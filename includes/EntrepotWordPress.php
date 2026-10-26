@@ -62,9 +62,10 @@ final class EntrepotWordPress implements Entrepot {
             }
         }
         $this->ecrire_cles($id, $f->cles_source);
-        $this->ecrire_themes($id, $f->themes);
         // Clé calculée sur la fiche reçue, comme celle que le dépôt cherchera à la prochaine collecte.
         update_post_meta($id, TypeContenu::META_DEDOUBLONNAGE, wp_slash($f->cle_dedoublonnage()));
+        // Thèmes en dernier : s'ils échouent, la fiche reste retrouvable par ses clés.
+        $this->ecrire_themes($id, $f->themes);
         return $id;
     }
 
@@ -188,16 +189,20 @@ final class EntrepotWordPress implements Entrepot {
             'resume' => self::texte($post->post_excerpt),
             'statut' => TypeContenu::statut_fiche($post->post_status),
         ];
+        // Seules les métas présentes : une méta absente (fiche créée dans l'administration) laisse
+        // la valeur par défaut de Fiche (langue fr, absences 0…).
         foreach (array_keys(TypeContenu::METAS) as $nom) {
-            $donnees[$nom] = get_post_meta($post->ID, TypeContenu::PREFIXE . $nom, true);
+            if (metadata_exists('post', $post->ID, TypeContenu::PREFIXE . $nom)) {
+                $donnees[$nom] = get_post_meta($post->ID, TypeContenu::PREFIXE . $nom, true);
+            }
         }
         if ($themes === null) {
             $termes = wp_get_object_terms($post->ID, TypeContenu::TAXONOMIE, ['fields' => 'names', 'orderby' => 'term_order']);
             $themes = is_array($termes) ? array_map(static fn(string $nom): string => self::texte($nom), $termes) : [];
         }
         $donnees['themes'] = array_values($themes);
-        $donnees['cles_source'] = is_array($donnees['cles_source']) ? array_values($donnees['cles_source']) : [];
-        if (!is_array($donnees['titres_source'])) {
+        $donnees['cles_source'] = is_array($donnees['cles_source'] ?? null) ? array_values($donnees['cles_source']) : [];
+        if (!is_array($donnees['titres_source'] ?? null)) {
             $donnees['titres_source'] = [];
         }
         // Les champs vides et absents (dates, drapeau d'absence) redeviennent null dans depuis_tableau.

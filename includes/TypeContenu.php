@@ -165,9 +165,10 @@ final class TypeContenu {
     }
 
     /**
-     * Valeur nettoyée d'un champ avant écriture. Les clés de source sont gardées telles quelles :
-     * ce sont des identifiants comparés exactement à ceux des collectes suivantes (les nettoyer,
-     * par exemple en retirant les `%xx`, créerait des doublons).
+     * Valeur nettoyée d'un champ avant écriture. Les clés de source et les titres vus à la source
+     * (`titres_source`) ne sont que contrôlés en UTF-8 : ils sont comparés exactement aux valeurs des
+     * collectes suivantes. `sanitize_text_field` (qui retire les `%xx` et change un `<` isolé en
+     * `&lt;`) créerait des doublons de clés et réécrirait `titres_source` à chaque collecte.
      */
     public static function nettoyer_meta(string $nom, mixed $valeur): mixed {
         switch ($nom) {
@@ -181,14 +182,14 @@ final class TypeContenu {
             case 'courriel_proposant':
                 return sanitize_email(self::chaine($valeur));
             case 'cle_source':
-                return self::chaine($valeur);
+                return self::brut($valeur);
             case 'cles_source':
-                $cles = array_map(static fn($cle): string => self::chaine($cle), is_array($valeur) ? $valeur : []);
+                $cles = array_map(static fn($cle): string => self::brut($cle), is_array($valeur) ? $valeur : []);
                 return array_values(array_unique(array_filter($cles, static fn(string $c): bool => $c !== '')));
             case 'titres_source':
                 $titres = [];
                 foreach (is_array($valeur) ? $valeur : [] as $cle => $titre) {
-                    $titres[(string) $cle] = sanitize_text_field(self::chaine($titre));
+                    $titres[self::brut($cle)] = self::brut($titre);
                 }
                 return $titres;
             default:
@@ -219,6 +220,11 @@ final class TypeContenu {
             $donnees['post_status'] = 'publish';
         }
         return $donnees;
+    }
+
+    /** Chaîne gardée telle quelle si elle est en UTF-8 valide, vide sinon. */
+    private static function brut(mixed $valeur): string {
+        return wp_check_invalid_utf8(self::chaine($valeur));
     }
 
     /** Valeur scalaire en chaîne, chaîne vide sinon. */
