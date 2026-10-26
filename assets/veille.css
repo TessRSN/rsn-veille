@@ -198,7 +198,7 @@
 
 .rsn-veille .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--navy);color:#fff;padding:11px 18px;border-radius:10px;font-size:14px;box-shadow:0 10px 30px rgba(0,52,105,.2);z-index:20;max-width:calc(100vw - 32px)}
 
-@media (prefers-reduced-motion:reduce){.rsn-veille .btn,.rsn-veille .btn svg{transition:none}}
+@media (prefers-reduced-motion:reduce){.rsn-veille.rsn-veille .btn,.rsn-veille.rsn-veille .btn svg{transition:none}}
 @media (max-width:820px){
   .rsn-veille .deux{grid-template-columns:minmax(0,1fr);gap:34px}
   .rsn-veille .cote{position:static}
