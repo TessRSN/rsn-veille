@@ -29,6 +29,10 @@ spl_autoload_register(static function (string $classe): void {
     }
 });
 
+if (function_exists('add_action')) {
+    add_action('init', [\RSN\Veille\TypeContenu::class, 'enregistrer']);
+}
+
 /**
  * Date du jour (Y-m-d), en heure de Montréal selon le fuseau du site.
  */
