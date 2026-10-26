@@ -57,6 +57,8 @@ final class JournalTest extends TestCase {
         $this->assertCount(11, $ligne['erreurs']);
         $this->assertSame('Erreur 10', $ligne['erreurs'][9]);
         $this->assertSame('… et 5 autres', $ligne['erreurs'][10]);
+        Journal::consigner('mila', ['erreurs' => array_slice($erreurs, 0, 11)]);
+        $this->assertSame('… et 1 autre', Journal::derniere('mila')['erreurs'][10]);
         Journal::consigner('dhc', ['erreurs' => array_slice($erreurs, 0, 10)]);
         $this->assertCount(10, Journal::derniere('dhc')['erreurs']);
     }

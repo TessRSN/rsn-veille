@@ -336,13 +336,41 @@ final class CollecteTest extends TestCase {
         $nuit = rsn_veille_bouchons_planifies(Collecte::CROCHET_NUIT);
         $this->assertCount(1, $nuit);
         $this->assertSame('2026-11-02 03:00', (new DateTimeImmutable('@' . $nuit[0]['horodatage']))->setTimezone($montreal)->format('Y-m-d H:i'));
+    }
 
-        // Même si la prochaine était déjà placée une heure plus tard le même jour : jamais à moins de 12 h.
-        wp_clear_scheduled_hook(Collecte::CROCHET_NUIT);
-        wp_schedule_event($maintenant + 3600, 'daily', Collecte::CROCHET_NUIT);
+    public function test_passage_a_l_heure_avancee(): void {
+        $montreal = new DateTimeZone('America/Toronto');
+        // 13 mars 2027, 3 h HNE ; WordPress replanifie 24 h plus tard, soit 4 h HAE le 14.
+        $maintenant = (new DateTimeImmutable('2027-03-13 03:00', $montreal))->getTimestamp();
+        wp_schedule_event($maintenant + DAY_IN_SECONDS, 'daily', Collecte::CROCHET_NUIT);
         Collecte::recaler_nuit_depuis($maintenant);
         $nuit = rsn_veille_bouchons_planifies(Collecte::CROCHET_NUIT);
-        $this->assertSame('2026-11-02 03:00', (new DateTimeImmutable('@' . $nuit[0]['horodatage']))->setTimezone($montreal)->format('Y-m-d H:i'));
+        $this->assertCount(1, $nuit);
+        $this->assertSame('2027-03-14 03:00 EDT', (new DateTimeImmutable('@' . $nuit[0]['horodatage']))->setTimezone($montreal)->format('Y-m-d H:i T'));
+    }
+
+    public function test_tache_executee_en_retard_ne_saute_pas_la_nuit_suivante(): void {
+        $montreal = new DateTimeZone('America/Toronto');
+        // Tâche de 3 h exécutée à 15 h 30 (cache de page, peu de visites) ; WordPress a replanifié au lendemain 3 h.
+        $maintenant = (new DateTimeImmutable('2026-12-10 15:30', $montreal))->getTimestamp();
+        $lendemain = (new DateTimeImmutable('2026-12-11 03:00', $montreal))->getTimestamp();
+        wp_schedule_event($lendemain, 'daily', Collecte::CROCHET_NUIT);
+        Collecte::recaler_nuit_depuis($maintenant);
+        $this->assertSame($lendemain, wp_next_scheduled(Collecte::CROCHET_NUIT));
+    }
+
+    public function test_heure_voulue_deja_passee_laisse_la_prevision(): void {
+        $montreal = new DateTimeZone('America/Toronto');
+        // Réglage passé à 22 h 30 ; tâche de 3 h exécutée à 23 h : 22 h 30 est passé, la prévision de 3 h reste.
+        update_option(Collecte::OPTION_REGLAGES, ['heure_collecte' => '22:30']);
+        $maintenant = (new DateTimeImmutable('2026-12-10 23:00', $montreal))->getTimestamp();
+        $lendemain = (new DateTimeImmutable('2026-12-11 03:00', $montreal))->getTimestamp();
+        wp_schedule_event($lendemain, 'daily', Collecte::CROCHET_NUIT);
+        Collecte::recaler_nuit_depuis($maintenant);
+        $this->assertSame($lendemain, wp_next_scheduled(Collecte::CROCHET_NUIT));
+        // Exécutée à 3 h : ramenée à 22 h 30 le jour même.
+        Collecte::recaler_nuit_depuis($lendemain - DAY_IN_SECONDS);
+        $this->assertSame('2026-12-10 22:30', (new DateTimeImmutable('@' . wp_next_scheduled(Collecte::CROCHET_NUIT)))->setTimezone($montreal)->format('Y-m-d H:i'));
     }
 
     public function test_lancement_manuel_l_apres_midi_ne_saute_pas_la_nuit_suivante(): void {
@@ -526,11 +554,12 @@ final class CollecteTest extends TestCase {
         $http = Collecte::$obtenir_pour_tests;
         // Pendant le traitement, un autre traitement a jugé le verrou périmé et l'a repris.
         Collecte::$obtenir_pour_tests = static function (string $url, array $options = []) use ($http): array {
-            update_option(Collecte::VERROU, ['jeton' => 'autre', 'depuis' => time()]);
+            rsn_veille_bouchons_ecrire_option_ailleurs(Collecte::VERROU, ['jeton' => 'autre', 'depuis' => time()]);
             return $http($url, $options);
         };
         Collecte::mettre_en_file();
         Collecte::traiter_une_source();
+        wp_cache_delete(Collecte::VERROU, 'options');
         $this->assertSame('autre', get_option(Collecte::VERROU)['jeton']);
     }
 
@@ -541,11 +570,12 @@ final class CollecteTest extends TestCase {
         wp_clear_scheduled_hook(Collecte::CROCHET_SOURCE);
         // Un second processus insère la même option juste après nous et écrase notre jeton.
         $GLOBALS['rsn_veille_wp']['apres_add_option'] = static function (string $nom): void {
-            update_option($nom, ['jeton' => 'concurrent', 'depuis' => time()]);
+            rsn_veille_bouchons_ecrire_option_ailleurs($nom, ['jeton' => 'concurrent', 'depuis' => time()]);
         };
         Collecte::traiter_une_source();
         $this->assertSame(['dhc'], get_option(Collecte::OPTION_FILE));
         $this->assertNull(Journal::derniere('dhc'));
+        wp_cache_delete(Collecte::VERROU, 'options');
         $this->assertSame('concurrent', get_option(Collecte::VERROU)['jeton']);
         $this->assertNotFalse(wp_next_scheduled(Collecte::CROCHET_SOURCE));
     }

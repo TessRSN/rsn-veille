@@ -31,7 +31,7 @@ final class Verrou {
     }
 
     /**
-     * Jeton relu juste après l'insertion, cache contourné : `add_option` de WordPress fait un
+     * Jeton relu hors cache (après l'insertion et avant la libération) : `add_option` de WordPress fait un
      * `INSERT … ON DUPLICATE KEY UPDATE`, donc deux insertions simultanées réussissent toutes deux et
      * la seconde écrase le jeton de la première, qui doit alors abandonner.
      */
@@ -43,10 +43,9 @@ final class Verrou {
         return is_array($actuel) && is_string($actuel['jeton'] ?? null) ? $actuel['jeton'] : null;
     }
 
-    /** Libère le verrou $nom s'il porte encore ce jeton. */
+    /** Libère le verrou $nom s'il porte encore ce jeton (relu hors cache : un autre traitement a pu le reprendre). */
     public static function liberer(string $nom, string $jeton): void {
-        $actuel = get_option($nom);
-        if (is_array($actuel) && ($actuel['jeton'] ?? null) === $jeton) {
+        if (self::relu($nom) === $jeton) {
             delete_option($nom);
         }
     }

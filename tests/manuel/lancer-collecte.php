@@ -31,6 +31,8 @@ $tours = 0;
 while (get_option(Collecte::OPTION_FILE, []) !== [] && $tours++ < 50) {
     $avant = get_option(Collecte::OPTION_FILE, []);
     Collecte::traiter_une_source();
+    // traiter_une_source() planifie la suivante : on la retire pour que WP-Cron ne la lance pas en parallèle.
+    wp_clear_scheduled_hook(Collecte::CROCHET_SOURCE);
     if (get_option(Collecte::OPTION_FILE, []) === $avant) {
         echo 'Verrou tenu par une autre exécution (option ' . Collecte::VERROU . ') : arrêt.' . PHP_EOL;
         break;

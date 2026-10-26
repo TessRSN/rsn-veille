@@ -33,7 +33,7 @@ function rsn_veille_bouchons_reinitialiser(): void {
     $GLOBALS['rsn_veille_wp'] = [
         'posts' => [], 'meta' => [], 'termes' => [], 'filtres' => [], 'actions' => [],
         'prochain_id' => 1, 'types' => [], 'taxonomies' => [], 'metas_enregistrees' => [], 'requetes' => [],
-        'options' => [], 'transients' => [], 'cron' => [], 'declenchees' => [],
+        'options' => [], 'cache_options' => [], 'transients' => [], 'cron' => [], 'declenchees' => [],
     ];
     \RSN\Veille\TypeContenu::enregistrer();
 }
@@ -99,13 +99,34 @@ function rsn_veille_bouchons_declenchements(string $crochet): array {
     return $GLOBALS['rsn_veille_wp']['declenchees'][$crochet] ?? [];
 }
 
+/**
+ * Options : `options` imite la base, `cache_options` le cache de la requête (rempli par la lecture et
+ * par nos écritures, vidé par `wp_cache_delete`). Un « autre processus » écrit directement dans
+ * `options` : la requête courante ne le voit qu'après `wp_cache_delete`.
+ */
 function get_option(string $nom, mixed $defaut = false): mixed {
-    return array_key_exists($nom, $GLOBALS['rsn_veille_wp']['options']) ? $GLOBALS['rsn_veille_wp']['options'][$nom] : $defaut;
+    $wp = &$GLOBALS['rsn_veille_wp'];
+    if (!array_key_exists($nom, $wp['cache_options'])) {
+        $wp['cache_options'][$nom] = array_key_exists($nom, $wp['options']) ? $wp['options'][$nom] : null;
+    }
+    return $wp['cache_options'][$nom] ?? $defaut;
 }
 
 function update_option(string $nom, mixed $valeur, mixed $chargement_auto = null): bool {
     $GLOBALS['rsn_veille_wp']['options'][$nom] = $valeur;
+    $GLOBALS['rsn_veille_wp']['cache_options'][$nom] = $valeur;
     return true;
+}
+
+/** Écriture d'un autre processus : la base seulement, pas le cache de cette requête (outil de test). */
+function rsn_veille_bouchons_ecrire_option_ailleurs(string $nom, mixed $valeur): void {
+    $GLOBALS['rsn_veille_wp']['options'][$nom] = $valeur;
+}
+
+if (!function_exists('_n')) {
+    function _n(string $singulier, string $pluriel, int $nombre, string $domaine = 'default'): string {
+        return $nombre === 1 ? $singulier : $pluriel;
+    }
 }
 
 /**
@@ -118,6 +139,7 @@ function add_option(string $nom, mixed $valeur = '', string $deprecie = '', mixe
         return false;
     }
     $GLOBALS['rsn_veille_wp']['options'][$nom] = $valeur;
+    $GLOBALS['rsn_veille_wp']['cache_options'][$nom] = $valeur;
     $concurrent = $GLOBALS['rsn_veille_wp']['apres_add_option'] ?? null;
     if ($concurrent !== null) {
         $GLOBALS['rsn_veille_wp']['apres_add_option'] = null;
@@ -126,12 +148,16 @@ function add_option(string $nom, mixed $valeur = '', string $deprecie = '', mixe
     return true;
 }
 
+/** Seul le groupe « options » est imité. */
 function wp_cache_delete(string $cle, string $groupe = ''): bool {
+    if ($groupe === 'options') {
+        unset($GLOBALS['rsn_veille_wp']['cache_options'][$cle]);
+    }
     return true;
 }
 
 function delete_option(string $nom): bool {
-    unset($GLOBALS['rsn_veille_wp']['options'][$nom]);
+    unset($GLOBALS['rsn_veille_wp']['options'][$nom], $GLOBALS['rsn_veille_wp']['cache_options'][$nom]);
     return true;
 }
 

@@ -396,8 +396,9 @@ final class Collecte {
 
     /**
      * Rappel de `rsn_veille_nuit` (après la mise en file) : la récurrence « daily » compte 24 h, donc au
-     * changement d'heure, ou si l'heure des réglages change, la prochaine collecte quotidienne est
-     * replacée à l'heure voulue, jamais à moins de 12 h de celle-ci.
+     * changement d'heure, ou si l'heure des réglages change, la prochaine collecte prévue est ramenée à
+     * l'heure voulue la plus proche (à ± 12 h). Une exécution en retard ne décale rien : WordPress a
+     * déjà replanifié sur la grille d'origine. Une heure voulue déjà passée laisse la prévision telle quelle.
      */
     public static function recaler_nuit(): void {
         self::recaler_nuit_depuis(time());
@@ -406,8 +407,11 @@ final class Collecte {
     /** `recaler_nuit` à l'instant $maintenant (tests). */
     public static function recaler_nuit_depuis(int $maintenant): void {
         $prevue = wp_next_scheduled(self::CROCHET_NUIT);
-        $voulue = self::prochaine_collecte($maintenant + 12 * HOUR_IN_SECONDS);
-        if ($prevue !== false && $prevue !== $voulue) {
+        if ($prevue === false) {
+            return;
+        }
+        $voulue = self::prochaine_collecte($prevue - 12 * HOUR_IN_SECONDS);
+        if ($voulue !== $prevue && $voulue > $maintenant) {
             wp_unschedule_event($prevue, self::CROCHET_NUIT);
             wp_schedule_event($voulue, 'daily', self::CROCHET_NUIT);
         }

@@ -31,7 +31,7 @@ final class Journal {
             $reste = count($ligne['erreurs']) - self::MAX_ERREURS;
             $ligne['erreurs'] = array_slice(array_values($ligne['erreurs']), 0, self::MAX_ERREURS);
             /* translators: %d : nombre d'erreurs non affichées. */
-            $ligne['erreurs'][] = sprintf(__('… et %d autres', 'rsn-veille'), $reste);
+            $ligne['erreurs'][] = sprintf(_n('… et %d autre', '… et %d autres', $reste, 'rsn-veille'), $reste);
         }
         $tout = self::tout();
         $entrees = $tout[$id_source] ?? [];
