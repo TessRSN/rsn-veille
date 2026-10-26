@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:atom="http://www.w3.org/2005/Atom"
+	xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+	xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+	>
+
+<channel>
+	<title>IVADO</title>
+	<atom:link href="https://ivado.ca/feed/" rel="self" type="application/rss+xml" />
+	<link>https://ivado.ca</link>
+	<description>Consortium en intelligence artificielle</description>
+	<lastBuildDate>Thu, 15 Oct 2026 13:11:47 +0000</lastBuildDate>
+	<language>fr-FR</language>
+	<sy:updatePeriod>
+	hourly	</sy:updatePeriod>
+	<sy:updateFrequency>
+	1	</sy:updateFrequency>
+	
+
+<image>
+	<url>https://ivado.ca/wp-content/uploads/2021/11/cropped-ivado-icone-32x32.png</url>
+	<title>IVADO</title>
+	<link>https://ivado.ca</link>
+	<width>32</width>
+	<height>32</height>
+</image> 
+	<item>
+		<title>IA au travail&#160;: un remplacement massif des emplois n&#8217;est pas pour demain</title>
+		<link>https://ivado.ca/2026/10/15/ia-au-travail-un-remplacement-massif-des-emplois-nest-pas-pour-demain/</link>
+		
+		<dc:creator><![CDATA[Sandra Estrela]]></dc:creator>
+		<pubDate>Thu, 15 Oct 2026 13:25:34 +0000</pubDate>
+				<category><![CDATA[Actualités]]></category>
+		<guid isPermaLink="false">https://ivado.ca/?p=205402</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>Frédérique Le Roux&#160;: comprendre les ennemis des bactéries</title>
+		<link>https://ivado.ca/2026/10/14/frederique-le-roux-comprendre-les-ennemis-des-bacteries/</link>
+		
+		<dc:creator><![CDATA[Christine Charest]]></dc:creator>
+		<pubDate>Wed, 14 Oct 2026 13:34:26 +0000</pubDate>
+				<category><![CDATA[Actualités]]></category>
+		<guid isPermaLink="false">https://ivado.ca/?p=205382</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>Lancement du programme de financement de recherche postdoctorale IVADO 2027</title>
+		<link>https://ivado.ca/2026/10/13/lancement-du-programme-de-financement-de-recherche-postdoctorale-ivado-2027/</link>
+		
+		<dc:creator><![CDATA[Sandra Estrela]]></dc:creator>
+		<pubDate>Tue, 13 Oct 2026 17:22:05 +0000</pubDate>
+				<category><![CDATA[Actualités]]></category>
+		<guid isPermaLink="false">https://ivado.ca/?p=205334</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>IVADO et Connected Minds lancent le concours de subventions de démarrage RISE pour soutenir de nouvelles collaborations en IA responsable</title>
+		<link>https://ivado.ca/2026/10/05/ivado-et-connected-minds-lancent-le-concours-de-subventions-de-demarrage-rise-pour-soutenir-de-nouvelles-collaborations-en-ia-responsable/</link>
+		
+		<dc:creator><![CDATA[Sandra Estrela]]></dc:creator>
+		<pubDate>Mon, 05 Oct 2026 17:00:29 +0000</pubDate>
+				<category><![CDATA[Actualités]]></category>
+		<guid isPermaLink="false">https://ivado.ca/?p=205188</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>Six projets retenus dans le cadre du second semestre franco-québécois d&#8217;échanges lancé par IVADO et INRIA </title>
+		<link>https://ivado.ca/2026/09/14/six-projets-retenus-pour-les-semestres-2026-dechanges-franco-quebecois-en-ia-divado-et-de-linria/</link>
+		
+		<dc:creator><![CDATA[Sabrine Chibane]]></dc:creator>
+		<pubDate>Mon, 14 Sep 2026 16:18:20 +0000</pubDate>
+				<category><![CDATA[Actualités]]></category>
+		<guid isPermaLink="false">https://ivado.ca/?p=204735</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>Le Regroupement de recherche stratégique IA et neurosciences d’IVADO lance son premier appel à participation</title>
+		<link>https://ivado.ca/2026/09/10/le-regroupement-de-recherche-strategique-ia-et-neurosciences-divado-lance-son-premier-appel-a-participation/</link>
+		
+		<dc:creator><![CDATA[Sandra Estrela]]></dc:creator>
+		<pubDate>Thu, 10 Sep 2026 18:59:24 +0000</pubDate>
+				<category><![CDATA[Actualités]]></category>
+		<guid isPermaLink="false">https://ivado.ca/?p=204655</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>IVADO ouvre les candidatures pour DémultiplIA 2027&#160;: transformer la R&#038;D en moteur de croissance pour les PME et startups en IA</title>
+		<link>https://ivado.ca/2026/09/10/ivado-ouvre-les-candidatures-pour-demultiplia-2027-transformer-la-rd-en-moteur-de-croissance-pour-les-pme-et-startups-en-ia/</link>
+		
+		<dc:creator><![CDATA[Sabrine Chibane]]></dc:creator>
+		<pubDate>Thu, 10 Sep 2026 18:53:05 +0000</pubDate>
+				<category><![CDATA[Actualités]]></category>
+		<guid isPermaLink="false">https://ivado.ca/?p=204645</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>Peser le carbone des géants de la forêt</title>
+		<link>https://ivado.ca/2026/09/10/peser-le-carbone-des-geants-de-la-foret/</link>
+		
+		<dc:creator><![CDATA[Christine Charest]]></dc:creator>
+		<pubDate>Thu, 10 Sep 2026 12:31:35 +0000</pubDate>
+				<category><![CDATA[Actualités]]></category>
+		<guid isPermaLink="false">https://ivado.ca/?p=204592</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>Benjamin Haley&#160;: cartographier la tumeur avant qu&#8217;elle ne résiste</title>
+		<link>https://ivado.ca/2026/09/08/benjamin-haley-cartographier-la-tumeur-avant-quelle-ne-resiste/</link>
+		
+		<dc:creator><![CDATA[Christine Charest]]></dc:creator>
+		<pubDate>Tue, 08 Sep 2026 20:03:34 +0000</pubDate>
+				<guid isPermaLink="false">https://ivado.ca/?p=204533</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>Autisme&#160;: capturer la certitude clinique avec l’IA</title>
+		<link>https://ivado.ca/2026/08/28/autisme-capturer-la-certitude-clinique-avec-lia/</link>
+		
+		<dc:creator><![CDATA[Christine Charest]]></dc:creator>
+		<pubDate>Fri, 28 Aug 2026 13:35:16 +0000</pubDate>
+				<guid isPermaLink="false">https://ivado.ca/?p=204138</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+	</channel>
+</rss>

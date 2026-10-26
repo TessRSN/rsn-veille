@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:atom="http://www.w3.org/2005/Atom"
+	xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+	xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+	>
+
+<channel>
+	<title>Événements &#8211; IVADO</title>
+	<atom:link href="https://ivado.ca/evenements/feed/" rel="self" type="application/rss+xml" />
+	<link>https://ivado.ca</link>
+	<description>Consortium en intelligence artificielle</description>
+	<lastBuildDate>Fri, 23 Oct 2026 19:20:23 +0000</lastBuildDate>
+	<language>fr-FR</language>
+	<sy:updatePeriod>
+	hourly	</sy:updatePeriod>
+	<sy:updateFrequency>
+	1	</sy:updateFrequency>
+	
+
+<image>
+	<url>https://ivado.ca/wp-content/uploads/2021/11/cropped-ivado-icone-32x32.png</url>
+	<title>Événements &#8211; IVADO</title>
+	<link>https://ivado.ca</link>
+	<width>32</width>
+	<height>32</height>
+</image> 
+	<item>
+		<title>IA en santé 2026</title>
+		<link>https://ivado.ca/evenements/ia-en-sante-2026/</link>
+		
+		<dc:creator><![CDATA[Stéphanie Dufaud]]></dc:creator>
+		<pubDate>Fri, 23 Oct 2026 16:19:49 +0000</pubDate>
+				<guid isPermaLink="false">https://ivado.ca/?post_type=events&#038;p=205515</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>Séminaires Quantiques IVADO 2026/2027</title>
+		<link>https://ivado.ca/evenements/seminaires-quantiques-ivado-2026-2027/</link>
+		
+		<dc:creator><![CDATA[Nora Charifi]]></dc:creator>
+		<pubDate>Mon, 19 Oct 2026 15:16:21 +0000</pubDate>
+				<guid isPermaLink="false">https://ivado.ca/?post_type=events&#038;p=205434</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>Webinaire CRIMT et IVADO&#160;: l&#8217;IA vue par les travailleurs et travailleuses</title>
+		<link>https://ivado.ca/evenements/webinaire-crimt-et-ivado-lia-vue-par-les-travailleurs-et-travailleuses/</link>
+		
+		<dc:creator><![CDATA[Sandra Estrela]]></dc:creator>
+		<pubDate>Thu, 15 Oct 2026 13:34:01 +0000</pubDate>
+				<guid isPermaLink="false">https://ivado.ca/?post_type=events&#038;p=205412</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>Juger l’IA&#160;: une conférence-spectacle interactive</title>
+		<link>https://ivado.ca/evenements/juger-lia-une-conference-spectacle-interactive/</link>
+		
+		<dc:creator><![CDATA[Nora Charifi]]></dc:creator>
+		<pubDate>Thu, 01 Oct 2026 18:45:31 +0000</pubDate>
+				<guid isPermaLink="false">https://ivado.ca/?post_type=events&#038;p=205109</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>Démocraties à l’épreuve de l’IA</title>
+		<link>https://ivado.ca/evenements/democraties-a-lepreuve-de-lia/</link>
+		
+		<dc:creator><![CDATA[Nora Charifi]]></dc:creator>
+		<pubDate>Fri, 25 Sep 2026 18:55:34 +0000</pubDate>
+				<guid isPermaLink="false">https://ivado.ca/?post_type=events&#038;p=204932</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>Conférence&#160;: Améliorer la gouvernance de l’IA&#160;: restitution des travaux réalisés au cours de la période thématique</title>
+		<link>https://ivado.ca/evenements/conference-2-ameliorer-la-gouvernance-de-lia-conference-de-restitution-des-travaux-realises-au-cours-de-la-periode-thematique/</link>
+		
+		<dc:creator><![CDATA[Stéphanie Dufaud]]></dc:creator>
+		<pubDate>Tue, 24 Mar 2026 20:15:27 +0000</pubDate>
+				<guid isPermaLink="false">https://ivado.ca/?post_type=events&#038;p=201060</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>Conférence &#8211; Enjeux transversaux et problématiques sectorielles&#160;: comment dégager des principes communs sans négliger les besoins particuliers&#8239;?</title>
+		<link>https://ivado.ca/evenements/conference-1-faire-dialoguer-les-disciplines-pour-ameliorer-la-gouvernance-regards-croises-sur-les-bonnes-pratiques/</link>
+		
+		<dc:creator><![CDATA[Stéphanie Dufaud]]></dc:creator>
+		<pubDate>Tue, 24 Mar 2026 20:12:43 +0000</pubDate>
+				<guid isPermaLink="false">https://ivado.ca/?post_type=events&#038;p=201056</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>Atelier &#8211; Adapter la gouvernance de l’IA à des enjeux sectoriels&#160;: perspectives comparées</title>
+		<link>https://ivado.ca/evenements/atelier-2-adapter-la-gouvernance-de-lia-a-des-enjeux-sectoriels-perspectives-comparees/</link>
+		
+		<dc:creator><![CDATA[Stéphanie Dufaud]]></dc:creator>
+		<pubDate>Tue, 24 Mar 2026 20:10:39 +0000</pubDate>
+				<guid isPermaLink="false">https://ivado.ca/?post_type=events&#038;p=201052</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>Atelier &#8211; Gouverner l’IA&#160;: échelles, espaces et approches</title>
+		<link>https://ivado.ca/evenements/atelier-1-gouverner-lia-echelles-espaces-et-approches/</link>
+		
+		<dc:creator><![CDATA[Stéphanie Dufaud]]></dc:creator>
+		<pubDate>Tue, 24 Mar 2026 19:58:44 +0000</pubDate>
+				<guid isPermaLink="false">https://ivado.ca/?post_type=events&#038;p=200882</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+		<item>
+		<title>Atelier &#8211; Mettre l’IA au service de certaines valeurs</title>
+		<link>https://ivado.ca/evenements/atelier-3-mettre-lia-au-service-de-certaines-valeurs/</link>
+		
+		<dc:creator><![CDATA[Stéphanie Dufaud]]></dc:creator>
+		<pubDate>Tue, 24 Mar 2026 15:43:48 +0000</pubDate>
+				<guid isPermaLink="false">https://ivado.ca/?post_type=events&#038;p=201065</guid>
+
+					<description><![CDATA[]]></description>
+										<content:encoded><![CDATA[]]></content:encoded>
+					
+		
+		
+			</item>
+	</channel>
+</rss>

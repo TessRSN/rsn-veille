@@ -1,0 +1,102 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Digital Health Canada - ECPv6.18.1//NONSGML v1.0//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Digital Health Canada
+X-ORIGINAL-URL:https://digitalhealthcanada.com
+X-WR-CALDESC:Events for Digital Health Canada
+REFRESH-INTERVAL;VALUE=DURATION:PT1H
+X-Robots-Tag:noindex
+X-PUBLISHED-TTL:PT1H
+BEGIN:VTIMEZONE
+TZID:America/Toronto
+BEGIN:DAYLIGHT
+TZOFFSETFROM:-0500
+TZOFFSETTO:-0400
+TZNAME:EDT
+DTSTART:20250309T070000
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:-0400
+TZOFFSETTO:-0500
+TZNAME:EST
+DTSTART:20251102T060000
+END:STANDARD
+BEGIN:DAYLIGHT
+TZOFFSETFROM:-0500
+TZOFFSETTO:-0400
+TZNAME:EDT
+DTSTART:20260308T070000
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:-0400
+TZOFFSETTO:-0500
+TZNAME:EST
+DTSTART:20261101T060000
+END:STANDARD
+BEGIN:DAYLIGHT
+TZOFFSETFROM:-0500
+TZOFFSETTO:-0400
+TZNAME:EDT
+DTSTART:20270314T070000
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:-0400
+TZOFFSETTO:-0500
+TZNAME:EST
+DTSTART:20271107T060000
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+DTSTART;TZID=America/Toronto:20261027T080000
+DTEND;TZID=America/Toronto:20261027T113000
+DTSTAMP:20261023T183314Z
+CREATED:20260707T230004Z
+LAST-MODIFIED:20261023T183314Z
+UID:10000629-1793088000-1793100600@digitalhealthcanada.com
+SUMMARY:Digital Health Canada/RSN Montreal 2026 Breakfast
+DESCRIPTION:Let’s discuss the future of digital health in Canada over breakfast. Digital Health Canada’s MTL26 Breakfast Event\, presented in partnership with RSN (Réseau santé numérique)\, will identify common challenges and opportunities from across Canada\, with a focus on Quebec innovation. Learn about local innovation programs and opportunities\, and gain insights into digital health partnerships and collaborations from other provinces to spark new ideas and drive progress in Quebec and beyond. \nThe Breakfast will take place in Montreal\, Quebec on Tuesday\, October 27\, 2026. \nPresented by\n\n		\n		\n			\n				\n			\n			\n				\n			\n			\n		\n\nRegister\n\nMember Regular: $155\nNon-Member Regular: $185\nStudent: $50\n\nSend your team and save with bundle pricing \n\nMember Ticket Bundle (5 tickets): $685\nMember Ticket Bundle (10 tickets): $1\,370\nMember Ticket Bundles (25 tickets): $3\,225\nMember Ticket Bundles (50 tickets): $6\,075\n\nREGISTER \n\nTell others about the event\nDownload any of the images below to share on social media.
+URL:https://digitalhealthcanada.com/event-calendar/digital-health-canada-mtl26/
+LOCATION:Plaza Centre-Ville\, 777 Blvd Robert Bourassa\, Montreal\, Québec\, H3C 3Z7\, Canada
+ATTACH;FMTTYPE=image/png:https://digitalhealthcanada.com/wp-content/uploads/2026/07/MTL26-Event-Header.png
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Toronto:20261027T080000
+DTEND;TZID=America/Toronto:20261028T170000
+DTSTAMP:20260721T220618Z
+CREATED:20260721T220438Z
+LAST-MODIFIED:20260721T220618Z
+UID:10000638-1793088000-1793206800@digitalhealthcanada.com
+SUMMARY:FHIR North 2026
+DESCRIPTION:Join us virtually on October 27 & 28 as we explore the future of healthcare interoperability. \nWe’re excited to welcome you to FHIR North 2026\, where we are shifting the lens from theoretical data standards to widespread\, real-world implementation. This year\, we will dive deep into how organizations are moving past localized pilots to build resilient\, connected health systems. Join us to unpack the practical strategies\, infrastructure insights\, and scaling policies needed to make FHIR function sustainably across diverse systems and sectors. \nFHIR North 2026\nOctober 27 – 28\, 2026\nZoom Events Platform \nNetworking Event in Toronto\nOctober 28 | 6:30pm \nJoin us to meet other like-minded FHIR professionals\, to mingle and network. Light hors d’oeuvres will be provided. \nSpace is limited. Tickets are required. Learn more here.
+URL:https://digitalhealthcanada.com/event-calendar/fhir-north-26/
+LOCATION:Online
+ATTACH;FMTTYPE=image/png:https://digitalhealthcanada.com/wp-content/uploads/2026/07/FHIR-North.png
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Toronto:20261028T120000
+DTEND;TZID=America/Toronto:20261028T130000
+DTSTAMP:20260923T161156Z
+CREATED:20260820T205914Z
+LAST-MODIFIED:20260923T161156Z
+UID:10000646-1793188800-1793192400@digitalhealthcanada.com
+SUMMARY:Connected Content\, Connected Care: Building a Unified Digital Health Record
+DESCRIPTION:This session explores how healthcare organizations can reduce information fragmentation by adopting an enterprise content management (ECM) strategy. Attendees will learn how intelligent capture\, archival of legacy data\, systems integrations\, and records governance create a unified record that improves clinician access\, operational efficiency\, compliance\, and digital transformation outcomes. \nOctober Webinar Wednesdays are sponsored by Quest Diagnostics
+URL:https://digitalhealthcanada.com/event-calendar/connected-content-connected-care/
+LOCATION:Online
+ATTACH;FMTTYPE=image/png:https://digitalhealthcanada.com/wp-content/uploads/2026/08/26-27-event-header-ww-9.png
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Toronto:20261029T120000
+DTEND;TZID=America/Toronto:20261029T130000
+DTSTAMP:20261001T154657Z
+CREATED:20260909T163326Z
+LAST-MODIFIED:20261001T154657Z
+UID:10000716-1793275200-1793278800@digitalhealthcanada.com
+SUMMARY:Digital Health Canada Office Hours Online
+DESCRIPTION:Do you have questions? We have answers!\nEvery Thursday\, Digital Health Canada representatives are online to answer questions about membership\, events\, education—ask us anything! No registration required. Drop in anytime between 12–1:00 p.m. ET. \n\nJoin Zoom Meeting: https://us02web.zoom.us/j/89990442155?pwd=YRwpCo7NspjNzKSuCv4S2w4j6ai8Ia.1 \nJoin and take notes: https://us02web.zoom.us/j/89990442155?pwd=YRwpCo7NspjNzKSuCv4S2w4j6ai8Ia.1&mynotes=on\nMeeting chat link: https://us02web.zoom.us/launch/jc/89990442155\nMeeting ID: 899 9044 2155\nPasscode: 631840\nOne tap mobile: +15873281099\,\,89990442155# Canada / +16473744685\,\,89990442155# Canada\nJoin by SIP: 89990442155@zoomcrc.com\nJoin instructions: https://us02web.zoom.us/meetings/89990442155/invitations?signature=mvwXie5NwOOj8Lb6VPQVA2e7IzrgNCd2vSapxff7vXw
+URL:https://digitalhealthcanada.com/event-calendar/office-hours-october/2026-10-29/
+ATTACH;FMTTYPE=image/png:https://digitalhealthcanada.com/wp-content/uploads/2026/09/26–27-office-hours-green.png
+END:VEVENT
+END:VCALENDAR

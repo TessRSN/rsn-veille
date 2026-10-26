@@ -1,0 +1,1235 @@
+<!DOCTYPE html><html
+lang="fr-CA"      data-text-selection="mixed"><head> <script>
+var gform;gform||(document.addEventListener("gform_main_scripts_loaded",function(){gform.scriptsLoaded=!0}),document.addEventListener("gform/theme/scripts_loaded",function(){gform.themeScriptsLoaded=!0}),window.addEventListener("DOMContentLoaded",function(){gform.domLoaded=!0}),gform={domLoaded:!1,scriptsLoaded:!1,themeScriptsLoaded:!1,isFormEditor:()=>"function"==typeof InitializeEditor,callIfLoaded:function(o){return!(!gform.domLoaded||!gform.scriptsLoaded||!gform.themeScriptsLoaded&&!gform.isFormEditor()||(gform.isFormEditor()&&console.warn("The use of gform.initializeOnLoaded() is deprecated in the form editor context and will be removed in Gravity Forms 3.1."),o(),0))},initializeOnLoaded:function(o){gform.callIfLoaded(o)||(document.addEventListener("gform_main_scripts_loaded",()=>{gform.scriptsLoaded=!0,gform.callIfLoaded(o)}),document.addEventListener("gform/theme/scripts_loaded",()=>{gform.themeScriptsLoaded=!0,gform.callIfLoaded(o)}),window.addEventListener("DOMContentLoaded",()=>{gform.domLoaded=!0,gform.callIfLoaded(o)}))},hooks:{action:{},filter:{}},addAction:function(o,r,e,t){gform.addHook("action",o,r,e,t)},addFilter:function(o,r,e,t){gform.addHook("filter",o,r,e,t)},doAction:function(o){gform.doHook("action",o,arguments)},applyFilters:function(o){return gform.doHook("filter",o,arguments)},removeAction:function(o,r){gform.removeHook("action",o,r)},removeFilter:function(o,r,e){gform.removeHook("filter",o,r,e)},addHook:function(o,r,e,t,n){null==gform.hooks[o][r]&&(gform.hooks[o][r]=[]);var d=gform.hooks[o][r];null==n&&(n=r+"_"+d.length),gform.hooks[o][r].push({tag:n,callable:e,priority:t=null==t?10:t})},doHook:function(r,o,e){var t;if(e=Array.prototype.slice.call(e,1),null!=gform.hooks[r][o]&&((o=gform.hooks[r][o]).sort(function(o,r){return o.priority-r.priority}),o.forEach(function(o){"function"!=typeof(t=o.callable)&&(t=window[t]),"action"==r?t.apply(null,e):e[0]=t.apply(null,e)})),"filter"==r)return e[0]},removeHook:function(o,r,t,n){var e;null!=gform.hooks[o][r]&&(e=(e=gform.hooks[o][r]).filter(function(o,r,e){return!!(null!=n&&n!=o.tag||null!=t&&t!=o.priority)}),gform.hooks[o][r]=e)}});
+</script>
+
+ <script>(function(w, d, s, l, i) {
+            w[l] = w[l] || [];
+            w[l].push({
+                'gtm.start': new Date().getTime(),
+                event: 'gtm.js'
+            });
+            var f = d.getElementsByTagName(s)[0],
+                j = d.createElement(s),
+                dl = l != 'dataLayer' ? '&l=' + l : '';
+            j.async = true;
+            j.src =
+                'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+            f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer', 'GTM-KPMQTST');</script> 
+ <script>!function(f,b,e,v,n,t,s)
+          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+          n.queue=[];t=b.createElement(e);t.async=!0;
+          t.src=v;s=b.getElementsByTagName(e)[0];
+          s.parentNode.insertBefore(t,s)}(window, document,'script',
+          'https://connect.facebook.net/en_US/fbevents.js');
+          fbq('init', '1843479385796059');
+          fbq('track', 'PageView');</script> <noscript><img
+height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1843479385796059&ev=PageView&noscript=1"
+/></noscript><meta
+name="viewport"
+content="width=device-width, initial-scale=1" /><meta
+charset="UTF-8"><link
+rel="apple-touch-icon"
+sizes="180x180"
+href="https://frq.gouv.qc.ca/app/themes/webit/apple-touch-icon.png"><link
+rel="icon"
+type="image/png"
+sizes="32x32"
+href="https://frq.gouv.qc.ca/app/themes/webit/favicon-32x32.png"><link
+rel="icon"
+type="image/png"
+sizes="16x16"
+href="https://frq.gouv.qc.ca/app/themes/webit/favicon-16x16.png"><link
+rel="manifest"
+href="https://frq.gouv.qc.ca/app/themes/webit/manifest.php?template_url=https://frq.gouv.qc.ca/app/themes/webit"><link
+rel="mask-icon"
+href="https://frq.gouv.qc.ca/app/themes/webit/safari-pinned-tab.svg"
+color="black"><meta
+name="msapplication-TileColor"
+content="#b4daf5"><meta
+name="theme-color"
+content="#b4daf5"><meta
+name="facebook-domain-verification"
+content="rzd1q3l1rxndk6tei7n36id1q863ta" /> <script src="https://unpkg.com/@popperjs/core@2"></script> <script src="https://unpkg.com/tippy.js@6"></script> <script>var ajaxurl = "https://frq.gouv.qc.ca/wp/wp-admin/admin-ajax.php";
+    var environment = "production";
+
+            var language = "fr";</script> <meta
+name='robots' content='index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1' /><title>Événements - Fonds de recherche du Québec - FRQ</title>
+<link data-rocket-prefetch href="https://sdk.privacy-center.org" rel="dns-prefetch">
+<link data-rocket-prefetch href="https://www.gstatic.com" rel="dns-prefetch">
+<link data-rocket-prefetch href="https://www.googletagmanager.com" rel="dns-prefetch">
+<link data-rocket-prefetch href="https://connect.facebook.net" rel="dns-prefetch">
+<link data-rocket-prefetch href="https://unpkg.com" rel="dns-prefetch">
+<link data-rocket-prefetch href="https://fonts.googleapis.com" rel="dns-prefetch">
+<link data-rocket-prefetch href="https://www.google.com" rel="dns-prefetch">
+<link data-rocket-prefetch href="https://t.ofsys.com" rel="dns-prefetch">
+<link data-rocket-prefetch href="https://ofsys.com" rel="dns-prefetch">
+<link data-rocket-preload as="style" href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&#038;ver=1770751690&#038;display=swap" rel="preload">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&#038;ver=1770751690&#038;display=swap" media="print" onload="this.media=&#039;all&#039;" rel="stylesheet">
+<noscript data-wpr-hosted-gf-parameters=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&#038;ver=1770751690&#038;display=swap"></noscript><link rel="preload" data-rocket-preload as="image" href="https://frq.gouv.qc.ca/app/themes/webit/assets/img/wave--mixed.svg" fetchpriority="high"><meta
+name="description" content="Les événements à venir mis de l’avant par les Fonds de recherche du Québec. Parcourez notre plateforme en utilisant le moteur de recherche afin de trouver des événements auxquels vous aimeriez assister." /><link
+rel="canonical" href="https://frq.gouv.qc.ca/evenements/" /><meta
+property="og:locale" content="fr_CA" /><meta
+property="og:type" content="article" /><meta
+property="og:title" content="Événements" /><meta
+property="og:url" content="https://frq.gouv.qc.ca/evenements/" /><meta
+property="og:site_name" content="Fonds de recherche du Québec" /><meta
+property="article:modified_time" content="2026-04-15T19:20:01+00:00" /><meta
+name="twitter:card" content="summary_large_image" /> <script type="application/ld+json" class="yoast-schema-graph">{"@context":"https:\/\/schema.org","@graph":[{"@type":"WebPage","@id":"https:\/\/frq.gouv.qc.ca\/evenements\/","url":"https:\/\/frq.gouv.qc.ca\/evenements\/","name":"Événements - Fonds de recherche du Québec - FRQ","isPartOf":{"@id":"https:\/\/frq.gouv.qc.ca\/#website"},"datePublished":"2021-02-11T19:58:59+00:00","dateModified":"2026-04-15T19:20:01+00:00","description":"Les événements à venir mis de l’avant par les Fonds de recherche du Québec. Parcourez notre plateforme en utilisant le moteur de recherche afin de trouver des événements auxquels vous aimeriez assister.","breadcrumb":{"@id":"https:\/\/frq.gouv.qc.ca\/evenements\/#breadcrumb"},"inLanguage":"fr-CA","potentialAction":[{"@type":"ReadAction","target":["https:\/\/frq.gouv.qc.ca\/evenements\/"]}]},{"@type":"BreadcrumbList","@id":"https:\/\/frq.gouv.qc.ca\/evenements\/#breadcrumb","itemListElement":[{"@type":"ListItem","position":1,"name":"","item":"https:\/\/frq.gouv.qc.ca\/"},{"@type":"ListItem","position":2,"name":"Événements"}]},{"@type":"WebSite","@id":"https:\/\/frq.gouv.qc.ca\/#website","url":"https:\/\/frq.gouv.qc.ca\/","name":"Fonds de recherche du Québec","description":"","potentialAction":[{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https:\/\/frq.gouv.qc.ca\/?s={search_term_string}"},"query-input":{"@type":"PropertyValueSpecification","valueRequired":true,"valueName":"search_term_string"}}],"inLanguage":"fr-CA"}]}</script> <link
+rel='dns-prefetch' href='//www.google.com' /><link
+rel='dns-prefetch' href='//code.jquery.com' /><link
+rel='dns-prefetch' href='//fonts.googleapis.com' /><link
+href='https://fonts.gstatic.com' crossorigin rel='preconnect' /><style id="wp-img-auto-sizes-contain-inline-css">img:is([sizes=auto i],[sizes^="auto," i]){contain-intrinsic-size:3000px 1500px}
+/*# sourceURL=wp-img-auto-sizes-contain-inline-css */</style><style id="wp-block-library-inline-css">:root{--wp-block-synced-color:#7a00df;--wp-block-synced-color--rgb:122,0,223;--wp-bound-block-color:var(--wp-block-synced-color);--wp-editor-canvas-background:#ddd;--wp-admin-theme-color:#007cba;--wp-admin-theme-color--rgb:0,124,186;--wp-admin-theme-color-darker-10:#006ba1;--wp-admin-theme-color-darker-10--rgb:0,107,160.5;--wp-admin-theme-color-darker-20:#005a87;--wp-admin-theme-color-darker-20--rgb:0,90,135;--wp-admin-border-width-focus:2px}@media (min-resolution:192dpi){:root{--wp-admin-border-width-focus:1.5px}}.wp-element-button{cursor:pointer}:root .has-very-light-gray-background-color{background-color:#eee}:root .has-very-dark-gray-background-color{background-color:#313131}:root .has-very-light-gray-color{color:#eee}:root .has-very-dark-gray-color{color:#313131}:root .has-vivid-green-cyan-to-vivid-cyan-blue-gradient-background{background:linear-gradient(135deg,#00d084,#0693e3)}:root .has-purple-crush-gradient-background{background:linear-gradient(135deg,#34e2e4,#4721fb 50%,#ab1dfe)}:root .has-hazy-dawn-gradient-background{background:linear-gradient(135deg,#faaca8,#dad0ec)}:root .has-subdued-olive-gradient-background{background:linear-gradient(135deg,#fafae1,#67a671)}:root .has-atomic-cream-gradient-background{background:linear-gradient(135deg,#fdd79a,#004a59)}:root .has-nightshade-gradient-background{background:linear-gradient(135deg,#330968,#31cdcf)}:root .has-midnight-gradient-background{background:linear-gradient(135deg,#020381,#2874fc)}:root{--wp--preset--font-size--normal:16px;--wp--preset--font-size--huge:42px}.has-regular-font-size{font-size:1em}.has-larger-font-size{font-size:2.625em}.has-normal-font-size{font-size:var(--wp--preset--font-size--normal)}.has-huge-font-size{font-size:var(--wp--preset--font-size--huge)}:root .has-text-align-center{text-align:center}:root .has-text-align-left{text-align:left}:root .has-text-align-right{text-align:right}.has-fit-text{white-space:nowrap!important}#end-resizable-editor-section{display:none}.aligncenter{clear:both}.items-justified-left{justify-content:flex-start}.items-justified-center{justify-content:center}.items-justified-right{justify-content:flex-end}.items-justified-space-between{justify-content:space-between}.screen-reader-text{word-wrap:normal!important;border:0;clip-path:inset(50%);height:1px;margin:-1px;overflow:hidden;padding:0;position:absolute;width:1px;word-break:normal!important}.screen-reader-text:focus{background-color:#ddd;clip-path:none;color:#444;display:block;font-size:1em;height:auto;left:5px;line-height:normal;padding:15px 23px 14px;text-decoration:none;top:5px;width:auto;z-index:100000}html :where(.has-border-color){border-style:solid}html :where([style^=border-color],[style*=";border-color"],[style*="; border-color"]){border-style:solid}html :where([style^=border-top-color],[style*=";border-top-color"],[style*="; border-top-color"]){border-top-style:solid}html :where([style^=border-right-color],[style*=";border-right-color"],[style*="; border-right-color"]){border-right-style:solid}html :where([style^=border-bottom-color],[style*=";border-bottom-color"],[style*="; border-bottom-color"]){border-bottom-style:solid}html :where([style^=border-left-color],[style*=";border-left-color"],[style*="; border-left-color"]){border-left-style:solid}html :where([style^=border-width],[style*=";border-width"],[style*="; border-width"]){border-style:solid}html :where([style^=border-top-width],[style*=";border-top-width"],[style*="; border-top-width"]){border-top-style:solid}html :where([style^=border-right-width],[style*=";border-right-width"],[style*="; border-right-width"]){border-right-style:solid}html :where([style^=border-bottom-width],[style*=";border-bottom-width"],[style*="; border-bottom-width"]){border-bottom-style:solid}html :where([style^=border-left-width],[style*=";border-left-width"],[style*="; border-left-width"]){border-left-style:solid}html :where(img[class*=wp-image-]){height:auto;max-width:100%}:where(figure){margin:0 0 1em}html :where(.is-position-sticky){--wp-admin--admin-bar--position-offset:var(--wp-admin--admin-bar--height,0px)}@media screen and (max-width:600px){html :where(.is-position-sticky){--wp-admin--admin-bar--position-offset:0px}}
+
+/*# sourceURL=/wp-includes/css/dist/block-library/common.min.css */
+</style><style id="classic-theme-styles-inline-css">/*! This file is auto-generated */
+.wp-block-button__link{color:#fff;background-color:#32373c;border-radius:9999px;box-shadow:none;text-decoration:none;padding:calc(.667em + 2px) calc(1.333em + 2px);font-size:1.125em}.wp-block-file__button{background:#32373c;color:#fff;text-decoration:none}
+/*# sourceURL=/wp-includes/css/classic-themes.min.css */</style><style id="global-styles-inline-css">
+:root{--wp--preset--aspect-ratio--square: 1;--wp--preset--aspect-ratio--4-3: 4/3;--wp--preset--aspect-ratio--3-4: 3/4;--wp--preset--aspect-ratio--3-2: 3/2;--wp--preset--aspect-ratio--2-3: 2/3;--wp--preset--aspect-ratio--16-9: 16/9;--wp--preset--aspect-ratio--9-16: 9/16;--wp--preset--color--black: #000000;--wp--preset--color--cyan-bluish-gray: #abb8c3;--wp--preset--color--white: #ffffff;--wp--preset--color--pale-pink: #f78da7;--wp--preset--color--vivid-red: #cf2e2e;--wp--preset--color--luminous-vivid-orange: #ff6900;--wp--preset--color--luminous-vivid-amber: #fcb900;--wp--preset--color--light-green-cyan: #7bdcb5;--wp--preset--color--vivid-green-cyan: #00d084;--wp--preset--color--pale-cyan-blue: #8ed1fc;--wp--preset--color--vivid-cyan-blue: #0693e3;--wp--preset--color--vivid-purple: #9b51e0;--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple: linear-gradient(135deg,rgb(6,147,227) 0%,rgb(155,81,224) 100%);--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan: linear-gradient(135deg,rgb(122,220,180) 0%,rgb(0,208,130) 100%);--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange: linear-gradient(135deg,rgb(252,185,0) 0%,rgb(255,105,0) 100%);--wp--preset--gradient--luminous-vivid-orange-to-vivid-red: linear-gradient(135deg,rgb(255,105,0) 0%,rgb(207,46,46) 100%);--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray: linear-gradient(135deg,rgb(238,238,238) 0%,rgb(169,184,195) 100%);--wp--preset--gradient--cool-to-warm-spectrum: linear-gradient(135deg,rgb(74,234,220) 0%,rgb(151,120,209) 20%,rgb(207,42,186) 40%,rgb(238,44,130) 60%,rgb(251,105,98) 80%,rgb(254,248,76) 100%);--wp--preset--gradient--blush-light-purple: linear-gradient(135deg,rgb(255,206,236) 0%,rgb(152,150,240) 100%);--wp--preset--gradient--blush-bordeaux: linear-gradient(135deg,rgb(254,205,165) 0%,rgb(254,45,45) 50%,rgb(107,0,62) 100%);--wp--preset--gradient--luminous-dusk: linear-gradient(135deg,rgb(255,203,112) 0%,rgb(199,81,192) 50%,rgb(65,88,208) 100%);--wp--preset--gradient--pale-ocean: linear-gradient(135deg,rgb(255,245,203) 0%,rgb(182,227,212) 50%,rgb(51,167,181) 100%);--wp--preset--gradient--electric-grass: linear-gradient(135deg,rgb(202,248,128) 0%,rgb(113,206,126) 100%);--wp--preset--gradient--midnight: linear-gradient(135deg,rgb(2,3,129) 0%,rgb(40,116,252) 100%);--wp--preset--font-size--small: 13px;--wp--preset--font-size--medium: 20px;--wp--preset--font-size--large: 36px;--wp--preset--font-size--x-large: 42px;--wp--preset--spacing--20: 0.44rem;--wp--preset--spacing--30: 0.67rem;--wp--preset--spacing--40: 1rem;--wp--preset--spacing--50: 1.5rem;--wp--preset--spacing--60: 2.25rem;--wp--preset--spacing--70: 3.38rem;--wp--preset--spacing--80: 5.06rem;--wp--preset--shadow--natural: 6px 6px 9px rgba(0, 0, 0, 0.2);--wp--preset--shadow--deep: 12px 12px 50px rgba(0, 0, 0, 0.4);--wp--preset--shadow--sharp: 6px 6px 0px rgba(0, 0, 0, 0.2);--wp--preset--shadow--outlined: 6px 6px 0px -3px rgb(255, 255, 255), 6px 6px rgb(0, 0, 0);--wp--preset--shadow--crisp: 6px 6px 0px rgb(0, 0, 0);}.wp-block-button{--wp--preset--dimension--25: 25%;--wp--preset--dimension--50: 50%;--wp--preset--dimension--75: 75%;--wp--preset--dimension--100: 100%;}:where(body) { margin: 0; }:where(.is-layout-flex){gap: 0.5em;}:where(.is-layout-grid){gap: 0.5em;}body .is-layout-flex{display: flex;}.is-layout-flex{flex-wrap: wrap;align-items: center;}.is-layout-flex > :is(*, div){margin: 0;}body .is-layout-grid{display: grid;}.is-layout-grid > :is(*, div){margin: 0;}body{padding-top: 0px;padding-right: 0px;padding-bottom: 0px;padding-left: 0px;}:root :where(.wp-element-button, .wp-block-button__link){background-color: #32373c;border-width: 0;color: #fff;font-family: inherit;font-size: inherit;font-style: inherit;font-weight: inherit;letter-spacing: inherit;line-height: inherit;padding-top: calc(0.667em + 2px);padding-right: calc(1.333em + 2px);padding-bottom: calc(0.667em + 2px);padding-left: calc(1.333em + 2px);text-decoration: none;text-transform: inherit;}.has-black-color{color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-color{color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-color{color: var(--wp--preset--color--white) !important;}.has-pale-pink-color{color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-color{color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-color{color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-color{color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-color{color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-color{color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-color{color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-color{color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-color{color: var(--wp--preset--color--vivid-purple) !important;}.has-black-background-color{background-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-background-color{background-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-background-color{background-color: var(--wp--preset--color--white) !important;}.has-pale-pink-background-color{background-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-background-color{background-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-background-color{background-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-background-color{background-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-background-color{background-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-background-color{background-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-background-color{background-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-background-color{background-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-background-color{background-color: var(--wp--preset--color--vivid-purple) !important;}.has-black-border-color{border-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-border-color{border-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-border-color{border-color: var(--wp--preset--color--white) !important;}.has-pale-pink-border-color{border-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-border-color{border-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-border-color{border-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-border-color{border-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-border-color{border-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-border-color{border-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-border-color{border-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-border-color{border-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-border-color{border-color: var(--wp--preset--color--vivid-purple) !important;}.has-vivid-cyan-blue-to-vivid-purple-gradient-background{background: var(--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple) !important;}.has-light-green-cyan-to-vivid-green-cyan-gradient-background{background: var(--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan) !important;}.has-luminous-vivid-amber-to-luminous-vivid-orange-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange) !important;}.has-luminous-vivid-orange-to-vivid-red-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-orange-to-vivid-red) !important;}.has-very-light-gray-to-cyan-bluish-gray-gradient-background{background: var(--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray) !important;}.has-cool-to-warm-spectrum-gradient-background{background: var(--wp--preset--gradient--cool-to-warm-spectrum) !important;}.has-blush-light-purple-gradient-background{background: var(--wp--preset--gradient--blush-light-purple) !important;}.has-blush-bordeaux-gradient-background{background: var(--wp--preset--gradient--blush-bordeaux) !important;}.has-luminous-dusk-gradient-background{background: var(--wp--preset--gradient--luminous-dusk) !important;}.has-pale-ocean-gradient-background{background: var(--wp--preset--gradient--pale-ocean) !important;}.has-electric-grass-gradient-background{background: var(--wp--preset--gradient--electric-grass) !important;}.has-midnight-gradient-background{background: var(--wp--preset--gradient--midnight) !important;}.has-small-font-size{font-size: var(--wp--preset--font-size--small) !important;}.has-medium-font-size{font-size: var(--wp--preset--font-size--medium) !important;}.has-large-font-size{font-size: var(--wp--preset--font-size--large) !important;}.has-x-large-font-size{font-size: var(--wp--preset--font-size--x-large) !important;}
+/*# sourceURL=global-styles-inline-css */
+</style>
+<link data-minify="1"
+rel='stylesheet' id='wp-smart-crop-renderer-css' href='https://frq.gouv.qc.ca/app/cache/min/1/app/plugins/wp-smartcrop/css/image-renderer.css?ver=1792525586' media='all' /><link data-minify="1"
+rel='stylesheet' id='main-css' href='https://frq.gouv.qc.ca/app/cache/min/1/app/themes/webit/assets/generated/css/theme.css?ver=1792525586' media='all' /> <script data-minify="1" id="jquery-js" src="https://frq.gouv.qc.ca/app/cache/min/1/jquery-3.4.1.min.js?ver=1792525586"></script> <script id="gform_json-js" defer='defer' src="https://frq.gouv.qc.ca/app/plugins/webit-gravityforms/js/jquery.json.min.js?ver=3.2.0"></script> <script id="gform_gravityforms-js-extra">var gf_global = {"gf_currency_config":{"name":"Dollar canadien","symbol_left":"$","symbol_right":"CAD","symbol_padding":" ","thousand_separator":",","decimal_separator":".","decimals":2,"code":"CAD"},"base_url":"https://frq.gouv.qc.ca/app/plugins/webit-gravityforms","number_formats":[],"version_hash":"837aee4f7172eeac911e0d9f727450e4","countries":{"AF":"Afghanistan","AX":"Iles Aland","AL":"Albanie","DZ":"Alg\u00e9rie","AS":"Samoa am\u00e9ricaines","AD":"Andorre","AO":"Angola","AI":"Anguilla","AQ":"Antarctique","AG":"Antigua-et-Barbuda","AR":"Argentine","AM":"Arm\u00e9nie","AW":"Aruba","AU":"Australie","AT":"Autriche","AZ":"Azerba\u00efdjan","BS":"Bahamas","BH":"Bahre\u00efn","BD":"Bangladesh","BB":"La Barbade","BY":"Belarus","BE":"Belgique","BZ":"Belize","BJ":"B\u00e9nin","BM":"Bermudes","BT":"Bhoutan","BO":"Bolivie","BQ":"Bonaire, Saint-Eustache et Saba","BA":"Bosnie-Herz\u00e9govine","BW":"Botswana","BV":"\u00cele Bouvet","BR":"Br\u00e9sil","IO":"Territoire britannique de l'oc\u00e9an Indien","BN":"Brunei Darussalam","BG":"Bulgarie","BF":"Burkina Faso","BI":"Burundi","CV":"Cap-Vert","KH":"Cambodge","CM":"Cameroun","CA":"Canada","KY":"\u00celes Cayman","CF":"R\u00e9publique centrafricaine","TD":"Tchad","CL":"Chili","CN":"Chine","CX":"\u00cele de No\u00ebl","CC":"\u00celes Cocos","CO":"Colombie","KM":"Comores","CD":"R\u00e9publique d\u00e9mocratique du Congo","CG":"Congo","CK":"\u00celes Cook","CR":"Costa Rica","CI":"C\u00f4te d\u2019Ivoire","HR":"Croatie","CU":"Cuba","CW":"Cura\u00e7ao","CY":"Chypre","CZ":"Czechia","DK":"Danemark","DJ":"Djibouti","DM":"Dominique","DO":"R\u00e9publique Dominicaine","EC":"\u00c9quateur","EG":"\u00c9gypte","SV":"Salvador","GQ":"Guin\u00e9e \u00e9quatoriale","ER":"\u00c9rythr\u00e9e","EE":"Estonie","SZ":"Eswatini","ET":"\u00c9thiopie","FK":"\u00celes Falkland","FO":"\u00celes F\u00e9ro\u00e9","FJ":"Fidji","FI":"Finlande","FR":"France","GF":"Guin\u00e9e Fran\u00e7aise","PF":"Polyn\u00e9sie fran\u00e7aise","TF":"Terres australes Fran\u00e7aises","GA":"Gabon","GM":"Gambie","GE":"G\u00e9orgie","DE":"Allemagne","GH":"Ghana","GI":"Gibraltar","GR":"Gr\u00e8ce","GL":"Groenland","GD":"Grenade","GP":"Guadeloupe","GU":"Guam","GT":"Guatemala","GG":"Guernesey","GN":"Guin\u00e9e","GW":"Guin\u00e9e-Bissau","GY":"Guyane","HT":"Ha\u00efti","HM":"Heard Island and McDonald Islands","VA":"Saint-Si\u00e8ge","HN":"Honduras","HK":"Hong Kong","HU":"Hongrie","IS":"Islande","IN":"Inde","ID":"Indon\u00e9sie","IR":"Iran","IQ":"Irak","IE":"Irlande","IM":"\u00cele de Man","IL":"Isra\u00ebl","IT":"Italie","JM":"Jama\u00efque","JP":"Japon","JE":"Jersey","JO":"Jordanie","KZ":"Kazakhstan","KE":"Kenya","KI":"Kiribati","KP":"Korea, Democratic People's Republic of","KR":"Korea, Republic of","KW":"Kowe\u00eft","KG":"Kirghizistan","LA":"R\u00e9publique d\u00e9mocratique populaire Lao","LV":"Lettonie","LB":"Liban","LS":"Lesotho","LR":"Liberia","LY":"Libye","LI":"Liechtenstein","LT":"Lituanie","LU":"Luxembourg","MO":"Macao","MG":"Madagascar","MW":"Malawi","MY":"Malaisie","MV":"Maldives","ML":"Mali","MT":"Malte","MH":"\u00celes Marshall","MQ":"Martinique","MR":"Mauritanie","MU":"\u00cele Maurice","YT":"Mayotte","MX":"Mexique","FM":"Micron\u00e9sie","MD":"Moldavie","MC":"Monaco","MN":"Mongolie","ME":"Mont\u00e9n\u00e9gro","MS":"Montserrat","MA":"Maroc","MZ":"Mozambique","MM":"Myanmar","NA":"Namibie","NR":"Nauru","NP":"N\u00e9pal","NL":"Pays-Bas","NC":"Nouvelle Cal\u00e9donie","NZ":"Nouvelle-Z\u00e9lande","NI":"Nicaragua","NE":"Niger","NG":"Nig\u00e9ria","NU":"Niue","NF":"\u00cele de Norfolk","MK":"North Macedonia","MP":"\u00celes Mariannes du Nord","NO":"Norv\u00e8ge","OM":"Oman","PK":"Pakistan","PW":"Palau","PS":"\u00c9tat palestinien","PA":"Panama","PG":"Papouasie-Nouvelle-Guin\u00e9e","PY":"Paraguay","PE":"P\u00e9rou","PH":"Philippines","PN":"Pitcairn","PL":"Pologne","PT":"Portugal","PR":"Porto Rico","QA":"Qatar","RE":"La R\u00e9union","RO":"Roumanie","RU":"Russian Federation","RW":"Rwanda","BL":"Saint Barth\u00e9lemy","SH":"Saint Helena, Ascension and Tristan da Cunha","KN":"Saint-Christophe-et-Nevis","LC":"Sainte-Lucie","MF":"Saint Martin","PM":"Saint-Pierre-et-Miquelon","VC":"Saint-Vincent-et-les Grenadines","WS":"Samoa","SM":"Saint-Marin","ST":"Sao Tom\u00e9 et Principe","SA":"Arabie Saoudite","SN":"S\u00e9n\u00e9gal","RS":"Serbie","SC":"Seychelles","SL":"Sierra Leone","SG":"Singapour","SX":"Saint-Martin","SK":"Slovaquie","SI":"Slov\u00e9nie","SB":"\u00celes Salomon","SO":"Somalie","ZA":"Afrique du Sud","GS":"South Georgia and the South Sandwich Islands","SS":"Soudan du Sud","ES":"Espagne","LK":"Sri Lanka","SD":"Soudan","SR":"Suriname","SJ":"Svalbard and Jan Mayen","SE":"Su\u00e8de","CH":"Suisse","SY":"Syria Arab Republic","TW":"Ta\u00efwan","TJ":"Tadjikistan","TZ":"Tanzania, the United Republic of","TH":"Tha\u00eflande","TL":"Timor-Leste","TG":"Togo","TK":"Tokelau","TO":"Tonga","TT":"Trinit\u00e9 et Tobago","TN":"Tunisie","TR":"T\u00fcrkiye","TM":"Turkm\u00e9nistan","TC":"\u00celes Turques-et-Ca\u00efques","TV":"Tuvalu","UG":"Ouganda","UA":"Ukraine","AE":"\u00c9mirats arabes unis","GB":"Royaume-Uni","US":"\u00c9tats-Unis","UY":"Uruguay","UM":"\u00celes mineures \u00e9loign\u00e9es des \u00c9tats-Unis","UZ":"Ouzb\u00e9kistan","VU":"Vanuatu","VE":"Venezuela","VN":"Viet Nam","VG":"\u00celes Vierges britanniques","VI":"\u00celes Vierges am\u00e9ricaines","WF":"Wallis et Futuna","EH":"Sahara occidental","YE":"Y\u00e9men","ZM":"Zambie","ZW":"Zimbabwe"},"strings":{"newRowAdded":"Nouvelle ligne ajout\u00e9e.","rowRemoved":"Ligne supprim\u00e9e","formSaved":"Le formulaire a \u00e9t\u00e9 sauvegard\u00e9. Le contenu contient un lien pour revenir et compl\u00e9ter le formulaire."}};
+var gf_global = {"gf_currency_config":{"name":"Dollar canadien","symbol_left":"$","symbol_right":"CAD","symbol_padding":" ","thousand_separator":",","decimal_separator":".","decimals":2,"code":"CAD"},"base_url":"https://frq.gouv.qc.ca/app/plugins/webit-gravityforms","number_formats":[],"version_hash":"837aee4f7172eeac911e0d9f727450e4","countries":{"AF":"Afghanistan","AX":"Iles Aland","AL":"Albanie","DZ":"Alg\u00e9rie","AS":"Samoa am\u00e9ricaines","AD":"Andorre","AO":"Angola","AI":"Anguilla","AQ":"Antarctique","AG":"Antigua-et-Barbuda","AR":"Argentine","AM":"Arm\u00e9nie","AW":"Aruba","AU":"Australie","AT":"Autriche","AZ":"Azerba\u00efdjan","BS":"Bahamas","BH":"Bahre\u00efn","BD":"Bangladesh","BB":"La Barbade","BY":"Belarus","BE":"Belgique","BZ":"Belize","BJ":"B\u00e9nin","BM":"Bermudes","BT":"Bhoutan","BO":"Bolivie","BQ":"Bonaire, Saint-Eustache et Saba","BA":"Bosnie-Herz\u00e9govine","BW":"Botswana","BV":"\u00cele Bouvet","BR":"Br\u00e9sil","IO":"Territoire britannique de l'oc\u00e9an Indien","BN":"Brunei Darussalam","BG":"Bulgarie","BF":"Burkina Faso","BI":"Burundi","CV":"Cap-Vert","KH":"Cambodge","CM":"Cameroun","CA":"Canada","KY":"\u00celes Cayman","CF":"R\u00e9publique centrafricaine","TD":"Tchad","CL":"Chili","CN":"Chine","CX":"\u00cele de No\u00ebl","CC":"\u00celes Cocos","CO":"Colombie","KM":"Comores","CD":"R\u00e9publique d\u00e9mocratique du Congo","CG":"Congo","CK":"\u00celes Cook","CR":"Costa Rica","CI":"C\u00f4te d\u2019Ivoire","HR":"Croatie","CU":"Cuba","CW":"Cura\u00e7ao","CY":"Chypre","CZ":"Czechia","DK":"Danemark","DJ":"Djibouti","DM":"Dominique","DO":"R\u00e9publique Dominicaine","EC":"\u00c9quateur","EG":"\u00c9gypte","SV":"Salvador","GQ":"Guin\u00e9e \u00e9quatoriale","ER":"\u00c9rythr\u00e9e","EE":"Estonie","SZ":"Eswatini","ET":"\u00c9thiopie","FK":"\u00celes Falkland","FO":"\u00celes F\u00e9ro\u00e9","FJ":"Fidji","FI":"Finlande","FR":"France","GF":"Guin\u00e9e Fran\u00e7aise","PF":"Polyn\u00e9sie fran\u00e7aise","TF":"Terres australes Fran\u00e7aises","GA":"Gabon","GM":"Gambie","GE":"G\u00e9orgie","DE":"Allemagne","GH":"Ghana","GI":"Gibraltar","GR":"Gr\u00e8ce","GL":"Groenland","GD":"Grenade","GP":"Guadeloupe","GU":"Guam","GT":"Guatemala","GG":"Guernesey","GN":"Guin\u00e9e","GW":"Guin\u00e9e-Bissau","GY":"Guyane","HT":"Ha\u00efti","HM":"Heard Island and McDonald Islands","VA":"Saint-Si\u00e8ge","HN":"Honduras","HK":"Hong Kong","HU":"Hongrie","IS":"Islande","IN":"Inde","ID":"Indon\u00e9sie","IR":"Iran","IQ":"Irak","IE":"Irlande","IM":"\u00cele de Man","IL":"Isra\u00ebl","IT":"Italie","JM":"Jama\u00efque","JP":"Japon","JE":"Jersey","JO":"Jordanie","KZ":"Kazakhstan","KE":"Kenya","KI":"Kiribati","KP":"Korea, Democratic People's Republic of","KR":"Korea, Republic of","KW":"Kowe\u00eft","KG":"Kirghizistan","LA":"R\u00e9publique d\u00e9mocratique populaire Lao","LV":"Lettonie","LB":"Liban","LS":"Lesotho","LR":"Liberia","LY":"Libye","LI":"Liechtenstein","LT":"Lituanie","LU":"Luxembourg","MO":"Macao","MG":"Madagascar","MW":"Malawi","MY":"Malaisie","MV":"Maldives","ML":"Mali","MT":"Malte","MH":"\u00celes Marshall","MQ":"Martinique","MR":"Mauritanie","MU":"\u00cele Maurice","YT":"Mayotte","MX":"Mexique","FM":"Micron\u00e9sie","MD":"Moldavie","MC":"Monaco","MN":"Mongolie","ME":"Mont\u00e9n\u00e9gro","MS":"Montserrat","MA":"Maroc","MZ":"Mozambique","MM":"Myanmar","NA":"Namibie","NR":"Nauru","NP":"N\u00e9pal","NL":"Pays-Bas","NC":"Nouvelle Cal\u00e9donie","NZ":"Nouvelle-Z\u00e9lande","NI":"Nicaragua","NE":"Niger","NG":"Nig\u00e9ria","NU":"Niue","NF":"\u00cele de Norfolk","MK":"North Macedonia","MP":"\u00celes Mariannes du Nord","NO":"Norv\u00e8ge","OM":"Oman","PK":"Pakistan","PW":"Palau","PS":"\u00c9tat palestinien","PA":"Panama","PG":"Papouasie-Nouvelle-Guin\u00e9e","PY":"Paraguay","PE":"P\u00e9rou","PH":"Philippines","PN":"Pitcairn","PL":"Pologne","PT":"Portugal","PR":"Porto Rico","QA":"Qatar","RE":"La R\u00e9union","RO":"Roumanie","RU":"Russian Federation","RW":"Rwanda","BL":"Saint Barth\u00e9lemy","SH":"Saint Helena, Ascension and Tristan da Cunha","KN":"Saint-Christophe-et-Nevis","LC":"Sainte-Lucie","MF":"Saint Martin","PM":"Saint-Pierre-et-Miquelon","VC":"Saint-Vincent-et-les Grenadines","WS":"Samoa","SM":"Saint-Marin","ST":"Sao Tom\u00e9 et Principe","SA":"Arabie Saoudite","SN":"S\u00e9n\u00e9gal","RS":"Serbie","SC":"Seychelles","SL":"Sierra Leone","SG":"Singapour","SX":"Saint-Martin","SK":"Slovaquie","SI":"Slov\u00e9nie","SB":"\u00celes Salomon","SO":"Somalie","ZA":"Afrique du Sud","GS":"South Georgia and the South Sandwich Islands","SS":"Soudan du Sud","ES":"Espagne","LK":"Sri Lanka","SD":"Soudan","SR":"Suriname","SJ":"Svalbard and Jan Mayen","SE":"Su\u00e8de","CH":"Suisse","SY":"Syria Arab Republic","TW":"Ta\u00efwan","TJ":"Tadjikistan","TZ":"Tanzania, the United Republic of","TH":"Tha\u00eflande","TL":"Timor-Leste","TG":"Togo","TK":"Tokelau","TO":"Tonga","TT":"Trinit\u00e9 et Tobago","TN":"Tunisie","TR":"T\u00fcrkiye","TM":"Turkm\u00e9nistan","TC":"\u00celes Turques-et-Ca\u00efques","TV":"Tuvalu","UG":"Ouganda","UA":"Ukraine","AE":"\u00c9mirats arabes unis","GB":"Royaume-Uni","US":"\u00c9tats-Unis","UY":"Uruguay","UM":"\u00celes mineures \u00e9loign\u00e9es des \u00c9tats-Unis","UZ":"Ouzb\u00e9kistan","VU":"Vanuatu","VE":"Venezuela","VN":"Viet Nam","VG":"\u00celes Vierges britanniques","VI":"\u00celes Vierges am\u00e9ricaines","WF":"Wallis et Futuna","EH":"Sahara occidental","YE":"Y\u00e9men","ZM":"Zambie","ZW":"Zimbabwe"},"strings":{"newRowAdded":"Nouvelle ligne ajout\u00e9e.","rowRemoved":"Ligne supprim\u00e9e","formSaved":"Le formulaire a \u00e9t\u00e9 sauvegard\u00e9. Le contenu contient un lien pour revenir et compl\u00e9ter le formulaire."}};
+var gf_global = {"gf_currency_config":{"name":"Dollar canadien","symbol_left":"$","symbol_right":"CAD","symbol_padding":" ","thousand_separator":",","decimal_separator":".","decimals":2,"code":"CAD"},"base_url":"https://frq.gouv.qc.ca/app/plugins/webit-gravityforms","number_formats":[],"version_hash":"837aee4f7172eeac911e0d9f727450e4","countries":{"AF":"Afghanistan","AX":"Iles Aland","AL":"Albanie","DZ":"Alg\u00e9rie","AS":"Samoa am\u00e9ricaines","AD":"Andorre","AO":"Angola","AI":"Anguilla","AQ":"Antarctique","AG":"Antigua-et-Barbuda","AR":"Argentine","AM":"Arm\u00e9nie","AW":"Aruba","AU":"Australie","AT":"Autriche","AZ":"Azerba\u00efdjan","BS":"Bahamas","BH":"Bahre\u00efn","BD":"Bangladesh","BB":"La Barbade","BY":"Belarus","BE":"Belgique","BZ":"Belize","BJ":"B\u00e9nin","BM":"Bermudes","BT":"Bhoutan","BO":"Bolivie","BQ":"Bonaire, Saint-Eustache et Saba","BA":"Bosnie-Herz\u00e9govine","BW":"Botswana","BV":"\u00cele Bouvet","BR":"Br\u00e9sil","IO":"Territoire britannique de l'oc\u00e9an Indien","BN":"Brunei Darussalam","BG":"Bulgarie","BF":"Burkina Faso","BI":"Burundi","CV":"Cap-Vert","KH":"Cambodge","CM":"Cameroun","CA":"Canada","KY":"\u00celes Cayman","CF":"R\u00e9publique centrafricaine","TD":"Tchad","CL":"Chili","CN":"Chine","CX":"\u00cele de No\u00ebl","CC":"\u00celes Cocos","CO":"Colombie","KM":"Comores","CD":"R\u00e9publique d\u00e9mocratique du Congo","CG":"Congo","CK":"\u00celes Cook","CR":"Costa Rica","CI":"C\u00f4te d\u2019Ivoire","HR":"Croatie","CU":"Cuba","CW":"Cura\u00e7ao","CY":"Chypre","CZ":"Czechia","DK":"Danemark","DJ":"Djibouti","DM":"Dominique","DO":"R\u00e9publique Dominicaine","EC":"\u00c9quateur","EG":"\u00c9gypte","SV":"Salvador","GQ":"Guin\u00e9e \u00e9quatoriale","ER":"\u00c9rythr\u00e9e","EE":"Estonie","SZ":"Eswatini","ET":"\u00c9thiopie","FK":"\u00celes Falkland","FO":"\u00celes F\u00e9ro\u00e9","FJ":"Fidji","FI":"Finlande","FR":"France","GF":"Guin\u00e9e Fran\u00e7aise","PF":"Polyn\u00e9sie fran\u00e7aise","TF":"Terres australes Fran\u00e7aises","GA":"Gabon","GM":"Gambie","GE":"G\u00e9orgie","DE":"Allemagne","GH":"Ghana","GI":"Gibraltar","GR":"Gr\u00e8ce","GL":"Groenland","GD":"Grenade","GP":"Guadeloupe","GU":"Guam","GT":"Guatemala","GG":"Guernesey","GN":"Guin\u00e9e","GW":"Guin\u00e9e-Bissau","GY":"Guyane","HT":"Ha\u00efti","HM":"Heard Island and McDonald Islands","VA":"Saint-Si\u00e8ge","HN":"Honduras","HK":"Hong Kong","HU":"Hongrie","IS":"Islande","IN":"Inde","ID":"Indon\u00e9sie","IR":"Iran","IQ":"Irak","IE":"Irlande","IM":"\u00cele de Man","IL":"Isra\u00ebl","IT":"Italie","JM":"Jama\u00efque","JP":"Japon","JE":"Jersey","JO":"Jordanie","KZ":"Kazakhstan","KE":"Kenya","KI":"Kiribati","KP":"Korea, Democratic People's Republic of","KR":"Korea, Republic of","KW":"Kowe\u00eft","KG":"Kirghizistan","LA":"R\u00e9publique d\u00e9mocratique populaire Lao","LV":"Lettonie","LB":"Liban","LS":"Lesotho","LR":"Liberia","LY":"Libye","LI":"Liechtenstein","LT":"Lituanie","LU":"Luxembourg","MO":"Macao","MG":"Madagascar","MW":"Malawi","MY":"Malaisie","MV":"Maldives","ML":"Mali","MT":"Malte","MH":"\u00celes Marshall","MQ":"Martinique","MR":"Mauritanie","MU":"\u00cele Maurice","YT":"Mayotte","MX":"Mexique","FM":"Micron\u00e9sie","MD":"Moldavie","MC":"Monaco","MN":"Mongolie","ME":"Mont\u00e9n\u00e9gro","MS":"Montserrat","MA":"Maroc","MZ":"Mozambique","MM":"Myanmar","NA":"Namibie","NR":"Nauru","NP":"N\u00e9pal","NL":"Pays-Bas","NC":"Nouvelle Cal\u00e9donie","NZ":"Nouvelle-Z\u00e9lande","NI":"Nicaragua","NE":"Niger","NG":"Nig\u00e9ria","NU":"Niue","NF":"\u00cele de Norfolk","MK":"North Macedonia","MP":"\u00celes Mariannes du Nord","NO":"Norv\u00e8ge","OM":"Oman","PK":"Pakistan","PW":"Palau","PS":"\u00c9tat palestinien","PA":"Panama","PG":"Papouasie-Nouvelle-Guin\u00e9e","PY":"Paraguay","PE":"P\u00e9rou","PH":"Philippines","PN":"Pitcairn","PL":"Pologne","PT":"Portugal","PR":"Porto Rico","QA":"Qatar","RE":"La R\u00e9union","RO":"Roumanie","RU":"Russian Federation","RW":"Rwanda","BL":"Saint Barth\u00e9lemy","SH":"Saint Helena, Ascension and Tristan da Cunha","KN":"Saint-Christophe-et-Nevis","LC":"Sainte-Lucie","MF":"Saint Martin","PM":"Saint-Pierre-et-Miquelon","VC":"Saint-Vincent-et-les Grenadines","WS":"Samoa","SM":"Saint-Marin","ST":"Sao Tom\u00e9 et Principe","SA":"Arabie Saoudite","SN":"S\u00e9n\u00e9gal","RS":"Serbie","SC":"Seychelles","SL":"Sierra Leone","SG":"Singapour","SX":"Saint-Martin","SK":"Slovaquie","SI":"Slov\u00e9nie","SB":"\u00celes Salomon","SO":"Somalie","ZA":"Afrique du Sud","GS":"South Georgia and the South Sandwich Islands","SS":"Soudan du Sud","ES":"Espagne","LK":"Sri Lanka","SD":"Soudan","SR":"Suriname","SJ":"Svalbard and Jan Mayen","SE":"Su\u00e8de","CH":"Suisse","SY":"Syria Arab Republic","TW":"Ta\u00efwan","TJ":"Tadjikistan","TZ":"Tanzania, the United Republic of","TH":"Tha\u00eflande","TL":"Timor-Leste","TG":"Togo","TK":"Tokelau","TO":"Tonga","TT":"Trinit\u00e9 et Tobago","TN":"Tunisie","TR":"T\u00fcrkiye","TM":"Turkm\u00e9nistan","TC":"\u00celes Turques-et-Ca\u00efques","TV":"Tuvalu","UG":"Ouganda","UA":"Ukraine","AE":"\u00c9mirats arabes unis","GB":"Royaume-Uni","US":"\u00c9tats-Unis","UY":"Uruguay","UM":"\u00celes mineures \u00e9loign\u00e9es des \u00c9tats-Unis","UZ":"Ouzb\u00e9kistan","VU":"Vanuatu","VE":"Venezuela","VN":"Viet Nam","VG":"\u00celes Vierges britanniques","VI":"\u00celes Vierges am\u00e9ricaines","WF":"Wallis et Futuna","EH":"Sahara occidental","YE":"Y\u00e9men","ZM":"Zambie","ZW":"Zimbabwe"},"strings":{"newRowAdded":"Nouvelle ligne ajout\u00e9e.","rowRemoved":"Ligne supprim\u00e9e","formSaved":"Le formulaire a \u00e9t\u00e9 sauvegard\u00e9. Le contenu contient un lien pour revenir et compl\u00e9ter le formulaire."}};
+var gf_global = {"gf_currency_config":{"name":"Dollar canadien","symbol_left":"$","symbol_right":"CAD","symbol_padding":" ","thousand_separator":",","decimal_separator":".","decimals":2,"code":"CAD"},"base_url":"https://frq.gouv.qc.ca/app/plugins/webit-gravityforms","number_formats":[],"version_hash":"837aee4f7172eeac911e0d9f727450e4","countries":{"AF":"Afghanistan","AX":"Iles Aland","AL":"Albanie","DZ":"Alg\u00e9rie","AS":"Samoa am\u00e9ricaines","AD":"Andorre","AO":"Angola","AI":"Anguilla","AQ":"Antarctique","AG":"Antigua-et-Barbuda","AR":"Argentine","AM":"Arm\u00e9nie","AW":"Aruba","AU":"Australie","AT":"Autriche","AZ":"Azerba\u00efdjan","BS":"Bahamas","BH":"Bahre\u00efn","BD":"Bangladesh","BB":"La Barbade","BY":"Belarus","BE":"Belgique","BZ":"Belize","BJ":"B\u00e9nin","BM":"Bermudes","BT":"Bhoutan","BO":"Bolivie","BQ":"Bonaire, Saint-Eustache et Saba","BA":"Bosnie-Herz\u00e9govine","BW":"Botswana","BV":"\u00cele Bouvet","BR":"Br\u00e9sil","IO":"Territoire britannique de l'oc\u00e9an Indien","BN":"Brunei Darussalam","BG":"Bulgarie","BF":"Burkina Faso","BI":"Burundi","CV":"Cap-Vert","KH":"Cambodge","CM":"Cameroun","CA":"Canada","KY":"\u00celes Cayman","CF":"R\u00e9publique centrafricaine","TD":"Tchad","CL":"Chili","CN":"Chine","CX":"\u00cele de No\u00ebl","CC":"\u00celes Cocos","CO":"Colombie","KM":"Comores","CD":"R\u00e9publique d\u00e9mocratique du Congo","CG":"Congo","CK":"\u00celes Cook","CR":"Costa Rica","CI":"C\u00f4te d\u2019Ivoire","HR":"Croatie","CU":"Cuba","CW":"Cura\u00e7ao","CY":"Chypre","CZ":"Czechia","DK":"Danemark","DJ":"Djibouti","DM":"Dominique","DO":"R\u00e9publique Dominicaine","EC":"\u00c9quateur","EG":"\u00c9gypte","SV":"Salvador","GQ":"Guin\u00e9e \u00e9quatoriale","ER":"\u00c9rythr\u00e9e","EE":"Estonie","SZ":"Eswatini","ET":"\u00c9thiopie","FK":"\u00celes Falkland","FO":"\u00celes F\u00e9ro\u00e9","FJ":"Fidji","FI":"Finlande","FR":"France","GF":"Guin\u00e9e Fran\u00e7aise","PF":"Polyn\u00e9sie fran\u00e7aise","TF":"Terres australes Fran\u00e7aises","GA":"Gabon","GM":"Gambie","GE":"G\u00e9orgie","DE":"Allemagne","GH":"Ghana","GI":"Gibraltar","GR":"Gr\u00e8ce","GL":"Groenland","GD":"Grenade","GP":"Guadeloupe","GU":"Guam","GT":"Guatemala","GG":"Guernesey","GN":"Guin\u00e9e","GW":"Guin\u00e9e-Bissau","GY":"Guyane","HT":"Ha\u00efti","HM":"Heard Island and McDonald Islands","VA":"Saint-Si\u00e8ge","HN":"Honduras","HK":"Hong Kong","HU":"Hongrie","IS":"Islande","IN":"Inde","ID":"Indon\u00e9sie","IR":"Iran","IQ":"Irak","IE":"Irlande","IM":"\u00cele de Man","IL":"Isra\u00ebl","IT":"Italie","JM":"Jama\u00efque","JP":"Japon","JE":"Jersey","JO":"Jordanie","KZ":"Kazakhstan","KE":"Kenya","KI":"Kiribati","KP":"Korea, Democratic People's Republic of","KR":"Korea, Republic of","KW":"Kowe\u00eft","KG":"Kirghizistan","LA":"R\u00e9publique d\u00e9mocratique populaire Lao","LV":"Lettonie","LB":"Liban","LS":"Lesotho","LR":"Liberia","LY":"Libye","LI":"Liechtenstein","LT":"Lituanie","LU":"Luxembourg","MO":"Macao","MG":"Madagascar","MW":"Malawi","MY":"Malaisie","MV":"Maldives","ML":"Mali","MT":"Malte","MH":"\u00celes Marshall","MQ":"Martinique","MR":"Mauritanie","MU":"\u00cele Maurice","YT":"Mayotte","MX":"Mexique","FM":"Micron\u00e9sie","MD":"Moldavie","MC":"Monaco","MN":"Mongolie","ME":"Mont\u00e9n\u00e9gro","MS":"Montserrat","MA":"Maroc","MZ":"Mozambique","MM":"Myanmar","NA":"Namibie","NR":"Nauru","NP":"N\u00e9pal","NL":"Pays-Bas","NC":"Nouvelle Cal\u00e9donie","NZ":"Nouvelle-Z\u00e9lande","NI":"Nicaragua","NE":"Niger","NG":"Nig\u00e9ria","NU":"Niue","NF":"\u00cele de Norfolk","MK":"North Macedonia","MP":"\u00celes Mariannes du Nord","NO":"Norv\u00e8ge","OM":"Oman","PK":"Pakistan","PW":"Palau","PS":"\u00c9tat palestinien","PA":"Panama","PG":"Papouasie-Nouvelle-Guin\u00e9e","PY":"Paraguay","PE":"P\u00e9rou","PH":"Philippines","PN":"Pitcairn","PL":"Pologne","PT":"Portugal","PR":"Porto Rico","QA":"Qatar","RE":"La R\u00e9union","RO":"Roumanie","RU":"Russian Federation","RW":"Rwanda","BL":"Saint Barth\u00e9lemy","SH":"Saint Helena, Ascension and Tristan da Cunha","KN":"Saint-Christophe-et-Nevis","LC":"Sainte-Lucie","MF":"Saint Martin","PM":"Saint-Pierre-et-Miquelon","VC":"Saint-Vincent-et-les Grenadines","WS":"Samoa","SM":"Saint-Marin","ST":"Sao Tom\u00e9 et Principe","SA":"Arabie Saoudite","SN":"S\u00e9n\u00e9gal","RS":"Serbie","SC":"Seychelles","SL":"Sierra Leone","SG":"Singapour","SX":"Saint-Martin","SK":"Slovaquie","SI":"Slov\u00e9nie","SB":"\u00celes Salomon","SO":"Somalie","ZA":"Afrique du Sud","GS":"South Georgia and the South Sandwich Islands","SS":"Soudan du Sud","ES":"Espagne","LK":"Sri Lanka","SD":"Soudan","SR":"Suriname","SJ":"Svalbard and Jan Mayen","SE":"Su\u00e8de","CH":"Suisse","SY":"Syria Arab Republic","TW":"Ta\u00efwan","TJ":"Tadjikistan","TZ":"Tanzania, the United Republic of","TH":"Tha\u00eflande","TL":"Timor-Leste","TG":"Togo","TK":"Tokelau","TO":"Tonga","TT":"Trinit\u00e9 et Tobago","TN":"Tunisie","TR":"T\u00fcrkiye","TM":"Turkm\u00e9nistan","TC":"\u00celes Turques-et-Ca\u00efques","TV":"Tuvalu","UG":"Ouganda","UA":"Ukraine","AE":"\u00c9mirats arabes unis","GB":"Royaume-Uni","US":"\u00c9tats-Unis","UY":"Uruguay","UM":"\u00celes mineures \u00e9loign\u00e9es des \u00c9tats-Unis","UZ":"Ouzb\u00e9kistan","VU":"Vanuatu","VE":"Venezuela","VN":"Viet Nam","VG":"\u00celes Vierges britanniques","VI":"\u00celes Vierges am\u00e9ricaines","WF":"Wallis et Futuna","EH":"Sahara occidental","YE":"Y\u00e9men","ZM":"Zambie","ZW":"Zimbabwe"},"strings":{"newRowAdded":"Nouvelle ligne ajout\u00e9e.","rowRemoved":"Ligne supprim\u00e9e","formSaved":"Le formulaire a \u00e9t\u00e9 sauvegard\u00e9. Le contenu contient un lien pour revenir et compl\u00e9ter le formulaire."}};
+var gform_i18n = {"datepicker":{"wdOffset":1,"helpTextShort":"Press F1 for help","helpText":"Press the arrow keys to navigate by day, PageUp and PageDown to navigate by month, Alt+PageUp and Alt+PageDown to navigate by year, or Escape to cancel.","openOnFocusHelpText":"Press Down arrow to browse the calendar, or Escape to close.","tooltipTxt":"Press Escape to cancel","disabledTxt":"D\u00e9sactiv\u00e9","markedTxt":"S\u00e9lectionn\u00e9","prevTxt":"Pr\u00e9c\u00e9dent","nextTxt":"Suivant","monthTxt":"Mois","yearTxt":"Ann\u00e9e","months":["Janvier","F\u00e9vrier","Mars","Avril","May","Juin","Juillet","Ao\u00fbt","Septembre","Octobre","Novembre","D\u00e9cembre"],"days":[{"s":"S","l":"Dimanche"},{"s":"M","l":"Lundi"},{"s":"T","l":"Mardi"},{"s":"W","l":"Mercredi"},{"s":"T","l":"Jeudi"},{"s":"F","l":"Vendredi"},{"s":"S","l":"Samedi"}]}};
+var gf_legacy_multi = {"1":"","2":"","3":"","4":""};
+var gform_gravityforms = {"strings":{"invalid_file_extension":"Ce type de fichier n\u2019est pas autoris\u00e9. Seuls les formats suivants sont autoris\u00e9s :","file_uploaded":"File uploaded","delete_file":"Supprimer ce fichier","in_progress":"en cours","file_exceeds_limit":"Le fichier d\u00e9passe la taille autoris\u00e9e.","illegal_extension":"Ce type de fichier n\u2019est pas autoris\u00e9.","max_reached":"Nombre de fichiers maximal atteint","unknown_error":"Une erreur s\u2019est produite lors de la sauvegarde du fichier sur le serveur","currently_uploading":"Veuillez attendre la fin de l\u2019envoi","cancel":"Annuler","cancel_upload":"Annuler cet envoi","cancelled":"Annul\u00e9","error":"Erreur","message":"Message"},"vars":{"images_url":"https://frq.gouv.qc.ca/app/plugins/webit-gravityforms/images"}};
+//# sourceURL=gform_gravityforms-js-extra</script> <script id="gform_gravityforms-js-before">
+//# sourceURL=gform_gravityforms-js-before</script> <script id="gform_gravityforms-js" defer='defer' src="https://frq.gouv.qc.ca/app/plugins/webit-gravityforms/js/gravityforms.min.js?ver=3.2.0"></script> <script id="gform_recaptcha-js" defer='defer' src="https://www.google.com/recaptcha/api.js?hl=fr&#038;&#038;ver=7.1.3#038;render=explicit"></script> <script id="gform_gravityforms_utils-js" defer='defer' src="https://frq.gouv.qc.ca/app/plugins/webit-gravityforms/assets/js/dist/utils.min.js?ver=d7e103405223e60d2719f4c330fd11cf"></script> <script id="gform_conditional_logic-js-extra">var gf_legacy = {"is_legacy":""};
+//# sourceURL=gform_conditional_logic-js-extra</script> <script id="gform_conditional_logic-js" defer='defer' src="https://frq.gouv.qc.ca/app/plugins/webit-gravityforms/js/conditional_logic.min.js?ver=3.2.0"></script> <script id="wpml-cookie-js-extra">var wpml_cookies = {"wp-wpml_current_language":{"value":"fr","expires":"Mon, 26 Oct 2026 19:39:53 GMT","path":"/"}};
+//# sourceURL=wpml-cookie-js-extra</script> <script data-minify="1" data-wp-strategy="defer" defer id="wpml-cookie-js" src="https://frq.gouv.qc.ca/app/cache/min/1/app/plugins/sitepress-multilingual-cms/res/js/cookies/language-cookie.js?ver=1792525586"></script> <meta
+name="generator" content="WPML ver:5.1.0 stt:1,4;" /> <script>var keepScripts = "#vendor-js,#main-js,#lib-barba-js";</script> <noscript><style>.lazyload[data-src]{display:none !important;}</style></noscript><style>.lazyload{background-image:none !important;}.lazyload:before{background-image:none !important;}</style><noscript><style id="rocket-lazyload-nojs-css">.rll-youtube-player, [data-lazy-src]{display:none !important;}</style></noscript><meta name="generator" content="WP Rocket 3.23.5.1" data-wpr-features="wpr_minify_js wpr_lazyload_images wpr_preconnect_external_domains wpr_oci wpr_minify_css wpr_cdn wpr_desktop" /></head><body>
+<noscript><iframe
+src="https://www.googletagmanager.com/ns.html?id=GTM-KPMQTST"
+height="0"
+width="0"
+style="display:none;visibility:hidden"></iframe></noscript><div
+class="load-overlay load-overlay--initial"><div
+class="load-overlay__icon"></div></div><div
+id="barba-transition"><div
+class="rect"></div></div><div
+id="page"
+data-transition="wrapper">
+<nav
+class="a11y__nav"><ul><li>
+<button
+type="button"
+class="a11y__skip-to-first">Passer au contenu principal</button></li><li>
+<button
+type="button"
+class="a11y__skip-to-footer">Passer au pied de page</button></li></ul>
+</nav><header
+class="page__header"
+id="masthead"><div
+class="page__header__nav"><div
+class="page__header__top"><div
+class="page__header__top__qc"><div
+class="container-fluid container-fluid--gutters"><div
+class="page__header__top__qc__inner">
+<a
+class="page__header__logo logo-qc"
+href="https://www.quebec.ca/"
+aria-label="Allez sur le site du Québec"
+target="_blank"
+rel="external noopener">
+<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAXAAAABIAQMAAADViTwIAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAABpJREFUGBntwYEAAAAAw6D7U8/gBNUAAAC4Ag04AAHqsfIbAAAAAElFTkSuQmCC" alt="Gouvernement du Québec" data-src="https://frq.gouv.qc.ca/app/themes/webit/assets/img/logo-qc.png" decoding="async" class="lazyload" data-eio-rwidth="368" data-eio-rheight="72"><noscript><img
+src="https://frq.gouv.qc.ca/app/themes/webit/assets/img/logo-qc.png" alt="Gouvernement du Québec" data-eio="l"></noscript>
+</a><a
+href="https://frq.gouv.qc.ca/"
+aria-label="Fonds de recherche du Québec"
+rel="home"
+class="page__header__logo page__header__top__qc__logo"><div
+class="page__header__logo page__header__top__qc__logo-line">Fonds de recherche du Québec</div>
+</a></div></div></div><div
+class="page__header__top__nav"><div
+class="container-fluid container-fluid--gutters h-100"><div
+class="d-flex justify-content-end align-items-center h-100"><div
+class="page__header__top-actions">
+<button
+type="button"
+class="btn-icon btn-icon--menu-search search__form-trigger"
+aria-label="Ouvrir le formulaire de recherche"
+aria-controls="search__form"
+aria-expanded="false"
+title="Rechercher">
+<span><i
+class="fal fa-search" aria-hidden="true"></i></span>
+</button>
+<button
+type="button"
+class="btn-icon btn-icon--accessibility js-toggle-accessibility"
+aria-label="Basculer le menu d'accessibilité"
+title="Accessibilité"
+aria-expanded="false">
+<span><i
+class="fal fa-universal-access" aria-hidden="true"></i></span>
+</button>
+<button
+type="button"
+id="burger"
+class="btn-icon btn-icon--close btn-icon--menu-toggle menu__toggle burger"
+aria-label="Basculer le menu de navigation"
+title="Navigation"
+aria-expanded="false">
+<span><i
+class="fal fa-bars" aria-hidden="true"></i></span>
+<span><i
+class="fal fa-times" aria-hidden="true"></i></span>
+</button></div><nav
+class="menu menu--secondary"><ul
+class="nav__social "><li>
+<a
+href="https://www.linkedin.com/company/fonds-de-recherche-du-quebec/"
+aria-label="Notre page LinkedIn. Ceci va ouvrir une nouvelle page."
+title="LinkedIn"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-linkedin" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://www.facebook.com/FondsRechercheQuebec/"
+aria-label="Notre page Facebook. Ceci va ouvrir une nouvelle page."
+title="Facebook"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-facebook-f" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://www.instagram.com/fondsrecherchequebec/"
+aria-label="Notre page Instagram. Ceci va ouvrir une nouvelle page."
+title="Instagram"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-instagram" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://www.youtube.com/user/FondsRechercheQuebec"
+aria-label="Notre page Youtube. Ceci va ouvrir une nouvelle page."
+title="Youtube"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-youtube" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://frq.gouv.qc.ca/les-fonds-de-recherche-du-quebec/nos-medias-sociaux/"
+aria-label="Notre page X. Ceci va ouvrir une nouvelle page."
+title="X"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-x-twitter" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://www.threads.net/@fondsrecherchequebec"
+aria-label="Notre page Threads. Ceci va ouvrir une nouvelle page."
+title="Threads"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-threads" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://bsky.app/profile/did:plc:fnlbkzikezv6w5ksvofbk3i5"
+aria-label="Notre page Bluesky. Ceci va ouvrir une nouvelle page."
+title="Bluesky"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-bluesky" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://frq.gouv.qc.ca/infolettre-frq-info/"
+aria-label="Notre page Infolettre. Ceci va ouvrir une nouvelle page."
+title="Infolettre"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-light fa-newspaper" aria-hidden="true"></i>                                   </a></li></ul><ul
+class="menu__list d-flex align-items-stretch justify-content-left"><li
+id="menu-item-80325" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80325 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/actualites/" class=" menu__item__el"><span>Actualités</span></a></li><li
+id="menu-item-80324" class="menu-item menu-item-type-post_type menu-item-object-page current-menu-item page_item page-item-80320 current_page_item menu-item-80324 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/evenements/" class=" menu__item__el"><span>Événements</span></a></li><li
+id="menu-item-124021" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-124021 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/carrieres/" class=" menu__item__el"><span>Carrières</span></a></li><li
+id="menu-item-86296" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-86296 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/contact/" class=" menu__item__el"><span>Contact</span></a></li><li
+id="menu-item-80185" class="menu__item--ap menu-item menu-item-type-post_type menu-item-object-page menu-item-80185 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/acces-portails/" class=" menu__item__el"><span>Accès portails</span></a></li><li
+class="menu__item menu__item-lang menu__item-en"><a
+class="menu__item__el language-switcher" aria-label="English" href="https://frq.gouv.qc.ca/en/events/" data-lang="en"><span>EN</span></a></li></ul>
+<button
+type="button"
+class="btn-icon btn-icon--menu-search search__form-trigger"
+aria-label="Ouvrir le formulaire de recherche"
+aria-controls="search__form"
+aria-expanded="false"
+title="Rechercher">
+<span><i
+class="fal fa-search" aria-hidden="true"></i></span>
+</button>
+<button
+type="button"
+class="btn-icon btn-icon--accessibility js-toggle-accessibility"
+aria-label="Basculer le menu d'accessibilité"
+title="Accessibilité"
+aria-expanded="false">
+<span><i
+class="fal fa-universal-access" aria-hidden="true"></i></span>
+</button>
+</nav></div></div></div></div><div
+class="page__header__main"><div
+class="container-fluid container-fluid--gutters h-100"><div
+class="page__header__main__inner"><nav
+class="menu menu--main"><ul
+class="menu__list"><li
+id="menu-item-88945" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children menu-item-88945 menu__item level-0" data-level="0" aria-haspopup="true" aria-expanded="false"><button
+class=" menu__item__el sub-menu__trigger" type="button" aria-expanded="false"><span>Trouver un financement</span></button><ul
+class="sub-menu"><li
+id="menu-item-80208" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80208 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/concours-ouverts/" class=" menu__item__el"><span>Concours ouverts</span></a></li><li
+id="menu-item-150345" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-150345 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/frq-calendrier-des-concours/" class=" menu__item__el"><span>Calendrier des concours</span></a></li><li
+id="menu-item-145097" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-145097 menu__item level-1" data-level="1" aria-haspopup="true" aria-expanded="false"><button
+class=" menu__item__el sub-menu__trigger" type="button" aria-expanded="false"><span>Cadre réglementaire</span></button><ul
+class="sub-menu"><li
+id="menu-item-80211" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80211 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/regles-generales-communes/" class=" menu__item__el"><span>Règles générales communes</span></a></li><li
+id="menu-item-80213" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80213 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/etablissements-gestionnaires/" class=" menu__item__el"><span>Établissements gestionnaires</span></a></li><li
+id="menu-item-88701" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-88701 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/protection-des-renseignements/" class=" menu__item__el"><span>Protection des renseignements</span></a></li></ul></li><li
+id="menu-item-80203" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80203 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/resultats-des-concours/" class=" menu__item__el"><span>Résultats des concours</span></a></li><li
+id="menu-item-80201" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80201 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/repertoire-complet-des-programmes/" class=" menu__item__el"><span>Répertoire complet des programmes</span></a></li><li
+id="menu-item-80202" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80202 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/evaluer-une-demande/" class=" menu__item__el"><span>Évaluer une demande de financement</span></a></li><li
+id="menu-item-187046" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-187046 menu__item level-1" data-level="1" aria-haspopup="true" aria-expanded="false"><button
+class=" menu__item__el sub-menu__trigger" type="button" aria-expanded="false"><span>Projet FRQnet 2.0</span></button><ul
+class="sub-menu"><li
+id="menu-item-186439" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-186439 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/frqnet-2-0/" class=" menu__item__el"><span>FRQnet 2.0</span></a></li><li
+id="menu-item-187041" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-187041 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/identifiants-uniques-et-permanents-doi/" class=" menu__item__el"><span>Identifiants uniques et permanents (DOI)</span></a></li><li
+id="menu-item-187544" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-187544 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/cv-frq/" class=" menu__item__el"><span>CV-FRQ</span></a></li></ul></li></ul></li><li
+id="menu-item-88946" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children menu-item-88946 menu__item level-0" data-level="0" aria-haspopup="true" aria-expanded="false"><button
+class=" menu__item__el sub-menu__trigger" type="button" aria-expanded="false"><span>Faire de la recherche autrement</span></button><ul
+class="sub-menu"><li
+id="menu-item-196709" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-196709 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/declaration-de-reconnaissance-des-savoirs-autochtones-du-fond-de-recherche-du-quebec/" class=" menu__item__el"><span>Déclaration de reconnaissance des savoirs autochtones</span></a></li><li
+id="menu-item-202749" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-202749 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/e3r/" class=" menu__item__el"><span>L&rsquo;excellence en recherche en évolution :  l&rsquo;engagement du FRQ envers DORA et CoARA</span></a></li><li
+id="menu-item-83620" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-83620 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/faire-de-la-recherche-autrement/" class=" menu__item__el"><span>Faire de la recherche autrement</span></a></li><li
+id="menu-item-80247" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80247 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/recherche-intersectorielle/" class=" menu__item__el"><span>Recherche intersectorielle</span></a></li><li
+id="menu-item-144106" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-144106 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/la-science-en-francais/" class=" menu__item__el"><span>Science en français</span></a></li><li
+id="menu-item-80230" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children menu-item-80230 menu__item level-1" data-level="1" aria-haspopup="true" aria-expanded="false"><button
+class=" menu__item__el sub-menu__trigger" type="button" aria-expanded="false"><span>Science et société</span></button><ul
+class="sub-menu"><li
+id="menu-item-188417" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-188417 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/scientifique-en-residence-perspective-de-carriere-de-type-postdoctoral/" class=" menu__item__el"><span>Scientifique en résidence</span></a></li><li
+id="menu-item-88947" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-88947 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/programme-dialogue/" class=" menu__item__el"><span>Programme DIALOGUE</span></a></li><li
+id="menu-item-133777" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-133777 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/partenariats-de-diffusion/" class=" menu__item__el"><span>Partenariats de diffusion</span></a></li></ul></li></ul></li><li
+id="menu-item-88948" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children menu-item-88948 menu__item level-0" data-level="0" aria-haspopup="true" aria-expanded="false"><button
+class=" menu__item__el sub-menu__trigger" type="button" aria-expanded="false"><span>Partenariat</span></button><ul
+class="sub-menu"><li
+id="menu-item-83641" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-83641 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/partenariats-de-recherche/" class=" menu__item__el"><span>Partenariats de recherche</span></a></li><li
+id="menu-item-83588" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-83588 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/devenir-partenaire/" class=" menu__item__el"><span>Devenir partenaire</span></a></li><li
+id="menu-item-89350" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-89350 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/concours-ouverts/" class=" menu__item__el"><span>Programmes en partenariat</span></a></li><li
+id="menu-item-88949" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-88949 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/projets-de-recherche/" class=" menu__item__el"><span>Projets de recherche</span></a></li><li
+id="menu-item-88950" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-88950 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/histoires-et-rapports-de-recherche/" class=" menu__item__el"><span>Rapports de recherche</span></a></li><li
+id="menu-item-86724" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-86724 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/activites-de-transfert-de-connaissances/" class=" menu__item__el"><span>Activités de transfert de connaissances</span></a></li></ul></li><li
+id="menu-item-89351" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children menu-item-89351 menu__item level-0" data-level="0" aria-haspopup="true" aria-expanded="false"><button
+class=" menu__item__el sub-menu__trigger" type="button" aria-expanded="false"><span>Vitrines</span></button><ul
+class="sub-menu"><li
+id="menu-item-196558" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-196558 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/changer-le-monde-au-coeur-du-quebec-scientifique/" class=" menu__item__el"><span>Changer le monde : au cœur du Québec scientifique</span></a></li><li
+id="menu-item-196013" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-196013 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/la-recherche-au-coeur-de-nos-vies/" class=" menu__item__el"><span>La recherche au coeur de nos vies</span></a></li><li
+id="menu-item-200355" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-200355 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/sante-psychologique-au-travail/" class=" menu__item__el"><span>Santé psychologique au travail</span></a></li><li
+id="menu-item-204498" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-204498 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/la-recherche-a-double-usage/" class=" menu__item__el"><span>La recherche à double usage</span></a></li><li
+id="menu-item-187136" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-187136 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/regroupements-de-recherche/" class=" menu__item__el"><span>Regroupements de recherche</span></a></li><li
+id="menu-item-80277" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80277 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/projets-de-recherche/" class=" menu__item__el"><span>Projets de recherche</span></a></li><li
+id="menu-item-80272" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80272 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/histoires-et-rapports-de-recherche/" class=" menu__item__el"><span>Histoires et rapports de recherche</span></a></li><li
+id="menu-item-80469" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80469 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/prix/" class=" menu__item__el"><span>Prix</span></a></li><li
+id="menu-item-83907" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-83907 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/revues-scientifiques/" class=" menu__item__el"><span>Revues scientifiques</span></a></li></ul></li><li
+id="menu-item-89352" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children menu-item-89352 menu__item level-0" data-level="0" aria-haspopup="true" aria-expanded="false"><button
+class=" menu__item__el sub-menu__trigger" type="button" aria-expanded="false"><span>Recherche responsable</span></button><ul
+class="sub-menu"><li
+id="menu-item-80311" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80311 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/conduite-responsable-en-recherche/" class=" menu__item__el"><span>Conduite responsable en recherche</span></a></li><li
+id="menu-item-209749" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-209749 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/ethique/" class=" menu__item__el"><span>Éthique</span></a></li><li
+id="menu-item-203765" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-203765 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/securite-de-la-recherche/" class=" menu__item__el"><span>Sécurité de la recherche</span></a></li><li
+id="menu-item-122946" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-122946 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/science-ouverte/" class=" menu__item__el"><span>Science ouverte</span></a></li><li
+id="menu-item-127439" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-127439 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/gestion-des-donnees/" class=" menu__item__el"><span>Gestion des données en recherche</span></a></li><li
+id="menu-item-86762" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-86762 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/propriete-intellectuelle/" class=" menu__item__el"><span>Propriété intellectuelle</span></a></li><li
+id="menu-item-80607" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80607 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/responsabilite-environnementale/" class=" menu__item__el"><span>Responsabilité environnementale</span></a></li><li
+id="menu-item-167439" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-167439 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/equite-diversite-et-inclusion-edi/" class=" menu__item__el"><span>Équité, diversité et inclusion</span></a></li></ul></li><li
+id="menu-item-89353" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children menu-item-89353 menu__item level-0" data-level="0" aria-haspopup="true" aria-expanded="false"><button
+class=" menu__item__el sub-menu__trigger" type="button" aria-expanded="false"><span>À propos</span></button><ul
+class="sub-menu"><li
+id="menu-item-80347" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80347 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/le-fonds-de-recherche-du-quebec/" class=" menu__item__el"><span>Le Fonds de recherche du Québec</span></a></li><li
+id="menu-item-168453" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-168453 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/mission-et-mandats/" class=" menu__item__el"><span>Mission et mandats</span></a></li><li
+id="menu-item-89070" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-89070 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/concours-ouverts/" class=" menu__item__el"><span>Bourses et subventions</span></a></li><li
+id="menu-item-168586" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children menu-item-168586 menu__item level-1" data-level="1" aria-haspopup="true" aria-expanded="false"><button
+class=" menu__item__el sub-menu__trigger" type="button" aria-expanded="false"><span>Conseil d’administration / comités</span></button><ul
+class="sub-menu"><li
+id="menu-item-168428" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-168428 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/conseil-dadministration/" class=" menu__item__el"><span>Conseil d’administration</span></a></li><li
+id="menu-item-209630" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-209630 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/conduite-responsable-en-recherche/comite-conduite-responsable-en-recherche/" class=" menu__item__el"><span>Comité conduite responsable en recherche</span></a></li><li
+id="menu-item-168589" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-168589 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/les-comites-statutaires/" class=" menu__item__el"><span>Comités statutaires</span></a></li><li
+id="menu-item-168599" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-168599 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/comite-scientifique-nature-et-technologies/" class=" menu__item__el"><span>Comité scientifique – Nature et technologies</span></a></li><li
+id="menu-item-168598" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-168598 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/comite-scientifique-sante/" class=" menu__item__el"><span>Comité scientifique – Santé</span></a></li><li
+id="menu-item-168597" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-168597 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/comite-scientifique-societe-et-culture/" class=" menu__item__el"><span>Comité scientifique – Société et culture</span></a></li><li
+id="menu-item-183928" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-183928 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/comite-sur-lethique-de-la-recherche/" class=" menu__item__el"><span>Comité sur l’éthique de la recherche</span></a></li><li
+id="menu-item-168568" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-168568 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/comite-intersectoriel-etudiant/" class=" menu__item__el"><span>Comité intersectoriel étudiant</span></a></li></ul></li><li
+id="menu-item-168600" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-168600 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/publications/" class=" menu__item__el"><span>Publications</span></a></li><li
+id="menu-item-175205" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-175205 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/diffusion-de-linformation-frq/" class=" menu__item__el"><span>Diffusion de l’information FRQ</span></a></li><li
+id="menu-item-89354" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children menu-item-89354 menu__item level-1" data-level="1" aria-haspopup="true" aria-expanded="false"><button
+class=" menu__item__el sub-menu__trigger" type="button" aria-expanded="false"><span>Nature et technologies</span></button><ul
+class="sub-menu"><li
+id="menu-item-80353" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80353 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/nature-et-technologies/vision-et-domaines-de-recherche/" class=" menu__item__el"><span>Vision et domaines de recherche – Nature et technologies</span></a></li><li
+id="menu-item-80365" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80365 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/nature-et-technologies/direction-scientifique/" class=" menu__item__el"><span>Direction scientifique</span></a></li><li
+id="menu-item-83859" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-83859 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/nature-et-technologies/diffusion-de-linformation/" class=" menu__item__el"><span>Diffusion de l’information &#8211; Archives</span></a></li></ul></li><li
+id="menu-item-89355" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children menu-item-89355 menu__item level-1" data-level="1" aria-haspopup="true" aria-expanded="false"><button
+class=" menu__item__el sub-menu__trigger" type="button" aria-expanded="false"><span>Santé</span></button><ul
+class="sub-menu"><li
+id="menu-item-80354" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80354 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/sante/vision-et-domaines-de-recherche/" class=" menu__item__el"><span>Vision et domaines de recherche – Santé</span></a></li><li
+id="menu-item-80366" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80366 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/sante/direction-scientifique/" class=" menu__item__el"><span>Direction scientifique</span></a></li><li
+id="menu-item-175415" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-175415 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/sante-durable/" class=" menu__item__el"><span>Santé durable</span></a></li><li
+id="menu-item-83860" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-83860 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/sante/diffusion-de-linformation/" class=" menu__item__el"><span>Diffusion de l’information &#8211; Archives</span></a></li></ul></li><li
+id="menu-item-89357" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-has-children menu-item-89357 menu__item level-1" data-level="1" aria-haspopup="true" aria-expanded="false"><button
+class=" menu__item__el sub-menu__trigger" type="button" aria-expanded="false"><span>Société et culture</span></button><ul
+class="sub-menu"><li
+id="menu-item-80355" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80355 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/societe-et-culture/vision-et-domaines-de-recherche/" class=" menu__item__el"><span>Vision et domaines de recherche – Société et culture</span></a></li><li
+id="menu-item-80367" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80367 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/societe-et-culture/direction-scientifique/" class=" menu__item__el"><span>Direction scientifique</span></a></li><li
+id="menu-item-83861" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-83861 menu__item level-2" data-level="2"><a
+href="https://frq.gouv.qc.ca/societe-et-culture/diffusion-de-linformation/" class=" menu__item__el"><span>Diffusion de l’information &#8211; Archives</span></a></li></ul></li><li
+id="menu-item-203964" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-203964 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/communaute-frq/" class=" menu__item__el"><span>Communauté FRQ</span></a></li><li
+id="menu-item-88520" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-88520 menu__item level-1" data-level="1"><a
+href="https://frq.gouv.qc.ca/le-scientifique-en-chef-du-quebec/" class=" menu__item__el"><span>Le scientifique en chef du Québec</span></a></li></ul></li></ul>
+</nav><div
+class="page__header__main-aside">
+<nav
+class="menu menu--aside"><ul
+class="menu__list menu__list--aside"><li
+class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80325 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/actualites/" class=" menu__item__el"><span>Actualités</span></a></li><li
+class="menu-item menu-item-type-post_type menu-item-object-page current-menu-item page_item page-item-80320 current_page_item menu-item-80324 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/evenements/" class=" menu__item__el"><span>Événements</span></a></li><li
+class="menu-item menu-item-type-post_type menu-item-object-page menu-item-124021 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/carrieres/" class=" menu__item__el"><span>Carrières</span></a></li><li
+class="menu-item menu-item-type-post_type menu-item-object-page menu-item-86296 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/contact/" class=" menu__item__el"><span>Contact</span></a></li><li
+class="menu__item--ap menu-item menu-item-type-post_type menu-item-object-page menu-item-80185 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/acces-portails/" class=" menu__item__el"><span>Accès portails</span></a></li><li
+class="menu__item menu__item-lang menu__item-en"><a
+class="menu__item__el language-switcher" aria-label="English" href="https://frq.gouv.qc.ca/en/events/" data-lang="en"><span>EN</span></a></li></ul><ul
+class="nav__social "><li>
+<a
+href="https://www.linkedin.com/company/fonds-de-recherche-du-quebec/"
+aria-label="Notre page LinkedIn. Ceci va ouvrir une nouvelle page."
+title="LinkedIn"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-linkedin" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://www.facebook.com/FondsRechercheQuebec/"
+aria-label="Notre page Facebook. Ceci va ouvrir une nouvelle page."
+title="Facebook"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-facebook-f" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://www.instagram.com/fondsrecherchequebec/"
+aria-label="Notre page Instagram. Ceci va ouvrir une nouvelle page."
+title="Instagram"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-instagram" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://www.youtube.com/user/FondsRechercheQuebec"
+aria-label="Notre page Youtube. Ceci va ouvrir une nouvelle page."
+title="Youtube"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-youtube" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://frq.gouv.qc.ca/les-fonds-de-recherche-du-quebec/nos-medias-sociaux/"
+aria-label="Notre page X. Ceci va ouvrir une nouvelle page."
+title="X"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-x-twitter" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://www.threads.net/@fondsrecherchequebec"
+aria-label="Notre page Threads. Ceci va ouvrir une nouvelle page."
+title="Threads"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-threads" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://bsky.app/profile/did:plc:fnlbkzikezv6w5ksvofbk3i5"
+aria-label="Notre page Bluesky. Ceci va ouvrir une nouvelle page."
+title="Bluesky"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-bluesky" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://frq.gouv.qc.ca/infolettre-frq-info/"
+aria-label="Notre page Infolettre. Ceci va ouvrir une nouvelle page."
+title="Infolettre"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-light fa-newspaper" aria-hidden="true"></i>                                   </a></li></ul></nav></div></div></div></div></div>
+</header><main
+class="wp-singular page-template page-template-templates page-template-template-search-event page-template-templatestemplate-search-event-php page page-id-80320 wp-theme-webit lang-fr"              data-transition="container"
+data-transition-namespace="default"
+data-admin-bar-page-url=""
+data-text-selection-value="mixed"><div
+class="banner banner--full banner--offset"
+tabindex="-1"><div
+class="banner__wave banner__wave--mixed"></div><div
+class="container-fluid container-fluid--gutters banner__text"><div
+class="wysiwyg"><h1>Événements</h1></div></div></div><div
+class="container-fluid container-fluid--gutters">
+<section
+class="search-box --offset--top"><div
+class="search-box__inner --box-padding--large"><form
+action="https://frq.gouv.qc.ca/evenements"
+method="get"
+role="search"
+class="search-box__form"
+id="search-box__form"
+aria-label="Recherche avancée"
+aria-description="Sélectionnez des options de filtrage ou saisissez des mots-clés pour affiner votre recherche."><h2 class="h3 search-box__title">Recherche avancée</h2><div
+class="filter__field field ">
+<label
+for="secteur"
+class="label ">
+Secteur    </label><select
+name="secteur"
+id="secteur"
+class="filter--select2"><option
+value="">Secteur</option><option
+value="nature-et-technologies"
+>Nature et technologies</option><option
+value="sante"
+>Santé</option><option
+value="societe-et-culture"
+>Société et culture</option>
+</select></div><div
+class="filter__field field ">
+<label
+for="lieu"
+class="label ">
+Lieux    </label><select
+name="lieu"
+id="lieu"
+class="filter--select2"><option
+value="">Lieux</option><option
+value="chicoutimi"
+>Chicoutimi</option><option
+value="montreal"
+>Montréal</option><option
+value="quebec"
+>Québec</option><option
+value="shawinigan"
+>Shawinigan</option>
+</select></div><div
+class="filter__field field ">
+<label
+for="type"
+class="label ">
+Types    </label><select
+name="type"
+id="type"
+class="filter--select2"><option
+value="">Types</option><option
+value="conferences"
+>conférences</option><option
+value="ecosystemes"
+>écosystèmes</option><option
+value="presentiel"
+>En présence</option><option
+value="virtuel"
+>En virtuel</option><option
+value="organise-conjointement-par-le-centre-interuniversitaire-sur-la-litterature-et-la-culture-au-quebec-crilcq"
+>organisé conjointement par le Centre interuniversitaire sur la littérature et la culture au Québec (CRILCQ)</option><option
+value="webinaire"
+>webinaire</option>
+</select></div><div
+class="filter__field field ">
+<label
+for="date-debut"
+class="label ">
+Après    </label><input
+type="text"
+name="date-debut"
+id="date-debut"
+class="filter--datepicker"
+placeholder="Choisir une date"
+value="2026-10-25"
+readonly></div><div
+class="filter__field field ">
+<label
+for="date-fin"
+class="label ">
+Avant    </label><input
+type="text"
+name="date-fin"
+id="date-fin"
+class="filter--datepicker"
+placeholder="Choisir une date"
+value=""
+readonly></div><div
+class="search-box__keywords">
+<label
+for="search-box__keywords-text"
+class="label ">
+Mot(s) clé(s)    </label><div
+class="search-box__keywords__text-wrapper">
+<input
+type="text"
+name="mots-cles"
+id="search-box__keywords__text"
+autocorrect="off"
+autocomplete="off"
+spellcheck="false"
+class="search-box__keywords-text"
+id="search-box__keywords-text"
+placeholder="Mot(s) clé(s)"
+value=""
+aria-label="Entrer mots-clés" /></div></div><input
+type="hidden"
+name="post_id"
+value="80320" />
+<input
+type="hidden"
+name="template_name"
+value="templates/template-search-event.php"><input
+type="hidden"
+name="filters_action"
+value="get_event_filters">
+<input
+type="hidden"
+name="action"
+value="get_event_search" />
+<button
+type="submit"
+class="btn btn--raised js-submit-search-form search-box__submit"
+>
+<span>Rechercher</span>
+</button></form></div>
+</section><div
+class="breadcrumbs__container">
+<nav
+id="breadcrumbs"
+class="breadcrumbs"
+aria-label="Fil d'Ariane"><ol
+itemscope
+itemtype="http://schema.org/BreadcrumbList"><li
+itemprop="itemListElement"
+itemscope
+itemtype="http://schema.org/ListItem">
+<a
+itemscope
+itemtype="https://schema.org/Thing"
+itemprop="item"
+itemid="https://frq.gouv.qc.ca/"
+href="https://frq.gouv.qc.ca/"
+aria-label="Accueil">
+<span>
+<i
+class="fas fa-home" aria-hidden="true"></i>
+</span><meta
+itemprop="name"
+content="Accueil" />
+</a><meta
+itemprop="position"
+content="1" /></li><li
+itemprop="itemListElement"
+itemscope
+itemtype="http://schema.org/ListItem">
+<span
+itemscope itemtype="http://schema.org/Thing" itemprop="item">
+<strong
+itemprop="name" aria-current="page" aria-label="Événements">Événements</strong>
+</span><meta
+itemprop="position"
+content="2" /></li></ol>
+</nav></div></div><div
+class="container-fluid container-fluid--gutters">
+<section
+class="flexible flexible--large events"><article
+class="events__list__el flexible h-gradient-line"><div
+class="image image--ratio image--ratio--16-9 events__list__el__image">
+<img
+width="1024" height="461" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201024%20461'%3E%3C/svg%3E" class="bg--color--white" alt="" decoding="async" fetchpriority="high" data-lazy-srcset="https://frq.gouv.qc.ca/app/uploads/2026/06/1-1024x461.jpg 1024w, https://frq.gouv.qc.ca/app/uploads/2026/06/1-300x135.jpg 300w, https://frq.gouv.qc.ca/app/uploads/2026/06/1-150x68.jpg 150w, https://frq.gouv.qc.ca/app/uploads/2026/06/1-768x346.jpg 768w, https://frq.gouv.qc.ca/app/uploads/2026/06/1.jpg 1920w" data-lazy-sizes="(max-width: 1024px) 100vw, 1024px" data-lazy-src="https://frq.gouv.qc.ca/app/uploads/2026/06/1-1024x461.jpg" /><noscript><img
+width="1024" height="461" src="https://frq.gouv.qc.ca/app/uploads/2026/06/1-1024x461.jpg" class="bg--color--white" alt="" decoding="async" fetchpriority="high" srcset="https://frq.gouv.qc.ca/app/uploads/2026/06/1-1024x461.jpg 1024w, https://frq.gouv.qc.ca/app/uploads/2026/06/1-300x135.jpg 300w, https://frq.gouv.qc.ca/app/uploads/2026/06/1-150x68.jpg 150w, https://frq.gouv.qc.ca/app/uploads/2026/06/1-768x346.jpg 768w, https://frq.gouv.qc.ca/app/uploads/2026/06/1.jpg 1920w" sizes="(max-width: 1024px) 100vw, 1024px" /></noscript></div><div
+class="events__list__el__content wysiwyg">
+<header><div
+class="events__list__el__date --uppercase --color--third-400 --fw--bold">
+Du <time
+datetime="2026-09-04"><span
+class="sr-only">Date de début&nbsp;:</span>4 septembre</time> au <time
+datetime="2026-12-18"><span
+class="sr-only">Date de fin&nbsp;:</span>18 Décembre 2026</time></div><h3>
+<a
+href="https://frq.gouv.qc.ca/evenement/partenariat-scientifique-france-quebec-une-serie-de-webinaires-pour-valoriser-les-cohortes-banques-de-donnees-et-biobanques/" class="link--dark">Partenariat scientifique France-Québec | Une série de webinaires pour valoriser les cohortes, banques de données et biobanques</a></h3>
+</header><p>La présente série de six webinaires constitue une initiative du Fonds de recherche du Québec et de l'Académie nationale de médecine de France et s’inscrit&hellip;</p><div
+class="btn-list">
+<a
+href="https://frq.gouv.qc.ca/evenement/partenariat-scientifique-france-quebec-une-serie-de-webinaires-pour-valoriser-les-cohortes-banques-de-donnees-et-biobanques/"
+target="_self"
+rel=""
+class="btn btn--raised "
+>
+<span>Lire la suite</span>
+</a></div></div></article><article
+class="events__list__el flexible h-gradient-line"><div
+class="image image--ratio image--ratio--16-9 events__list__el__image">
+<img
+width="1024" height="576" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201024%20576'%3E%3C/svg%3E" class="bg--color--white" alt="" decoding="async" data-lazy-srcset="https://frq.gouv.qc.ca/app/uploads/2026/05/midi_cannabis_1920x864_en_tete_page_web-1920-x-1080-px-1024x576.png 1024w, https://frq.gouv.qc.ca/app/uploads/2026/05/midi_cannabis_1920x864_en_tete_page_web-1920-x-1080-px-300x169.png 300w, https://frq.gouv.qc.ca/app/uploads/2026/05/midi_cannabis_1920x864_en_tete_page_web-1920-x-1080-px-150x84.png 150w, https://frq.gouv.qc.ca/app/uploads/2026/05/midi_cannabis_1920x864_en_tete_page_web-1920-x-1080-px-768x432.png 768w, https://frq.gouv.qc.ca/app/uploads/2026/05/midi_cannabis_1920x864_en_tete_page_web-1920-x-1080-px.png 1920w" data-lazy-sizes="(max-width: 1024px) 100vw, 1024px" data-lazy-src="https://frq.gouv.qc.ca/app/uploads/2026/05/midi_cannabis_1920x864_en_tete_page_web-1920-x-1080-px-1024x576.png" /><noscript><img
+width="1024" height="576" src="https://frq.gouv.qc.ca/app/uploads/2026/05/midi_cannabis_1920x864_en_tete_page_web-1920-x-1080-px-1024x576.png" class="bg--color--white" alt="" decoding="async" srcset="https://frq.gouv.qc.ca/app/uploads/2026/05/midi_cannabis_1920x864_en_tete_page_web-1920-x-1080-px-1024x576.png 1024w, https://frq.gouv.qc.ca/app/uploads/2026/05/midi_cannabis_1920x864_en_tete_page_web-1920-x-1080-px-300x169.png 300w, https://frq.gouv.qc.ca/app/uploads/2026/05/midi_cannabis_1920x864_en_tete_page_web-1920-x-1080-px-150x84.png 150w, https://frq.gouv.qc.ca/app/uploads/2026/05/midi_cannabis_1920x864_en_tete_page_web-1920-x-1080-px-768x432.png 768w, https://frq.gouv.qc.ca/app/uploads/2026/05/midi_cannabis_1920x864_en_tete_page_web-1920-x-1080-px.png 1920w" sizes="(max-width: 1024px) 100vw, 1024px" /></noscript></div><div
+class="events__list__el__content wysiwyg">
+<header><div
+class="events__list__el__date --uppercase --color--third-400 --fw--bold">
+Du <time
+datetime="2026-10-06"><span
+class="sr-only">Date de début&nbsp;:</span>6 octobre</time> au <time
+datetime="2026-12-01"><span
+class="sr-only">Date de fin&nbsp;:</span>1<sup>er</sup> Décembre 2026</time></div><h3>
+<a
+href="https://frq.gouv.qc.ca/evenement/serie-de-webinaires-donnant-des-pistes-daction-issues-de-recherches-sur-lusage-du-cannabis-2/" class="link--dark">Série de webinaires donnant des pistes d’action issues de recherches sur l’usage du cannabis</a></h3>
+</header><div
+class="btn-list">
+<a
+href="https://frq.gouv.qc.ca/evenement/serie-de-webinaires-donnant-des-pistes-daction-issues-de-recherches-sur-lusage-du-cannabis-2/"
+target="_self"
+rel=""
+class="btn btn--raised "
+>
+<span>Lire la suite</span>
+</a></div></div></article><article
+class="events__list__el flexible h-gradient-line"><div
+class="image image--ratio image--ratio--16-9 events__list__el__image">
+<img
+width="1024" height="588" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201024%20588'%3E%3C/svg%3E" class="bg--color--white" alt="" decoding="async" data-lazy-srcset="https://frq.gouv.qc.ca/app/uploads/2022/06/visuel_politique_libre_acces_rvb_web_fond_blanc_vf-2-1024x588.png 1024w, https://frq.gouv.qc.ca/app/uploads/2022/06/visuel_politique_libre_acces_rvb_web_fond_blanc_vf-2-300x172.png 300w, https://frq.gouv.qc.ca/app/uploads/2022/06/visuel_politique_libre_acces_rvb_web_fond_blanc_vf-2-150x86.png 150w, https://frq.gouv.qc.ca/app/uploads/2022/06/visuel_politique_libre_acces_rvb_web_fond_blanc_vf-2-768x441.png 768w, https://frq.gouv.qc.ca/app/uploads/2022/06/visuel_politique_libre_acces_rvb_web_fond_blanc_vf-2-1920x1103.png 1920w, https://frq.gouv.qc.ca/app/uploads/2022/06/visuel_politique_libre_acces_rvb_web_fond_blanc_vf-2.png 1959w" data-lazy-sizes="(max-width: 1024px) 100vw, 1024px" data-lazy-src="https://frq.gouv.qc.ca/app/uploads/2022/06/visuel_politique_libre_acces_rvb_web_fond_blanc_vf-2-1024x588.png" /><noscript><img
+width="1024" height="588" src="https://frq.gouv.qc.ca/app/uploads/2022/06/visuel_politique_libre_acces_rvb_web_fond_blanc_vf-2-1024x588.png" class="bg--color--white" alt="" decoding="async" srcset="https://frq.gouv.qc.ca/app/uploads/2022/06/visuel_politique_libre_acces_rvb_web_fond_blanc_vf-2-1024x588.png 1024w, https://frq.gouv.qc.ca/app/uploads/2022/06/visuel_politique_libre_acces_rvb_web_fond_blanc_vf-2-300x172.png 300w, https://frq.gouv.qc.ca/app/uploads/2022/06/visuel_politique_libre_acces_rvb_web_fond_blanc_vf-2-150x86.png 150w, https://frq.gouv.qc.ca/app/uploads/2022/06/visuel_politique_libre_acces_rvb_web_fond_blanc_vf-2-768x441.png 768w, https://frq.gouv.qc.ca/app/uploads/2022/06/visuel_politique_libre_acces_rvb_web_fond_blanc_vf-2-1920x1103.png 1920w, https://frq.gouv.qc.ca/app/uploads/2022/06/visuel_politique_libre_acces_rvb_web_fond_blanc_vf-2.png 1959w" sizes="(max-width: 1024px) 100vw, 1024px" /></noscript></div><div
+class="events__list__el__content wysiwyg">
+<header><div
+class="events__list__el__date --uppercase --color--third-400 --fw--bold">
+Du <time
+datetime="2026-10-22"><span
+class="sr-only">Date de début&nbsp;:</span>22 octobre</time> au <time
+datetime="2026-11-18"><span
+class="sr-only">Date de fin&nbsp;:</span>18 novembre 2026</time></div><h3>
+<a
+href="https://frq.gouv.qc.ca/evenement/webinaires-diffusion-en-libre-acces/" class="link--dark">Webinaires | Diffusion en libre accès</a></h3>
+</header><p>Afin de mieux faire connaître ses exigences découlant de la <a
+href="https://frq.gouv.qc.ca/science-ouverte/politique-diffusion-2022/">Politique de diffusion en libre accès</a>, le Fonds de recherche du Québec (FRQ) offre des&hellip;</p><div
+class="btn-list">
+<a
+href="https://frq.gouv.qc.ca/evenement/webinaires-diffusion-en-libre-acces/"
+target="_self"
+rel=""
+class="btn btn--raised "
+>
+<span>Lire la suite</span>
+</a></div></div></article><article
+class="events__list__el flexible h-gradient-line"><div
+class="image image--ratio image--ratio--16-9 events__list__el__image">
+<img
+width="1024" height="461" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201024%20461'%3E%3C/svg%3E" class="bg--color--white" alt="" decoding="async" data-lazy-srcset="https://frq.gouv.qc.ca/app/uploads/2026/08/format-evenement-et-webinaire-1920-x-864-px-1-1024x461.jpg 1024w, https://frq.gouv.qc.ca/app/uploads/2026/08/format-evenement-et-webinaire-1920-x-864-px-1-300x135.jpg 300w, https://frq.gouv.qc.ca/app/uploads/2026/08/format-evenement-et-webinaire-1920-x-864-px-1-150x68.jpg 150w, https://frq.gouv.qc.ca/app/uploads/2026/08/format-evenement-et-webinaire-1920-x-864-px-1-768x346.jpg 768w, https://frq.gouv.qc.ca/app/uploads/2026/08/format-evenement-et-webinaire-1920-x-864-px-1.jpg 1920w" data-lazy-sizes="(max-width: 1024px) 100vw, 1024px" data-lazy-src="https://frq.gouv.qc.ca/app/uploads/2026/08/format-evenement-et-webinaire-1920-x-864-px-1-1024x461.jpg" /><noscript><img
+width="1024" height="461" src="https://frq.gouv.qc.ca/app/uploads/2026/08/format-evenement-et-webinaire-1920-x-864-px-1-1024x461.jpg" class="bg--color--white" alt="" decoding="async" srcset="https://frq.gouv.qc.ca/app/uploads/2026/08/format-evenement-et-webinaire-1920-x-864-px-1-1024x461.jpg 1024w, https://frq.gouv.qc.ca/app/uploads/2026/08/format-evenement-et-webinaire-1920-x-864-px-1-300x135.jpg 300w, https://frq.gouv.qc.ca/app/uploads/2026/08/format-evenement-et-webinaire-1920-x-864-px-1-150x68.jpg 150w, https://frq.gouv.qc.ca/app/uploads/2026/08/format-evenement-et-webinaire-1920-x-864-px-1-768x346.jpg 768w, https://frq.gouv.qc.ca/app/uploads/2026/08/format-evenement-et-webinaire-1920-x-864-px-1.jpg 1920w" sizes="(max-width: 1024px) 100vw, 1024px" /></noscript></div><div
+class="events__list__el__content wysiwyg">
+<header><div
+class="events__list__el__date --uppercase --color--third-400 --fw--bold">
+Le <time
+datetime="2026-11-25"><span
+class="sr-only">Date de début&nbsp;:</span>25 novembre 2026</time></div><h3>
+<a
+href="https://frq.gouv.qc.ca/evenement/webinaire-programme-engagement-2027-2028/" class="link--dark">Webinaire | Programme ENGAGEMENT 2027-2028</a></h3>
+</header><div
+class="btn-list">
+<a
+href="https://frq.gouv.qc.ca/evenement/webinaire-programme-engagement-2027-2028/"
+target="_self"
+rel=""
+class="btn btn--raised "
+>
+<span>Lire la suite</span>
+</a></div></div></article><article
+class="events__list__el flexible h-gradient-line"><div
+class="image image--ratio image--ratio--16-9 events__list__el__image">
+<img
+width="1024" height="461" src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%201024%20461'%3E%3C/svg%3E" class="bg--color--white" alt="" decoding="async" data-lazy-srcset="https://frq.gouv.qc.ca/app/uploads/2026/08/creation-sans-titre-1-1024x461.png 1024w, https://frq.gouv.qc.ca/app/uploads/2026/08/creation-sans-titre-1-300x135.png 300w, https://frq.gouv.qc.ca/app/uploads/2026/08/creation-sans-titre-1-150x68.png 150w, https://frq.gouv.qc.ca/app/uploads/2026/08/creation-sans-titre-1-768x346.png 768w, https://frq.gouv.qc.ca/app/uploads/2026/08/creation-sans-titre-1.png 1920w" data-lazy-sizes="(max-width: 1024px) 100vw, 1024px" data-lazy-src="https://frq.gouv.qc.ca/app/uploads/2026/08/creation-sans-titre-1-1024x461.png" /><noscript><img
+width="1024" height="461" src="https://frq.gouv.qc.ca/app/uploads/2026/08/creation-sans-titre-1-1024x461.png" class="bg--color--white" alt="" decoding="async" srcset="https://frq.gouv.qc.ca/app/uploads/2026/08/creation-sans-titre-1-1024x461.png 1024w, https://frq.gouv.qc.ca/app/uploads/2026/08/creation-sans-titre-1-300x135.png 300w, https://frq.gouv.qc.ca/app/uploads/2026/08/creation-sans-titre-1-150x68.png 150w, https://frq.gouv.qc.ca/app/uploads/2026/08/creation-sans-titre-1-768x346.png 768w, https://frq.gouv.qc.ca/app/uploads/2026/08/creation-sans-titre-1.png 1920w" sizes="(max-width: 1024px) 100vw, 1024px" /></noscript></div><div
+class="events__list__el__content wysiwyg">
+<header><div
+class="events__list__el__date --uppercase --color--third-400 --fw--bold">
+Du <time
+datetime="2027-05-10"><span
+class="sr-only">Date de début&nbsp;:</span>10</time> au <time
+datetime="2027-05-14"><span
+class="sr-only">Date de fin&nbsp;:</span>14 mai 2027</time></div><h3>
+<a
+href="https://frq.gouv.qc.ca/evenement/94e-congres-de-lacfas-remettre-en-questions-du-10-au-14-mai-2027-a-luqam/" class="link--dark">94<sup>e</sup> Congrès de l’Acfas : « Remettre en questions », du 10 au 14 mai 2027 à l’UQAM</a></h3>
+</header><div
+class="btn-list">
+<a
+href="https://frq.gouv.qc.ca/evenement/94e-congres-de-lacfas-remettre-en-questions-du-10-au-14-mai-2027-a-luqam/"
+target="_self"
+rel=""
+class="btn btn--raised "
+>
+<span>Lire la suite</span>
+</a></div></div></article>
+</section></div> <script id="DI-Journey-bAEAAFVMSnljaFcWAABXY1Q1MmS7CAAA" type="text/javascript" src=https://t.ofsys.com/js/Journey/1/bAEAAFVMSnljaFcWAABXY1Q1MmS7CAAA/DI.Journey-min.js></script> </main><footer
+class="page__footer"
+tabindex="-1"
+id="mastfoot">
+<section
+class="page__footer__socials page__footer__socials--divisions flexible"><div
+class="container-fluid container-fluid--gutters"><h2 class="h4 a-center mb-0">Suivez-nous sur</h2><ul
+class="nav__social nav__social--grid"><li>
+<a
+href="https://www.linkedin.com/company/fonds-de-recherche-du-quebec/"
+aria-label="Notre page LinkedIn. Ceci va ouvrir une nouvelle page."
+title="LinkedIn"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-linkedin" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://www.facebook.com/FondsRechercheQuebec/"
+aria-label="Notre page Facebook. Ceci va ouvrir une nouvelle page."
+title="Facebook"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-facebook-f" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://www.instagram.com/fondsrecherchequebec/"
+aria-label="Notre page Instagram. Ceci va ouvrir une nouvelle page."
+title="Instagram"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-instagram" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://www.youtube.com/user/FondsRechercheQuebec"
+aria-label="Notre page Youtube. Ceci va ouvrir une nouvelle page."
+title="Youtube"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-youtube" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://frq.gouv.qc.ca/les-fonds-de-recherche-du-quebec/nos-medias-sociaux/"
+aria-label="Notre page X. Ceci va ouvrir une nouvelle page."
+title="X"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-x-twitter" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://www.threads.net/@fondsrecherchequebec"
+aria-label="Notre page Threads. Ceci va ouvrir une nouvelle page."
+title="Threads"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-threads" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://bsky.app/profile/did:plc:fnlbkzikezv6w5ksvofbk3i5"
+aria-label="Notre page Bluesky. Ceci va ouvrir une nouvelle page."
+title="Bluesky"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-bluesky" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://frq.gouv.qc.ca/infolettre-frq-info/"
+aria-label="Notre page Infolettre. Ceci va ouvrir une nouvelle page."
+title="Infolettre"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-light fa-newspaper" aria-hidden="true"></i>                                   </a></li></ul></div>
+</section>
+<section
+class="chief-scientist-social flexible"><h2 class="h4">Suivez aussi le Scientifique en chef du Québec</h2><ul
+class="nav__social nav__social--grid"><li>
+<a
+href="https://twitter.com/SciChefQC"
+aria-label="La page X du Chef Scientifique du Québec. Ceci va ouvrir une nouvelle page."
+title="X"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-x-twitter" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://www.facebook.com/SciChefQC/"
+aria-label="La page Facebook du Chef Scientifique du Québec. Ceci va ouvrir une nouvelle page."
+title="Facebook"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-facebook-f" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://www.instagram.com/scichefqc/"
+aria-label="La page Instagram du Chef Scientifique du Québec. Ceci va ouvrir une nouvelle page."
+title="Instagram"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-instagram" aria-hidden="true"></i>                                   </a></li><li>
+<a
+href="https://bsky.app/profile/scichefqc.bsky.social"
+aria-label="La page Bluesky du Chef Scientifique du Québec. Ceci va ouvrir une nouvelle page."
+title="Bluesky"
+class="link "
+rel="me"
+target="_blank">
+<i
+class="fa-classic fa-brands fa-bluesky" aria-hidden="true"></i>                                   </a></li></ul>
+</section><div
+class="page__footer__nav page__footer__nav--main flexible"><div
+class="container-fluid container-fluid--gutters"><div
+class="page__footer__nav__col-logo"><div
+class="page__footer__nav__logo">
+<span>
+<svg
+width="155" height="158" viewBox="0 0 155 158" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><title>Fonds de recherche du Québec</title><defs><path
+id="a" d="M.356.41h142.57v104.43H.356z"/><path
+id="c" d="M.356.863h142.57v151.555H.356z"/><path
+id="e" d="M.204.307h125.397V49.61H.204z"/><path
+id="g" d="M.356.125h142.57v67.528H.356z"/><path
+id="i" d="M.357.247h143.006v83.39H.357z"/><path
+id="k" d="M.807.594h5.275v16.343H.807z"/><path
+id="m" d="M.807.594h5.275v16.343H.807z"/><path
+d="M45.976 25.458V23.64C29.808 15.855 15.411 7.6.651.74c14.902 7.107 29.266 16.233 45.325 24.718" id="o"/></defs><g
+fill="none" fill-rule="evenodd"><g
+transform="translate(10.925 52.044)"><mask
+id="b" fill="#fff"><use
+xlink:href="#a"/></mask><path
+d="M.356 79.101c58.29 33.665 86.148 29.499 136.335-5.434C199.077 30.241 234.647-6.766 322.272 1.6l.032 4.523c-87.39-10.907-122.269 26.038-185.597 69.99C86.473 110.975 60.083 116.602.357 79.1" fill="#3796C7" mask="url(#b)"/></g><g
+transform="translate(10.925)"><mask
+id="d" fill="#fff"><use
+xlink:href="#c"/></mask><path
+d="M322.272 49.65c-81.954-7.667-124.644 30.341-186.304 74.005-49.903 35.34-78.83 39.426-135.612 4.931C67.093 160.83 105.94 138.945 151.71 95.24 201.99 47.23 240.654-5.619 322.351-22.775l-.08 72.425z" fill="#3796C7" mask="url(#d)"/></g><g
+transform="translate(28.249 80.669)"><mask
+id="f" fill="#fff"><use
+xlink:href="#e"/></mask><path
+d="M177.845 35c-51.262-2.52-83.1-25.592-123.182-29.42-19.843-1.893-39.3-.03-54.459 6.286.78-.268 1.573-.525 2.374-.775C17.366 6.485 35.84 5.107 54.663 8.265c40.083 6.723 71.92 33.347 123.182 39.573C243.834 55.85 288.73 34.81 305.027 22.337V.307C288.73 13.96 243.834 38.243 177.845 35" fill="#C2C93B" mask="url(#f)"/></g><g
+transform="translate(10.925 89.343)"><mask
+id="h" fill="#fff"><use
+xlink:href="#g"/></mask><path
+d="M197.05 43.708C145.295 36.552 113.497 9.63 73.055 2.2 61.325.047 49.895-.369 39.319.67c-8.905.875-17.553 2.83-25.89 6.103-2.12.832-4.213 1.76-6.175 2.922-3.02 1.789-5.5 3.811-6.898 5.036v.273c3.143-2.152 6.622-4.25 10.391-5.954 9.318-4.21 19.505-6.22 29.667-6.862a103.46 103.46 0 018.806-.171c39.827.885 66.402 24.289 103.149 42.145 53.905 26.195 111.986 30.726 169.982 16.559V23.524c-19.147 12.027-63.123 28.782-125.3 20.184" fill="#C2C93B" mask="url(#h)"/></g><g
+transform="translate(10.487 61)"><mask
+id="j" fill="#fff"><use
+xlink:href="#i"/></mask><path
+d="M282.488.853c-14.303 1.405-29.689 5.32-42.212 10.743-18.247 7.9-32.972 17.244-47.211 26.28-27.584 17.506-51.4 32.62-90.455 30.29-10.303-.613-21.234-3.051-32.806-5.633C46.389 57.311 22.254 51.93.357 60.971v1.83c21.704-6.613 45.801 1.535 69.177 9.44 11.615 3.926 22.581 7.634 32.962 9.447 39.38 6.88 63.327-5.563 91.055-19.969 14.206-7.38 28.896-15.013 47.07-20.792 12.43-3.95 27.704-6.079 41.907-5.84 15.56.263 29.583 3.268 40.81 8.715V4.786C312.04.69 298.006-.67 282.487.853" fill="#AD2126" mask="url(#j)"/></g><g
+transform="translate(147.768 120.753)"><mask
+id="l" fill="#fff"><use
+xlink:href="#k"/></mask><path
+d="M15.555 12.915a251.011 251.011 0 008.747 4.022c6.129-2.257 12.074-4.945 18.045-7.872-9.675-2.312-18.665-5.245-27.21-8.47a113.971 113.971 0 01-14.33 4.69c4.763 2.6 9.658 5.168 14.748 7.63" fill="#B1BD35" mask="url(#l)"/></g><g
+transform="translate(147.768 120.753)"><mask
+id="n" fill="#fff"><use
+xlink:href="#m"/></mask><path
+d="M15.555 12.915a251.011 251.011 0 008.747 4.022c6.129-2.257 12.074-4.945 18.045-7.872-9.675-2.312-18.665-5.245-27.21-8.47a113.971 113.971 0 01-14.33 4.69c4.763 2.6 9.658 5.168 14.748 7.63" fill="#314B22" mask="url(#n)"/></g><path
+d="M27.29 97.334c6.254-1.774 12.73-2.677 19.213-2.973 6.487-.3 12.995.013 19.414.913 6.42.9 12.741 2.417 18.882 4.46 6.145 2.04 12.108 4.599 17.905 7.488 5.552 2.764 10.956 5.827 16.288 9.023l2.439-1.246c-.182-.105-.362-.213-.544-.318-5.66-3.258-11.414-6.387-17.336-9.192-5.918-2.804-12.01-5.278-18.277-7.221-6.264-1.949-12.698-3.358-19.206-4.14a106.01 106.01 0 00-19.608-.537c-6.524.427-13.027 1.466-19.28 3.373-3.123.957-6.184 2.116-9.115 3.55-2.494 1.22-4.894 2.615-7.22 4.119v.033c2.36-1.46 4.788-2.809 7.303-3.977 2.945-1.37 6.02-2.465 9.142-3.355" fill="#C2C93B"/><path
+fill="#AD2126" d="M10.846 122.227v1.337L4.778 125.6l1.663-1.337z"/><path
+d="M1.161 127.479l1.638-1.213c.033-.024 3.397-2.495 8.07-4.334l.177.445a39.981 39.981 0 00-5.827 2.886 63.755 63.755 0 015.666-1.939l.135.46c-2.745.805-4.983 1.616-7.983 2.895l-1.876.8z" fill="#AD2126"/><path
+fill="#FFF" d="M30.914 74V29h22.988v6.743H38.008v12.109h13.096v6.745H38.008V74zm34.528-24.316h6.74c4.098 0 7.292-3.068 7.292-7.044v-.207c0-3.977-3.194-7.325-7.292-7.325h-6.74v14.576zm-7.225 24.273V28.343h14.45c8.127 0 14.034 6.695 14.034 14.228v.349c0 5.37-3.198 10.044-7.921 12.136l2.64 6.835c1.6 4.254 4.24 5.231 7.78 5.299v6.837c-9.794 0-12.852-5.928-14.172-9.207l-3.264-8.299h-6.322v17.436h-7.225zm40.166-14.856c0 4.325 3.54 8.299 8.128 8.299 4.445 0 7.986-3.974 7.986-8.299V43.269c0-4.325-3.54-8.37-7.986-8.37-4.587 0-8.128 4.116-8.128 8.37V59.1zm-7.227-15.832c0-8.23 6.462-15.485 15.284-15.485 8.545 0 15.285 6.976 15.285 15.485v15.903c0 5.927-3.335 10.808-7.851 13.11.693 6.277 5.069 8.44 9.933 8.647v6.625c-8.822-.136-15.42-4.67-16.879-13.04h-.417c-8.198 0-15.355-6.486-15.355-15.342V43.269z"/><g
+transform="translate(107.874 107)"><mask
+id="p" fill="#fff"><use
+xlink:href="#o"/></mask><path
+d="M45.976 25.458V23.64C29.808 15.855 15.411 7.6.651.74c14.902 7.107 29.266 16.233 45.325 24.718" mask="url(#p)"/></g></g></svg>                </span></div></div><div
+class="page__footer__nav__col-nav">
+<nav
+class="menu menu--footer-main"><ul
+class="menu__list menu__list--footer-main"><li
+class="menu__item menu__item-lang menu__item-en"><a
+class="menu__item__el language-switcher" aria-label="English" href="https://frq.gouv.qc.ca/en/events/" data-lang="en"><span>EN</span></a></li><li
+id="menu-item-80301" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80301 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/acces-portails/" class=" menu__item__el"><span>Accès portails</span></a></li><li
+id="menu-item-80302" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80302 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/carrieres/" class=" menu__item__el"><span>Carrières</span></a></li><li
+id="menu-item-80306" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80306 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/plan-du-site/" class=" menu__item__el"><span>Plan du site</span></a></li><li
+id="menu-item-184461" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-184461 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/infolettre-frq-info/" class=" menu__item__el"><span>Infolettre FRQ info</span></a></li><li
+id="menu-item-192793" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-192793 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/le-fonds-de-recherche-du-quebec/mention-visibilite-logo/" class=" menu__item__el"><span>Mention | Visibilité | Logo</span></a></li><li
+id="menu-item-204175" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-204175 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/category/appel/feed/" class=" menu__item__el"><span>Flux RSS &#8211; Appels</span></a></li></ul>
+</nav></div><div
+class="page__footer__nav__col-newsletter"><div
+class="mt-3"><div>
+<a
+href="https://com.frq.gouv.qc.ca/T/WF/28228/pqKY6s/Optin/fr-CA/Form.ofsys"
+target="_blank"
+rel="external"
+class="btn btn--raised">S’abonner à nos infolettres</a></div></div></div></div></div><div
+class="page__footer__nav page__footer__nav--secondary flexible"><div
+class="container-fluid container-fluid--gutters"><nav
+class="menu menu--footer-secondary"><ul
+class="menu__list menu__list--footer-secondary"><li
+id="menu-item-88707" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-88707 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/condition-dutilisation/" class=" menu__item__el"><span>Conditions d’utilisation</span></a></li><li
+id="menu-item-80298" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80298 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/declaration-de-services/" class=" menu__item__el"><span>Déclaration de services</span></a></li><li
+id="menu-item-80295" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-80295 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/politique-de-confidentialite/" class=" menu__item__el"><span>Politique de confidentialité</span></a></li><li
+id="menu-item-88706" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-88706 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/acces-a-linformation/" class=" menu__item__el"><span>Accès à l’information</span></a></li><li
+id="menu-item-177796" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-177796 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/accessibilite/" class=" menu__item__el"><span>Accessibilité</span></a></li><li
+id="menu-item-88705" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-88705 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/propriete-intellectuelle-2/" class=" menu__item__el"><span>Propriété intellectuelle</span></a></li><li
+id="menu-item-85260" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-85260 menu__item level-0" data-level="0"><a
+href="https://frq.gouv.qc.ca/contrats-publics/" class=" menu__item__el"><span>Contrats publics</span></a></li><li
+id="menu-item-89205" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-89205 menu__item level-0" data-level="0"><a
+href="mailto:webmestre.frq@frq.gouv.qc.ca" class=" menu__item__el"><span>Webmestre</span></a></li><li
+id="menu-item-156417" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-156417 menu__item level-0" data-level="0"><a
+href="javascript:Didomi.preferences.show()" class=" menu__item__el"><span>Préférences de consentement</span></a></li></ul>
+</nav></div></div><div
+class="page__footer__copy flexible"><div
+class="container-fluid container-fluid--gutters"><div
+class="d-flex flex-column align-items-center"><span
+class="page__footer__copy__date">
+Dernière mise à jour&nbsp;:&nbsp;15 avril 2026            </span><a
+href="https://www.quebec.ca/"
+aria-label="Allez sur le site du Québec"
+target="_blank"
+rel="external noopener"
+class="page__footer__copy__logo mt-3">
+<svg
+width="179" height="35" viewBox="0 0 179 35" xmlns="http://www.w3.org/2000/svg"><title>Gouvernement du Québec</title><g
+fill="none" fill-rule="evenodd"><g
+fill="#000" fill-rule="nonzero"><path
+d="M48.375 24.12V9.359h-.114c-.536.494-2.486.532-3.29.532h-1.415v.114c1.645 1.028 1.415 2.511 1.415 4.375v6.24c0 3.12-3.098 5.326-5.584 5.326-3.289 0-4.627-2.321-4.627-6.05V9.36h-.115c-.536.494-2.486.532-3.328.532h-1.415v.114c1.645 1.028 1.415 2.511 1.415 4.375v6.24c0 5.706 2.486 8.407 6.923 8.407 2.639 0 5.355-.913 6.693-3.157v2.7h4.857v-.113c-1.606-.952-1.415-2.473-1.415-4.337zm7.535-7.875c.459-2.55 2.333-4.147 4.857-4.147 2.716 0 4.437 1.331 4.858 4.147H55.91zm13.654 2.358c.153-5.212-3.366-9.13-8.49-9.13-5.623 0-9.41 4.032-9.41 9.663 0 5.668 4.399 9.967 10.786 9.967 1.76 0 3.595-.266 5.202-.989l1.874-3.804h-.115c-1.721 1.483-3.901 2.168-6.158 2.168-4.245 0-7.458-2.891-7.534-7.837h13.845v-.038zM72.547.799c.918 0 2.754-.038 3.29-.609h.114v25.565c.995.267 2.065.495 3.098.495 4.13 0 6.464-2.853 6.464-6.848 0-3.918-1.836-6.924-5.622-6.924-1.186 0-2.142.305-3.137.875l2.027-3.424a7.86 7.86 0 012.64-.456c4.283 0 7.878 3.69 7.878 9.206 0 6.316-4.283 10.424-11.091 10.424-2.525 0-4.972-.456-6.846-.723v-.114c1.223-.57 1.147-1.902 1.147-3.233V6.467c0-1.864.23-4.489-1.377-5.478V.875h1.415V.799zM96.03 16.245c.46-2.55 2.334-4.147 4.858-4.147 2.715 0 4.437 1.331 4.857 4.147h-9.714zm13.693 2.358c.153-5.212-3.366-9.13-8.453-9.13-5.622 0-9.408 4.032-9.408 9.663 0 5.668 4.398 9.967 10.785 9.967 1.76 0 3.595-.266 5.202-.989l1.874-3.804h-.115c-1.72 1.483-3.901 2.168-6.158 2.168-4.245 0-7.458-2.891-7.534-7.837h13.807v-.038zm16.828-4.527h-.114c-1.11-1.331-2.907-1.978-4.59-1.978-3.633 0-6.272 2.739-6.272 6.62 0 4.679 3.633 7.76 7.84 7.76 1.913 0 4.016-.799 5.508-1.978h.114l-1.95 3.842c-1.568.647-3.328.8-4.972.8-5.814 0-10.327-4.071-10.327-9.321 0-6.962 5.049-10.31 10.748-10.31 1.338 0 2.753.152 4.054.494v4.071h-.039zM64.86 6.125v-4.07c-2.486 1.103-4.743 3.157-6.273 5.173v1.598C62.26 6.353 64.86 6.24 64.86 6.125z"/><path
+d="M14.412 26.288c-5.698 0-9.638-6.391-9.638-11.793v-.61c.077-5.25 3.48-10.157 9.447-10.157 6.273 0 9.524 5.897 9.562 11.49v.57c.038 5.973-3.71 10.5-9.37 10.5zm19.506 6.201c-4.207.685-8.223-.647-12.506-5.516 4.13-2.055 6.693-7.228 6.693-11.984v-.609C28.028 6.201 21.832.8 14.489.8 7.107.799.567 6.429.529 14.685v.57c0 8.028 6.005 14 13.348 14 1.07 0 2.065-.152 3.098-.418 4.819 4.49 9.103 6.391 12.813 5.935 1.759-.229 3.595-.913 4.742-2.359l-.612.076z"/></g><path
+fill="#006CB7" d="M134.879.833h18.358v10.833h-18.358z"/><path
+d="M144.475 1.667c-.115.224-.424.599-.963 1.198-.578.712-.501 1.686-.193 2.247.308.637.501 1.199.655 1.723.193.75.077 1.76.077 1.648h-.5c0-1.198-.386-2.36-1.35-2.884-1.348-.711-2.658.525-2.234 1.835.23.675.616.9.732.9 0 0-.193-.75.385-1.124a1.025 1.025 0 011.464.3c.27.411.347.973.347.973h-.963v.712h1.927s-.039.974-1.118.899c0 0 .116.786 1.118.374 0 0-.039.824.616 1.199.655-.412.617-1.199.617-1.199 1.002.412 1.117-.374 1.117-.374-1.079.112-1.117-.9-1.117-.9h1.926v-.71h-.963s.039-.563.347-.975c.308-.45.963-.636 1.464-.3.578.375.385 1.124.385 1.124.116 0 .501-.224.733-.899.423-1.31-.887-2.546-2.235-1.835-.964.525-1.349 1.648-1.349 2.884h-.501c0 .075-.116-.899.077-1.648a12.48 12.48 0 01.655-1.723c.27-.561.386-1.535-.193-2.247-.5-.637-.809-.974-.963-1.198z" fill="#FFF"/><path
+fill="#006CB7" d="M159.078.833h18.358v10.833h-18.358z"/><path
+d="M167.84 1.667c-.154.224-.424.599-.963 1.198-.578.712-.501 1.686-.193 2.247.309.637.501 1.199.655 1.723.193.75.077 1.76.077 1.648h-.5c0-1.198-.386-2.36-1.35-2.884-1.348-.711-2.658.525-2.234 1.835.231.675.616.9.732.9 0 0-.193-.75.385-1.124.54-.375 1.156-.15 1.465.3.27.411.346.973.346.973h-.963v.712h1.927s-.039.974-1.118.899c0 0 .116.786 1.118.374 0 0-.039.824.616 1.199.655-.412.617-1.199.617-1.199 1.002.412 1.117-.374 1.117-.374-1.079.112-1.117-.9-1.117-.9h1.927v-.71h-.964s.039-.563.347-.975c.308-.45.963-.636 1.464-.3.54.375.386 1.124.386 1.124.115 0 .5-.224.732-.899.424-1.31-.886-2.546-2.235-1.835-.925.525-1.349 1.648-1.349 2.884h-.5c0 .075-.116-.899.076-1.648a12.48 12.48 0 01.655-1.723c.27-.561.386-1.535-.192-2.247-.501-.637-.81-.974-.964-1.198z" fill="#FFF"/><path
+fill="#006CB7" d="M135.07 16.9h18.404v11.433H135.07z"/><path
+d="M144.272 17.483c-.115.234-.422.623-.958 1.245-.575.739-.499 1.75-.192 2.333.307.661.498 1.245.652 1.789.191.778.076 1.789.076 1.711h-.498c0-1.244-.383-2.45-1.342-2.994-1.342-.74-2.645.544-2.224 1.905.23.7.614.934.729.934 0 0-.192-.778.383-1.167.537-.389 1.189-.156 1.457.311.269.428.345 1.011.345 1.011h-.958v.7h1.917s-.039 1.011-1.112.933c0 0 .115.817 1.112.39 0 0-.039.855.613 1.244.652-.428.614-1.245.614-1.245.996.428 1.111-.389 1.111-.389-1.073.078-1.111-.933-1.111-.933h1.917v-.7h-.959s.038-.583.345-1.011c.307-.428.959-.661 1.457-.311.575.389.384 1.167.384 1.167.115 0 .498-.234.728-.934.422-1.36-.882-2.644-2.224-1.905-.958.544-1.342 1.71-1.342 2.994h-.498c0 .078-.115-.933.077-1.711.153-.544.345-1.089.651-1.789.269-.583.384-1.594-.191-2.333-.499-.622-.805-1.011-.959-1.245z" fill="#FFF"/><path
+fill="#006CB7" d="M158.842 16.9h18.403v11.433h-18.403z"/><path
+d="M168.043 17.483a11.35 11.35 0 01-.958 1.245c-.575.739-.499 1.75-.192 2.333.307.661.499 1.245.652 1.789.192.778.077 1.789.077 1.711h-.499c0-1.244-.383-2.45-1.342-2.994-1.342-.74-2.645.544-2.224 1.905.23.7.614.934.729.934 0 0-.192-.778.383-1.167.537-.389 1.15-.156 1.457.311.269.428.345 1.011.345 1.011h-.958v.7h1.917s-.038 1.011-1.112.933c0 0 .115.817 1.112.39 0 0-.038.855.613 1.244.652-.428.614-1.245.614-1.245.997.428 1.112-.389 1.112-.389-1.074.078-1.112-.933-1.112-.933h1.917v-.7h-.959s.039-.583.345-1.011c.307-.428.959-.661 1.457-.311.537.389.384 1.167.384 1.167.115 0 .498-.234.728-.934.422-1.36-.882-2.644-2.224-1.905-.92.544-1.342 1.71-1.342 2.994h-.498c0 .078-.115-.933.077-1.711.153-.544.345-1.089.652-1.789.268-.583.383-1.594-.192-2.333-.499-.622-.805-1.011-.959-1.245z" fill="#FFF"/></g></svg>            </a><div
+class="page__footer__copy__credits mt-2">
+<small>&copy; Fonds de recherche du Québec, 2026<span
+class="sr-only"> Tous droits réservés.</span></small>
+<small>Une création de <a
+href="https://webitinteractive.ca/" class="link" target="_blank" title="Agence marketing | E-Commerce | Développement web | Webit Interactive" rel="external">Webit Interactive</a>.</small></div></div></div></div></footer></div><div
+class="search__form overlay search"
+id="search__form"
+role="dialog"
+aria-labelledby="search__label"
+aria-describedby="search__info"
+aria-modal="true"
+itemscope
+itemtype="https://schema.org/WebSite"><meta
+itemprop="url"
+content="https://frq.gouv.qc.ca/" /><button
+type="button"
+class="search__form-close"
+aria-label="Fermer le formulaire de recherche"
+aria-controls="search__form"
+title="Fermer">
+<i
+class="fas fa-times" aria-hidden="true"></i>
+</button><form
+action="https://frq.gouv.qc.ca/"
+method="get"
+role="search"
+class="container-fluid container-fluid--gutters"
+id="globalSearch"
+itemprop="potentialAction"
+itemscope
+itemtype="https://schema.org/SearchAction"><meta
+itemprop="target"
+content="https://frq.gouv.qc.ca/?s={s}" /><div>
+<label
+for='search'
+id="search__label">
+<span
+class='sr-only'>Rechercher par mots-clés</span>
+</label><input
+type="text"
+name="s"
+id="search"
+autocorrect="off"
+autocomplete="off"
+spellcheck="false"
+class="search__text"
+value=""
+itemprop="query-input" /><div
+class="search__info"
+id="search__info">
+Écrivez les mots recherchés et appuyez sur Entrée.<br>
+Pour rechercher dans notre répertoire des programmes, cliquez sur ce <a
+href="https://frq.gouv.qc.ca/concours-ouverts/">lien</a>.</div><input
+type="hidden"
+name="action"
+value="get_global_search"></div></form></div><div
+class="overlay overlay--center container-fluid container-fluid--gutters a11y"
+id="a11y"
+role="dialog"
+aria-labelledby="a11y__label"
+aria-modal="true"><div
+class="overlay__content"><div
+class="a11y__header"><h2 id="a11y__label" class="h3">Options d'accessibilité</h2><button
+type="button"
+class="a11y__close"
+aria-label="Fermer les options d'accessibilité"
+aria-controls="a11y"
+title="Fermer">
+<i
+class="fas fa-times" aria-hidden="true"></i>
+</button></div><div
+class="a11y__content"><div
+class="a11y__content__section"><div
+class="wysiwyg"><h3 class="h4">Taille du texte</h3><p>Ajustez la taille du texte selon vos besoins en cliquant sur les boutons ci-dessous</p></div><div
+class="a11y__buttons a11y__buttons--text-size"
+role="listbox">
+<button
+type="button"
+aria-selected="true"
+role="option"
+id="a11y__100">100%</button>
+<button
+type="button"
+role="option"
+id="a11y__150">150%</button>
+<button
+type="button"
+role="option"
+id="a11y__200">200%</button></div></div><div
+class="a11y__content__section"><div
+class="wysiwyg"><h3 class="h4">Style visuel de la page</h3><p>Ajustez le style visuel du site en sélectionnant celui qui vous convient le mieux parmi les choix disponibles ci-dessous :</p></div><div
+class="a11y__buttons a11y__buttons--visual-style"
+role="listbox">
+<button
+type="button"
+aria-selected="true"
+role="option"
+id="a11y__orig">Couleurs originales</button>
+<button
+type="button"
+role="option"
+id="a11y__high">Haut contraste</button></div></div></div><div
+class="a11y__footer"><div
+class="wysiwyg"><p>Accédez à notre <a
+href="https://frq.gouv.qc.ca/accessibilite/">section accessibilité</a> pour en savoir plus sur nos politiques et l'accessibilité de notre site Web.</p></div></div></div></div> <script type="speculationrules">{"prefetch":[{"source":"document","where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":["/wp/wp-*.php","/wp/wp-admin/*","/app/uploads/*","/app/*","/app/plugins/*","/app/themes/webit/*","/*\\?(.+)"]}},{"not":{"selector_matches":"a[rel~=\"nofollow\"]"}},{"not":{"selector_matches":".no-prefetch, .no-prefetch a"}}]},"eagerness":"conservative"}]}</script> <script>var relevanssi_rt_regex = /(&|\?)_(rt|rt_nonce)=(\w+)/g
+	var newUrl = window.location.search.replace(relevanssi_rt_regex, '')
+	if (newUrl.substr(0, 1) == '&') {
+		newUrl = '?' + newUrl.substr(1)
+	}
+	history.replaceState(null, null, window.location.pathname + newUrl + window.location.hash)</script> <script id="wp-dom-ready-js" src="https://frq.gouv.qc.ca/wp/wp-includes/js/dist/dom-ready.min.js?ver=3fe927cab37bf38d6a23"></script> <script id="wp-hooks-js" src="https://frq.gouv.qc.ca/wp/wp-includes/js/dist/hooks.min.js?ver=f0f188028580e8dc1255"></script> <script id="wp-i18n-js" src="https://frq.gouv.qc.ca/wp/wp-includes/js/dist/i18n.min.js?ver=1dfe7db3940c23ea9216"></script> <script id="wp-i18n-js-after">wp.i18n.setLocaleData( { 'text direction\u0004ltr': [ 'ltr' ] } );
+//# sourceURL=wp-i18n-js-after</script> <script id="wp-a11y-js-translations">( function( domain, translations ) {
+	var localeData = translations.locale_data[ domain ] || translations.locale_data.messages;
+	localeData[""].domain = domain;
+	wp.i18n.setLocaleData( localeData, domain );
+} )( "default", {"translation-revision-date":"2026-07-20 16:05:29+0000","generator":"GlotPress\/4.0.3","domain":"messages","locale_data":{"messages":{"":{"domain":"messages","plural-forms":"nplurals=2; plural=n > 1;","lang":"fr_CA"},"Notifications":["Notifications"]}},"comment":{"reference":"wp-includes\/js\/dist\/a11y.js"}} );
+//# sourceURL=wp-a11y-js-translations</script> <script id="wp-a11y-js" src="https://frq.gouv.qc.ca/wp/wp-includes/js/dist/a11y.min.js?ver=31c6cec5a4ff7aff483d"></script> <script id="gform_gravityforms_theme_vendors-js" defer='defer' src="https://frq.gouv.qc.ca/app/plugins/webit-gravityforms/assets/js/dist/vendor-theme.min.js?ver=ddae8d403393f0e5eaeedeb511ce46e0"></script> <script id="gform_gravityforms_theme-js-extra">var gform_theme_config = {"common":{"form":{"honeypot":{"version_hash":"837aee4f7172eeac911e0d9f727450e4"},"ajax":{"ajaxurl":"https://frq.gouv.qc.ca/wp/wp-admin/admin-ajax.php","ajax_submission_nonce":"d9bbd392a1","i18n":{"step_announcement":"Step %1$s of %2$s, %3$s","unknown_error":"There was an unknown error processing your request. Please try again.","error_403":"The request was blocked (403 error) for unknown security reasons. Remove any code-like text (scripts or DB queries) and try again."}}}},"fields":{"repeater":{"strings":{"item_added":"added.","item_removed":"removed.","renumbered":"and above renumbered.","max_items":"You have reached the maximum number of repeated items.","confirm_delete":"Are you sure you want to remove {label} {number}?"}}},"hmr_dev":"","public_path":"https://frq.gouv.qc.ca/app/plugins/webit-gravityforms/assets/js/dist/","config_nonce":"fd38a7039a"};
+//# sourceURL=gform_gravityforms_theme-js-extra</script> <script id="gform_gravityforms_theme-js" defer='defer' src="https://frq.gouv.qc.ca/app/plugins/webit-gravityforms/assets/js/dist/scripts-theme.min.js?ver=97219a00e44efe96fe680a9fde3911cf"></script> <script id="eio-lazy-load-js-before">const eio_lazy_vars = {"bg_min_dpr":1.1,"exactdn_domain":"","safe_paths":["\/app\/plugins","\/app\/themes","\/wp\/wp-includes\/"],"safe_domains":["frq.gouv.qc.ca","www.frq.gouv.qc.ca"],"skip_autoscale":0,"threshold":0,"use_dpr":1};Object.freeze(eio_lazy_vars);
+//# sourceURL=eio-lazy-load-js-before</script> <script async data-wp-strategy="async" id="eio-lazy-load-js" src="https://frq.gouv.qc.ca/app/plugins/ewww-image-optimizer/includes/lazysizes.min.js?ver=890"></script> <script id="jquery.wp-smartcrop-js-extra">var wpsmartcrop_options = {"focus_mode":"power-lines"};
+//# sourceURL=jquery.wp-smartcrop-js-extra</script> <script id="jquery.wp-smartcrop-js" src="https://frq.gouv.qc.ca/app/plugins/wp-smartcrop/js/jquery.wp-smartcrop.min.js?ver=2.0.10"></script> <script data-minify="1" id="vendor-js" src="https://frq.gouv.qc.ca/app/cache/min/1/app/themes/webit/assets/libs/vendor.js?ver=1792525586"></script> <script id="main-js-extra">var ajax_obj = {"ajaxurl":"https://frq.gouv.qc.ca/wp/wp-admin/admin-ajax.php","lang":"fr"};
+//# sourceURL=main-js-extra</script> <script data-minify="1" id="main-js" src="https://frq.gouv.qc.ca/app/cache/min/1/app/themes/webit/assets/generated/js/theme.js?ver=1792525587"></script> <script>window.lazyLoadOptions=[{elements_selector:"img[data-lazy-src],.rocket-lazyload",data_src:"lazy-src",data_srcset:"lazy-srcset",data_sizes:"lazy-sizes",class_loading:"lazyloading",class_loaded:"lazyloaded",threshold:300,callback_loaded:function(element){if(element.tagName==="IFRAME"&&element.dataset.rocketLazyload=="fitvidscompatible"){if(element.classList.contains("lazyloaded")){if(typeof window.jQuery!="undefined"){if(jQuery.fn.fitVids){jQuery(element).parent().fitVids()}}}}}},{elements_selector:".rocket-lazyload",data_src:"lazy-src",data_srcset:"lazy-srcset",data_sizes:"lazy-sizes",class_loading:"lazyloading",class_loaded:"lazyloaded",threshold:300,}];window.addEventListener('LazyLoad::Initialized',function(e){var lazyLoadInstance=e.detail.instance;if(window.MutationObserver){var observer=new MutationObserver(function(mutations){var image_count=0;var iframe_count=0;var rocketlazy_count=0;mutations.forEach(function(mutation){for(var i=0;i<mutation.addedNodes.length;i++){if(typeof mutation.addedNodes[i].getElementsByTagName!=='function'){continue}
+if(typeof mutation.addedNodes[i].getElementsByClassName!=='function'){continue}
+images=mutation.addedNodes[i].getElementsByTagName('img');is_image=mutation.addedNodes[i].tagName=="IMG";iframes=mutation.addedNodes[i].getElementsByTagName('iframe');is_iframe=mutation.addedNodes[i].tagName=="IFRAME";rocket_lazy=mutation.addedNodes[i].getElementsByClassName('rocket-lazyload');image_count+=images.length;iframe_count+=iframes.length;rocketlazy_count+=rocket_lazy.length;if(is_image){image_count+=1}
+if(is_iframe){iframe_count+=1}}});if(image_count>0||iframe_count>0||rocketlazy_count>0){lazyLoadInstance.update()}});var b=document.getElementsByTagName("body")[0];var config={childList:!0,subtree:!0};observer.observe(b,config)}},!1)</script><script data-no-minify="1" async src="https://frq.gouv.qc.ca/app/plugins/wp-rocket/assets/js/lazyload/17.8.3/lazyload.min.js"></script> </body></html>
+<!-- This website is like a Rocket, isn't it? Performance optimized by WP Rocket. Learn more: https://wp-rocket.me - Debug: cached@1792957193 -->

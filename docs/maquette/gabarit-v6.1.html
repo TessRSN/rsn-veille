@@ -1,0 +1,663 @@
+<title>Veille de l'écosystème</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout : gabarit des pages rsn.quebec (bandeau marine, colonne de filtres à gauche comme Dernières nouvelles, frise à hexagones comme Événements). Thème clair seulement, comme le site. */
+:root{
+  --navy:#003469; --ink:#101828; --body:rgba(16,24,40,.72); --muted:#6E7A84; --rule:#DCE1E8; --trait:#3D6A99; --tint:#F5F7FA;
+  --yellow:#FFCC4E; --yellow-ink:#E3A800; --yellow-tint:#FFF4D1; --green:#00A759; --blue:#0061AF; --amber:#C99000; --bg:#ffffff;
+  --serif:"DM Serif Display",Georgia,"Times New Roman",serif;
+  --sans:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--body);font:400 15px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--navy)}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0;margin:0}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:400;margin:0;text-wrap:balance;letter-spacing:normal}
+.hex{width:13px;height:14px;flex:0 0 auto;overflow:visible}
+.gutter{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1140px;margin:0 auto}
+
+/* Bandeau de titre (comme le gabarit UiCore du site) */
+.bandeau{background:var(--navy);color:#fff;padding-block:40px 56px}
+.bandeau .ariane{font-size:15px;color:rgba(255,255,255,.72);margin-bottom:28px}
+.bandeau .ariane b{font-weight:400;color:#fff}
+.bandeau .ariane i{font-style:normal;margin:0 8px;opacity:.6}
+.bandeau h1{font-size:clamp(38px,6vw,58px);line-height:1.05;color:#fff}
+.proto{display:inline-flex;align-items:center;gap:8px;margin-top:22px;font-size:12.5px;color:rgba(255,255,255,.8)}
+.proto i{width:8px;height:8px;background:var(--yellow);transform:rotate(45deg)}
+
+/* Intro et actions */
+.intro{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:18px 30px;margin:52px 0 40px}
+.intro p{margin:0;max-width:56ch;font-size:16px}
+.intro .act{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px}
+.btn{display:inline-flex;align-items:center;gap:9px;padding:11px 20px;border-radius:10px;background:var(--yellow-tint);color:var(--ink);font-weight:600;font-size:14.5px;border:1px solid transparent;transition:background .2s,border-color .2s}
+.btn svg{width:15px;height:15px;color:var(--yellow-ink);transition:transform .2s}
+.btn:hover{border-color:var(--yellow-ink);background:#fff}
+.btn:hover svg{transform:translate(2px,-2px)}
+.btn.sobre{background:var(--tint)}
+.btn.sobre svg{color:var(--navy)}
+.btn.sobre:hover{border-color:var(--navy)}
+.btn.petit{padding:7px 12px;font-size:13px;border-radius:8px}
+.equipe{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);cursor:pointer;user-select:none}
+.equipe input{accent-color:var(--navy);width:16px;height:16px;margin:0}
+
+/* Onglets (filtres de la page Événements) */
+.onglets{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;border-bottom:1px solid var(--rule);padding-bottom:0;margin-bottom:40px}
+.onglet{display:inline-flex;align-items:center;gap:8px;padding:6px 0 10px;font-size:15px;font-weight:500;color:var(--body);border-bottom:1.5px solid transparent;margin-bottom:-1px}
+.onglet:hover{color:var(--navy)}
+.onglet[aria-selected="true"]{color:var(--navy);font-weight:600;border-bottom-color:var(--yellow-ink)}
+.onglet .n{font-size:12.5px;color:var(--muted);font-weight:500;font-variant-numeric:tabular-nums}
+.onglet .hex{color:var(--trait)}
+.onglet[aria-selected="true"] .hex{color:var(--yellow-ink)}
+
+/* Deux colonnes : filtres + contenu */
+.deux{display:grid;grid-template-columns:230px minmax(0,1fr);gap:56px;align-items:start}
+.cote{position:sticky;top:calc(16px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:22px}
+.annee{font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:9px 0 3px;border-bottom:1px solid var(--rule)}
+.plus-moins{font-size:13px;font-weight:600;color:var(--navy);padding:2px 0;border-bottom:1.5px solid var(--yellow-ink)}
+.recherche{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--trait);padding:6px 0}
+.recherche svg{width:17px;height:17px;color:var(--navy);flex:0 0 auto}
+.recherche input{border:0;outline:0;font:inherit;font-size:15px;color:var(--ink);width:100%;background:transparent;padding:4px 0;min-width:0}
+.recherche:focus-within{border-color:var(--yellow-ink)}
+.fhead{font-family:var(--serif);font-size:19px;line-height:1.2;color:var(--navy);margin:0 0 10px}
+.rubs{display:flex;flex-direction:column;border-top:1px solid var(--rule)}
+.rub{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border-bottom:1px solid var(--rule);padding:7px 0;font-weight:500;color:var(--ink);font-size:14.5px}
+.rub .n{margin-left:auto;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.rub .hex{visibility:hidden;color:var(--yellow-ink)}
+.rub:hover .t{text-decoration:underline;text-decoration-color:var(--yellow);text-decoration-thickness:1.5px;text-underline-offset:4px}
+.rub[aria-pressed="true"]{font-weight:600;color:var(--navy)}
+.rub[aria-pressed="true"] .hex{visibility:visible}
+.tags{display:flex;flex-wrap:wrap;gap:6px 14px}
+.tag{padding:2px 0;font-size:14px;color:var(--body);border-bottom:1px solid var(--rule)}
+.tag:hover{color:var(--navy);border-bottom-color:var(--navy)}
+.tag[aria-pressed="true"]{color:var(--navy);font-weight:600;border-bottom:1.5px solid var(--yellow-ink)}
+.reinit{font-size:13px;font-weight:600;color:var(--blue);text-align:left}
+.cote select{font:inherit;font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;width:100%}
+
+/* Têtes de section avec trait qui continue */
+.shead{display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin:0 0 18px}
+.shead::after{content:"";order:1;flex:1 1 40px;border-top:1px solid var(--trait)}
+.shead h2{display:flex;align-items:center;gap:10px;font-size:28px;line-height:1.2;color:var(--navy)}
+.shead h2 .hex{width:15px;height:16px;color:var(--yellow-ink)}
+.shead .aside{order:2;font-size:14px;color:var(--muted)}
+.bloc{margin-bottom:54px}
+.compte{font-size:14px;color:var(--muted);margin:-22px 0 22px}
+
+/* Frise d'événements (liste compacte de la page Événements) */
+.frise{border-left:1px solid var(--rule);padding:4px 0 6px;margin-left:7px}
+.ev{position:relative;display:grid;grid-template-columns:62px minmax(0,1fr);gap:18px;padding:14px 0 18px 26px}
+.ev > .hex{position:absolute;left:-7px;top:22px;background:#fff;color:var(--trait)}
+.ev.attente > .hex{color:var(--amber)}
+.ev + .ev{border-top:1px solid var(--rule)}
+.jour{font-family:var(--serif);font-size:26px;line-height:1;color:var(--navy);font-variant-numeric:tabular-nums}
+.jour small{display:block;font-family:var(--sans);font-size:11.5px;color:var(--muted);margin-top:5px;letter-spacing:.04em;text-transform:uppercase;font-weight:500}
+.jour small b{display:block;font-weight:400;text-transform:none;letter-spacing:0;margin-top:2px}
+.tx{min-width:0}
+.tx h3{font-family:var(--sans);font-size:17px;line-height:1.35;font-weight:500;color:var(--ink);margin:0 0 4px}
+.tx h3 a:hover{color:var(--navy);text-decoration:underline;text-decoration-color:var(--yellow);text-decoration-thickness:1.5px;text-underline-offset:4px}
+.meta{font-size:13.5px;color:var(--muted)}
+.meta b{font-weight:600;color:var(--navy)}
+.etiq{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0 0;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--trait)}
+.tx p{margin:7px 0 0;font-size:14.5px;max-width:66ch;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pied{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;margin-top:10px;font-size:14px}
+.plus{font-weight:600;color:var(--navy);border-bottom:1.5px solid var(--yellow-ink);padding-bottom:2px}
+.fmt{color:var(--muted)}
+.fmt b{color:var(--ink);font-weight:500}
+.src{font-size:12.5px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.niv{display:inline-block;min-width:17px;height:17px;line-height:15px;text-align:center;font-size:10.5px;font-weight:600;border:1px solid var(--trait);color:var(--trait);border-radius:4px;padding:0 3px}
+.outils{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-left:auto}
+.statut{font-size:12.5px;font-weight:600}
+.statut.publie{color:var(--green)} .statut.a_approuver{color:var(--amber)} .statut.ecarte{color:var(--muted)}
+.attente .tx{position:relative}
+.attente .tx::before{content:"";position:absolute;left:-10px;top:4px;bottom:4px;width:2px;background:var(--yellow)}
+
+/* Appels : tuile de date (page Événements) */
+.appel{display:grid;grid-template-columns:72px minmax(0,1fr);gap:20px;padding:20px 0;border-bottom:1px solid var(--rule)}
+.appel:first-child{border-top:1px solid var(--rule)}
+.tuile{width:72px;border-radius:12px;background:var(--yellow);color:var(--navy);text-align:center;padding:9px 0 8px;align-self:start}
+.tuile.gris{background:var(--tint);color:var(--ink)}
+.tuile b{display:block;font-family:var(--serif);font-weight:400;font-size:28px;line-height:1}
+.tuile span{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+.tuile i{display:block;font-style:normal;font-size:10.5px;font-weight:500;margin-top:1px;opacity:.8}
+.appel h3{font-family:var(--sans);font-size:17px;line-height:1.35;font-weight:500;color:var(--ink);margin:0 0 4px}
+.appel h3 a:hover{color:var(--navy);text-decoration:underline;text-decoration-color:var(--yellow);text-decoration-thickness:1.5px;text-underline-offset:4px}
+
+/* Actualités : lignes datées (Dernières nouvelles) */
+.actu{display:grid;grid-template-columns:64px minmax(0,1fr);gap:24px;align-items:start;padding:18px 0;border-bottom:1px solid var(--rule)}
+.actu:first-child{border-top:1px solid var(--rule)}
+.actu .d{display:flex;flex-direction:column;line-height:1}
+.actu .d b{font-family:var(--serif);font-weight:400;font-size:32px;color:var(--navy)}
+.actu .d span{font-size:12px;font-weight:500;color:var(--muted);margin-top:6px}
+.actu .cat{font-size:13px;color:var(--muted);margin-bottom:3px}
+.actu .cat strong{color:var(--navy);font-weight:600}
+.actu h3{font-family:var(--sans);font-size:17px;line-height:1.35;font-weight:500;color:var(--ink);margin:0 0 5px}
+.actu h3 a:hover{color:var(--navy);text-decoration:underline;text-decoration-color:var(--yellow);text-decoration-thickness:1.5px;text-underline-offset:4px}
+.actu p{margin:0;font-size:14.5px;max-width:70ch;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* Encadrés : file d'approbation, formulaire, vide */
+.encadre{padding:24px 28px;border-radius:14px;background:var(--tint);color:var(--ink);margin:0 0 36px}
+.encadre h2{font-size:24px;color:var(--navy);margin-bottom:6px}
+.encadre p{margin:0;max-width:72ch;font-size:14.5px;color:var(--body)}
+.chiffres{display:flex;flex-wrap:wrap;gap:12px 32px;margin-top:14px;font-size:14px;color:var(--muted)}
+.chiffres b{font-family:var(--serif);font-weight:400;font-size:30px;line-height:1;color:var(--navy);margin-right:7px;font-variant-numeric:tabular-nums}
+.champs{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:16px}
+.champs label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:var(--ink)}
+.champs input,.champs select,.champs textarea{font:inherit;font-size:14.5px;font-weight:400;padding:9px 11px;border:1px solid var(--rule);border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+.champs .large{grid-column:1/-1}
+.boutons{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;margin-top:16px}
+.boutons .note{font-size:13px;color:var(--muted)}
+.vide{padding:22px 26px;border-radius:14px;background:var(--tint);color:var(--ink)}
+
+/* Sources */
+.sources{margin:64px 0 60px}
+.tableau{overflow-x:auto}
+.sources table{width:100%;border-collapse:collapse;font-size:14px}
+.sources th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;padding:10px 12px 8px 0;border-bottom:1px solid var(--rule)}
+.sources td{padding:11px 12px 11px 0;border-bottom:1px solid var(--rule);vertical-align:top;color:var(--ink)}
+.sources td.n{text-align:right;font-variant-numeric:tabular-nums;padding-right:0;color:var(--muted)}
+.sources td a:hover{color:var(--navy);text-decoration:underline;text-decoration-color:var(--yellow);text-decoration-thickness:1.5px;text-underline-offset:4px}
+.legende{font-size:13.5px;color:var(--muted);margin:14px 0 0;max-width:78ch}
+.legende b{color:var(--ink);font-weight:600}
+
+/* Fiches d'événements à venir : lignes séparées par un trait fin, image à gauche à la hauteur du texte, bloc date sobre */
+.ev.avec-image{grid-template-columns:44px 230px minmax(0,1fr);column-gap:12px}
+.ev.avec-image .tx{padding-left:10px}
+.ev .im{display:block;align-self:stretch;min-height:150px;max-height:230px;border-radius:10px 0 0 10px;background:var(--tint) center/cover no-repeat;overflow:hidden}
+.ev .im img{width:100%;height:100%;object-fit:cover;display:block}
+.ev .infos{display:flex;flex-direction:column;gap:2px;font-size:14px;color:var(--ink);margin-top:3px}
+.ev .infos span{display:flex;gap:8px;align-items:flex-start}
+.ev .infos svg{width:15px;height:15px;flex:0 0 auto;margin-top:3px;color:var(--muted)}
+.niv-seulement-equipe .niv,.niv-seulement-equipe .col-niv,.niv-seulement-equipe .src,.niv-seulement-equipe .equipe-seulement{display:none}
+@media (max-width:820px){
+  .ev.avec-image{grid-template-columns:52px minmax(0,1fr)}
+  .ev.avec-image .im{grid-column:2;width:100%;max-width:none;aspect-ratio:16/9;max-height:none;min-height:0;align-self:start;border-radius:10px 10px 0 0}
+  .ev.avec-image .tx{grid-column:2;padding-left:0}
+}
+
+/* Affichage liste / calendrier */
+.barre{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 20px;margin:0 0 22px}
+.barre .compte{margin:0}
+.vues{display:flex;gap:16px}
+.vue{display:inline-flex;align-items:center;gap:7px;padding:2px 0;font-size:14px;font-weight:500;color:var(--body);border-bottom:1px solid var(--rule)}
+.vue svg{width:15px;height:15px;color:var(--muted)}
+.vue[aria-pressed="true"]{color:var(--navy);font-weight:600;border-bottom:1.5px solid var(--yellow-ink)}
+.vue[aria-pressed="true"] svg{color:var(--navy)}
+
+/* Calendrier mensuel */
+.cal-tete{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.cal-tete h2{font-size:28px;color:var(--navy);flex:1;min-width:0}
+.cal-tete h2 small{display:block;font-family:var(--sans);font-size:13px;color:var(--muted);margin-top:2px}
+.cal-nav{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;border:1px solid var(--rule);color:var(--navy);background:#fff}
+.cal-nav:hover{border-color:var(--navy)}
+.cal-nav svg{width:16px;height:16px}
+.cal-auj{font-size:13.5px;font-weight:600;color:var(--navy);border-bottom:1.5px solid var(--yellow-ink);padding-bottom:1px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--rule);border-left:1px solid var(--rule);touch-action:pan-y;user-select:none}
+.cal .jn{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 6px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);background:var(--tint)}
+.cal .c{min-height:92px;padding:6px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);text-align:left;display:flex;flex-direction:column;gap:3px;font:inherit;color:inherit;background:#fff;cursor:pointer}
+.cal .c.hors{background:#FAFBFC;color:var(--muted)}
+.cal .c.hors .num{color:var(--muted)}
+.cal .c:hover{background:var(--tint)}
+.cal .c[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--yellow-ink)}
+.cal .num{font-family:var(--serif);font-size:15px;color:var(--navy);line-height:1}
+.cal .c.auj .num{display:inline-block;background:var(--yellow);border-radius:6px;padding:3px 5px;margin:-3px 0 0 -5px}
+.cal .puce{font-size:11px;line-height:1.25;color:var(--ink);background:var(--tint);border-radius:4px;padding:2px 5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border-left:2px solid var(--trait)}
+.cal .puce.rsn{border-left-color:var(--yellow-ink);background:var(--yellow-tint)}
+.cal .puce.attente{border-left-color:var(--amber);border-style:dashed}
+.cal .plus{font-size:11px;color:var(--muted);border:0;font-weight:500}
+.cal-jour{margin-top:26px}
+.cal-legende{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px;color:var(--muted);margin-top:12px}
+.cal-legende i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:var(--tint);border-left:2px solid var(--trait)}
+.cal-legende i.rsn{background:var(--yellow-tint);border-left-color:var(--yellow-ink)}
+@media (max-width:640px){
+  .cal-tete h2{font-size:22px}
+  .cal .c{min-height:56px;padding:4px}
+  .cal .puce{display:none}
+  .cal .pts{display:flex;gap:3px;flex-wrap:wrap}
+  .cal .pt{width:6px;height:6px;border-radius:50%;background:var(--trait)}
+  .cal .pt.rsn{background:var(--yellow-ink)}
+  .cal .plus{display:none}
+  .ev.avec-image{grid-template-columns:52px minmax(0,1fr)}
+  .appel.avec-image{grid-template-columns:64px minmax(0,1fr)}
+}
+@media (min-width:641px){.cal .pts{display:none}}
+
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--navy);color:#fff;padding:11px 18px;border-radius:10px;font-size:14px;box-shadow:0 10px 30px rgba(0,52,105,.2);z-index:20;max-width:calc(100vw - 32px)}
+
+@media (prefers-reduced-motion:reduce){.btn,.btn svg{transition:none}}
+@media (max-width:820px){
+  .deux{grid-template-columns:minmax(0,1fr);gap:34px}
+  .cote{position:static}
+  .intro{margin-top:36px}
+  .ev{grid-template-columns:52px minmax(0,1fr);gap:14px;padding-left:22px}
+  .jour{font-size:22px}
+  .actu{grid-template-columns:52px minmax(0,1fr);gap:14px}
+  .actu .d b{font-size:26px}
+  .appel{grid-template-columns:64px minmax(0,1fr);gap:14px}
+  .tuile{width:64px}
+  .outils{margin-left:0}
+  .shead h2{font-size:24px}
+}
+</style>
+
+<header class="bandeau gutter">
+  <div class="wrap">
+    <div class="ariane">Accueil<i>›</i>Communauté<i>›</i><b>Veille de l'écosystème</b></div>
+    <h1>Veille de l'écosystème</h1>
+    <div class="proto"><i></i>Prototype · données réelles collectées le 25 octobre 2026 · rien n'est publié sur rsn.quebec</div>
+  </div>
+</header>
+
+<main class="gutter"><div class="wrap">
+  <div class="intro">
+    <p>Les événements, appels et actualités en santé numérique au Québec qui se passent ailleurs qu'au RSN : partenaires, réseaux thématiques du FRQ, IVADO, Obvia, Mila, universités et organismes publics, rassemblés automatiquement à partir de leurs flux.</p>
+    <div class="act">
+      <button class="btn" id="btn-proposer" type="button">Proposer un événement <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12 12 4M6 4h6v6"/></svg></button>
+      <button class="btn sobre" id="btn-infolettre" type="button" hidden>Copier l'agenda pour l'infolettre <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 11V3h8"/></svg></button>
+      <label class="equipe"><input type="checkbox" id="mode-equipe"> Mode équipe RSN</label>
+    </div>
+  </div>
+
+  <section class="encadre" id="dialogue" hidden>
+    <h2>Proposer un événement ou une nouvelle</h2>
+    <p>Votre proposition entre dans la file d'approbation de l'équipe du RSN. Elle sera publiée ici et, si elle s'y prête, reprise dans l'infolettre.</p>
+    <form id="form-proposition">
+      <div class="champs">
+        <label class="large">Titre <input id="p-titre" required placeholder="Ex. : Colloque sur la souveraineté numérique en santé"></label>
+        <label>Date de début <input id="p-debut" type="date" required></label>
+        <label>Date de fin (si plusieurs jours) <input id="p-fin" type="date"></label>
+        <label>Organisateur <input id="p-orga" required placeholder="Ex. : Obvia"></label>
+        <label>Format <select id="p-format"><option>Présentiel</option><option>Virtuel</option><option>Hybride</option></select></label>
+        <label>Lieu et ville <input id="p-lieu" placeholder="Ex. : HEC Montréal, Montréal"></label>
+        <label>Lien d'information <input id="p-url" type="url" placeholder="https://"></label>
+        <label class="large">Courte description (2 à 3 phrases) <textarea id="p-resume" rows="3"></textarea></label>
+        <label>Votre courriel (pour vous répondre) <input id="p-courriel" type="email"></label>
+      </div>
+      <div class="boutons">
+        <button class="btn" type="submit">Envoyer à l'équipe</button>
+        <button class="btn sobre" type="button" id="btn-annuler">Annuler</button>
+        <span class="note">Dans le prototype, la proposition reste dans cette page ; dans la version réelle elle irait dans Notion.</span>
+      </div>
+    </form>
+  </section>
+
+  <section class="encadre" id="file" hidden>
+    <h2>File d'approbation</h2>
+    <p>Ce que la collecte a trouvé sans pouvoir le publier d'office : événements des sources numériques sans mot-clé santé, nouvelles de sources santé sans mot-clé numérique, propositions reçues. Un clic publie, un clic écarte. Les éléments publiés gardent un bouton Retirer.</p>
+    <div class="chiffres" id="chiffres"></div>
+  </section>
+
+  <nav class="onglets" role="tablist" aria-label="Sections">
+    <button class="onglet" role="tab" data-onglet="agenda" aria-selected="true"><svg class="hex" viewBox="0 0 24 26" aria-hidden="true"><path d="M12 2 21.5 7.5v11L12 24 2.5 18.5v-11Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg>Agenda <span class="n" id="n-agenda"></span></button>
+    <button class="onglet" role="tab" data-onglet="appels" aria-selected="false"><svg class="hex" viewBox="0 0 24 26" aria-hidden="true"><path d="M12 2 21.5 7.5v11L12 24 2.5 18.5v-11Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg>Appels <span class="n" id="n-appels"></span></button>
+    <button class="onglet equipe-seulement" role="tab" data-onglet="actualites" aria-selected="false" title="Radar de nouvelles pour l'équipe, non publié"><svg class="hex" viewBox="0 0 24 26" aria-hidden="true"><path d="M12 2 21.5 7.5v11L12 24 2.5 18.5v-11Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg>Actualités <span class="n" id="n-actualites"></span></button>
+  </nav>
+
+  <div class="deux" id="vue-agenda">
+    <aside class="cote">
+      <label class="recherche"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="m14 14 4 4"/></svg><input id="f-recherche" type="search" placeholder="Rechercher un événement" aria-label="Rechercher un événement"></label>
+      <div><div class="fhead">Mois</div><div class="rubs" id="f-mois"></div></div>
+      <div><div class="fhead">Format</div><div class="tags" id="f-format" data-cle="format"></div></div>
+      <div><div class="fhead">Lieu</div><div class="tags" id="f-region" data-cle="region"></div></div>
+      <div><div class="fhead">Thèmes</div><div class="tags" id="f-theme" data-cle="theme"></div></div>
+      <div><div class="fhead">Organisateur</div><select id="f-orga" aria-label="Organisateur"><option value="">Tous</option></select></div>
+      <button class="reinit" id="f-reinit" type="button">Réinitialiser les filtres</button>
+    </aside>
+    <div>
+      <div class="barre">
+        <div class="compte" id="compte-agenda"></div>
+        <div class="vues" role="group" aria-label="Affichage">
+          <button type="button" class="vue" data-vue="liste" aria-pressed="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 4h10M3 8h10M3 12h10"/></svg>Liste</button>
+          <button type="button" class="vue" data-vue="calendrier" aria-pressed="false"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 7h12M6 1.5v3M10 1.5v3"/></svg>Calendrier</button>
+        </div>
+      </div>
+      <div id="liste-agenda"></div>
+      <div id="calendrier" hidden>
+        <div class="cal-tete">
+          <button type="button" class="cal-nav" id="cal-prec" aria-label="Mois précédent"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 3-5 5 5 5"/></svg></button>
+          <h2 id="cal-titre"></h2>
+          <button type="button" class="cal-auj" id="cal-auj">Aujourd'hui</button>
+          <button type="button" class="cal-nav" id="cal-suiv" aria-label="Mois suivant"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 3 5 5-5 5"/></svg></button>
+        </div>
+        <div class="cal" id="cal-grille" tabindex="0" aria-label="Calendrier du mois, flèches gauche et droite pour changer de mois"></div>
+        <div class="cal-legende"><span><i class="rsn"></i>Événement du RSN</span><span><i></i>Écosystème</span><span>Glisser ou utiliser les flèches pour changer de mois</span></div>
+        <div class="cal-jour" id="cal-jour"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="vue-appels" hidden>
+    <div class="shead"><h2><svg class="hex" viewBox="0 0 24 26" aria-hidden="true"><path d="M12 2 21.5 7.5v11L12 24 2.5 18.5v-11Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg>Appels en cours</h2><span class="aside" id="aside-appels"></span></div>
+    <p class="legende" style="margin:0 0 22px">Appels à projets, concours et appels de candidatures repérés dans les flux du FRQ, du CRM, du RSN, de CARES et des Prix Hippocrate. La date limite est extraite du texte quand elle y figure.</p>
+    <div id="liste-appels"></div>
+  </div>
+
+  <div id="vue-actualites" hidden>
+    <div class="shead"><h2><svg class="hex" viewBox="0 0 24 26" aria-hidden="true"><path d="M12 2 21.5 7.5v11L12 24 2.5 18.5v-11Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg>Actualités de l'écosystème</h2><span class="aside" id="aside-actus"></span></div>
+    <p class="legende" style="margin:0 0 22px">Radar pour l'équipe : nouvelles des organismes de l'écosystème repérées dans leurs flux. Rien n'est publié sur le site ; « Garder pour l'infolettre » met la nouvelle dans le bloc à copier pour Mailchimp.</p>
+    <div id="liste-actualites"></div>
+  </div>
+
+  <section class="sources">
+    <div class="shead"><h2><svg class="hex" viewBox="0 0 24 26" aria-hidden="true" style="color:var(--navy)"><path d="M12 2 21.5 7.5v11L12 24 2.5 18.5v-11Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg>Sources lues</h2><span class="aside" id="maj"></span></div>
+    <div class="tableau"><table>
+      <thead><tr><th>Source</th><th>Ce qu'on lit</th><th class="col-niv">Niveau</th><th style="text-align:right">Éléments</th></tr></thead>
+      <tbody id="tbl-sources"></tbody>
+    </table></div>
+    <p class="legende"><span class="col-niv">Niveau de fiabilité de la source (visible en mode équipe) : <b>A</b> flux structuré avec dates d'événement (iCal, API) · <b>B</b> flux RSS de nouvelles, date de publication seulement · <b>C</b> page web structurée, dates lisibles par programme · <b>M</b> saisie manuelle. </span>Les sources sans flux (CRES, Polytechnique, McGill, Le Point en santé, congrès PLS, LinkedIn) passent par le bouton Proposer ou par la saisie de l'équipe.</p>
+  </section>
+</div></main>
+
+<script id="donnees" type="application/json">__DATA__</script>
+<script>
+(function(){
+  const D = JSON.parse(document.getElementById('donnees').textContent);
+  const items = D.items.map(k => Object.assign({}, k));
+  const AUJ = '2026-10-25';
+  const MOIS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+  const MOIS_LONG = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const HEX = '<svg class="hex" viewBox="0 0 24 26" aria-hidden="true"><path d="M12 2 21.5 7.5v11L12 24 2.5 18.5v-11Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg>';
+  const $ = s => document.querySelector(s);
+  let equipe = false, onglet = 'agenda';
+  const filtres = { mois: '', format: '', region: '', theme: '', orga: '', q: '' };
+
+  const d = s => { const [a,m,j] = s.split('-').map(Number); return {a,m,j}; };
+  const cap = s => s[0].toUpperCase() + s.slice(1);
+  const dateLongue = s => { if(!s) return ''; const x = d(s); return `${x.j === 1 ? '1er' : x.j} ${MOIS_LONG[x.m-1]} ${x.a}`; };
+  const dateCourte = s => { if(!s) return ''; const x = d(s); return `${x.j} ${MOIS[x.m-1]} ${x.a}`; };
+  const esc = s => String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const lieuTexte = k => [k.lieu, k.ville].filter(Boolean).filter((v,i,t)=>t.indexOf(v)===i).join(' – ');
+  const nivTitre = {A:'Flux structuré avec dates', B:'Flux RSS de nouvelles', C:'Page web structurée', M:'Saisie manuelle'};
+  document.body.classList.add('niv-seulement-equipe');
+
+  function blocJour(k){
+    const a = d(k.debut), b = d(k.fin || k.debut);
+    const meme = !k.fin || k.fin === k.debut;
+    if (meme) return `<div class="jour">${a.j}<small>${MOIS[a.m-1]}<b>${a.a}</b></small></div>`;
+    if (a.m === b.m) return `<div class="jour">${a.j}–${b.j}<small>${MOIS[a.m-1]}<b>${a.a}</b></small></div>`;
+    return `<div class="jour">${a.j}<small>${MOIS[a.m-1]}<b>${a.a}</b></small></div>`;
+  }
+  function outils(k){
+    if (!equipe) return '';
+    if (k.type === 'actualite') {
+      const st = `<span class="statut ${k.statut==='garde'?'publie':k.statut==='ecarte'?'ecarte':'a_approuver'}">${{garde:'Gardée pour l’infolettre', publie:'Repérée automatiquement', a_approuver:'À trier', ecarte:'Ignorée'}[k.statut]}</span>`;
+      const b = k.statut === 'garde'
+        ? `<button class="btn sobre petit" data-act="retirer" data-id="${k.id}">Retirer de l’infolettre</button>`
+        : `<button class="btn petit" data-act="garder" data-id="${k.id}">Garder pour l’infolettre</button><button class="btn sobre petit" data-act="ecarter" data-id="${k.id}">Ignorer</button>`;
+      return `<span class="outils">${st}${b}</span>`;
+    }
+    const st = `<span class="statut ${k.statut}">${k.statut === 'publie' ? (k.manuel ? 'Publié par l’équipe' : 'Publié automatiquement') : {a_approuver:'À approuver', ecarte:'Écarté'}[k.statut]}</span>`;
+    const b = k.statut === 'publie'
+      ? `<button class="btn sobre petit" data-act="retirer" data-id="${k.id}">Retirer</button>`
+      : `<button class="btn petit" data-act="publier" data-id="${k.id}">Publier</button><button class="btn sobre petit" data-act="ecarter" data-id="${k.id}">Écarter</button>`;
+    return `<span class="outils">${st}${b}</span>`;
+  }
+  const srcTexte = k => `<span class="src" title="${nivTitre[k.niveau]||''}"><span class="niv">${k.niveau}</span>${esc(k.source)}</span>`;
+  const ICO_DATE = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 7h12M6 1.5v3M10 1.5v3"/></svg>';
+  const ICO_LIEU = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 14.5s4.5-4.2 4.5-7.5a4.5 4.5 0 0 0-9 0c0 3.3 4.5 7.5 4.5 7.5Z"/><circle cx="8" cy="7" r="1.6"/></svg>';
+  function periode(k){
+    const a = d(k.debut), b = d(k.fin || k.debut); const h = k.heure ? `, ${k.heure.replace(':',' h ')}` : '';
+    if (!k.fin || k.fin === k.debut) return `${dateLongue(k.debut)}${h}`;
+    if (a.m === b.m && a.a === b.a) return `Du ${a.j} au ${b.j} ${MOIS_LONG[a.m-1]} ${a.a}`;
+    return `Du ${a.j === 1 ? '1er' : a.j} ${MOIS_LONG[a.m-1]}${a.a !== b.a ? ' ' + a.a : ''} au ${dateLongue(k.fin)}`;
+  }
+  // ligne compacte (événements passés, comme la section « Passés » de la page Événements)
+  function ligneEv(k){
+    const etiq = (k.etiquettes||[]).map(e=>`<span>${esc(e)}</span>`).join('');
+    const fmt = [k.format && `<b>${k.format}</b>`, k.langue === 'en' && 'En anglais'].filter(Boolean).join(' · ');
+    const cat = k.categorie_rsn ? `${esc(k.categorie_rsn)} · ` : '';
+    return `<div class="ev ${k.statut==='a_approuver'?'attente':''}" data-id="${k.id}">${HEX}${blocJour(k)}<div class="tx">
+      <h3><a href="${esc(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
+      <div class="meta">${cat}<b>${esc(k.organisateur)}</b>${lieuTexte(k) ? ' · ' + esc(lieuTexte(k)) : ''}</div>
+      ${etiq ? `<div class="etiq">${etiq}</div>` : ''}
+      <div class="pied"><a class="plus" href="${esc(k.url)}" target="_blank" rel="noopener">Plus d'information</a><span class="fmt">${fmt}</span>${srcTexte(k)}${outils(k)}</div>
+    </div></div>`;
+  }
+  // fiche à venir : même ligne que les passés, avec l'image à gauche du texte et les lignes date / lieu
+  function carteEv(k, compact){
+    if (compact) return ligneEv(k);
+    const etiq = (k.etiquettes||[]).map(e=>`<span>${esc(e)}</span>`).join('');
+    const fmt = [k.prix && esc(k.prix), k.langue === 'en' && 'En anglais', k.note && esc(k.note)].filter(Boolean).join(' · ');
+    const lieu = [lieuTexte(k), k.format].filter(Boolean).join(' · ');
+    return `<div class="ev ${k.statut==='a_approuver'?'attente':''} ${k.image?'avec-image':''}" data-id="${k.id}">${HEX}${blocJour(k)}
+      ${k.image ? `<a class="im" href="${esc(k.url)}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"><img src="${k.image}" alt=""></a>` : ''}
+      <div class="tx">
+        <div class="meta"><b>${esc(k.organisateur)}</b>${k.categorie_rsn ? ' · ' + esc(k.categorie_rsn) : ''}</div>
+        <h3><a href="${esc(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
+        <div class="infos"><span>${ICO_DATE}${periode(k)}</span>${lieu ? `<span>${ICO_LIEU}${esc(lieu)}</span>` : ''}</div>
+        ${etiq ? `<div class="etiq">${etiq}</div>` : ''}
+        ${k.resume ? `<p>${esc(k.resume)}</p>` : ''}
+        <div class="pied"><a class="plus" href="${esc(k.url)}" target="_blank" rel="noopener">Plus d'information</a>${fmt ? `<span class="fmt">${fmt}</span>` : ''}${srcTexte(k)}${outils(k)}</div>
+      </div></div>`;
+  }
+  const estRSN = k => k.source === 'RSN' || k.categorie_rsn === 'Événements RSN';
+  function carteAppel(k){
+    const lim = k.fin && k.fin !== k.debut;
+    const x = d(lim ? k.fin : k.debut);
+    const tuile = lim ? `<div class="tuile"><b>${x.j}</b><span>${MOIS[x.m-1]}</span><i>date limite</i></div>`
+                      : `<div class="tuile gris"><b>${x.j}</b><span>${MOIS[x.m-1]}</span><i>publié</i></div>`;
+    return `<div class="appel ${k.statut==='a_approuver'?'attente':''}" data-id="${k.id}">${tuile}<div class="tx">
+      <h3><a href="${esc(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
+      <div class="meta"><b>${esc(k.organisateur)}</b> · ${esc(k.categorie||'Appel')}${lim ? ' · publié le ' + dateCourte(k.debut) : ''}</div>
+      ${k.resume ? `<p>${esc(k.resume)}</p>` : ''}
+      <div class="pied"><a class="plus" href="${esc(k.url)}" target="_blank" rel="noopener">Consulter l'appel</a>
+        <span class="src"><span class="niv">${k.niveau}</span>${esc(k.source)}</span>${outils(k)}</div>
+    </div></div>`;
+  }
+  function carteActu(k){
+    const x = d(k.debut || AUJ);
+    return `<div class="actu ${k.statut==='a_approuver'?'attente':''}" data-id="${k.id}"><div class="d"><b>${x.j}</b><span>${MOIS[x.m-1]} ${x.a}</span></div><div class="tx">
+      <div class="cat"><strong>${esc(k.source)}</strong>${(k.etiquettes||[]).length ? ' · ' + k.etiquettes.map(esc).join(', ') : ''}</div>
+      <h3><a href="${esc(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
+      ${k.resume ? `<p>${esc(k.resume)}</p>` : ''}
+      ${equipe ? `<div class="pied" style="margin-top:8px">${outils(k)}</div>` : ''}
+    </div></div>`;
+  }
+  function visibles(type){ return items.filter(k => k.type === type && (k.statut === 'publie' || k.statut === 'garde' || (equipe && k.statut === 'a_approuver'))); }
+  const aVenir = () => visibles('evenement').filter(k => (k.fin || k.debut) >= AUJ);
+  const passes = () => visibles('evenement').filter(k => (k.fin || k.debut) < AUJ);
+  let vue = 'liste', calMois = AUJ.slice(0,7), calJour = '';
+
+  function filtrer(L){
+    const q = filtres.q.trim().toLowerCase();
+    if (q) L = L.filter(k => (k.titre + ' ' + k.organisateur + ' ' + (k.resume||'')).toLowerCase().includes(q));
+    if (filtres.format) L = L.filter(k => k.format === filtres.format);
+    if (filtres.region) L = L.filter(k => k.region === filtres.region);
+    if (filtres.theme) L = L.filter(k => (k.etiquettes||[]).includes(filtres.theme));
+    if (filtres.orga) L = L.filter(k => k.organisateur === filtres.orga);
+    return L;
+  }
+  function rendreAgenda(){
+    $('#liste-agenda').hidden = vue !== 'liste'; $('#calendrier').hidden = vue !== 'calendrier';
+    if (vue === 'calendrier') { rendreCalendrier(); rendreMois(); return; }
+    const anciens = filtres.mois === 'passes';
+    let L = filtrer(anciens ? passes() : aVenir());
+    if (filtres.mois === 'plus-tard') { const apres = decalerMois(moisSuivants()[NB_MOIS-1], 1); L = L.filter(k => k.debut.slice(0,7) >= apres); }
+    else if (filtres.mois && !anciens) L = L.filter(k => k.debut.slice(0,7) <= filtres.mois && (k.fin||k.debut).slice(0,7) >= filtres.mois);
+    L.sort((a,b) => anciens ? b.debut.localeCompare(a.debut) : a.debut.localeCompare(b.debut));
+    const groupes = new Map();
+    for (const k of L) { const cle = (anciens || k.debut >= AUJ ? k.debut : AUJ).slice(0,7); if (!groupes.has(cle)) groupes.set(cle, []); groupes.get(cle).push(k); }
+    let html = '';
+    for (const [cle, G] of groupes) { const x = d(cle + '-01');
+      html += `<section class="bloc"><div class="shead"><h2>${HEX}${cap(MOIS_LONG[x.m-1])} ${x.a}</h2><span class="aside">${G.length} événement${G.length>1?'s':''}</span></div><div class="frise">${G.map(k => carteEv(k, anciens)).join('')}</div></section>`; }
+    $('#liste-agenda').innerHTML = L.length ? html : '<div class="vide">Aucun événement ne correspond à ces filtres.</div>';
+    $('#compte-agenda').textContent = anciens ? `${L.length} événement${L.length>1?'s':''} passé${L.length>1?'s':''} depuis octobre 2025`
+      : `${L.length} événement${L.length>1?'s':''} à venir${equipe ? ', y compris la file d’approbation' : ''}`;
+    rendreMois();
+  }
+  const NB_MOIS = 4;
+  function moisSuivants(){ const mois = []; let c = d(AUJ); for (let i = 0; i < NB_MOIS; i++) { mois.push(`${c.a}-${String(c.m).padStart(2,'0')}`); c.m++; if (c.m > 12) { c.m = 1; c.a++; } } return mois; }
+  function rendreMois(){
+    const E = filtrer(aVenir()); const mois = moisSuivants(); const apres = decalerMois(mois[mois.length-1], 1);
+    const n = m => E.filter(k => k.debut.slice(0,7) <= m && (k.fin||k.debut).slice(0,7) >= m).length;
+    const actif = vue === 'calendrier' ? calMois : filtres.mois;
+    let html = `<button type="button" class="rub" data-mois="" aria-pressed="${actif===''}">${HEX}<span class="t">Tous les mois à venir</span><span class="n">${E.length}</span></button>`;
+    let annee = d(AUJ).a;
+    for (const m of mois) { const x = d(m+'-01');
+      if (x.a !== annee) { annee = x.a; html += `<div class="annee">${x.a}</div>`; }
+      html += `<button type="button" class="rub" data-mois="${m}" aria-pressed="${actif===m}">${HEX}<span class="t">${cap(MOIS_LONG[x.m-1])}</span><span class="n">${n(m)}</span></button>`; }
+    const nTard = E.filter(k => k.debut.slice(0,7) >= apres).length;
+    html += `<button type="button" class="rub" data-mois="plus-tard" aria-pressed="${actif==='plus-tard'}">${HEX}<span class="t">Plus tard</span><span class="n">${nTard}</span></button>`;
+    html += `<button type="button" class="rub" data-mois="passes" aria-pressed="${actif==='passes'}">${HEX}<span class="t">Événements passés</span><span class="n">${filtrer(passes()).length}</span></button>`;
+    $('#f-mois').innerHTML = html;
+  }
+  function decalerMois(m, n){ const x = d(m + '-01'); x.m += n; while (x.m > 12) { x.m -= 12; x.a++; } while (x.m < 1) { x.m += 12; x.a--; } return `${x.a}-${String(x.m).padStart(2,'0')}`; }
+  function rendreCalendrier(){
+    const E = filtrer(visibles('evenement'));
+    const x = d(calMois + '-01');
+    const nbJours = new Date(x.a, x.m, 0).getDate();
+    const premier = (new Date(x.a, x.m - 1, 1).getDay() + 6) % 7; // lundi = 0
+    const prec = d(decalerMois(calMois, -1) + '-01'); const nbPrec = new Date(prec.a, prec.m, 0).getDate();
+    const nEv = E.filter(k => k.debut.slice(0,7) <= calMois && (k.fin||k.debut).slice(0,7) >= calMois).length;
+    $('#cal-titre').innerHTML = `${cap(MOIS_LONG[x.m-1])} ${x.a}<small>${nEv} événement${nEv>1?'s':''} ce mois-ci</small>`;
+    let html = ['L','M','M','J','V','S','D'].map(j => `<div class="jn">${j}</div>`).join('');
+    // une série qui dure plus d'une semaine (webinaires, cours) n'apparaît qu'à son premier jour, pour ne pas remplir le mois
+    const longue = k => (new Date(k.fin||k.debut) - new Date(k.debut)) / 864e5 > 7;
+    const ceJour = (k, iso) => longue(k) ? k.debut === iso : (k.debut <= iso && (k.fin||k.debut) >= iso);
+    const cellule = (iso, num, hors) => {
+      const J = E.filter(k => ceJour(k, iso)).sort((a,b)=>a.debut.localeCompare(b.debut));
+      const puces = J.slice(0,3).map(k => `<span class="puce ${estRSN(k)?'rsn':''} ${k.statut==='a_approuver'?'attente':''}" title="${esc(k.titre)}">${esc(k.titre)}</span>`).join('') + (J.length > 3 ? `<span class="plus">+ ${J.length-3}</span>` : '');
+      const pts = `<span class="pts">${J.slice(0,4).map(k => `<i class="pt ${estRSN(k)?'rsn':''}"></i>`).join('')}</span>`;
+      return `<button type="button" class="c ${hors?'hors':''} ${iso===AUJ?'auj':''}" data-jour="${iso}" aria-pressed="${calJour===iso}" aria-label="${dateLongue(iso)}, ${J.length} événement${J.length>1?'s':''}"><span class="num">${num}</span>${puces}${J.length ? pts : ''}</button>`;
+    };
+    for (let i = premier - 1; i >= 0; i--) { const j = nbPrec - i; html += cellule(`${prec.a}-${String(prec.m).padStart(2,'0')}-${String(j).padStart(2,'0')}`, j, true); }
+    for (let j = 1; j <= nbJours; j++) html += cellule(`${calMois}-${String(j).padStart(2,'0')}`, j, false);
+    const suiv = d(decalerMois(calMois, 1) + '-01'); let reste = (7 - (premier + nbJours) % 7) % 7;
+    for (let j = 1; j <= reste; j++) html += cellule(`${suiv.a}-${String(suiv.m).padStart(2,'0')}-${String(j).padStart(2,'0')}`, j, true);
+    $('#cal-grille').innerHTML = html;
+    const J = calJour ? E.filter(k => ceJour(k, calJour)).sort((a,b)=>a.debut.localeCompare(b.debut)) : [];
+    $('#cal-jour').innerHTML = calJour ? `<div class="shead"><h2>${HEX}${cap(dateLongue(calJour))}</h2><span class="aside">${J.length} événement${J.length>1?'s':''}</span></div>` + (J.length ? `<div class="frise">${J.map(carteEv).join('')}</div>` : '<div class="vide">Aucun événement ce jour-là.</div>') : '';
+    $('#compte-agenda').textContent = 'Cliquer sur un jour pour voir ses événements';
+  }
+  let themesOuverts = false; const NB_THEMES = 6;
+  function rendreTags(){
+    const E = items.filter(k => k.type === 'evenement');
+    const mk = (id, vals) => { $(id).innerHTML = vals.map(v => `<button type="button" class="tag" data-val="${esc(v)}" aria-pressed="${filtres[$(id).dataset.cle]===v}">${esc(v)}</button>`).join(''); };
+    mk('#f-format', ['Présentiel','Virtuel','Hybride']);
+    mk('#f-region', ['Québec','En ligne','Hors Québec']);
+    const compte = {}; E.forEach(k => (k.etiquettes||[]).forEach(t => compte[t] = (compte[t]||0) + 1));
+    let themes = Object.keys(compte).sort((a,b) => compte[b] - compte[a] || a.localeCompare(b,'fr'));
+    const tous = themes.length;
+    if (!themesOuverts && tous > NB_THEMES) { themes = themes.slice(0, NB_THEMES); if (filtres.theme && !themes.includes(filtres.theme)) themes.push(filtres.theme); }
+    mk('#f-theme', themes);
+    if (tous > NB_THEMES) $('#f-theme').insertAdjacentHTML('beforeend', `<button type="button" class="plus-moins" data-plus-moins>${themesOuverts ? 'Moins' : 'Plus…'}</button>`);
+    const orgas = [...new Set(E.map(k => k.organisateur))].sort((a,b)=>a.localeCompare(b,'fr'));
+    $('#f-orga').innerHTML = '<option value="">Tous</option>' + orgas.map(o => `<option${filtres.orga===o?' selected':''}>${esc(o)}</option>`).join('');
+  }
+  function rendreAppels(){
+    const L = visibles('appel').sort((a,b) => (a.fin && a.fin !== a.debut ? a.fin : '9' + a.debut).localeCompare(b.fin && b.fin !== b.debut ? b.fin : '9' + b.debut));
+    $('#liste-appels').innerHTML = L.length ? L.map(carteAppel).join('') : '<div class="vide">Aucun appel en cours.</div>';
+    $('#aside-appels').textContent = `${L.length} appel${L.length>1?'s':''}`;
+  }
+  function rendreActus(){
+    const L = visibles('actualite').sort((a,b) => (b.debut||'').localeCompare(a.debut||''));
+    $('#liste-actualites').innerHTML = L.length ? L.map(carteActu).join('') : '<div class="vide">Aucune actualité.</div>';
+    $('#aside-actus').textContent = `${L.length} nouvelle${L.length>1?'s':''}`;
+  }
+  function rendreCompteurs(){
+    $('#n-agenda').textContent = aVenir().length;
+    $('#n-appels').textContent = visibles('appel').length;
+    $('#n-actualites').textContent = visibles('actualite').length;
+    const att = items.filter(k => k.statut === 'a_approuver'), pub = items.filter(k => k.statut === 'publie'), ec = items.filter(k => k.statut === 'ecarte');
+    $('#chiffres').innerHTML = `<span><b>${att.length}</b>à approuver</span><span><b>${pub.length}</b>publiés automatiquement</span><span><b>${ec.length}</b>écartés par le filtre</span><span><b>${att.filter(k=>k.source==='Proposition').length}</b>propositions reçues</span>`;
+  }
+  function rendreSources(){
+    const S = D.sources.filter(s => s.nb > 0).sort((a,b) => a.niveau.localeCompare(b.niveau) || b.nb - a.nb);
+    $('#tbl-sources').innerHTML = S.map(s => `<tr><td><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.nom)}</a></td><td style="color:var(--body)">${esc(s.flux)}</td><td class="col-niv"><span class="niv">${s.niveau}</span></td><td class="n">${s.nb}</td></tr>`).join('');
+    const g = new Date(D.genere_le);
+    $('#maj').textContent = `collecte du ${g.getDate()} ${MOIS_LONG[g.getMonth()]} ${g.getFullYear()} à ${g.getHours()} h ${String(g.getMinutes()).padStart(2,'0')}`;
+  }
+  function tout(){ rendreCompteurs(); rendreTags(); rendreAgenda(); rendreAppels(); rendreActus(); }
+
+  // interactions
+  document.querySelectorAll('.onglet').forEach(b => b.addEventListener('click', () => {
+    onglet = b.dataset.onglet;
+    document.querySelectorAll('.onglet').forEach(x => x.setAttribute('aria-selected', x === b));
+    ['agenda','appels','actualites'].forEach(v => $('#vue-' + v).hidden = v !== onglet);
+    majBoutonInfolettre();
+  }));
+  const LIBELLES_COPIE = { agenda: "Copier l'agenda pour l'infolettre", appels: "Copier les appels pour l'infolettre", actualites: "Copier les nouvelles gardées pour l'infolettre" };
+  function majBoutonInfolettre(){ const b = $('#btn-infolettre'); b.hidden = !equipe; b.firstChild.textContent = LIBELLES_COPIE[onglet] + ' '; }
+  $('#f-recherche').addEventListener('input', e => { filtres.q = e.target.value; rendreAgenda(); });
+  $('#f-mois').addEventListener('click', e => { const b = e.target.closest('[data-mois]'); if (!b) return; const m = b.dataset.mois;
+    if (vue === 'calendrier' && m && m !== 'passes' && m !== 'plus-tard') { calMois = m; calJour = ''; rendreAgenda(); return; }
+    if (vue === 'calendrier') { vue = 'liste'; document.querySelectorAll('.vue').forEach(x => x.setAttribute('aria-pressed', x.dataset.vue === vue)); }
+    filtres.mois = m; rendreAgenda(); });
+  document.querySelectorAll('.vue').forEach(b => b.addEventListener('click', () => { vue = b.dataset.vue;
+    document.querySelectorAll('.vue').forEach(x => x.setAttribute('aria-pressed', x === b));
+    if (vue === 'calendrier' && filtres.mois && filtres.mois !== 'passes' && filtres.mois !== 'plus-tard') calMois = filtres.mois;
+    rendreAgenda(); }));
+  $('#cal-prec').addEventListener('click', () => { calMois = decalerMois(calMois, -1); calJour = ''; rendreAgenda(); });
+  $('#cal-suiv').addEventListener('click', () => { calMois = decalerMois(calMois, 1); calJour = ''; rendreAgenda(); });
+  $('#cal-auj').addEventListener('click', () => { calMois = AUJ.slice(0,7); calJour = AUJ; rendreAgenda(); });
+  $('#cal-grille').addEventListener('click', e => { const c = e.target.closest('[data-jour]'); if (!c) return;
+    calJour = calJour === c.dataset.jour ? '' : c.dataset.jour; if (calJour && calJour.slice(0,7) !== calMois) calMois = calJour.slice(0,7); rendreAgenda();
+    if (calJour) $('#cal-jour').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' }); });
+  $('#cal-grille').addEventListener('keydown', e => { if (e.key === 'ArrowLeft') { calMois = decalerMois(calMois, -1); calJour = ''; rendreAgenda(); } if (e.key === 'ArrowRight') { calMois = decalerMois(calMois, 1); calJour = ''; rendreAgenda(); } });
+  let touche = null;
+  $('#cal-grille').addEventListener('touchstart', e => { touche = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }, { passive: true });
+  $('#cal-grille').addEventListener('touchend', e => { if (!touche) return; const dx = e.changedTouches[0].clientX - touche.x, dy = e.changedTouches[0].clientY - touche.y; touche = null;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { calMois = decalerMois(calMois, dx < 0 ? 1 : -1); calJour = ''; rendreAgenda(); } }, { passive: true });
+  $('#f-theme').addEventListener('click', e => { if (e.target.closest('[data-plus-moins]')) { themesOuverts = !themesOuverts; rendreTags(); } });
+  ['#f-format','#f-region','#f-theme'].forEach(id => $(id).addEventListener('click', e => { const b = e.target.closest('[data-val]'); if (!b) return;
+    const cle = $(id).dataset.cle; filtres[cle] = filtres[cle] === b.dataset.val ? '' : b.dataset.val; rendreTags(); rendreAgenda(); }));
+  $('#f-orga').addEventListener('change', e => { filtres.orga = e.target.value; rendreAgenda(); });
+  $('#f-reinit').addEventListener('click', () => { Object.keys(filtres).forEach(k => filtres[k] = ''); $('#f-recherche').value = ''; rendreTags(); rendreAgenda(); });
+  $('#mode-equipe').addEventListener('change', e => { equipe = e.target.checked; $('#file').hidden = !equipe; document.body.classList.toggle('niv-seulement-equipe', !equipe);
+    if (!equipe && onglet === 'actualites') document.querySelector('.onglet[data-onglet="agenda"]').click(); majBoutonInfolettre(); tout(); });
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-act]'); if (!b) return;
+    const k = items.find(x => x.id === b.dataset.id); if (!k) return;
+    k.statut = {publier:'publie', garder:'garde', ecarter:'ecarte', retirer: k.type === 'actualite' ? 'publie' : 'ecarte'}[b.dataset.act]; k.manuel = true;
+    tout(); toast({publier:'Publié', garder:'Gardée pour l’infolettre', ecarter: k.type === 'actualite' ? 'Ignorée' : 'Écartée', retirer: k.type === 'actualite' ? 'Retirée de l’infolettre' : 'Retiré de la page'}[b.dataset.act]);
+  });
+  $('#btn-proposer').addEventListener('click', () => { $('#dialogue').hidden = false; $('#p-titre').focus(); });
+  $('#btn-annuler').addEventListener('click', () => { $('#dialogue').hidden = true; });
+  $('#form-proposition').addEventListener('submit', e => {
+    e.preventDefault();
+    const deb = $('#p-debut').value, fin = $('#p-fin').value || deb;
+    items.push({ id: 'prop-' + Date.now(), type: 'evenement', titre: $('#p-titre').value, debut: deb, fin, heure: '', organisateur: $('#p-orga').value,
+      lieu: $('#p-lieu').value, ville: '', format: $('#p-format').value, prix: '', url: $('#p-url').value || '#', resume: $('#p-resume').value,
+      source: 'Proposition', niveau: '—', statut: 'a_approuver', etiquettes: [], langue: 'fr', region: $('#p-format').value === 'Virtuel' ? 'En ligne' : 'Québec', note: '' });
+    e.target.reset(); $('#dialogue').hidden = true; tout();
+    toast('Merci, votre proposition est dans la file d’approbation de l’équipe.');
+  });
+  const STYLE_TABLE = `style="border-collapse:collapse;font-family:'Plus Jakarta Sans',Arial,sans-serif;font-size:14px;color:#101828"`;
+  function blocAppels(){
+    const L = items.filter(k => k.type === 'appel' && k.statut === 'publie').sort((a,b) => (a.fin && a.fin !== a.debut ? a.fin : '9' + a.debut).localeCompare(b.fin && b.fin !== b.debut ? b.fin : '9' + b.debut));
+    const lignes = L.map(k => { const lim = k.fin && k.fin !== k.debut; const x = d(lim ? k.fin : k.debut);
+      return `<tr><td style="width:64px;text-align:center;vertical-align:top;color:#003469"><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#6E7A84">${lim?'Date limite':'Publié'}</div><div style="font-size:24px;line-height:1">${x.j}</div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase">${MOIS[x.m-1]}</div></td>
+<td style="vertical-align:top;padding:0 0 18px 14px"><b style="font-size:16px">${esc(k.titre)}</b><br><span style="color:#6E7A84">${esc(k.organisateur)} · ${esc(k.categorie||'Appel')}</span><br>${esc(k.resume)}<br><a href="${esc(k.url)}" style="color:#003469">Consulter l'appel →</a></td></tr>`; }).join('\n');
+    return [L.length, `<!-- Appels en cours (généré par la veille de l'écosystème, ${dateLongue(AUJ)}) -->\n<table ${STYLE_TABLE}>\n${lignes}\n</table>`];
+  }
+  function blocNouvelles(){
+    const L = items.filter(k => k.type === 'actualite' && k.statut === 'garde').sort((a,b) => (b.debut||'').localeCompare(a.debut||''));
+    const lignes = L.map(k => `<tr><td style="vertical-align:top;padding:0 0 16px 0"><span style="font-size:12px;color:#6E7A84">${dateCourte(k.debut)} · ${esc(k.source)}</span><br><b style="font-size:16px">${esc(k.titre)}</b><br>${esc(k.resume)}<br><a href="${esc(k.url)}" style="color:#003469">Lire la suite →</a></td></tr>`).join('\n');
+    return [L.length, `<!-- Nouvelles de l'écosystème gardées pour l'infolettre (${dateLongue(AUJ)}) -->\n<table ${STYLE_TABLE}>\n${lignes}\n</table>`];
+  }
+  function copier(html, message){
+    const fini = () => toast(message);
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(html).then(fini).catch(() => repli(html, fini)); else repli(html, fini);
+  }
+  $('#btn-infolettre').addEventListener('click', () => {
+    if (onglet === 'appels') { const [n, h] = blocAppels(); if (!n) return toast('Aucun appel publié à copier.'); return copier(h, `Appels copiés (${n}) : à coller dans Mailchimp.`); }
+    if (onglet === 'actualites') { const [n, h] = blocNouvelles(); if (!n) return toast('Aucune nouvelle gardée : cliquez d’abord « Garder pour l’infolettre ».'); return copier(h, `Nouvelles copiées (${n}) : à coller dans Mailchimp.`); }
+    const L = items.filter(k => k.type === 'evenement' && k.statut === 'publie' && k.debut >= AUJ).sort((a,b)=>a.debut.localeCompare(b.debut)).slice(0, 8);
+    const bloc = L.map(k => { const a = d(k.debut), b = d(k.fin||k.debut); const jj = (k.fin && k.fin!==k.debut) ? (a.m===b.m ? `${a.j}–${b.j}` : `${a.j} ${MOIS[a.m-1]} – ${b.j}`) : a.j;
+      return `<tr><td style="width:64px;text-align:center;vertical-align:top;color:#003469"><div style="font-size:28px;line-height:1">${jj}</div><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase">${MOIS[b.m-1]}</div></td>
+<td style="vertical-align:top;padding:0 0 18px 14px"><b style="font-size:16px">${esc(k.titre)}</b><br><span style="color:#6E7A84">${esc(k.organisateur)}${lieuTexte(k)?' · '+esc(lieuTexte(k)):''}</span><br><span style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#3D6A99">${(k.etiquettes||[]).join(' · ')}</span><br>${esc(k.resume)}<br><a href="${esc(k.url)}" style="color:#003469">Plus d'information →</a> &nbsp; <span style="color:#6E7A84">${k.format}${k.prix?' – '+esc(k.prix):''}${k.langue==='en'?' · En anglais':''}</span></td></tr>`; }).join('\n');
+    const html = `<!-- Agenda — événements à venir (généré par la veille de l'écosystème, ${dateLongue(AUJ)}) -->\n<table ${STYLE_TABLE}>\n${bloc}\n</table>`;
+    copier(html, `Agenda copié (${L.length} événements) : à coller dans Mailchimp.`);
+  });
+  function repli(txt, fini){ const t = document.createElement('textarea'); t.value = txt; t.style.position='fixed'; t.style.opacity='0'; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); fini(); } catch(e) { toast('Impossible de copier automatiquement.'); } document.body.removeChild(t); }
+  let toastT; function toast(m){ let t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role','status'); document.body.appendChild(t); } t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3200); }
+
+  rendreSources(); tout();
+})();
+</script>
