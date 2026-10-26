@@ -315,7 +315,7 @@ public function test_html_sans_evenement(): void { /* '<html></html>' → 0 fich
 **Interfaces :**
 - `LecteurIcal::lire()` : déplie les lignes continuées (espace en début de ligne), lit chaque `VEVENT` (`SUMMARY`, `DTSTART`, `DTEND`, `LOCATION`, `DESCRIPTION`, `URL`, `UID`), gère `DTSTART;VALUE=DATE` (journée entière, `DTEND` exclusif → fin = veille), `DTSTART;TZID=…` et `DTSTART` en UTC (`Z`) converti en heure de Montréal ; `cle_source` = `"{$source['id']}:{UID}"` ; ignore les événements finis sauf `inclure_passes`. Échappements `\,` `\n` décodés.
 
-- [ ] **Étape 1 : tests** (fixture `dhc.ics`, 18 VEVENT, et une chaîne iCal écrite dans le test avec `DTSTART:20261104T170000Z` → `2026-11-04`, `heure` `12:00`, et `DTSTART;VALUE=DATE:20270330` / `DTEND;VALUE=DATE:20270401` → `2027-03-30` à `2027-03-31`, `heure` vide).
+- [ ] **Étape 1 : tests** (fixture `dhc.ics`, 4 VEVENT à venir — l'inventaire annonçait 18 pour le flux complet, mais la fixture enregistrée vient de `/events/?ical=1` qui n'en liste que 4 —, et une chaîne iCal écrite dans le test avec `DTSTART:20261104T170000Z` → `2026-11-04`, `heure` `12:00`, et `DTSTART;VALUE=DATE:20270330` / `DTEND;VALUE=DATE:20270401` → `2027-03-30` à `2027-03-31`, `heure` vide).
 - [ ] **Étape 2 : échec.** — [ ] **Étape 3 : implémenter.** — [ ] **Étape 4 : succès.** — [ ] **Étape 5 : commit** `feat: lecteur iCal`.
 
 ---
