@@ -1,0 +1,193 @@
+<?php
+declare(strict_types=1);
+
+namespace RSN\Veille;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Une fiche de veille (événement, appel ou nouvelle) et ses règles de normalisation.
+ *
+ * Classe pure : aucune fonction WordPress, seulement du PHP standard.
+ */
+final class Fiche {
+    /** Villes du Québec reconnues pour deviner la région (sans accents, en minuscules). */
+    private const VILLES_QUEBEC = [
+        'montreal', 'quebec', 'laval', 'sherbrooke', 'trois-rivieres', 'drummondville',
+        'gatineau', 'longueuil', 'brossard', 'rimouski', 'saguenay', 'chicoutimi',
+    ];
+
+    /** Mots qui indiquent une activité en ligne. */
+    private const MOTS_VIRTUELS = [
+        'en ligne', 'virtuel', 'zoom', 'webinaire', 'webinar', 'online', 'virtual', 'en direct',
+    ];
+
+    /** Correspondance des lettres accentuées vers leur forme de base. */
+    private const ACCENTS = [
+        'à' => 'a', 'á' => 'a', 'â' => 'a', 'ä' => 'a', 'ã' => 'a', 'å' => 'a',
+        'ç' => 'c',
+        'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
+        'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i',
+        'ñ' => 'n',
+        'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'ö' => 'o', 'õ' => 'o',
+        'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u',
+        'ý' => 'y', 'ÿ' => 'y',
+        'œ' => 'oe', 'æ' => 'ae',
+    ];
+
+    /** @var string evenement|appel|nouvelle */
+    public string $type = '';
+    public string $titre = '';
+    public ?string $debut = null;
+    public ?string $fin = null;
+    public string $heure = '';
+    public string $organisateur = '';
+    public string $categorie_rsn = '';
+    public string $lieu = '';
+    public string $ville = '';
+    public string $region = '';
+    public string $format = '';
+    public string $prix = '';
+    public string $langue = 'fr';
+    /** @var string[] */
+    public array $themes = [];
+    public string $resume = '';
+    public string $url = '';
+    public string $image_url = '';
+    public string $source = '';
+    /** @var string A|B|C|M */
+    public string $niveau = '';
+    public string $statut = 'a_approuver';
+    /** Identifiant stable de la source, au format « source:id ». */
+    public string $cle_source = '';
+    /** @var string[] Toutes les clés de source fusionnées sur cette fiche. */
+    public array $cles_source = [];
+    /** Catégorie propre aux appels. */
+    public string $categorie = '';
+    /** Date limite propre aux appels (Y-m-d). */
+    public ?string $echeance = null;
+    // Champs de persistance.
+    public ?int $id = null;
+    public ?string $absent_depuis = null;
+    public int $absences = 0;
+    public bool $manuel = false;
+
+    /**
+     * Texte brut : sections CDATA dépliées, entités décodées, balises retirées, espaces réduits.
+     * Les émojis sont conservés.
+     */
+    public static function nettoyer_texte(string $html): string {
+        $texte = preg_replace('/<!\[CDATA\[(.*?)\]\]>/s', '$1', $html) ?? $html;
+        $texte = html_entity_decode($texte, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $texte = strip_tags($texte);
+        $texte = preg_replace('/[\s\x{00A0}]+/u', ' ', $texte) ?? $texte;
+        return trim($texte);
+    }
+
+    /**
+     * Texte raccourci à $max caractères, coupé au dernier mot entier, avec « … ».
+     */
+    public static function court(string $texte, int $max = 260): string {
+        if (mb_strlen($texte) <= $max) {
+            return $texte;
+        }
+        $coupe = mb_substr($texte, 0, $max);
+        // Si la coupure tombe pile sur une fin de mot, on garde tout ; sinon on recule au dernier espace.
+        if (!preg_match('/\s/u', mb_substr($texte, $max, 1))) {
+            $position = mb_strrpos($coupe, ' ');
+            if ($position !== false) {
+                $coupe = mb_substr($coupe, 0, $position);
+            }
+        }
+        $coupe = rtrim($coupe, " \t\n\r,;:");
+        return $coupe . '…';
+    }
+
+    /**
+     * Devine le format (Virtuel, Hybride, Présentiel) à partir d'un texte libre.
+     */
+    public static function deviner_format(string $texte, bool $virtuel = false): string {
+        if ($virtuel) {
+            return 'Virtuel';
+        }
+        $minuscules = mb_strtolower($texte);
+        if (str_contains($minuscules, 'hybride') || str_contains($minuscules, 'hybrid')) {
+            return 'Hybride';
+        }
+        foreach (self::MOTS_VIRTUELS as $mot) {
+            if (str_contains($minuscules, $mot)) {
+                return 'Virtuel';
+            }
+        }
+        return 'Présentiel';
+    }
+
+    /**
+     * Devine la région (En ligne, Québec, Hors Québec). Sans ville ni lieu : Québec (sources québécoises).
+     */
+    public static function deviner_region(string $ville, string $lieu, string $format): string {
+        if ($format === 'Virtuel') {
+            return 'En ligne';
+        }
+        $endroit = self::simplifier($ville . ' ' . $lieu);
+        if (trim($endroit) === '') {
+            return 'Québec';
+        }
+        foreach (self::VILLES_QUEBEC as $ville_quebec) {
+            if (str_contains($endroit, $ville_quebec)) {
+                return 'Québec';
+            }
+        }
+        return 'Hors Québec';
+    }
+
+    /**
+     * Clé de dédoublonnage : « début|22 premiers caractères du titre » (minuscules, sans accents,
+     * seulement lettres et chiffres : ponctuation, espaces et émojis disparaissent).
+     */
+    public function cle_dedoublonnage(): string {
+        $titre = preg_replace('/[^a-z0-9]/', '', self::simplifier($this->titre)) ?? '';
+        return ($this->debut ?? '') . '|' . substr($titre, 0, 22);
+    }
+
+    /**
+     * Toutes les propriétés publiques, sous forme de tableau.
+     */
+    public function vers_tableau(): array {
+        return get_object_vars($this);
+    }
+
+    /**
+     * Reconstruit une fiche depuis un tableau : clés inconnues ignorées, valeurs par défaut pour les absentes.
+     */
+    public static function depuis_tableau(array $a): Fiche {
+        $fiche = new self();
+        foreach (array_keys(get_object_vars($fiche)) as $nom) {
+            if (!array_key_exists($nom, $a)) {
+                continue;
+            }
+            $valeur = $a[$nom];
+            $type = (new \ReflectionProperty($fiche, $nom))->getType();
+            if ($valeur === null) {
+                if ($type->allowsNull()) {
+                    $fiche->$nom = null;
+                }
+                continue;
+            }
+            $fiche->$nom = match ($type->getName()) {
+                'int' => (int) $valeur,
+                'bool' => (bool) $valeur,
+                'array' => is_array($valeur) ? $valeur : [],
+                default => (string) $valeur,
+            };
+        }
+        return $fiche;
+    }
+
+    /** Minuscules et sans accents. */
+    private static function simplifier(string $texte): string {
+        return strtr(mb_strtolower($texte), self::ACCENTS);
+    }
+}
