@@ -54,4 +54,26 @@ final class PertinenceTest extends TestCase {
         $this->assertSame(['Faune'], $p->themes('Le zèbre'));
         $this->assertSame([], $p->themes("L'IA"));
     }
+
+    public function test_mots_entiers_aux_bords_de_mots(): void {
+        $p = new Pertinence(Pertinence::config_par_defaut());
+        $this->assertTrue($p->touche("Atelier sur l'IA: enjeux")['numerique']);
+        $this->assertSame(['sante' => true, 'numerique' => true], $p->touche('Repenser (IA) en clinique'));
+        $this->assertTrue($p->touche('IA/ML en recherche')['numerique']);
+        $this->assertFalse($p->touche('Mai-juin 2027')['numerique']);
+        $this->assertFalse($p->touche('Une media')['numerique']);
+        $this->assertContains('IA', $p->themes('Recherche en AI.'));
+    }
+
+    public function test_faux_positifs_corriges(): void {
+        $p = new Pertinence(Pertinence::config_par_defaut());
+        $this->assertFalse($p->touche('Stratégie gouvernementale')['sante']);
+        $this->assertFalse($p->touche('Enjeux environnementaux')['sante']);
+        $this->assertTrue($p->touche('Soins en santé mentale')['sante']);
+        $this->assertTrue($p->touche('Mental health and youth')['sante']);
+        $this->assertNotContains('Formation', $p->themes("Séance d'information sur les données"));
+        $this->assertContains('Formation', $p->themes('Formation en santé numérique'));
+        $this->assertContains('Formation', $p->themes('Des formations en ligne'));
+        $this->assertContains('Gouvernance', $p->themes('Nouveau règlement sur les données', 3));
+    }
 }

@@ -35,8 +35,8 @@ final class Pertinence {
     /**
      * Listes validées sur les données réelles. La correspondance se fait en
      * minuscules, sans pliage des accents : les listes portent les deux formes
-     * quand c'est utile. Les espaces autour de certains mots évitent les faux
-     * positifs (« ia » dans « pharmacie »).
+     * quand c'est utile. Une entrée qui commence ou finit par une espace est
+     * cherchée comme mot entier de ce côté (« ia » ne doit pas toucher « mai »).
      */
     public static function config_par_defaut(): array {
         return [
@@ -44,14 +44,14 @@ final class Pertinence {
                 'santé', 'sante', 'health', 'cliniq', 'clinic', 'médic', 'medic', 'patient', 'soins',
                 'care ', 'hospital', 'hôpital', 'biomédic', 'biomedic', 'épidémio', 'epidemio',
                 'pharma', 'génom', 'genom', 'neuro', 'cancer', 'sommeil', 'sleep', 'vieillissement',
-                'aging', 'réadaptation', 'rehabilit', 'douleur', 'pain', 'mental', 'cardio', 'diabèt',
+                'aging', 'réadaptation', 'rehabilit', 'douleur', 'pain', 'santé mentale', 'mental health', 'psychiatr', 'cardio', 'diabèt',
                 'télésanté', 'telehealth', 'maladie', 'disease', 'infirm', 'nursing', 'physio',
                 'radiolog', 'imagerie', 'cohorte', 'biobanque', 'dsn', 'dossier', 'handicap',
                 'autisme', 'obésité',
             ],
             'mots_numerique' => [
-                'numérique', 'numerique', 'digital', 'intelligence artificielle', ' ia ', ' ia,',
-                "l'ia", 'l’ia', ' ai ', 'ai-', 'données', 'donnees', 'data', 'algorithm',
+                'numérique', 'numerique', 'digital', 'intelligence artificielle', ' ia ',
+                "l'ia", 'l’ia', ' ai ', ' ai-', 'données', 'donnees', 'data', 'algorithm',
                 'apprentissage', 'machine learning', 'deep learning', 'interopérab', 'cyber',
                 'informati', 'technolog', 'plateforme', 'platform', 'logiciel', 'software', 'modèle',
                 'model', 'statisti', 'quantique', 'robot', 'capteur', 'sensor', 'agent', 'chatbot',
@@ -64,9 +64,9 @@ final class Pertinence {
                 ['nom' => 'Santé publique', 'mots' => ['santé publique', 'public health', 'population', 'épidémio']],
                 ['nom' => 'Vieillissement', 'mots' => ['vieillissement', 'aging', 'âgé', 'aîné']],
                 ['nom' => 'Sommeil', 'mots' => ['sommeil', 'sleep', 'somno']],
-                ['nom' => 'Gouvernance', 'mots' => ['gouvernance', 'souveraineté', 'réglement', 'regulat', 'politique', 'policy']],
+                ['nom' => 'Gouvernance', 'mots' => ['gouvernance', 'souveraineté', 'réglement', 'règlement', 'regulat', 'politique', 'policy']],
                 ['nom' => 'Éthique', 'mots' => ['éthique', 'ethic', 'responsab', 'confiance', 'trust']],
-                ['nom' => 'Formation', 'mots' => ['formation', "école d'été", 'cours', 'atelier', 'workshop', 'training', 'tutoriel']],
+                ['nom' => 'Formation', 'mots' => [' formation', "école d'été", 'cours', 'atelier', 'workshop', 'training', 'tutoriel']],
                 ['nom' => 'Réseautage', 'mots' => ['réseautage', 'networking', 'petit-déjeuner', 'breakfast', '5 à 7', 'communauté de pratique']],
                 ['nom' => 'Financement', 'mots' => ['financement', 'bourse', 'subvention', 'concours', 'funding', 'grant']],
                 ['nom' => 'Appel à communications', 'mots' => ['appel à communications', 'appel à contributions', 'call for', 'soumettre']],
@@ -134,10 +134,29 @@ final class Pertinence {
         return ' ' . mb_strtolower($texte, 'UTF-8') . ' ';
     }
 
-    /** @param string[] $mots */
+    /**
+     * Une entrée qui commence ou finit par une espace est un mot entier de ce
+     * côté : l'espace de bordure est retirée et le mot ne doit pas être collé à
+     * une lettre ou à un chiffre. Les autres entrées sont des sous-chaînes.
+     *
+     * @param string[] $mots
+     */
     private static function contient_un(string $texte, array $mots): bool {
         foreach ($mots as $mot) {
-            if ($mot !== '' && str_contains($texte, $mot)) {
+            $nu = trim($mot);
+            if ($nu === '') {
+                continue;
+            }
+            $debut = $mot[0] === ' ';
+            $fin = substr($mot, -1) === ' ';
+            if (!$debut && !$fin) {
+                if (str_contains($texte, $mot)) {
+                    return true;
+                }
+                continue;
+            }
+            $motif = ($debut ? '(?<![\p{L}\p{N}])' : '') . preg_quote($nu, '/') . ($fin ? '(?![\p{L}\p{N}])' : '');
+            if (preg_match('/' . $motif . '/u', $texte) === 1) {
                 return true;
             }
         }
