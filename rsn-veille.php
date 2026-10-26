@@ -35,6 +35,10 @@ if (function_exists('add_action')) {
     \RSN\Veille\Collecte::accrocher();
     // Menu Veille de wp-admin, capacité rsn_veille_gerer, ressources et action AJAX de la file d'approbation.
     \RSN\Veille\Admin\Menu::accrocher();
+    // Page publique : raccourci [rsn_veille], ressources seulement si la page le contient, cache du JSON.
+    \RSN\Veille\Public\Raccourci::accrocher();
+    // Sorties publiques : /wp-json/rsn/v1/veille et /veille.ics.
+    \RSN\Veille\Public\Rest::accrocher();
 }
 
 if (function_exists('register_activation_hook')) {
@@ -42,7 +46,10 @@ if (function_exists('register_activation_hook')) {
     register_activation_hook(__FILE__, [\RSN\Veille\Collecte::class, 'planifier_nuit']);
     // Activation : capacité rsn_veille_gerer donnée aux rôles des réglages (administrateur et éditeur par défaut).
     register_activation_hook(__FILE__, [\RSN\Veille\Admin\Menu::class, 'synchroniser_roles']);
+    // Activation : règle de réécriture de /veille.ics ajoutée puis règles régénérées ; désactivation : retirée.
+    register_activation_hook(__FILE__, [\RSN\Veille\Public\Rest::class, 'activer']);
     register_deactivation_hook(__FILE__, [\RSN\Veille\Collecte::class, 'deplanifier']);
+    register_deactivation_hook(__FILE__, [\RSN\Veille\Public\Rest::class, 'desactiver']);
 }
 
 /**

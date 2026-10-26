@@ -1,0 +1,190 @@
+<?php
+declare(strict_types=1);
+
+namespace RSN\Veille\Public;
+
+use RSN\Veille\Collecte;
+use RSN\Veille\Entrepot;
+use RSN\Veille\EntrepotWordPress;
+use RSN\Veille\Fiche;
+use RSN\Veille\Journal;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Données de la page publique : `{genere_le, sources[], items[]}`, la structure que lit `assets/veille.js`
+ * (et que sert `/wp-json/rsn/v1/veille`).
+ *
+ * `construire` ne fait aucune écriture : elle lit l'entrepôt, le registre des sources et le journal.
+ */
+final class Donnees {
+    /** Transient du JSON public (une heure), vidé par la collecte et par toute écriture de fiche. */
+    public const TRANSIENT = 'rsn_veille_json';
+
+    /** Clés d'une fiche montrées au public, dans cet ordre. Tout le reste (clés de source, courriel, absences…) est privé. */
+    private const CLES_PUBLIQUES = [
+        'id', 'type', 'titre', 'debut', 'fin', 'heure', 'organisateur', 'categorie_rsn', 'lieu', 'ville', 'region',
+        'format', 'prix', 'langue', 'themes', 'resume', 'url', 'image_url', 'statut', 'categorie', 'echeance',
+    ];
+
+    /** Clés ajoutées pour l'équipe seulement : source technique et niveau de fiabilité. */
+    private const CLES_EQUIPE = ['niveau', 'source'];
+
+    /** Types de fiches publiés sur la page (les nouvelles restent dans le radar de l'équipe). */
+    private const TYPES = ['evenement', 'appel'];
+
+    /**
+     * @param array<int,array<string,mixed>> $evenements_rsn Événements de The Events Calendar du site, au format fiche.
+     * @return array{genere_le: string, sources: array<int,array<string,mixed>>, items: array<int,array<string,mixed>>}
+     */
+    public static function construire(string $aujourdhui, Entrepot $e, array $evenements_rsn, bool $equipe = false): array {
+        $cles = $equipe ? array_merge(self::CLES_PUBLIQUES, self::CLES_EQUIPE) : self::CLES_PUBLIQUES;
+        $items = [];
+        foreach (self::elements($e, $evenements_rsn) as $element) {
+            $item = [];
+            foreach ($cles as $cle) {
+                $item[$cle] = $element[$cle] ?? null;
+            }
+            $items[] = $item;
+        }
+        $derniere = get_option(Collecte::OPTION_DERNIERE, 0);
+        return [
+            'genere_le' => is_numeric($derniere) && (int) $derniere > 0 ? wp_date('c', (int) $derniere) : $aujourdhui,
+            'sources' => self::sources($equipe),
+            'items' => $items,
+        ];
+    }
+
+    /**
+     * Fiches publiées (événements et appels) et événements du RSN, dédoublonnés et triés, complets
+     * (clés de source comprises : `Ical` s'en sert pour ses UID). À expurger avant toute sortie publique.
+     *
+     * @param array<int,array<string,mixed>> $evenements_rsn
+     * @return array<int,array<string,mixed>>
+     */
+    public static function elements(Entrepot $e, array $evenements_rsn): array {
+        $evenements = [];
+        $appels = [];
+        /** @var array<string,int> $positions Clé de dédoublonnage => position de la première fiche qui l'a. */
+        $positions = [];
+        foreach ($e->lister('publie') as $fiche) {
+            if ($fiche->type === 'appel') {
+                $appels[] = $fiche->vers_tableau();
+            } elseif ($fiche->type === 'evenement') {
+                $positions[$fiche->cle_dedoublonnage()] ??= count($evenements);
+                $evenements[] = $fiche->vers_tableau();
+            }
+        }
+
+        foreach ($evenements_rsn as $brut) {
+            if (!is_array($brut)) {
+                continue;
+            }
+            $rsn = Fiche::depuis_tableau(array_merge($brut, ['type' => 'evenement', 'statut' => 'publie', 'source' => 'RSN']));
+            if ($rsn->titre === '' || $rsn->debut === null) {
+                continue;
+            }
+            $position = $positions[$rsn->cle_dedoublonnage()] ?? null;
+            if ($position === null) {
+                $evenements[] = $rsn->vers_tableau();
+            } elseif ((string) $evenements[$position]['image_url'] === '') {
+                // Doublon : la fiche collectée gagne si elle a une image, sinon l'événement du RSN.
+                $evenements[$position] = $rsn->vers_tableau();
+            }
+        }
+
+        usort($evenements, static fn(array $a, array $b): int => [(string) $a['debut'], (string) $a['titre']] <=> [(string) $b['debut'], (string) $b['titre']]);
+        // Appels : ceux qui ont une échéance d'abord (la plus proche en premier), puis les autres par date de publication.
+        $cle_appel = static fn(array $a): array => [$a['echeance'] === null ? 1 : 0, (string) $a['echeance'], (string) $a['debut'], (string) $a['titre']];
+        usort($appels, static fn(array $a, array $b): int => $cle_appel($a) <=> $cle_appel($b));
+        return array_merge($evenements, $appels);
+    }
+
+    /**
+     * Données publiques, depuis le transient d'une heure ou reconstruites.
+     *
+     * @return array{genere_le: string, sources: array<int,array<string,mixed>>, items: array<int,array<string,mixed>>}
+     */
+    public static function en_cache(): array {
+        $donnees = get_transient(self::TRANSIENT);
+        if (is_array($donnees) && isset($donnees['items'], $donnees['sources'], $donnees['genere_le'])) {
+            return $donnees;
+        }
+        $donnees = self::construire(\rsn_veille_aujourdhui(), new EntrepotWordPress(), EvenementsRsn::lire());
+        set_transient(self::TRANSIENT, $donnees, HOUR_IN_SECONDS);
+        return $donnees;
+    }
+
+    /** Vide les caches publics (JSON et iCal) : collecte terminée, fiche modifiée, événement du RSN modifié. */
+    public static function vider_cache(): void {
+        delete_transient(self::TRANSIENT);
+        delete_transient(Ical::TRANSIENT);
+    }
+
+    /**
+     * Accroche l'invalidation des caches publics : purge de la collecte ou d'une écriture de fiche, fin
+     * de collecte, et événement de The Events Calendar enregistré (purge complète : la page Veille de
+     * LiteSpeed et d'Elementor contient aussi les événements du RSN).
+     */
+    public static function accrocher(): void {
+        add_action('rsn_veille_caches_purges', [self::class, 'vider_cache']);
+        add_action('rsn_veille_apres_collecte', [self::class, 'vider_cache']);
+        add_action('save_post_tribe_events', [Collecte::class, 'purger_caches']);
+    }
+
+    /**
+     * Sources actives qui donnent des fiches (pas les flux de nouvelles du radar) : nom, ce qu'on lit,
+     * adresse du site et nombre d'éléments lus à la dernière collecte ; niveau pour l'équipe seulement.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    private static function sources(bool $equipe): array {
+        $sources = [];
+        foreach (Collecte::sources() as $id => $source) {
+            if (!empty($source['categorie_nouvelles'])) {
+                continue;
+            }
+            $derniere = Journal::derniere((string) $id);
+            $ligne = [
+                'nom' => (string) ($source['nom'] ?? $id),
+                'flux' => self::ce_qu_on_lit($source),
+                'url' => self::adresse_publique($source),
+                'nb' => (int) ($derniere['lus'] ?? 0),
+            ];
+            if ($equipe) {
+                $ligne['niveau'] = (string) ($source['niveau'] ?? '');
+            }
+            $sources[] = $ligne;
+        }
+        return $sources;
+    }
+
+    /** Ce qu'on lit, en clair. */
+    private static function ce_qu_on_lit(array $source): string {
+        $type = (string) ($source['type'] ?? '');
+        $mode = (string) ($source['mode'] ?? '');
+        if ($type === 'tec') {
+            return __('Calendrier des événements du site', 'rsn-veille');
+        }
+        if ($type === 'ical') {
+            return __('Calendrier iCal', 'rsn-veille');
+        }
+        if ($type === 'rss') {
+            return $mode === 'appels' ? __('Fil RSS, articles d’appels et de concours', 'rsn-veille') : __('Fil RSS des événements', 'rsn-veille');
+        }
+        return __('Page des événements du site', 'rsn-veille');
+    }
+
+    /** Une page lue est montrée telle quelle ; un flux ou une API, par l'adresse de son site. */
+    private static function adresse_publique(array $source): string {
+        $url = (string) ($source['url'] ?? '');
+        if (str_starts_with((string) ($source['type'] ?? ''), 'html')) {
+            return $url;
+        }
+        $hote = parse_url($url, PHP_URL_HOST);
+        $schema = parse_url($url, PHP_URL_SCHEME);
+        return is_string($hote) && $hote !== '' ? (is_string($schema) ? $schema : 'https') . '://' . $hote . '/' : '';
+    }
+}

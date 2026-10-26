@@ -21,6 +21,14 @@
  * (`cron_lances`). La vérification de référence des réglages est la section Réglages de
  * `tests/manuel/verifier-admin.md`.
  *
+ * Public : `add_shortcode` / `do_shortcode` (raccourcis notés dans `raccourcis`), `shortcode_atts`,
+ * `has_shortcode`, la page demandée (`objet_demande`, singulière si c'est un WP_Post), les routes REST
+ * (`routes`, `WP_REST_Response` avec ses en-têtes), les règles de réécriture (`regles`, chaque
+ * `flush_rewrite_rules` compté dans `regles_regenerees`) et les variables de requête
+ * (`variables_requete`, lues par `get_query_var`). `tribe_get_events` (The Events Calendar) est
+ * absente : `EvenementsRsn::lire()` rend alors une liste vide. La vérification de référence est
+ * `tests/manuel/verifier-public.md`.
+ *
  * Chargé seulement par les tests qui en ont besoin (`require_once` en tête du fichier de test),
  * jamais par `tests/bootstrap.php`. Les bouchons déjà définis par le bootstrap sont gardés.
  * `rsn_veille_bouchons_reinitialiser()` remet l'état à zéro et réenregistre le type de contenu.
@@ -52,6 +60,9 @@ function rsn_veille_bouchons_reinitialiser(): void {
         'scripts' => [], 'styles' => [], 'localisations' => [],
         // Réglages : options enregistrées, messages d'erreur des champs, lancements de WP-Cron.
         'reglages' => [], 'erreurs_reglages' => [], 'cron_lances' => 0,
+        // Public : raccourcis, routes REST, règles de réécriture, variables de requête, page demandée.
+        'raccourcis' => [], 'routes' => [], 'regles' => [], 'variables_requete' => [], 'objet_demande' => null,
+        'regles_regenerees' => 0,
     ];
     $GLOBALS['rsn_veille_wp']['roles'] = [
         'administrator' => new WP_Role('administrator', ['manage_options' => true, 'edit_posts' => true]),
@@ -789,4 +800,105 @@ function get_pages(array $arguments = []): array {
     ));
     usort($pages, static fn(WP_Post $a, WP_Post $b): int => strcmp($a->post_title, $b->post_title));
     return array_map(static fn(WP_Post $p): WP_Post => clone $p, $pages);
+}
+
+// --- Public : raccourcis, REST, réécriture (imitation de shortcodes.php, rest-api.php, rewrite.php) ---
+
+if (!function_exists('_x')) {
+    function _x(string $texte, string $contexte, string $domaine = 'default'): string {
+        return $texte;
+    }
+}
+
+function wp_json_encode(mixed $valeur, int $drapeaux = 0, int $profondeur = 512): string|false {
+    return json_encode($valeur, $drapeaux, $profondeur);
+}
+
+function add_shortcode(string $nom, callable $rappel): void {
+    $GLOBALS['rsn_veille_wp']['raccourcis'][$nom] = $rappel;
+}
+
+/** Comme WordPress : attributs connus seulement, valeurs par défaut pour les absents, filtre `shortcode_atts_{nom}`. */
+function shortcode_atts(array $defauts, mixed $attributs, string $nom = ''): array {
+    $attributs = (array) $attributs;
+    $resultat = [];
+    foreach ($defauts as $cle => $defaut) {
+        $resultat[$cle] = array_key_exists($cle, $attributs) ? $attributs[$cle] : $defaut;
+    }
+    return $nom !== '' ? apply_filters('shortcode_atts_' . $nom, $resultat, $defauts, $attributs, $nom) : $resultat;
+}
+
+/** Raccourci `[nom]` ou `[nom attributs]` présent dans le texte (et enregistré, comme WordPress). */
+function has_shortcode(string $texte, string $nom): bool {
+    return isset($GLOBALS['rsn_veille_wp']['raccourcis'][$nom]) && preg_match('/\[' . preg_quote($nom, '/') . '(?=[\s\]\/])/', $texte) === 1;
+}
+
+/** Version simple : `[nom cle="valeur" …]` seulement. */
+function do_shortcode(string $texte): string {
+    return (string) preg_replace_callback('/\[([a-z_]+)((?:\s+[a-z_]+="[^"]*")*)\s*\]/', static function (array $m): string {
+        $rappel = $GLOBALS['rsn_veille_wp']['raccourcis'][$m[1]] ?? null;
+        if ($rappel === null) {
+            return $m[0];
+        }
+        preg_match_all('/([a-z_]+)="([^"]*)"/', $m[2], $paires, PREG_SET_ORDER);
+        $attributs = [];
+        foreach ($paires as $paire) {
+            $attributs[$paire[1]] = $paire[2];
+        }
+        return (string) $rappel($attributs === [] ? '' : $attributs, '', $m[1]);
+    }, $texte);
+}
+
+function get_queried_object(): mixed {
+    return $GLOBALS['rsn_veille_wp']['objet_demande'];
+}
+
+function is_singular(mixed $types = ''): bool {
+    return $GLOBALS['rsn_veille_wp']['objet_demande'] instanceof WP_Post;
+}
+
+function __return_true(): bool {
+    return true;
+}
+
+class WP_REST_Response {
+    /** @var array<string,string> */
+    public array $headers = [];
+
+    public function __construct(public mixed $data = null, public int $status = 200) {
+    }
+
+    public function header(string $nom, string $valeur, bool $remplacer = true): void {
+        $this->headers[$nom] = $valeur;
+    }
+
+    public function get_data(): mixed {
+        return $this->data;
+    }
+
+    /** @return array<string,string> */
+    public function get_headers(): array {
+        return $this->headers;
+    }
+}
+
+function rest_ensure_response(mixed $reponse): WP_REST_Response {
+    return $reponse instanceof WP_REST_Response ? $reponse : new WP_REST_Response($reponse);
+}
+
+function register_rest_route(string $espace, string $route, array $arguments = [], bool $remplacer = false): bool {
+    $GLOBALS['rsn_veille_wp']['routes'][$espace . $route] = $arguments;
+    return true;
+}
+
+function add_rewrite_rule(string $motif, string|array $requete, string $position = 'bottom'): void {
+    $GLOBALS['rsn_veille_wp']['regles'][$motif] = ['requete' => $requete, 'position' => $position];
+}
+
+function flush_rewrite_rules(bool $dur = true): void {
+    $GLOBALS['rsn_veille_wp']['regles_regenerees']++;
+}
+
+function get_query_var(string $nom, mixed $defaut = ''): mixed {
+    return $GLOBALS['rsn_veille_wp']['variables_requete'][$nom] ?? $defaut;
 }
