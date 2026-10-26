@@ -30,22 +30,22 @@ final class EntrepotWordPress implements Entrepot {
         if ($url === '') {
             return null;
         }
-        // Toutes les fiches de cette URL (peu nombreuses), la première qui n'est pas une proposition.
+        // Une seule fiche, la plus ancienne de cette URL qui n'est pas une proposition (source différente ou
+        // absente) : le coût ne dépend pas du nombre de propositions qui partagent l'URL.
         $arguments = self::requete(self::STATUTS_WP);
-        $arguments['posts_per_page'] = -1;
+        $arguments['posts_per_page'] = 1;
         $arguments['fields'] = 'ids';
-        $arguments['meta_query'] = [['key' => TypeContenu::PREFIXE . 'url', 'value' => $url, 'compare' => '=', 'type' => 'BINARY']];
-        $ids = array_map('intval', (new \WP_Query($arguments))->posts);
-        if ($ids === []) {
-            return null;
-        }
-        update_meta_cache('post', $ids);
-        foreach ($ids as $id) {
-            if ((string) get_post_meta($id, TypeContenu::PREFIXE . 'source', true) !== Fiche::SOURCE_PROPOSITION) {
-                return $this->obtenir($id);
-            }
-        }
-        return null;
+        $arguments['meta_query'] = [
+            'relation' => 'AND',
+            ['key' => TypeContenu::PREFIXE . 'url', 'value' => $url, 'compare' => '=', 'type' => 'BINARY'],
+            [
+                'relation' => 'OR',
+                ['key' => TypeContenu::PREFIXE . 'source', 'value' => Fiche::SOURCE_PROPOSITION, 'compare' => '!=', 'type' => 'BINARY'],
+                ['key' => TypeContenu::PREFIXE . 'source', 'compare' => 'NOT EXISTS'],
+            ],
+        ];
+        $ids = (new \WP_Query($arguments))->posts;
+        return $ids === [] ? null : $this->obtenir((int) $ids[0]);
     }
 
     /** La fiche $id, ou null si ce n'est pas une fiche de veille. */

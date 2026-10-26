@@ -260,4 +260,30 @@ final class EntrepotContratTest extends TestCase {
         $this->assertSame($collectee, $e->trouver_par_dedoublonnage($proposition->cle_dedoublonnage())->id);
         $this->assertSame($collectee, $e->trouver_par_url('https://exemple.ca/atelier?id=1')->id);
     }
+
+    /** @dataProvider entrepots */
+    public function test_cinquante_propositions_a_la_meme_url_n_empechent_pas_de_trouver_la_fiche_collectee(string $nom): void {
+        $e = self::entrepot($nom);
+        for ($i = 1; $i <= 50; $i++) {
+            $e->creer(self::fiche(['titre' => 'Proposition ' . $i, 'source' => 'proposition', 'niveau' => 'M', 'statut' => $i % 2 ? 'a_approuver' : 'ecarte',
+                'cle_source' => 'proposition:' . $i, 'cles_source' => ['proposition:' . $i]]));
+        }
+        $this->assertNull($e->trouver_par_url('https://exemple.ca/atelier?id=1'));
+        $collectee = $e->creer(self::fiche(['cle_source' => 'ex:9', 'cles_source' => ['ex:9']]));
+        $this->assertSame($collectee, $e->trouver_par_url('https://exemple.ca/atelier?id=1')->id);
+        if ($nom === 'wordpress') {
+            // Une seule requête bornée à une fiche, URL et « source ≠ proposition » dans le même meta_query.
+            $requete = end($GLOBALS['rsn_veille_wp']['requetes']);
+            $this->assertSame(1, $requete['posts_per_page']);
+            $this->assertSame('AND', $requete['meta_query']['relation']);
+            $this->assertSame('OR', $requete['meta_query'][1]['relation']);
+        }
+    }
+
+    public function test_wordpress_fiche_sans_meta_source_trouvee_par_url(): void {
+        $e = new EntrepotWordPress();
+        $id = $e->creer(self::fiche());
+        delete_post_meta($id, 'rsn_veille_source');
+        $this->assertSame($id, $e->trouver_par_url('https://exemple.ca/atelier?id=1')->id);
+    }
 }

@@ -5,7 +5,8 @@
  * Les comportements imités sont des hypothèses sur WordPress 6.x : la bascule « publish » → « future »
  * d'une date à venir, l'encodage kses (`&` → `&amp;`) des titres et résumés, la remise à maintenant de
  * la date d'une fiche à approuver sans `edit_date`, le déslashage des données, la comparaison exacte
- * d'un `meta_query` de type BINARY (et le « contient » de LIKE). La vérification de référence reste
+ * d'un `meta_query` de type BINARY (et le « contient » de LIKE, `!=`, EXISTS, NOT EXISTS, groupes
+ * imbriqués reliés par AND ou OR). La vérification de référence reste
  * `tests/manuel/verifier-cpt.php`, exécuté dans un vrai WordPress (`wp eval-file`).
  *
  * Administration : menus et crochets de pages (`toplevel_page_…`, `{menu}_page_…`), capacités de
@@ -543,10 +544,8 @@ class WP_Query {
             if ($post->post_type !== $arguments['post_type'] || !in_array($post->post_status, (array) $arguments['post_status'], true)) {
                 continue;
             }
-            foreach ($arguments['meta_query'] ?? [] as $clause) {
-                if (!self::satisfait($id, $clause)) {
-                    continue 2;
-                }
+            if (!self::groupe($id, $arguments['meta_query'] ?? [])) {
+                continue;
             }
             $this->posts[] = ($arguments['fields'] ?? 'all') === 'ids' ? $id : clone $post;
             if (($arguments['posts_per_page'] ?? 10) > 0 && count($this->posts) >= $arguments['posts_per_page']) {
@@ -555,15 +554,50 @@ class WP_Query {
         }
     }
 
-    /** `=` (exact si BINARY, sinon insensible à la casse comme la collation MySQL) ou LIKE (« contient »). */
+    /**
+     * Groupe de `meta_query` : clauses et sous-groupes reliés par `relation` (AND par défaut, ou OR),
+     * comme WordPress.
+     */
+    private static function groupe(int $id, array $groupe): bool {
+        $ou = strtoupper((string) ($groupe['relation'] ?? 'AND')) === 'OR';
+        $clauses = array_filter($groupe, static fn($c, $cle): bool => $cle !== 'relation' && is_array($c), ARRAY_FILTER_USE_BOTH);
+        if ($clauses === []) {
+            return true;
+        }
+        foreach ($clauses as $clause) {
+            $vrai = isset($clause['key']) ? self::satisfait($id, $clause) : self::groupe($id, $clause);
+            if ($vrai === $ou) {
+                return $ou;
+            }
+        }
+        return !$ou;
+    }
+
+    /**
+     * `=` (exact si BINARY, sinon insensible à la casse comme la collation MySQL), `!=` (une valeur
+     * présente et différente : une méta absente ne satisfait pas `!=`, comme le JOIN de WordPress), LIKE
+     * (« contient »), EXISTS et NOT EXISTS.
+     */
     private static function satisfait(int $id, array $clause): bool {
+        $compare = strtoupper((string) ($clause['compare'] ?? '='));
+        $present = isset($GLOBALS['rsn_veille_wp']['meta'][$id][$clause['key']]);
+        if ($compare === 'NOT EXISTS' || $compare === 'EXISTS') {
+            return ($compare === 'EXISTS') === $present;
+        }
         foreach (array_map('unserialize', $GLOBALS['rsn_veille_wp']['meta'][$id][$clause['key']] ?? []) as $valeur) {
             $valeur = (string) $valeur;
-            if (($clause['compare'] ?? '=') === 'LIKE') {
+            $egal = ($clause['type'] ?? '') === 'BINARY' ? $valeur === $clause['value'] : strcasecmp($valeur, (string) $clause['value']) === 0;
+            if ($compare === '!=') {
+                if (!$egal) {
+                    return true;
+                }
+                continue;
+            }
+            if ($compare === 'LIKE') {
                 if (stripos($valeur, (string) $clause['value']) !== false) {
                     return true;
                 }
-            } elseif (($clause['type'] ?? '') === 'BINARY' ? $valeur === $clause['value'] : strcasecmp($valeur, (string) $clause['value']) === 0) {
+            } elseif ($egal) {
                 return true;
             }
         }
