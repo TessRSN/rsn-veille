@@ -1,7 +1,7 @@
 /*
  * RSN : veille de l'écosystème, page publique ([rsn_veille]).
  * Repris du JS de docs/maquette/gabarit-v6.1.html, réduit aux parties publiques : filtres, mois (avec
- * « Plus tard » et « Événements passés »), thèmes repliés, liste et calendrier, glissement, formulaire.
+ * « Plus tard » et « Événements passés »), thèmes repliés, liste et calendrier, glissement, formulaire de proposition.
  * Les actions de l'équipe (publier, écarter, infolettre) vivent dans wp-admin.
  * Données : <script type="application/json" id="rsn-veille-donnees" data-rsn-veille-donnees> (suffixé
  * « -2 », « -3 »… si le raccourci figure plusieurs fois) ; textes : [data-rsn-veille-textes] du même bloc.
@@ -293,16 +293,91 @@ function animer(racine, noeudDonnees) {
   }));
   on('#f-orga', 'change', e => { filtres.orga = e.target.value; rendreAgenda(); });
   on('#f-reinit', 'click', () => { Object.keys(filtres).forEach(k => { filtres[k] = ''; }); $('#f-recherche').value = ''; rendreTags(); rendreAgenda(); });
-  // Formulaire « Proposer un événement » : ouverture et fermeture ; l'envoi arrive avec la tâche 14.
-  on('#btn-proposer', 'click', () => { $('#dialogue').hidden = false; $('#p-titre').focus(); });
-  on('#btn-annuler', 'click', () => { $('#dialogue').hidden = true; });
-  on('#form-proposition', 'submit', e => { e.preventDefault(); toast(t('envoi_non_branche')); });
-  let toastT;
-  function toast(m) {
-    let el = $('.toast');
-    if (!el) { el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); racine.appendChild(el); }
-    el.textContent = m; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 3200);
+  // Formulaire « Proposer un événement » : envoi en fetch vers admin-ajax.php (action rsn_veille_proposer,
+  // jeton de window.rsnVeillePublic), erreurs sous les champs et en tête, remerciement à la place du formulaire.
+  const CONFIG = window.rsnVeillePublic || {};
+  let jeton = String(CONFIG.nonce || '');
+  const form = $('#form-proposition');
+  function effacerErreurs() {
+    if (!form) return;
+    form.querySelectorAll('.erreur-champ').forEach(el => el.remove());
+    form.querySelectorAll('[aria-invalid]').forEach(el => { el.removeAttribute('aria-invalid'); el.removeAttribute('aria-describedby'); });
+    const zone = $('#p-erreurs'); zone.hidden = true; zone.textContent = '';
   }
+  // erreurs : { champ: message } (champ inconnu ou vide : message en tête seulement).
+  function montrerErreurs(erreurs) {
+    effacerErreurs();
+    const messages = [];
+    Object.keys(erreurs).forEach(cle => {
+      const message = String(erreurs[cle] || ''); if (!message) return;
+      messages.push(message);
+      const champ = cle && form.elements.namedItem(cle);
+      if (!champ || !champ.insertAdjacentElement) return;
+      const note = document.createElement('span');
+      note.className = 'erreur-champ'; note.id = 'p-erreur-' + cle; note.textContent = message;
+      champ.insertAdjacentElement('afterend', note);
+      champ.setAttribute('aria-invalid', 'true'); champ.setAttribute('aria-describedby', note.id);
+    });
+    const zone = $('#p-erreurs');
+    const liste = document.createElement('ul');
+    messages.forEach(m => { const li = document.createElement('li'); li.textContent = m; liste.appendChild(li); });
+    // Une erreur générale seule : son message ; sinon « Vérifiez les champs signalés : » et la liste.
+    const generale = messages.length === 1 && !Object.keys(erreurs).some(Boolean);
+    const tete = document.createElement('p'); tete.textContent = generale ? messages[0] : t('corriger_champs');
+    zone.appendChild(tete);
+    if (!generale) zone.appendChild(liste);
+    zone.hidden = false; zone.focus();
+  }
+  async function poster(donnees) {
+    const reponse = await fetch(CONFIG.ajaxurl, { method: 'POST', body: donnees, credentials: 'same-origin' });
+    let json = null; try { json = await reponse.json(); } catch (e) { /* réponse non JSON */ }
+    return { statut: reponse.status, data: json && typeof json.data === 'object' && json.data ? json.data : null };
+  }
+  async function envoyer(dejaRenouvele) {
+    const donnees = new FormData(form);
+    donnees.set('action', CONFIG.action || 'rsn_veille_proposer'); donnees.set('nonce', jeton);
+    const r = await poster(donnees);
+    // Page servie depuis un cache plus vieux que son jeton : un jeton neuf, puis un seul nouvel essai.
+    if (r.statut === 403 && !dejaRenouvele) {
+      const demande = new FormData(); demande.set('action', CONFIG.action_jeton || 'rsn_veille_jeton');
+      const j = await poster(demande);
+      if (j.data && j.data.nonce) { jeton = String(j.data.nonce); return envoyer(true); }
+    }
+    return r;
+  }
+  function ouvrirFormulaire() {
+    $('#dialogue').hidden = false; form.hidden = false; $('#p-merci').hidden = true; $('#p-titre').focus();
+  }
+  on('#btn-proposer', 'click', ouvrirFormulaire);
+  on('#btn-annuler', 'click', () => { effacerErreurs(); $('#dialogue').hidden = true; });
+  on('#form-proposition', 'submit', async e => {
+    e.preventDefault();
+    const bouton = form.querySelector('[type="submit"]');
+    if (bouton.disabled) return;
+    if (!CONFIG.ajaxurl) { montrerErreurs({ '': t('erreur_envoi') }); return; }
+    // Image trop lourde : refusée avant l'envoi (au-delà de post_max_size, PHP viderait toute la requête).
+    const image = form.elements.namedItem('image');
+    if (image && image.files && image.files[0] && image.files[0].size > 3 * 1024 * 1024) { montrerErreurs({ image: t('image_trop_lourde') }); return; }
+    const libelleBouton = bouton.textContent;
+    bouton.disabled = true; bouton.setAttribute('aria-busy', 'true'); bouton.textContent = t('envoi_en_cours');
+    effacerErreurs();
+    try {
+      const r = await envoyer(false);
+      const data = r.data || {};
+      if (data.ok) {
+        form.reset(); form.hidden = true;
+        const merci = $('#p-merci'); merci.textContent = data.message || t('merci_proposition'); merci.hidden = false; merci.focus();
+      } else if (data.erreurs && typeof data.erreurs === 'object' && Object.keys(data.erreurs).length) {
+        montrerErreurs(data.erreurs);
+      } else {
+        montrerErreurs({ '': data.message || (r.statut === 403 ? t('jeton_expire') : t('erreur_envoi')) });
+      }
+    } catch (err) {
+      montrerErreurs({ '': t('erreur_envoi') });
+    } finally {
+      bouton.disabled = false; bouton.removeAttribute('aria-busy'); bouton.textContent = libelleBouton;
+    }
+  });
 
   rendreSources(); tout();
 }

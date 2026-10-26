@@ -28,8 +28,14 @@ final class Raccourci {
 
     private const HEX = '<svg class="hex" viewBox="0 0 24 26" aria-hidden="true"><path d="M12 2 21.5 7.5v11L12 24 2.5 18.5v-11Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg>';
 
+    /** Objet JS de la configuration du formulaire (`window.rsnVeillePublic`). */
+    public const OBJET_JS = 'rsnVeillePublic';
+
     /** Rendus dans la requête : le deuxième raccourci de la page reçoit #rsn-veille-donnees-2, etc. */
     private static int $rendus = 0;
+
+    /** Configuration du formulaire déjà passée au JS dans cette requête. */
+    private static bool $configure = false;
 
     /** Accroche le raccourci, les ressources et l'invalidation des caches publics. */
     public static function accrocher(): void {
@@ -66,6 +72,18 @@ final class Raccourci {
         }
         wp_enqueue_style(self::RESSOURCE, RSN_VEILLE_URL . 'assets/veille.css', [], RSN_VEILLE_VERSION);
         wp_enqueue_script(self::RESSOURCE, RSN_VEILLE_URL . 'assets/veille.js', [], RSN_VEILLE_VERSION, true);
+        if (!self::$configure) {
+            self::$configure = true;
+            // LiteSpeed Cache (ESI actif) : le jeton est servi hors du cache de la page. Sinon, le JS en
+            // redemande un (action rsn_veille_jeton) quand celui de la page en cache a expiré.
+            do_action('litespeed_nonce', Formulaire::NONCE);
+            wp_localize_script(self::RESSOURCE, self::OBJET_JS, [
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'action' => Formulaire::ACTION,
+                'action_jeton' => Formulaire::ACTION_JETON,
+                'nonce' => wp_create_nonce(Formulaire::NONCE),
+            ]);
+        }
     }
 
     /**
@@ -97,9 +115,10 @@ final class Raccourci {
         return is_string($json) ? $json : '{}';
     }
 
-    /** Pour les tests : remet le compteur de rendus à zéro. */
+    /** Pour les tests : remet le compteur de rendus et la configuration du JS à zéro. */
     public static function reinitialiser(): void {
         self::$rendus = 0;
+        self::$configure = false;
     }
 
     /**
@@ -166,7 +185,13 @@ final class Raccourci {
             'collecte_du' => __('collecte du %s', 'rsn-veille'),
             /* translators: 1 : date de la collecte, 2 : heure (« 3 h 05 »). */
             'collecte_du_a' => __('collecte du %1$s à %2$s', 'rsn-veille'),
-            'envoi_non_branche' => __('Envoi non encore branché.', 'rsn-veille'),
+            // Formulaire « Proposer un événement ».
+            'envoi_en_cours' => __('Envoi…', 'rsn-veille'),
+            'merci_proposition' => __("Merci ! Votre proposition est dans la file d'approbation de l'équipe du RSN.", 'rsn-veille'),
+            'corriger_champs' => __('Vérifiez les champs signalés :', 'rsn-veille'),
+            'erreur_envoi' => __("L'envoi a échoué. Réessayez plus tard.", 'rsn-veille'),
+            'jeton_expire' => __('Jeton de sécurité expiré : rechargez la page.', 'rsn-veille'),
+            'image_trop_lourde' => __('Image trop lourde (3 Mo au plus).', 'rsn-veille'),
         ];
     }
 }

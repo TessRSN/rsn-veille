@@ -65,7 +65,42 @@ final class RaccourciTest extends TestCase {
         $textes = [];
         $this->assertSame(1, preg_match('#<script type="application/json" id="rsn-veille-textes" data-rsn-veille-textes>(.*?)</script>#s', $html, $textes));
         $this->assertStringContainsString('<h2>Proposer un événement</h2>', $html);
-        $this->assertSame('Envoi non encore branché.', json_decode($textes[1], true)['envoi_non_branche']);
+        $this->assertArrayNotHasKey('envoi_non_branche', json_decode($textes[1], true));
+        $this->assertStringNotContainsString('non encore branché', $html);
+        $this->assertStringNotContainsString('Dans le prototype', $html);
+    }
+
+    public function test_formulaire_de_proposition_branche(): void {
+        $html = Raccourci::rendre([]);
+
+        $this->assertStringContainsString('<form id="form-proposition" method="post" enctype="multipart/form-data">', $html);
+        foreach (['titre', 'debut', 'fin', 'organisateur', 'format', 'lieu', 'url', 'resume', 'courriel'] as $nom) {
+            $this->assertStringContainsString('name="' . $nom . '"', $html, $nom);
+        }
+        $this->assertStringContainsString('name="image" type="file" accept="image/jpeg,image/png,image/webp"', $html);
+        $this->assertSame(1, preg_match('#<div class="piege" aria-hidden="true">.*?<input name="site_web" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">#s', $html));
+        $this->assertStringContainsString('id="p-erreurs" role="alert"', $html);
+        $this->assertStringContainsString('id="p-merci" role="status"', $html);
+        $this->assertStringContainsString('Votre courriel sert seulement à vous répondre ; il n&#039;est jamais publié.', $html);
+
+        $config = $GLOBALS['rsn_veille_wp']['localisations']['rsn-veille']['rsnVeillePublic'];
+        $this->assertSame([
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'action' => 'rsn_veille_proposer',
+            'action_jeton' => 'rsn_veille_jeton',
+            'nonce' => 'jeton-rsn_veille_proposer',
+        ], $config);
+        $this->assertSame([['rsn_veille_proposer']], rsn_veille_bouchons_declenchements('litespeed_nonce'));
+
+        // Un second rendu ne repasse pas la configuration.
+        Raccourci::rendre([]);
+        $this->assertCount(1, rsn_veille_bouchons_declenchements('litespeed_nonce'));
+    }
+
+    public function test_section_appels_sans_formulaire(): void {
+        $html = Raccourci::rendre(['section' => 'appels']);
+        $this->assertStringNotContainsString('form-proposition', $html);
+        $this->assertStringNotContainsString('site_web', $html);
     }
 
     public function test_filtre_qui_organise_au_dessus_de_format(): void {

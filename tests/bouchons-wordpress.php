@@ -29,6 +29,12 @@
  * absente : `EvenementsRsn::lire()` rend alors une liste vide. La vérification de référence est
  * `tests/manuel/verifier-public.md`.
  *
+ * Formulaire public : `wp_salt` déterministe, `wp_check_filetype_and_ext` (extension parmi `mimes` et
+ * type réel lu par finfo), `media_handle_upload` imité (appels notés dans `televersements`, échec forcé
+ * par `televersement_erreur`), `set_post_thumbnail` (méta `_thumbnail_id`) et
+ * `wp_get_attachment_image_url`. La vérification de référence est la section Formulaire de
+ * `tests/manuel/verifier-public.md`.
+ *
  * Chargé seulement par les tests qui en ont besoin (`require_once` en tête du fichier de test),
  * jamais par `tests/bootstrap.php`. Les bouchons déjà définis par le bootstrap sont gardés.
  * `rsn_veille_bouchons_reinitialiser()` remet l'état à zéro et réenregistre le type de contenu.
@@ -901,4 +907,56 @@ function flush_rewrite_rules(bool $dur = true): void {
 
 function get_query_var(string $nom, mixed $defaut = ''): mixed {
     return $GLOBALS['rsn_veille_wp']['variables_requete'][$nom] ?? $defaut;
+}
+
+// --- Formulaire public : sel, type réel des fichiers, téléversement et vignette ---
+
+/** Sel déterministe (imitation, aucune sécurité). */
+function wp_salt(string $schema = 'auth'): string {
+    return 'sel-' . $schema;
+}
+
+/**
+ * Comme WordPress : l'extension du nom doit être parmi `$mimes` et le type réel du contenu (finfo)
+ * doit correspondre à celui de cette extension ; sinon `ext` et `type` sont faux.
+ *
+ * @return array{ext: string|false, type: string|false, proper_filename: string|false}
+ */
+function wp_check_filetype_and_ext(string $fichier, string $nom, ?array $mimes = null): array {
+    $refus = ['ext' => false, 'type' => false, 'proper_filename' => false];
+    $extension = strtolower(pathinfo($nom, PATHINFO_EXTENSION));
+    $type = false;
+    foreach ($mimes ?? [] as $extensions => $mime) {
+        if ($extension !== '' && in_array($extension, explode('|', $extensions), true)) {
+            $type = $mime;
+            break;
+        }
+    }
+    if ($type === false || !is_file($fichier)) {
+        return $refus;
+    }
+    $reel = (new finfo(FILEINFO_MIME_TYPE))->file($fichier);
+    return $reel === $type ? ['ext' => $extension, 'type' => $type, 'proper_filename' => false] : $refus;
+}
+
+/**
+ * Imitation de `media_handle_upload` : note l'appel dans `televersements` et crée une pièce jointe ;
+ * `televersement_erreur` (message) fait échouer le téléversement.
+ */
+function media_handle_upload(string $champ, int $parent, array $donnees = [], array $substitutions = ['test_form' => false]): int|WP_Error {
+    $erreur = $GLOBALS['rsn_veille_wp']['televersement_erreur'] ?? null;
+    if (is_string($erreur)) {
+        return new WP_Error('upload_error', $erreur);
+    }
+    $id = wp_insert_post(['post_type' => 'attachment', 'post_status' => 'inherit', 'post_title' => (string) ($_FILES[$champ]['name'] ?? 'image')]);
+    $GLOBALS['rsn_veille_wp']['televersements'][] = ['champ' => $champ, 'parent' => $parent, 'substitutions' => $substitutions, 'id' => $id];
+    return $id;
+}
+
+function set_post_thumbnail(int $article, int $piece): int|bool {
+    return update_post_meta($article, '_thumbnail_id', $piece);
+}
+
+function wp_get_attachment_image_url(int $piece, string $taille = 'thumbnail'): string|false {
+    return isset($GLOBALS['rsn_veille_wp']['posts'][$piece]) ? 'https://exemple.test/wp-content/uploads/' . $piece . '-' . $taille . '.png' : false;
 }

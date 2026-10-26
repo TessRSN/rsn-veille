@@ -7,7 +7,7 @@
  */
 .rsn-veille{
   --navy:#003469; --ink:#101828; --body:rgba(16,24,40,.72); --muted:#6E7A84; --rule:#DCE1E8; --trait:#3D6A99; --tint:#F5F7FA;
-  --yellow:#FFCC4E; --yellow-ink:#E3A800; --yellow-tint:#FFF4D1; --green:#00A759; --blue:#0061AF; --amber:#C99000; --bg:#ffffff;
+  --yellow:#FFCC4E; --yellow-ink:#E3A800; --yellow-tint:#FFF4D1; --green:#00A759; --blue:#0061AF; --amber:#C99000; --erreur:#B42318; --bg:#ffffff;
   --serif:"DM Serif Display",Georgia,"Times New Roman",serif;
   --sans:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   color-scheme:light;
@@ -123,6 +123,17 @@
 .rsn-veille .champs .large{grid-column:1/-1}
 .rsn-veille .boutons{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;margin-top:16px}
 .rsn-veille .boutons .note{font-size:13px;color:var(--muted)}
+/* Formulaire : champ piège hors écran (robots seulement), erreurs, remerciement. */
+.rsn-veille #form-proposition{position:relative}
+.rsn-veille .piege{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
+.rsn-veille .champs input[type="file"]{padding:7px 9px}
+.rsn-veille .champs [aria-invalid="true"]{border-color:var(--erreur)}
+.rsn-veille .erreur-champ{font-size:12.5px;font-weight:500;color:var(--erreur)}
+.rsn-veille .erreurs{margin-top:16px;padding:12px 16px;border-radius:8px;background:#fff;color:var(--erreur);font-size:14px}
+.rsn-veille .erreurs p{margin:0;color:inherit;font-weight:600}
+.rsn-veille .erreurs ul{margin:6px 0 0;padding-left:18px}
+.rsn-veille .encadre .merci{margin-top:16px;font-size:16px;font-weight:600;color:var(--navy)}
+.rsn-veille.rsn-veille .btn[disabled]{opacity:.6;cursor:progress}
 .rsn-veille .vide{padding:22px 26px;border-radius:14px;background:var(--tint);color:var(--ink)}
 
 /* Sources */
@@ -196,7 +207,6 @@
 }
 @media (min-width:641px){.rsn-veille .cal .pts{display:none}}
 
-.rsn-veille .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--navy);color:#fff;padding:11px 18px;border-radius:10px;font-size:14px;box-shadow:0 10px 30px rgba(0,52,105,.2);z-index:20;max-width:calc(100vw - 32px)}
 
 @media (prefers-reduced-motion:reduce){.rsn-veille.rsn-veille .btn,.rsn-veille.rsn-veille .btn svg{transition:none}}
 @media (max-width:820px){

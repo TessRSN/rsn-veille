@@ -38,24 +38,28 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
   <section class="encadre" id="dialogue" hidden>
     <h2><?php echo esc_html__('Proposer un événement', 'rsn-veille'); ?></h2>
     <p><?php echo esc_html__("Votre proposition entre dans la file d'approbation de l'équipe du RSN. Elle sera publiée ici et, si elle s'y prête, reprise dans l'infolettre.", 'rsn-veille'); ?></p>
-    <form id="form-proposition">
+    <form id="form-proposition" method="post" enctype="multipart/form-data">
+      <div class="erreurs" id="p-erreurs" role="alert" tabindex="-1" hidden></div>
       <div class="champs">
-        <label class="large"><?php echo esc_html__('Titre', 'rsn-veille'); ?> <input id="p-titre" required placeholder="<?php echo esc_attr__('Ex. : Colloque sur la souveraineté numérique en santé', 'rsn-veille'); ?>"></label>
-        <label><?php echo esc_html__('Date de début', 'rsn-veille'); ?> <input id="p-debut" type="date" required></label>
-        <label><?php echo esc_html__('Date de fin (si plusieurs jours)', 'rsn-veille'); ?> <input id="p-fin" type="date"></label>
-        <label><?php echo esc_html__('Organisateur', 'rsn-veille'); ?> <input id="p-orga" required placeholder="<?php echo esc_attr__('Ex. : Obvia', 'rsn-veille'); ?>"></label>
-        <label><?php echo esc_html__('Format', 'rsn-veille'); ?> <select id="p-format"><option value="Présentiel"><?php echo esc_html__('Présentiel', 'rsn-veille'); ?></option><option value="Virtuel"><?php echo esc_html__('Virtuel', 'rsn-veille'); ?></option><option value="Hybride"><?php echo esc_html__('Hybride', 'rsn-veille'); ?></option></select></label>
-        <label><?php echo esc_html__('Lieu et ville', 'rsn-veille'); ?> <input id="p-lieu" placeholder="<?php echo esc_attr__('Ex. : HEC Montréal, Montréal', 'rsn-veille'); ?>"></label>
-        <label><?php echo esc_html__("Lien d'information", 'rsn-veille'); ?> <input id="p-url" type="url" placeholder="https://"></label>
-        <label class="large"><?php echo esc_html__('Courte description (2 à 3 phrases)', 'rsn-veille'); ?> <textarea id="p-resume" rows="3"></textarea></label>
-        <label><?php echo esc_html__('Votre courriel (pour vous répondre)', 'rsn-veille'); ?> <input id="p-courriel" type="email"></label>
+        <label class="large"><?php echo esc_html__('Titre', 'rsn-veille'); ?> <input id="p-titre" name="titre" required maxlength="200" placeholder="<?php echo esc_attr__('Ex. : Colloque sur la souveraineté numérique en santé', 'rsn-veille'); ?>"></label>
+        <label><?php echo esc_html__('Date de début', 'rsn-veille'); ?> <input id="p-debut" name="debut" type="date" required></label>
+        <label><?php echo esc_html__('Date de fin (si plusieurs jours)', 'rsn-veille'); ?> <input id="p-fin" name="fin" type="date"></label>
+        <label><?php echo esc_html__('Organisateur', 'rsn-veille'); ?> <input id="p-orga" name="organisateur" required maxlength="120" placeholder="<?php echo esc_attr__('Ex. : Obvia', 'rsn-veille'); ?>"></label>
+        <label><?php echo esc_html__('Format', 'rsn-veille'); ?> <select id="p-format" name="format"><option value="Présentiel"><?php echo esc_html__('Présentiel', 'rsn-veille'); ?></option><option value="Virtuel"><?php echo esc_html__('Virtuel', 'rsn-veille'); ?></option><option value="Hybride"><?php echo esc_html__('Hybride', 'rsn-veille'); ?></option></select></label>
+        <label><?php echo esc_html__('Lieu et ville', 'rsn-veille'); ?> <input id="p-lieu" name="lieu" maxlength="160" placeholder="<?php echo esc_attr__('Ex. : HEC Montréal, Montréal', 'rsn-veille'); ?>"></label>
+        <label><?php echo esc_html__("Lien d'information", 'rsn-veille'); ?> <input id="p-url" name="url" type="url" placeholder="https://"></label>
+        <label class="large"><?php echo esc_html__('Courte description (2 à 3 phrases)', 'rsn-veille'); ?> <textarea id="p-resume" name="resume" rows="3" maxlength="1000"></textarea></label>
+        <label><?php echo esc_html__('Votre courriel (pour vous répondre)', 'rsn-veille'); ?> <input id="p-courriel" name="courriel" type="email" autocomplete="email"></label>
+        <label><?php echo esc_html__('Image (facultative : JPEG, PNG ou WebP, 3 Mo au plus)', 'rsn-veille'); ?> <input id="p-image" name="image" type="file" accept="image/jpeg,image/png,image/webp"></label>
       </div>
+      <div class="piege" aria-hidden="true"><label><?php echo esc_html__('Site web (laisser vide)', 'rsn-veille'); ?> <input name="site_web" type="text" tabindex="-1" autocomplete="off" aria-hidden="true"></label></div>
       <div class="boutons">
         <button class="btn" type="submit"><?php echo esc_html__("Envoyer à l'équipe", 'rsn-veille'); ?></button>
         <button class="btn sobre" type="button" id="btn-annuler"><?php echo esc_html__('Annuler', 'rsn-veille'); ?></button>
         <span class="note"><?php echo esc_html__("Votre courriel sert seulement à vous répondre ; il n'est jamais publié.", 'rsn-veille'); ?></span>
       </div>
     </form>
+    <p class="merci" id="p-merci" role="status" tabindex="-1" hidden></p>
   </section>
 <?php endif; ?>
 

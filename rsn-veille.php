@@ -37,6 +37,8 @@ if (function_exists('add_action')) {
     \RSN\Veille\Admin\Menu::accrocher();
     // Page publique : raccourci [rsn_veille], ressources seulement si la page le contient, cache du JSON.
     \RSN\Veille\Public\Raccourci::accrocher();
+    // Formulaire « Proposer un événement » : actions AJAX rsn_veille_proposer et rsn_veille_jeton, avec et sans connexion.
+    \RSN\Veille\Public\Formulaire::accrocher();
     // Sorties publiques : /wp-json/rsn/v1/veille et /veille.ics.
     \RSN\Veille\Public\Rest::accrocher();
 }

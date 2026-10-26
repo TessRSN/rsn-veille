@@ -1,4 +1,4 @@
-# Vérification manuelle de la page publique (tâche 13)
+# Vérification manuelle de la page publique (tâches 13 et 14)
 
 À faire dans un WordPress réel (`npx @wordpress/env start`, extension active, idéalement avec The
 Events Calendar, Elementor et LiteSpeed Cache), les tests PHPUnit n'utilisant qu'une imitation de
@@ -39,8 +39,8 @@ WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se lancent par `n
       glissement tactile (mobile), événements RSN en jaune, clic sur un jour → fiches dessous.
 - [ ] Appels : triés par date limite, tuile jaune (date limite) ou grise (publication) ; un appel dont
       l'échéance est passée n'apparaît plus.
-- [ ] « Proposer un événement » ouvre le formulaire (titre « Proposer un événement »), « Annuler » le ferme, « Envoyer » affiche
-      « Envoi non encore branché. » sans créer de fiche (`wp post list --post_type=rsn_veille` inchangé).
+- [ ] « Proposer un événement » ouvre le formulaire (titre « Proposer un événement »), « Annuler » le ferme
+      (envoi : voir la section Formulaire ci-dessous).
 - [ ] Le titre piégé s'affiche en texte (aucune alerte) ; dans le code source, le JSON de
       `#rsn-veille-donnees` contient `</script>` et `&`.
 - [ ] Console du navigateur : aucune erreur, sur la page et au fil des clics.
@@ -53,6 +53,49 @@ WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se lancent par `n
       `[rsn_veille section="appels"]` : appels seuls. Les deux sur la même page : chacun fonctionne
       (nœuds `#rsn-veille-donnees` et `#rsn-veille-donnees-2`).
 - [ ] Le bloc est un `<div class="rsn-veille" role="region">` : la page n'a qu'un seul `<main>` (celui du thème).
+
+## Formulaire « Proposer un événement »
+
+Hors connexion (fenêtre privée), sur la page Veille. Entre deux séries d'essais, vider le compteur de
+débit : `wp transient list --search='rsn_veille_debit_*'` puis `wp transient delete <nom>` (ou
+`wp transient delete --all`).
+
+- [ ] Remplir titre, date de début, organisateur, format, lieu, lien, description, courriel et une
+      image JPEG ou PNG de moins de 3 Mo, puis « Envoyer à l'équipe » : le bouton se grise (« Envoi… »)
+      pendant l'envoi, puis le formulaire laisse place à « Merci ! Votre proposition est dans la file
+      d'approbation de l'équipe du RSN. ». « Proposer un événement » rouvre un formulaire vide.
+- [ ] Onglet Réseau : une requête POST `admin-ajax.php` (multipart) avec `action=rsn_veille_proposer`
+      et `nonce`, réponse 200 `{"success":true,"data":{"ok":true,"message":…}}`, sans le courriel.
+- [ ] `wp post list --post_type=rsn_veille --post_status=pending` : la fiche est là ; Veille › File
+      d'approbation, onglet « À approuver » : la fiche (source `proposition`), avec le lien Modifier ;
+      dans l'éditeur, l'image est l'image mise en avant ; Médiathèque : l'image y figure.
+- [ ] `wp post meta list <id>` : `rsn_veille_courriel_proposant` porte le courriel,
+      `rsn_veille_image_url` l'adresse de l'image, `rsn_veille_source` vaut `proposition`,
+      `rsn_veille_niveau` `M`, `_thumbnail_id` la pièce jointe.
+- [ ] La page publique, le JSON (`/wp-json/rsn/v1/veille`) et `/veille.ics` ne montrent pas la fiche
+      tant qu'elle n'est pas publiée ; une fois publiée, elle apparaît avec son image, et le courriel
+      n'apparaît nulle part (chercher l'adresse dans le code source et dans le JSON).
+- [ ] Le lien proposé n'est jamais chargé par le serveur (journal d'accès du site visé, ou un lien vers
+      un service de capture comme https://webhook.site : aucune requête reçue).
+- [ ] Sixième envoi dans l'heure depuis la même adresse : refusé, message « Trop de propositions,
+      réessayez plus tard. » en tête du formulaire (réponse 429), aucune fiche créée.
+- [ ] Champ piège : dans les outils de développement, remplir `site_web` (invisible, hors écran) puis
+      envoyer : le remerciement s'affiche, mais aucune fiche n'est créée. Le champ n'est atteint ni à la
+      tabulation ni par un lecteur d'écran (VoiceOver).
+- [ ] Erreurs : date de début d'il y a plus d'un an → message sous le champ et en tête (« Vérifiez les
+      champs signalés : »), champ encadré de rouge ; un fichier `.svg`, `.gif` ou un PDF renommé
+      `affiche.png` → « Image en JPEG, PNG ou WebP seulement. » ; une image de plus de 3 Mo → « Image
+      trop lourde (3 Mo au plus). » ; aucune fiche créée.
+- [ ] Lien `javascript:alert(1)` (en retirant `type="url"` dans les outils de développement) : la fiche
+      est créée sans lien. Titre `<script>alert(1)</script>Colloque` : la fiche s'intitule « Colloque ».
+- [ ] Doublon : proposer un événement de même date et de même titre qu'une fiche publiée → « Merci, cet
+      événement est déjà dans la veille. », aucune nouvelle fiche, la fiche publiée inchangée (dates,
+      lien, source).
+- [ ] Jeton : modifier `rsnVeillePublic.nonce` dans la console puis envoyer → le JS demande un jeton
+      neuf (`action=rsn_veille_jeton`) et l'envoi réussit. Avec LiteSpeed Cache (page en cache depuis
+      plus de 24 h, ou ESI activé), l'envoi réussit aussi.
+- [ ] Connecté comme administrateur : l'envoi fonctionne aussi (action `wp_ajax_rsn_veille_proposer`).
+- [ ] Mobile (375 px) : champs sur une colonne, aucun défilement horizontal, messages lisibles.
 
 ## Ressources et cohabitation
 
