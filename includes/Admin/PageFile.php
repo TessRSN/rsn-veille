@@ -7,6 +7,7 @@ use RSN\Veille\Collecte;
 use RSN\Veille\Entrepot;
 use RSN\Veille\EntrepotWordPress;
 use RSN\Veille\Fiche;
+use RSN\Veille\Public\Formulaire;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -123,11 +124,14 @@ final class PageFile {
 
     /**
      * Proposition du public écartée : son image (téléversée par un anonyme, publique à son adresse) est
-     * supprimée de la médiathèque, fichier compris, et la fiche n'a plus d'image.
+     * supprimée de la médiathèque, fichier compris, et la fiche n'a plus d'image. Seulement une pièce
+     * téléversée par le formulaire (méta repère) et rattachée à cette fiche : une image de la médiathèque
+     * choisie par l'équipe comme vignette n'est jamais supprimée.
      */
     private static function retirer_image_proposee(Entrepot $e, int $id): void {
         $piece = (int) get_post_thumbnail_id($id);
-        if ($piece <= 0) {
+        $post = $piece > 0 ? get_post($piece) : null;
+        if ($post === null || (int) $post->post_parent !== $id || !get_post_meta($piece, Formulaire::META_IMAGE_PROPOSEE, true)) {
             return;
         }
         wp_delete_attachment($piece, true);

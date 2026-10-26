@@ -375,6 +375,8 @@ final class FormulaireTest extends TestCase {
         $this->assertNotSame($nom, $rappel('/uploads/2026/10', 'affiche.png', '.png'), 'nom aléatoire à chaque appel');
         $piece = (int) get_post_meta($id, '_thumbnail_id', true);
         $this->assertSame($televersements[0]['id'], $piece);
+        $this->assertSame(1, get_post_meta($piece, 'rsn_veille_image_proposee', true), 'méta repère de la pièce');
+        $this->assertSame($id, get_post($piece)->post_parent);
         $this->assertSame(wp_get_attachment_image_url($piece, 'medium_large'), (new EntrepotWordPress())->obtenir($id)->image_url);
     }
 
@@ -529,6 +531,24 @@ final class FormulaireTest extends TestCase {
         $this->assertCount(2, self::fiches());
         $this->assertSame($avant, serialize($GLOBALS['rsn_veille_wp']['meta'][$proposition->ID]));
         $this->assertNotSame($proposition->ID, $entrepot->trouver_par_cle_source('obvia:9')->id);
+    }
+
+    public function test_equipe_exemptee_des_limites_de_debit(): void {
+        $GLOBALS['rsn_veille_wp']['capacites'] = ['rsn_veille_gerer'];
+        for ($i = 1; $i <= 32; $i++) {
+            [, $statut] = $this->envoyer(self::champs(['titre' => 'Atelier numéro ' . $i]));
+            $this->assertSame(200, $statut, "proposition $i");
+        }
+        $this->assertCount(32, self::fiches());
+        $this->assertSame([], $GLOBALS['rsn_veille_wp']['transients'], 'aucun compteur pour l’équipe');
+
+        // Sans la capacité (simple abonné connecté) : limité comme un anonyme.
+        $GLOBALS['rsn_veille_wp']['capacites'] = ['read'];
+        for ($i = 1; $i <= 5; $i++) {
+            $this->envoyer(self::champs(['titre' => 'Rencontre ' . $i]));
+        }
+        [, $statut] = $this->envoyer(self::champs(['titre' => 'Rencontre 6']));
+        $this->assertSame(429, $statut);
     }
 
     public function test_jeton_renouvele(): void {

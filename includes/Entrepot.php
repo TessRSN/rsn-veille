@@ -20,7 +20,10 @@ interface Entrepot {
      */
     public function trouver_par_dedoublonnage(string $cle): ?Fiche;
 
-    /** La fiche qui a exactement cette URL d'information, sinon null (null aussi pour une URL vide). */
+    /**
+     * La fiche qui a exactement cette URL d'information, sinon null (null aussi pour une URL vide).
+     * Les propositions du public ne sont jamais rendues.
+     */
     public function trouver_par_url(string $url): ?Fiche;
 
     /** Enregistre une nouvelle fiche et renvoie son identifiant. */

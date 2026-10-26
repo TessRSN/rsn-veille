@@ -28,7 +28,7 @@ final class EntrepotMemoire implements Entrepot {
         if ($url === '') {
             return null;
         }
-        return $this->premiere(static fn(Fiche $f): bool => $f->url === $url);
+        return $this->premiere(static fn(Fiche $f): bool => !$f->est_proposition() && $f->url === $url);
     }
 
     public function creer(Fiche $f): int {

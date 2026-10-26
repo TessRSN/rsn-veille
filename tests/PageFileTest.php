@@ -310,15 +310,36 @@ final class PageFileTest extends TestCase {
 
     // --- Image d'une proposition écartée ---
 
-    /** Fiche dans l'imitation de WordPress, avec une pièce jointe en vignette ; rend [entrepôt, id, pièce]. */
-    private static function fiche_avec_vignette(string $source): array {
+    /**
+     * Fiche dans l'imitation de WordPress, avec une pièce jointe en vignette, téléversée par le formulaire
+     * (rattachée à la fiche, méta repère) sauf indication contraire ; rend [entrepôt, id, pièce].
+     */
+    private static function fiche_avec_vignette(string $source, bool $rattachee = true, bool $repere = true): array {
         $e = new EntrepotWordPress();
         $f = self::fiche(['source' => $source, 'image_url' => 'https://exemple.test/wp-content/uploads/a.png']);
         $f->id = null;
         $id = $e->creer($f);
-        $piece = wp_insert_post(['post_type' => 'attachment', 'post_status' => 'inherit', 'post_title' => 'a.png']);
+        $piece = wp_insert_post(['post_type' => 'attachment', 'post_status' => 'inherit', 'post_title' => 'a.png', 'post_parent' => $rattachee ? $id : 0]);
+        if ($repere) {
+            update_post_meta($piece, 'rsn_veille_image_proposee', 1);
+        }
         set_post_thumbnail($id, $piece);
         return [$e, $id, $piece];
+    }
+
+    public function test_image_de_la_mediatheque_choisie_par_l_equipe_jamais_supprimee(): void {
+        // Pièce d'un autre parent (ou sans parent), même avec la méta repère.
+        [$e, $id, $piece] = self::fiche_avec_vignette('proposition', false, true);
+        PageFile::changer_statut($e, $id, 'ecarte');
+        // Pièce rattachée à la fiche mais sans la méta repère (téléversée depuis l'éditeur).
+        [$e2, $id2, $piece2] = self::fiche_avec_vignette('proposition', true, false);
+        PageFile::changer_statut($e2, $id2, 'ecarte');
+
+        $this->assertSame([], $GLOBALS['rsn_veille_wp']['pieces_supprimees'] ?? []);
+        $this->assertNotNull(get_post($piece));
+        $this->assertNotNull(get_post($piece2));
+        $this->assertSame($piece, get_post_thumbnail_id($id));
+        $this->assertSame('https://exemple.test/wp-content/uploads/a.png', $e->obtenir($id)->image_url);
     }
 
     public function test_proposition_ecartee_perd_son_image(): void {

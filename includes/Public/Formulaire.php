@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace RSN\Veille\Public;
 
+use RSN\Veille\Admin\Menu;
 use RSN\Veille\EntrepotWordPress;
 use RSN\Veille\Fiche;
 use RSN\Veille\Pertinence;
@@ -44,6 +45,8 @@ final class Formulaire {
     public const COTE_MAX = 8000;
 
     private const META_COURRIEL = TypeContenu::PREFIXE . 'courriel_proposant';
+    /** Méta repère d'une pièce jointe téléversée par le formulaire (seule supprimée quand la proposition est écartée). */
+    public const META_IMAGE_PROPOSEE = TypeContenu::PREFIXE . 'image_proposee';
 
     /** Champs texte lus dans la requête. */
     private const CHAMPS = ['titre', 'debut', 'fin', 'organisateur', 'format', 'lieu', 'url', 'resume', 'courriel', 'site_web'];
@@ -184,7 +187,9 @@ final class Formulaire {
             wp_send_json_error(['ok' => false, 'message' => __('Jeton de sécurité expiré : rechargez la page.', 'rsn-veille')], 403);
             return;
         }
-        if (self::debit_depasse(self::cle_debit(self::adresse()))) {
+        // L'équipe (capacité rsn_veille_gerer) n'est soumise à aucune des deux limites.
+        $equipe = current_user_can(Menu::CAPACITE);
+        if (!$equipe && self::debit_depasse(self::cle_debit(self::adresse()))) {
             wp_send_json_error(['ok' => false, 'message' => __('Trop de propositions, réessayez plus tard.', 'rsn-veille')], 429);
             return;
         }
@@ -215,7 +220,7 @@ final class Formulaire {
         }
         // Plafond de tout le site, compté sur les propositions valides seulement (un robot pris au piège
         // ou un formulaire incomplet ne bloque pas les autres visiteurs).
-        if (self::debit_depasse(self::CLE_DEBIT_GLOBAL, self::PROPOSITIONS_PAR_HEURE)) {
+        if (!$equipe && self::debit_depasse(self::CLE_DEBIT_GLOBAL, self::PROPOSITIONS_PAR_HEURE)) {
             wp_send_json_error(['ok' => false, 'message' => __('Trop de propositions, réessayez plus tard.', 'rsn-veille')], 429);
             return;
         }
@@ -328,6 +333,7 @@ final class Formulaire {
         if (is_wp_error($piece)) {
             return;
         }
+        update_post_meta((int) $piece, self::META_IMAGE_PROPOSEE, 1);
         set_post_thumbnail($id, (int) $piece);
         $url = wp_get_attachment_image_url((int) $piece, 'medium_large');
         if (is_string($url) && $url !== '') {

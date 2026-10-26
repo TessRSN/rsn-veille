@@ -27,7 +27,25 @@ final class EntrepotWordPress implements Entrepot {
     public function trouver_par_url(string $url): ?Fiche {
         // L'URL est cherchée sous la forme où elle est enregistrée.
         $url = $url === '' ? '' : (string) TypeContenu::nettoyer_meta('url', $url);
-        return $url === '' ? null : $this->premiere(TypeContenu::PREFIXE . 'url', $url);
+        if ($url === '') {
+            return null;
+        }
+        // Toutes les fiches de cette URL (peu nombreuses), la première qui n'est pas une proposition.
+        $arguments = self::requete(self::STATUTS_WP);
+        $arguments['posts_per_page'] = -1;
+        $arguments['fields'] = 'ids';
+        $arguments['meta_query'] = [['key' => TypeContenu::PREFIXE . 'url', 'value' => $url, 'compare' => '=', 'type' => 'BINARY']];
+        $ids = array_map('intval', (new \WP_Query($arguments))->posts);
+        if ($ids === []) {
+            return null;
+        }
+        update_meta_cache('post', $ids);
+        foreach ($ids as $id) {
+            if ((string) get_post_meta($id, TypeContenu::PREFIXE . 'source', true) !== Fiche::SOURCE_PROPOSITION) {
+                return $this->obtenir($id);
+            }
+        }
+        return null;
     }
 
     /** La fiche $id, ou null si ce n'est pas une fiche de veille. */

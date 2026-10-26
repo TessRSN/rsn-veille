@@ -83,8 +83,16 @@ final class Donnees {
             if ($fiche->type === 'appel') {
                 $appels[] = $fiche->vers_tableau();
             } elseif ($fiche->type === 'evenement') {
-                $positions[$fiche->cle_dedoublonnage()] ??= count($evenements);
-                $evenements[] = $fiche->vers_tableau();
+                $cle = $fiche->cle_dedoublonnage();
+                $position = $positions[$cle] ?? null;
+                if ($position === null) {
+                    $positions[$cle] = count($evenements);
+                    $evenements[] = $fiche->vers_tableau();
+                } elseif ((string) $evenements[$position]['source'] === Fiche::SOURCE_PROPOSITION && !$fiche->est_proposition()) {
+                    // Doublon entre fiches de veille : une proposition publiée cède la place à la fiche collectée.
+                    $evenements[$position] = $fiche->vers_tableau();
+                }
+                // Sinon, la première fiche de même date et même titre reste seule.
             }
         }
 

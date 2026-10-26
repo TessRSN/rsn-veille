@@ -252,11 +252,12 @@ final class EntrepotContratTest extends TestCase {
         $proposition = self::fiche(['source' => 'proposition', 'niveau' => 'M', 'statut' => 'a_approuver', 'cle_source' => 'proposition:1', 'cles_source' => ['proposition:1']]);
         $id = $e->creer($proposition);
         $this->assertNull($e->trouver_par_dedoublonnage($proposition->cle_dedoublonnage()));
-        // La fiche reste retrouvable par sa clé et par son URL (le dépôt l'ignore comme doublon).
+        $this->assertNull($e->trouver_par_url('https://exemple.ca/atelier?id=1'));
+        // La fiche reste retrouvable par sa clé de source.
         $this->assertSame($id, $e->trouver_par_cle_source('proposition:1')->id);
-        $this->assertSame($id, $e->trouver_par_url('https://exemple.ca/atelier?id=1')->id);
-        // Une fiche collectée ensuite est, elle, rendue.
+        // Une fiche collectée ensuite (identifiant plus grand) est, elle, rendue, par date-titre et par URL.
         $collectee = $e->creer(self::fiche(['cle_source' => 'ex:2', 'cles_source' => ['ex:2']]));
         $this->assertSame($collectee, $e->trouver_par_dedoublonnage($proposition->cle_dedoublonnage())->id);
+        $this->assertSame($collectee, $e->trouver_par_url('https://exemple.ca/atelier?id=1')->id);
     }
 }

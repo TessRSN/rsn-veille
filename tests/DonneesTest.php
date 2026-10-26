@@ -216,4 +216,28 @@ final class DonneesTest extends TestCase {
         $this->assertSame([], $items[0]['themes']);
         $this->assertSame('Événements partenaires', $items[0]['categorie_rsn']);
     }
+
+    public function test_proposition_publiee_cede_la_place_a_la_fiche_collectee(): void {
+        $this->entrepot->creer($this->fiche(['source' => 'proposition', 'niveau' => 'M', 'cle_source' => 'proposition:1', 'cles_source' => ['proposition:1'], 'url' => 'https://proposant.example/']));
+        $this->entrepot->creer($this->fiche([]));
+        $items = Donnees::construire('2026-10-25', $this->entrepot, [], true)['items'];
+        $this->assertCount(1, $items);
+        $this->assertSame('Obvia : événements', $items[0]['source']);
+        $this->assertSame('https://www.obvia.ca/evenements/colloque', $items[0]['url']);
+    }
+
+    public function test_doublon_entre_fiches_collectees_la_premiere_reste_seule(): void {
+        $this->entrepot->creer($this->fiche([]));
+        $this->entrepot->creer($this->fiche(['source' => 'Mila : événements', 'cle_source' => 'mila:1', 'cles_source' => ['mila:1'], 'url' => 'https://mila.quebec/x']));
+        $this->entrepot->creer($this->fiche(['titre' => 'Autre atelier', 'cle_source' => 'mila:2', 'cles_source' => ['mila:2']]));
+        $items = Donnees::construire('2026-10-25', $this->entrepot, [], true)['items'];
+        $this->assertSame(['Autre atelier', 'Colloque sur la santé numérique'], array_column($items, 'titre'));
+        $this->assertSame('Obvia : événements', $items[1]['source'], 'la première fiche collectée reste');
+        $this->assertNotContains('https://mila.quebec/x', array_column($items, 'url'));
+    }
+
+    public function test_proposition_seule_publiee_reste_affichee(): void {
+        $this->entrepot->creer($this->fiche(['source' => 'proposition', 'cle_source' => 'proposition:1', 'cles_source' => ['proposition:1']]));
+        $this->assertCount(1, Donnees::construire('2026-10-25', $this->entrepot, [])['items']);
+    }
 }

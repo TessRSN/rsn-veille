@@ -98,6 +98,7 @@ class WP_Post {
     public string $post_content = '';
     public string $post_date = '';
     public string $post_date_gmt = '';
+    public int $post_parent = 0;
     public string $post_name = '';
 }
 
@@ -428,6 +429,7 @@ function wp_insert_post(array $article, bool $erreur = false, bool $mise_a_jour 
         'post_date' => $date,
         'post_date_gmt' => $gmt,
         'post_name' => $article['post_name'] ?? '',
+        'post_parent' => (int) ($article['post_parent'] ?? 0),
     ];
     $donnees = apply_filters('wp_insert_post_data', $donnees, $article, $article, $mise_a_jour);
     $id = (int) ($article['ID'] ?? $GLOBALS['rsn_veille_wp']['prochain_id']++);
@@ -953,7 +955,7 @@ function media_handle_upload(string $champ, int $parent, array $donnees = [], ar
     if (is_string($erreur)) {
         return new WP_Error('upload_error', $erreur);
     }
-    $id = wp_insert_post(['post_type' => 'attachment', 'post_status' => 'inherit', 'post_title' => (string) ($_FILES[$champ]['name'] ?? 'image')]);
+    $id = wp_insert_post(['post_type' => 'attachment', 'post_status' => 'inherit', 'post_parent' => $parent, 'post_title' => (string) ($_FILES[$champ]['name'] ?? 'image')]);
     $GLOBALS['rsn_veille_wp']['televersements'][] = ['champ' => $champ, 'parent' => $parent, 'substitutions' => $substitutions, 'id' => $id];
     return $id;
 }
