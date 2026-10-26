@@ -8,6 +8,12 @@
  * d'un `meta_query` de type BINARY (et le « contient » de LIKE). La vérification de référence reste
  * `tests/manuel/verifier-cpt.php`, exécuté dans un vrai WordPress (`wp eval-file`).
  *
+ * Administration : menus et crochets de pages (`toplevel_page_…`, `{menu}_page_…`), capacités de
+ * l'utilisateur courant (liste `capacites`), rôles (`WP_Role`, chaque `add_cap` compté comme une
+ * écriture), jetons déterministes (« jeton-{action} »), et `wp_send_json_*` / `wp_die` qui lèvent
+ * `RsnVeilleArretRequete` au lieu d'arrêter PHP. La vérification de référence est
+ * `tests/manuel/verifier-admin.md`.
+ *
  * Chargé seulement par les tests qui en ont besoin (`require_once` en tête du fichier de test),
  * jamais par `tests/bootstrap.php`. Les bouchons déjà définis par le bootstrap sont gardés.
  * `rsn_veille_bouchons_reinitialiser()` remet l'état à zéro et réenregistre le type de contenu.
@@ -34,6 +40,15 @@ function rsn_veille_bouchons_reinitialiser(): void {
         'posts' => [], 'meta' => [], 'termes' => [], 'filtres' => [], 'actions' => [],
         'prochain_id' => 1, 'types' => [], 'taxonomies' => [], 'metas_enregistrees' => [], 'requetes' => [],
         'options' => [], 'cache_options' => [], 'transients' => [], 'cron' => [], 'declenchees' => [],
+        // Administration : menus, capacités de l'utilisateur courant, rôles, scripts et styles en file.
+        'menus' => [], 'sous_menus' => [], 'crochets_menus' => [], 'capacites' => [], 'ecritures_roles' => 0,
+        'scripts' => [], 'styles' => [], 'localisations' => [],
+    ];
+    $GLOBALS['rsn_veille_wp']['roles'] = [
+        'administrator' => new WP_Role('administrator', ['manage_options' => true, 'edit_posts' => true]),
+        'editor' => new WP_Role('editor', ['edit_others_posts' => true, 'edit_posts' => true]),
+        'author' => new WP_Role('author', ['edit_posts' => true]),
+        'subscriber' => new WP_Role('subscriber', ['read' => true]),
     ];
     \RSN\Veille\TypeContenu::enregistrer();
 }
@@ -505,4 +520,163 @@ class WP_Query {
         }
         return false;
     }
+}
+
+// --- Administration (imitation de wp-admin/includes/plugin.php, capabilities.php, pluggable.php) ---
+
+if (!function_exists('esc_attr')) {
+    function esc_attr(string $texte): string {
+        return htmlspecialchars($texte, ENT_QUOTES, 'UTF-8');
+    }
+}
+if (!function_exists('esc_url')) {
+    /** Comme esc_url : protocoles autorisés seulement (vide sinon), puis encodé pour un attribut. */
+    function esc_url(string $url): string {
+        $url = trim($url);
+        if ($url === '') {
+            return '';
+        }
+        if (preg_match('/^([a-z][a-z0-9+.-]*):/i', $url, $m) === 1 && !in_array(strtolower($m[1]), ['http', 'https', 'mailto'], true)) {
+            return '';
+        }
+        return htmlspecialchars(esc_url_raw($url), ENT_QUOTES, 'UTF-8');
+    }
+}
+if (!function_exists('esc_html__')) {
+    function esc_html__(string $texte, string $domaine = 'default'): string {
+        return esc_html(__($texte, $domaine));
+    }
+}
+if (!function_exists('esc_attr__')) {
+    function esc_attr__(string $texte, string $domaine = 'default'): string {
+        return esc_attr(__($texte, $domaine));
+    }
+}
+
+function absint(mixed $valeur): int {
+    return abs((int) $valeur);
+}
+
+function sanitize_key(string $cle): string {
+    return (string) preg_replace('/[^a-z0-9_\-]/', '', strtolower($cle));
+}
+
+function admin_url(string $chemin = ''): string {
+    return 'https://exemple.test/wp-admin/' . ltrim($chemin, '/');
+}
+
+/** Comme WordPress : le crochet d'une page de premier niveau est « toplevel_page_{slug} ». */
+function add_menu_page(string $titre_page, string $titre_menu, string $capacite, string $slug, ?callable $rappel = null, string $icone = '', int|float|null $position = null): string {
+    $GLOBALS['rsn_veille_wp']['menus'][$slug] = compact('titre_page', 'titre_menu', 'capacite', 'slug', 'rappel', 'icone', 'position');
+    $GLOBALS['rsn_veille_wp']['crochets_menus'][$slug] = sanitize_title($titre_menu);
+    return 'toplevel_page_' . $slug;
+}
+
+/**
+ * Comme WordPress : faux si l'utilisateur n'a pas la capacité ; le crochet d'une sous-page vaut
+ * « toplevel_page_{slug} » si elle reprend le slug du menu, sinon « {titre du menu nettoyé}_page_{slug} ».
+ */
+function add_submenu_page(string $parent, string $titre_page, string $titre_menu, string $capacite, string $slug, ?callable $rappel = null, int|float|null $position = null): string|false {
+    if (!current_user_can($capacite)) {
+        return false;
+    }
+    $GLOBALS['rsn_veille_wp']['sous_menus'][$parent][$slug] = compact('titre_page', 'titre_menu', 'capacite', 'slug', 'rappel');
+    if (isset($GLOBALS['rsn_veille_wp']['crochets_menus'][$slug])) {
+        return 'toplevel_page_' . $slug;
+    }
+    return ($GLOBALS['rsn_veille_wp']['crochets_menus'][$parent] ?? 'admin') . '_page_' . $slug;
+}
+
+/** Capacités de l'utilisateur courant : liste posée par le test (`capacites`). */
+function current_user_can(string $capacite, mixed ...$arguments): bool {
+    return in_array($capacite, $GLOBALS['rsn_veille_wp']['capacites'], true);
+}
+
+class WP_Role {
+    /** @param array<string,bool> $capabilities */
+    public function __construct(public string $name, public array $capabilities = []) {
+    }
+
+    /** Comme WordPress, chaque appel réécrit l'option des rôles (compté dans `ecritures_roles`). */
+    public function add_cap(string $capacite, bool $accorder = true): void {
+        $this->capabilities[$capacite] = $accorder;
+        $GLOBALS['rsn_veille_wp']['ecritures_roles']++;
+    }
+
+    public function remove_cap(string $capacite): void {
+        unset($this->capabilities[$capacite]);
+        $GLOBALS['rsn_veille_wp']['ecritures_roles']++;
+    }
+
+    public function has_cap(string $capacite): bool {
+        return !empty($this->capabilities[$capacite]);
+    }
+}
+
+class WP_Roles {
+    /** @var array<string,WP_Role> */
+    public array $role_objects = [];
+
+    public function __construct() {
+        $this->role_objects = $GLOBALS['rsn_veille_wp']['roles'];
+    }
+}
+
+function wp_roles(): WP_Roles {
+    return new WP_Roles();
+}
+
+function get_role(string $nom): ?WP_Role {
+    return $GLOBALS['rsn_veille_wp']['roles'][$nom] ?? null;
+}
+
+/** Jeton déterministe : « jeton-{action} » (imitation, aucune sécurité). */
+function wp_create_nonce(string|int $action = -1): string {
+    return 'jeton-' . $action;
+}
+
+function wp_verify_nonce(mixed $jeton, string|int $action = -1): int|false {
+    return is_string($jeton) && $jeton === 'jeton-' . $action ? 1 : false;
+}
+
+/** Réponse de wp_send_json_* ou de wp_die : WordPress arrête la requête, l'imitation lève cette exception. */
+class RsnVeilleArretRequete extends Exception {
+    public function __construct(public mixed $reponse, public int $statut_http) {
+        parent::__construct('Requête arrêtée (' . $statut_http . ')');
+    }
+}
+
+function wp_die(mixed $message = '', mixed $titre = '', mixed $arguments = []): void {
+    throw new RsnVeilleArretRequete($message, is_int($arguments) ? $arguments : (int) ($arguments['response'] ?? 500));
+}
+
+/** Comme WordPress : lit `$_REQUEST[$champ]` ; si le jeton est mauvais et $arreter est vrai, wp_die(-1, 403). */
+function check_ajax_referer(string|int $action = -1, string|false $champ = false, bool $arreter = true): int|false {
+    $jeton = $champ !== false ? ($_REQUEST[$champ] ?? '') : ($_REQUEST['_ajax_nonce'] ?? $_REQUEST['_wpnonce'] ?? '');
+    $resultat = wp_verify_nonce($jeton, $action);
+    if ($resultat === false && $arreter) {
+        wp_die('-1', '', 403);
+    }
+    return $resultat;
+}
+
+function wp_send_json_success(mixed $donnees = null, ?int $statut = null): void {
+    throw new RsnVeilleArretRequete(['success' => true, 'data' => $donnees], $statut ?? 200);
+}
+
+function wp_send_json_error(mixed $donnees = null, ?int $statut = null): void {
+    throw new RsnVeilleArretRequete(['success' => false, 'data' => $donnees], $statut ?? 200);
+}
+
+function wp_enqueue_style(string $nom, string $source = '', array $dependances = [], string|bool|null $version = false, string $media = 'all'): void {
+    $GLOBALS['rsn_veille_wp']['styles'][$nom] = compact('source', 'dependances', 'version');
+}
+
+function wp_enqueue_script(string $nom, string $source = '', array $dependances = [], string|bool|null $version = false, array|bool $pied = false): void {
+    $GLOBALS['rsn_veille_wp']['scripts'][$nom] = compact('source', 'dependances', 'version', 'pied');
+}
+
+function wp_localize_script(string $nom, string $objet, array $donnees): bool {
+    $GLOBALS['rsn_veille_wp']['localisations'][$nom][$objet] = $donnees;
+    return true;
 }
