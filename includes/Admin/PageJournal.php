@@ -5,6 +5,7 @@ namespace RSN\Veille\Admin;
 
 use RSN\Veille\Collecte;
 use RSN\Veille\Journal;
+use RSN\Veille\Sources;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -26,7 +27,10 @@ final class PageJournal {
         $derniere = get_option(Collecte::OPTION_DERNIERE, 0);
         $lisible = is_numeric($derniere) && (int) $derniere > 0 ? Dates::date_heure(wp_date('Y-m-d H:i', (int) $derniere)) : '';
         // Sortie entièrement échappée par les méthodes de rendu.
-        echo self::page_html(self::resume(Journal::tout(), Collecte::sources()), $lisible);
+        $journal = Journal::tout();
+        // Sources actives, puis les sources désactivées qui ont un journal (sous leur nom).
+        $sources = Collecte::sources() + array_intersect_key(Sources::par_defaut(), $journal);
+        echo self::page_html(self::resume($journal, $sources), $lisible);
     }
 
     /**
