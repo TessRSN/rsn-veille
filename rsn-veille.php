@@ -31,6 +31,14 @@ spl_autoload_register(static function (string $classe): void {
 
 if (function_exists('add_action')) {
     add_action('init', [\RSN\Veille\TypeContenu::class, 'enregistrer']);
+    // Collecte nocturne (rsn_veille_nuit, rsn_veille_source) et purge de la page Veille à chaque écriture de fiche.
+    \RSN\Veille\Collecte::accrocher();
+}
+
+if (function_exists('register_activation_hook')) {
+    // Activation : collecte quotidienne à l'heure des réglages (03:00 à Montréal par défaut) ; désactivation : tout déplanifier.
+    register_activation_hook(__FILE__, [\RSN\Veille\Collecte::class, 'planifier_nuit']);
+    register_deactivation_hook(__FILE__, [\RSN\Veille\Collecte::class, 'deplanifier']);
 }
 
 /**

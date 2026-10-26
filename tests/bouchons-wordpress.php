@@ -21,12 +21,16 @@ if (!defined('ABSPATH')) {
 if (!defined('DAY_IN_SECONDS')) {
     define('DAY_IN_SECONDS', 86400);
 }
+if (!defined('MINUTE_IN_SECONDS')) {
+    define('MINUTE_IN_SECONDS', 60);
+}
 
 /** État du faux WordPress. */
 function rsn_veille_bouchons_reinitialiser(): void {
     $GLOBALS['rsn_veille_wp'] = [
         'posts' => [], 'meta' => [], 'termes' => [], 'filtres' => [], 'actions' => [],
         'prochain_id' => 1, 'types' => [], 'taxonomies' => [], 'metas_enregistrees' => [], 'requetes' => [],
+        'options' => [], 'transients' => [], 'cron' => [], 'declenchees' => [],
     ];
     \RSN\Veille\TypeContenu::enregistrer();
 }
@@ -69,8 +73,135 @@ if (!function_exists('sanitize_text_field')) {
     }
 }
 
-function add_action(string $crochet, callable $rappel): void {
-    $GLOBALS['rsn_veille_wp']['actions'][$crochet][] = $rappel;
+function add_action(string $crochet, callable $rappel, int $priorite = 10, int $nb_arguments = 1): void {
+    $GLOBALS['rsn_veille_wp']['actions'][$crochet][] = ['rappel' => $rappel, 'nb_arguments' => $nb_arguments];
+}
+
+/**
+ * Comme WordPress : sans argument, les rappels reçoivent une chaîne vide ; chacun reçoit au plus
+ * `nb_arguments` arguments. Chaque déclenchement est noté dans `declenchees` (crochet => listes d'arguments).
+ */
+function do_action(string $crochet, mixed ...$arguments): void {
+    if ($arguments === []) {
+        $arguments = [''];
+    }
+    $GLOBALS['rsn_veille_wp']['declenchees'][$crochet][] = $arguments;
+    foreach ($GLOBALS['rsn_veille_wp']['actions'][$crochet] ?? [] as $action) {
+        ($action['rappel'])(...array_slice($arguments, 0, $action['nb_arguments']));
+    }
+}
+
+/** Arguments de chaque déclenchement d’une action (outil de test, pas une fonction WordPress). */
+function rsn_veille_bouchons_declenchements(string $crochet): array {
+    return $GLOBALS['rsn_veille_wp']['declenchees'][$crochet] ?? [];
+}
+
+function get_option(string $nom, mixed $defaut = false): mixed {
+    return array_key_exists($nom, $GLOBALS['rsn_veille_wp']['options']) ? $GLOBALS['rsn_veille_wp']['options'][$nom] : $defaut;
+}
+
+function update_option(string $nom, mixed $valeur, mixed $chargement_auto = null): bool {
+    $GLOBALS['rsn_veille_wp']['options'][$nom] = $valeur;
+    return true;
+}
+
+function delete_option(string $nom): bool {
+    unset($GLOBALS['rsn_veille_wp']['options'][$nom]);
+    return true;
+}
+
+/** Transients en mémoire ; une durée nulle ne périme jamais. */
+function get_transient(string $nom): mixed {
+    $transient = $GLOBALS['rsn_veille_wp']['transients'][$nom] ?? null;
+    if ($transient === null || ($transient['expire'] !== 0 && $transient['expire'] <= time())) {
+        unset($GLOBALS['rsn_veille_wp']['transients'][$nom]);
+        return false;
+    }
+    return $transient['valeur'];
+}
+
+function set_transient(string $nom, mixed $valeur, int $duree = 0): bool {
+    $GLOBALS['rsn_veille_wp']['transients'][$nom] = ['valeur' => $valeur, 'expire' => $duree > 0 ? time() + $duree : 0];
+    return true;
+}
+
+function delete_transient(string $nom): bool {
+    unset($GLOBALS['rsn_veille_wp']['transients'][$nom]);
+    return true;
+}
+
+/**
+ * Tâches planifiées : liste d'événements {horodatage, crochet, recurrence (false si unique), args}.
+ * Comme WordPress 5.1+, un événement unique est refusé s'il en existe déjà un du même crochet (mêmes
+ * arguments) à moins de 10 minutes.
+ */
+function wp_schedule_single_event(int $horodatage, string $crochet, array $args = []): bool {
+    foreach ($GLOBALS['rsn_veille_wp']['cron'] as $evenement) {
+        if ($evenement['crochet'] === $crochet && $evenement['args'] === $args && abs($evenement['horodatage'] - $horodatage) <= 10 * MINUTE_IN_SECONDS) {
+            return false;
+        }
+    }
+    $GLOBALS['rsn_veille_wp']['cron'][] = ['horodatage' => $horodatage, 'crochet' => $crochet, 'recurrence' => false, 'args' => $args];
+    return true;
+}
+
+function wp_schedule_event(int $horodatage, string $recurrence, string $crochet, array $args = []): bool {
+    $GLOBALS['rsn_veille_wp']['cron'][] = ['horodatage' => $horodatage, 'crochet' => $crochet, 'recurrence' => $recurrence, 'args' => $args];
+    return true;
+}
+
+function wp_next_scheduled(string $crochet, array $args = []): int|false {
+    $prochain = false;
+    foreach ($GLOBALS['rsn_veille_wp']['cron'] as $evenement) {
+        if ($evenement['crochet'] === $crochet && $evenement['args'] === $args && ($prochain === false || $evenement['horodatage'] < $prochain)) {
+            $prochain = $evenement['horodatage'];
+        }
+    }
+    return $prochain;
+}
+
+function wp_unschedule_event(int $horodatage, string $crochet, array $args = []): bool {
+    foreach ($GLOBALS['rsn_veille_wp']['cron'] as $i => $evenement) {
+        if ($evenement['horodatage'] === $horodatage && $evenement['crochet'] === $crochet && $evenement['args'] === $args) {
+            unset($GLOBALS['rsn_veille_wp']['cron'][$i]);
+            return true;
+        }
+    }
+    return false;
+}
+
+function wp_clear_scheduled_hook(string $crochet, array $args = []): int {
+    $avant = count($GLOBALS['rsn_veille_wp']['cron']);
+    $GLOBALS['rsn_veille_wp']['cron'] = array_filter(
+        $GLOBALS['rsn_veille_wp']['cron'],
+        static fn(array $e): bool => !($e['crochet'] === $crochet && $e['args'] === $args)
+    );
+    return $avant - count($GLOBALS['rsn_veille_wp']['cron']);
+}
+
+/** Événements planifiés d'un crochet (outil de test). */
+function rsn_veille_bouchons_planifies(string $crochet): array {
+    return array_values(array_filter($GLOBALS['rsn_veille_wp']['cron'], static fn(array $e): bool => $e['crochet'] === $crochet));
+}
+
+/**
+ * Comme le lanceur de WP-Cron pour un crochet : retire le prochain événement (unique) puis déclenche
+ * l'action, sans attendre son heure. Faux s'il n'y a rien de planifié (outil de test).
+ */
+function rsn_veille_bouchons_executer_cron(string $crochet): bool {
+    $horodatage = wp_next_scheduled($crochet);
+    if ($horodatage === false) {
+        return false;
+    }
+    wp_unschedule_event($horodatage, $crochet);
+    do_action($crochet);
+    return true;
+}
+
+if (!function_exists('wp_timezone')) {
+    function wp_timezone(): DateTimeZone {
+        return new DateTimeZone('America/Toronto');
+    }
 }
 
 function add_filter(string $crochet, callable $rappel): void {
@@ -193,6 +324,7 @@ function wp_insert_post(array $article, bool $erreur = false, bool $mise_a_jour 
         $post->$champ = $valeur;
     }
     $GLOBALS['rsn_veille_wp']['posts'][$id] = $post;
+    do_action('save_post_' . $post->post_type, $id, clone $post, $mise_a_jour);
     return $id;
 }
 
@@ -225,7 +357,11 @@ function get_post_field(string $champ, int $id): string {
 }
 
 function wp_delete_post(int $id, bool $definitif = false): void {
+    $post = get_post($id);
     unset($GLOBALS['rsn_veille_wp']['posts'][$id], $GLOBALS['rsn_veille_wp']['meta'][$id], $GLOBALS['rsn_veille_wp']['termes'][$id]);
+    if ($post !== null) {
+        do_action('deleted_post', $id, $post);
+    }
 }
 
 /** Comme sanitize_meta : applique le sanitize_callback enregistré. */

@@ -347,4 +347,22 @@ final class DepotTest extends TestCase {
         $this->assertNull($e->trouver_par_cle_source('s:9'));
         $this->assertNull($e->trouver_par_url(''));
     }
+
+    public function test_existe_par_cle_doublon_ou_url_sans_rien_ecrire(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $f = $this->fiche(['titre' => 'Atelier données', 'debut' => '2026-11-20', 'url' => 'https://x.test/atelier', 'cle_source' => 'rsn:1', 'niveau' => 'A', 'statut' => 'publie']);
+        $this->assertFalse($d->existe($f));
+        $this->assertNull($d->fiche_de_cle($f));
+        $this->assertSame([], $e->lister(''));
+        $d->integrer($f);
+
+        $this->assertTrue($d->existe($this->fiche(['titre' => 'Autre titre', 'cle_source' => 'rsn:1'])));
+        $doublon = $this->fiche(['titre' => 'Atelier données', 'debut' => '2026-11-20', 'cle_source' => 'mila:9']);
+        $this->assertTrue($d->existe($doublon));
+        $this->assertNull($d->fiche_de_cle($doublon));
+        $this->assertTrue($d->existe($this->fiche(['titre' => 'Sans date', 'url' => 'https://x.test/atelier', 'cle_source' => 'obvia:3'])));
+        $this->assertFalse($d->existe($this->fiche(['titre' => 'Inconnue', 'debut' => '2026-11-21', 'cle_source' => 'obvia:4'])));
+        $this->assertSame('rsn:1', $d->fiche_de_cle($this->fiche(['cle_source' => 'rsn:1']))->cle_source);
+        $this->assertCount(1, $e->lister(''));
+    }
 }

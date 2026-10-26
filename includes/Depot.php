@@ -105,6 +105,19 @@ final class Depot {
     }
 
     /**
+     * La fiche est déjà connue (même clé de source, doublon ou même URL) : `integrer()` ne créerait
+     * pas de nouvelle fiche. N'écrit rien.
+     */
+    public function existe(Fiche $f): bool {
+        return $this->trouver_par_cles($this->cles($f)) !== null || $this->trouver_doublon($f) !== null;
+    }
+
+    /** La fiche enregistrée qui porte une clé de source de $f (sans recherche de doublon), sinon null. N'écrit rien. */
+    public function fiche_de_cle(Fiche $f): ?Fiche {
+        return $this->trouver_par_cles($this->cles($f));
+    }
+
+    /**
      * Repasse « à approuver » une fiche publiée quand le titre de la clé de source entrante se met à
      * annoncer une annulation ou un report (transition sur cette clé seulement, '' si elle est
      * nouvelle : une fiche republiée par l'équipe avec un titre déjà annulé reste publiée).
