@@ -15,9 +15,14 @@ final class LecteurMila extends LecteurHtml {
         $vus = [];
         $requete = '//div[@data-nid][./div[' . self::classe('node--type-event') . ']]';
         foreach ($xpath->query($requete) as $position => $bloc) {
+            $identifiant = $this->attribut($bloc, 'data-nid');
+            if ($identifiant === '') {
+                $resultat->erreurs[] = sprintf('Événement %d sans identifiant', $position + 1);
+                continue;
+            }
             $lien = $this->premier($xpath, './/*[' . self::classe('field-name-node-title') . ']//a', $bloc);
             $lieu = $this->texte($this->premier($xpath, './/*[' . self::classe('field-name-field-text1') . ']', $bloc));
-            $fiche = $this->evenement($source, $this->attribut($bloc, 'data-nid'), [
+            $fiche = $this->evenement($source, $identifiant, [
                 'titre' => $this->texte($lien),
                 'url' => $this->attribut($lien, 'href'),
                 'image_url' => $this->attribut($this->premier($xpath, './/img[starts-with(@src, "/sites/default/files/")]', $bloc), 'src'),

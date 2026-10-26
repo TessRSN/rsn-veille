@@ -15,7 +15,7 @@ final class LecteurObvia extends LecteurHtml {
         $vus = [];
         foreach ($xpath->query('//article[' . self::classe('node--type-event') . ']') as $position => $bloc) {
             $lien = $this->premier($xpath, './/h2/a', $bloc);
-            $url = $this->attribut($lien, 'href');
+            $url = $this->absolue($this->attribut($lien, 'href'), (string) ($source['base'] ?? ''));
             $fiche = $this->evenement($source, $this->chemin($url), [
                 'titre' => $this->texte($lien),
                 'url' => $url,

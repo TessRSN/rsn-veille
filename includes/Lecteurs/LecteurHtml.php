@@ -74,26 +74,58 @@ abstract class LecteurHtml implements Lecteur {
         return $noeud instanceof \DOMElement ? trim($noeud->getAttribute($nom)) : '';
     }
 
-    /** URL absolue : « /chemin » et « chemin » se résolvent contre la base ; une URL absolue reste telle quelle. */
+    /**
+     * URL absolue (résolution simplifiée de la RFC 3986) : une URL avec schéma reste telle quelle ;
+     * « //hôte/… » prend le schéma de la base ; « /chemin » part de l'origine de la base ; « ?x » garde le chemin
+     * de la base ; sinon le chemin est relatif au répertoire de la base. Les segments « . » et « .. » sont résolus.
+     */
     protected function absolue(string $url, string $base): string {
         $url = trim($url);
         if ($url === '' || preg_match('~^[a-z][a-z0-9+.-]*:~i', $url) === 1) {
             return $url;
         }
-        if (str_starts_with($url, '//')) {
-            return 'https:' . $url;
-        }
-        $base = trim($base);
-        if ($base === '') {
+        $morceaux = parse_url(trim($base));
+        if (!is_array($morceaux) || !isset($morceaux['scheme'], $morceaux['host'])) {
             return $url;
         }
-        if (str_starts_with($url, '/')) {
-            $morceaux = parse_url($base);
-            if (isset($morceaux['scheme'], $morceaux['host'])) {
-                return $morceaux['scheme'] . '://' . $morceaux['host'] . (isset($morceaux['port']) ? ':' . $morceaux['port'] : '') . $url;
-            }
+        if (str_starts_with($url, '//')) {
+            return $morceaux['scheme'] . ':' . $url;
         }
-        return rtrim($base, '/') . '/' . ltrim($url, '/');
+        $origine = $morceaux['scheme'] . '://' . $morceaux['host'] . (isset($morceaux['port']) ? ':' . $morceaux['port'] : '');
+        $chemin_base = ($morceaux['path'] ?? '') !== '' ? $morceaux['path'] : '/';
+        if ($url[0] === '?') {
+            return $origine . $chemin_base . $url;
+        }
+        // Le chemin sans sa requête ni son ancre, puis ce qui suit (requête, ancre) tel quel.
+        $coupure = strcspn($url, '?#');
+        $chemin = substr($url, 0, $coupure);
+        $suffixe = substr($url, $coupure);
+        if ($chemin === '') {
+            return $origine . $chemin_base . $suffixe;
+        }
+        if ($chemin[0] !== '/') {
+            $chemin = substr($chemin_base, 0, (int) strrpos($chemin_base, '/') + 1) . $chemin;
+        }
+
+        $segments = explode('/', $chemin);
+        $dernier = count($segments) - 1;
+        $retenus = [];
+        foreach ($segments as $position => $segment) {
+            if ($position === 0) {
+                continue; // Vide : le chemin commence par « / ».
+            }
+            if ($segment === '.' || $segment === '..') {
+                if ($segment === '..') {
+                    array_pop($retenus);
+                }
+                if ($position === $dernier) {
+                    $retenus[] = ''; // « a/b/.. » désigne le répertoire « a/ ».
+                }
+                continue;
+            }
+            $retenus[] = $segment;
+        }
+        return $origine . '/' . implode('/', $retenus) . $suffixe;
     }
 
     /** Valeurs des <time datetime> d'un bloc, dans l'ordre du document. */
@@ -105,11 +137,16 @@ abstract class LecteurHtml implements Lecteur {
         return $valeurs;
     }
 
-    /** Chemin d'une URL sans barre oblique finale (identifiant naturel des pages), à défaut l'URL entière. */
-    protected function chemin(string $url): string {
-        $chemin = parse_url($url, PHP_URL_PATH);
-        $chemin = is_string($chemin) ? rtrim($chemin, '/') : '';
-        return $chemin !== '' ? $chemin : $url;
+    /**
+     * Identifiant naturel d'une page : chemin (sans barre oblique finale) et requête de son URL absolue, sans le domaine,
+     * pour que la clé ne change pas si la source passe de liens relatifs à des liens absolus.
+     */
+    protected function chemin(string $url_absolue): string {
+        $morceaux = parse_url($url_absolue);
+        $chemin = rtrim((string) ($morceaux['path'] ?? ''), '/');
+        $requete = isset($morceaux['query']) && $morceaux['query'] !== '' ? '?' . $morceaux['query'] : '';
+        $identifiant = $chemin . $requete;
+        return $identifiant !== '' ? $identifiant : $url_absolue;
     }
 
     /** Fiche d'événement avec ce que toutes les sources ont en commun. */

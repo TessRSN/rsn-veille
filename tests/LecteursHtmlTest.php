@@ -148,6 +148,54 @@ final class LecteursHtmlTest extends TestCase {
         $this->assertCount(2, $r->erreurs);
     }
 
+    public function test_meme_evenement_en_lien_relatif_ou_absolu_est_une_seule_fiche(): void {
+        $bloc = static fn(string $href): string => '<article class="node node--type-event"><time datetime="2026-11-02T12:00:00Z"></time><h2><a href="' . $href . '">Bon</a></h2></article>';
+        $html = '<html><body>' . $bloc('/evenements/a') . $bloc('https://www.obvia.ca/evenements/a') . $bloc('../evenements/a/') . '</body></html>';
+        $r = (new LecteurObvia())->lire($html, self::OBVIA + ['base' => 'https://www.obvia.ca/evenements/liste']);
+        $this->assertCount(1, $r->fiches);
+        $this->assertSame('obvia:/evenements/a', $r->fiches[0]->cle_source);
+        $this->assertSame('https://www.obvia.ca/evenements/a', $r->fiches[0]->url);
+    }
+
+    public function test_urls_relatives_resolues(): void {
+        $lecteur = new class extends \RSN\Veille\Lecteurs\LecteurHtml {
+            protected function extraire(\DOMXPath $xpath, array $source, \RSN\Veille\Lecteurs\Resultat $resultat): void {
+            }
+            public function resoudre(string $url, string $base): string {
+                return $this->absolue($url, $base);
+            }
+        };
+        $cas = [
+            ['../evenements/a?x=1', 'https://www.obvia.ca/evenements/liste', 'https://www.obvia.ca/evenements/a?x=1'],
+            ['a.jpg?itok=z', 'https://x.test/dir/page', 'https://x.test/dir/a.jpg?itok=z'],
+            ['a.jpg', 'https://x.test/dir/', 'https://x.test/dir/a.jpg'],
+            ['a.jpg', 'https://x.test', 'https://x.test/a.jpg'],
+            ['//cdn.test/i.png', 'https://x.test/dir/page', 'https://cdn.test/i.png'],
+            ['/sites/x.jpg', 'https://x.test:8080/dir/page', 'https://x.test:8080/sites/x.jpg'],
+            ['?page=2', 'https://x.test/dir/page', 'https://x.test/dir/page?page=2'],
+            ['../../../a', 'https://x.test/dir/page', 'https://x.test/a'],
+            ['./b/./c', 'https://x.test/dir/page', 'https://x.test/dir/b/c'],
+            ['..', 'https://x.test/dir/sous/page', 'https://x.test/dir/'],
+            ['https://y.test/a/../b', 'https://x.test/', 'https://y.test/a/../b'],
+            ['', 'https://x.test/', ''],
+            ['/a', '', '/a'],
+        ];
+        foreach ($cas as [$url, $base, $attendu]) {
+            $this->assertSame($attendu, $lecteur->resoudre($url, $base), $url . ' contre ' . $base);
+        }
+    }
+
+    public function test_mila_bloc_sans_identifiant_est_rejete(): void {
+        $bloc = static fn(string $nid, string $titre): string => '<div data-nid="' . $nid . '" class="entity-wrapper"><div class="node node--type-event">'
+            . '<div class="field-name-node-title"><a href="/fr/evenement/' . $titre . '">' . $titre . '</a></div>'
+            . '<time datetime="2026-11-04T18:00:00-05:00"></time></div></div>';
+        $html = '<html><body>' . $bloc('', 'a') . $bloc('', 'b') . $bloc('77', 'c') . '</body></html>';
+        $r = (new LecteurMila())->lire($html, self::MILA);
+        $this->assertCount(1, $r->fiches);
+        $this->assertSame('mila:77', $r->fiches[0]->cle_source);
+        $this->assertCount(2, $r->erreurs);
+    }
+
     public function test_libxml_ne_laisse_aucune_erreur_et_restaure_son_mode(): void {
         libxml_use_internal_errors(false);
         (new LecteurObvia())->lire($this->fixture('obvia.html'), self::OBVIA);

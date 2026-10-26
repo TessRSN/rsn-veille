@@ -15,7 +15,7 @@ final class LecteurFrqEvenements extends LecteurHtml {
         $vus = [];
         foreach ($xpath->query('//article[' . self::classe('events__list__el') . ']') as $position => $bloc) {
             $lien = $this->premier($xpath, './/h3/a', $bloc);
-            $url = $this->attribut($lien, 'href');
+            $url = $this->absolue($this->attribut($lien, 'href'), (string) ($source['base'] ?? ''));
             $fiche = $this->evenement($source, $this->chemin($url), [
                 'titre' => $this->texte($lien),
                 'url' => $url,
