@@ -25,7 +25,7 @@ final class Sources {
     public static function par_defaut(): array {
         $sources = [
             // Événements : flux structurés (niveau A).
-            self::entree('rsn', 'RSN : événements', 'https://rsn.quebec/wp-json/tribe/events/v1/events?per_page=50&start_date=2025-05-01&end_date=2028-12-31', 'tec', 'A', 'sante_numerique', 'RSN', ['inclure_passes' => true]),
+            self::entree('rsn', 'RSN : événements', self::url_rsn(), 'tec', 'A', 'sante_numerique', 'RSN', ['inclure_passes' => true]),
             self::entree('dhc', 'Digital Health Canada', 'https://digitalhealthcanada.com/wp-json/tribe/events/v1/events?per_page=50', 'tec', 'A', 'sante_numerique', 'Digital Health Canada', ['langue' => 'en']),
             self::entree('rqrv', 'RQRV : événements', 'https://www.rqrv.com/wp-json/tribe/events/v1/events?per_page=50', 'tec', 'A', 'sante', 'RQRV'),
             self::entree('sommeil', 'Réseau québécois de recherche sur le sommeil', 'https://reseausommeil.ca/events/feed/', 'rss', 'A', 'sante', 'Réseau québécois de recherche sur le sommeil', ['mode' => 'evenements']),
@@ -38,13 +38,13 @@ final class Sources {
 
             // Appels : flux RSS filtrés par catégorie ou par titre (niveau B).
             self::entree('frq_appels', 'FRQ : appels', 'https://frq.gouv.qc.ca/feed/', 'rss', 'B', 'sante_numerique', 'Fonds de recherche du Québec', ['mode' => 'appels', 'categories' => ['Appel']]),
-            self::entree('crm_appels', 'CRM : appels', 'https://www.crmath.ca/feed/', 'rss', 'B', 'generaliste', 'CRM', ['mode' => 'appels', 'categories' => ['Appel', 'Concours ouvert']]),
+            self::entree('crm_appels', 'CRM : appels', 'https://www.crmath.ca/feed/', 'rss', 'B', 'numerique', 'CRM', ['mode' => 'appels', 'categories' => ['Appel', 'Concours ouvert']]),
             self::entree('rsn_appels', 'RSN : appels', 'https://rsn.quebec/feed/', 'rss', 'B', 'sante_numerique', 'RSN', ['mode' => 'appels', 'categories' => ['Appels de financement']]),
             self::entree('cares_appels', 'CARES : concours', 'https://reseaucares.ca/feed/', 'rss', 'B', 'sante', 'CARES', ['mode' => 'appels', 'categories' => ['Concours']]),
             self::entree('hippocrate_appels', 'Prix Hippocrate : appels de candidatures', 'https://prixhippocrate.ca/feed/', 'rss', 'B', 'sante', 'Prix Hippocrate', ['mode' => 'appels', 'motif_titre' => 'appel|candidature']),
 
             // Nouvelles : radar de l'équipe seulement, jamais de fiches persistées (devis § 3.3).
-            self::nouvelles('frq', 'FRQ : nouvelles', 'https://frq.gouv.qc.ca/feed/', 'sante_numerique', 'FRQ'),
+            self::nouvelles('frq', 'FRQ : nouvelles', 'https://frq.gouv.qc.ca/feed/', 'generaliste', 'Fonds de recherche du Québec'),
             self::nouvelles('ivado_nouvelles', 'IVADO : nouvelles', 'https://ivado.ca/feed/', 'numerique', 'IVADO'),
             self::nouvelles('mila_nouvelles', 'Mila : nouvelles', 'https://mila.quebec/fr/rss.xml', 'numerique', 'Mila'),
             self::nouvelles('inspq', 'INSPQ : nouvelles', 'https://www.inspq.qc.ca/nouvelles/rss.xml', 'sante', 'INSPQ'),
@@ -96,6 +96,12 @@ final class Sources {
      */
     public static function actives(array $sources): array {
         return array_filter($sources, static fn(array $s): bool => !empty($s['actif']));
+    }
+
+    /** Événements du RSN, passés compris depuis mai 2025, jusqu'au 31 décembre dans trois ans. */
+    private static function url_rsn(): string {
+        $fin = ((int) substr(\rsn_veille_aujourdhui(), 0, 4) + 3) . '-12-31';
+        return 'https://rsn.quebec/wp-json/tribe/events/v1/events?per_page=50&start_date=2025-05-01&end_date=' . $fin;
     }
 
     /** Une entrée du registre, avec les valeurs par défaut (français, active). */

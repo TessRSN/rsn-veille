@@ -48,6 +48,24 @@ final class SourcesTest extends TestCase {
         $this->assertSame('appel|candidature', $sources['hippocrate_appels']['motif_titre']);
         $this->assertSame(8, $sources['inspq']['limite']);
         $this->assertSame('https://ivado.ca/evenements/feed/', $sources['ivado']['flux_evenements_url']);
+        $this->assertSame('numerique', $sources['crm_appels']['type_source']);
+        $this->assertSame('generaliste', $sources['frq']['type_source']);
+        foreach (['frq_evenements', 'frq_appels', 'frq'] as $id) {
+            $this->assertSame('Fonds de recherche du Québec', $sources[$id]['organisateur'], $id);
+        }
+    }
+
+    public function test_url_rsn_suit_la_date_du_jour(): void {
+        $this->assertSame(
+            'https://rsn.quebec/wp-json/tribe/events/v1/events?per_page=50&start_date=2025-05-01&end_date=2029-12-31',
+            Sources::par_defaut()['rsn']['url']
+        );
+        $GLOBALS['rsn_veille_test_aujourdhui'] = '2027-01-02';
+        try {
+            $this->assertStringEndsWith('&end_date=2030-12-31', Sources::par_defaut()['rsn']['url']);
+        } finally {
+            $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-10-25';
+        }
     }
 
     public function test_fusionner_applique_actif_et_niveau(): void {

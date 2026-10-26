@@ -15,16 +15,27 @@ if (!defined('ABSPATH')) {
  */
 final class Depot {
     /** Seuls champs qu'une collecte peut modifier sur une fiche existante. */
-    private const CHAMPS_FACTUELS = ['debut', 'fin', 'heure', 'url', 'image_url', 'prix', 'lieu', 'ville'];
+    private const CHAMPS_FACTUELS = ['debut', 'fin', 'heure', 'echeance', 'url', 'image_url', 'prix', 'lieu', 'ville'];
+
+    /** Champs qu'une source moins fiable que la fiche peut seulement combler s'ils sont vides. */
+    private const CHAMPS_A_COMBLER = ['image_url', 'url'];
 
     /** Priorité des niveaux : A > C > M > B (plus petit = plus fiable). */
     private const RANGS = ['A' => 0, 'C' => 1, 'M' => 2, 'B' => 3];
 
     /** Mots (entiers) d'un titre qui signalent une annulation ou un report. */
-    private const MOTIF_ANNULATION = '/(?<!\p{L})(?:annul[ée]e?s?|report[ée]e?s?|cancell?ed|postponed)(?!\p{L})/iu';
+    private const MOTIF_ANNULATION = '/(?<!\p{L})(?:annul[ée]e?s?|annulations?|report[ée]e?s?|cancell?ed|postponed)(?!\p{L})/iu';
 
     /** Collectes réussies consécutives sans la fiche avant de poser le drapeau « absent ». */
     private const ABSENCES_AVANT_DRAPEAU = 2;
+
+    /**
+     * Titre à la source de chaque fiche avant sa dernière intégration par ce dépôt (id => titre),
+     * pour qu'`annuler_si_necessaire` voie la transition même appelé après `integrer`.
+     *
+     * @var array<int,string>
+     */
+    private array $titres_precedents = [];
 
     public function __construct(private Entrepot $entrepot) {
     }
@@ -40,10 +51,15 @@ final class Depot {
     public function integrer(Fiche $f): string {
         $cles = $this->cles($f);
 
-        // 1. Déjà connue de cette source : seuls les champs factuels suivent la source.
+        // 1. Déjà connue de cette source : seuls les champs factuels suivent la source, et
+        //    seulement si elle est au moins aussi fiable que la fiche (sinon elle comble les vides).
         $existante = $this->trouver_par_cles($cles);
         if ($existante !== null) {
-            $champs = $this->champs_factuels($existante, $f);
+            $this->titres_precedents[$existante->id] = $existante->titre_source;
+            $champs = self::rang($f->niveau) <= self::rang($existante->niveau)
+                ? $this->champs_factuels($existante, $f)
+                : $this->champs_a_combler($existante, $f);
+            $champs += $this->champ_titre_source($existante, $f);
             if ($champs === []) {
                 return 'inchange';
             }
@@ -54,6 +70,7 @@ final class Depot {
         // 2. Doublon venu d'une autre source : on fusionne, jamais de seconde fiche.
         $existante = $this->trouver_doublon($f);
         if ($existante !== null) {
+            $this->titres_precedents[$existante->id] = $existante->titre_source;
             $champs = ['cles_source' => array_values(array_unique(array_merge($existante->cles_source, $cles)))];
             if (self::rang($f->niveau) < self::rang($existante->niveau)) {
                 // Source plus fiable : elle fournit dates, heure, URL, image, prix et lieu.
@@ -62,12 +79,9 @@ final class Depot {
                 $champs['source'] = $f->source;
             } else {
                 // Source égale ou moins fiable : elle ne fait que combler une image ou une URL manquante.
-                foreach (['image_url', 'url'] as $nom) {
-                    if ($existante->$nom === '' && $f->$nom !== '') {
-                        $champs[$nom] = $f->$nom;
-                    }
-                }
+                $champs += $this->champs_a_combler($existante, $f);
             }
+            $champs += $this->champ_titre_source($existante, $f);
             $this->entrepot->mettre_a_jour($existante->id, $champs);
             return 'fusionne';
         }
@@ -76,20 +90,26 @@ final class Depot {
         $nouvelle = clone $f;
         $nouvelle->id = null;
         $nouvelle->cles_source = $cles;
-        $this->entrepot->creer($nouvelle);
+        $nouvelle->titre_source = $f->titre;
+        $this->titres_precedents[$this->entrepot->creer($nouvelle)] = '';
         return 'cree';
     }
 
     /**
-     * Repasse « à approuver » une fiche publiée dont le titre à la source annonce une annulation
-     * ou un report. Renvoie vrai si le statut a changé.
+     * Repasse « à approuver » une fiche publiée quand son titre à la source se met à annoncer une
+     * annulation ou un report (transition seulement : une fiche republiée par l'équipe avec un titre
+     * déjà annulé reste publiée). Renvoie vrai si le statut a changé.
      */
     public function annuler_si_necessaire(Fiche $f): bool {
-        if (preg_match(self::MOTIF_ANNULATION, $f->titre) !== 1) {
+        if (!self::annonce_annulation($f->titre)) {
             return false;
         }
         $existante = $this->trouver_par_cles($this->cles($f)) ?? $this->trouver_doublon($f);
         if ($existante === null || $existante->statut !== 'publie') {
+            return false;
+        }
+        $precedent = $this->titres_precedents[$existante->id] ?? $existante->titre_source;
+        if (self::annonce_annulation($precedent)) {
             return false;
         }
         $this->entrepot->mettre_a_jour($existante->id, ['statut' => 'a_approuver']);
@@ -129,6 +149,10 @@ final class Depot {
                     break;
                 }
             }
+            if (!$revue && !self::evenement_a_venir($fiche, $aujourdhui)) {
+                // Les lecteurs ne rendent plus les événements finis, et les appels expirent par leur échéance.
+                continue;
+            }
             if ($revue) {
                 if ($fiche->absences !== 0) {
                     $this->entrepot->mettre_a_jour($id, ['absences' => 0]);
@@ -144,6 +168,43 @@ final class Depot {
                 $this->entrepot->marquer_absent($id, $aujourdhui);
             }
         }
+    }
+
+    private static function annonce_annulation(string $titre): bool {
+        return preg_match(self::MOTIF_ANNULATION, $titre) === 1;
+    }
+
+    /** Événement pas encore fini (fin, sinon début, aujourd'hui ou plus tard). */
+    private static function evenement_a_venir(Fiche $f, string $aujourdhui): bool {
+        $date = $f->fin ?? $f->debut ?? '';
+        return $f->type === 'evenement' && $date !== '' && $date >= $aujourdhui;
+    }
+
+    /**
+     * Image et URL de l'entrant là où la fiche n'en a pas.
+     *
+     * @return array<string,string>
+     */
+    private function champs_a_combler(Fiche $existante, Fiche $entrante): array {
+        $champs = [];
+        foreach (self::CHAMPS_A_COMBLER as $nom) {
+            if ($existante->$nom === '' && $entrante->$nom !== '') {
+                $champs[$nom] = $entrante->$nom;
+            }
+        }
+        return $champs;
+    }
+
+    /**
+     * Dernier titre vu à la source, quel que soit le niveau de la source.
+     *
+     * @return array<string,string>
+     */
+    private function champ_titre_source(Fiche $existante, Fiche $entrante): array {
+        if ($entrante->titre === '' || $entrante->titre === $existante->titre_source) {
+            return [];
+        }
+        return ['titre_source' => $entrante->titre];
     }
 
     /** @return string[] Clés de source de la fiche (`cles_source` et `cle_source`), sans doublon ni vide. */

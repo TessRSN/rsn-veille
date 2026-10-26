@@ -67,6 +67,8 @@ final class Fiche {
     public string $statut = 'a_approuver';
     /** Identifiant stable de la source, au format « source:id ». */
     public string $cle_source = '';
+    /** Dernier titre vu à la source (posé et suivi par le dépôt, pour repérer une annulation). */
+    public string $titre_source = '';
     /** @var string[] Toutes les clés de source fusionnées sur cette fiche. */
     public array $cles_source = [];
     /** Catégorie propre aux appels. */

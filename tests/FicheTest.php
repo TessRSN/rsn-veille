@@ -74,6 +74,7 @@ final class FicheTest extends TestCase {
         $f->niveau = 'A';
         $f->statut = 'approuve';
         $f->cle_source = 'ivado:123';
+        $f->titre_source = 'Appel à projets – IA en santé (source)';
         $f->cles_source = ['ivado:123', 'crm:456'];
         $f->categorie = 'Subvention';
         $f->echeance = '2027-03-01';

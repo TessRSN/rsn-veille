@@ -108,6 +108,50 @@ final class DepotTest extends TestCase {
         $this->assertSame(['https://frq.test/i.png', 'https://frq.test/fhir'], [$x->image_url, $x->url]);
         $this->assertSame(['dhc:1', 'frq:9', 'crm:5'], $x->cles_source);
         $this->assertCount(1, $e->lister(''));
+
+        // La collecte suivante de frq retrouve sa clé : elle ne réécrit pas les champs de dhc.
+        $this->assertSame('inchange', $d->integrer(clone $b));
+        $x = $e->trouver_par_cle_source('frq:9');
+        $this->assertSame(['2026-10-28', '', '', 'A', 'dhc'], [$x->fin, $x->heure, $x->prix, $x->niveau, $x->source]);
+    }
+
+    public function test_cle_source_moins_fiable_comble_seulement_les_vides(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $d->integrer($this->fiche(['titre' => 'Colloque IA', 'debut' => '2026-12-01', 'fin' => '2026-12-02', 'cle_source' => 'obvia:1', 'niveau' => 'C']));
+        $d->integrer($this->fiche(['titre' => 'Colloque IA', 'debut' => '2026-12-01', 'cle_source' => 'frq:1', 'niveau' => 'B']));
+        $b = $this->fiche(['titre' => 'Colloque IA', 'debut' => '2026-12-01', 'fin' => '2026-12-05', 'cle_source' => 'frq:1', 'niveau' => 'B', 'image_url' => 'https://frq.test/c.png']);
+        $this->assertSame('mis_a_jour', $d->integrer($b));
+        $x = $e->trouver_par_cle_source('frq:1');
+        $this->assertSame(['2026-12-02', 'https://frq.test/c.png', 'C'], [$x->fin, $x->image_url, $x->niveau]);
+        // Une clé de même niveau que la fiche, elle, fait suivre les champs factuels.
+        $c = $this->fiche(['titre' => 'Colloque IA', 'debut' => '2026-12-01', 'fin' => '2026-12-03', 'cle_source' => 'obvia:1', 'niveau' => 'C']);
+        $this->assertSame('mis_a_jour', $d->integrer($c));
+        $this->assertSame('2026-12-03', $e->trouver_par_cle_source('frq:1')->fin);
+    }
+
+    public function test_echeance_suit_la_source(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $a = $this->fiche(['type' => 'appel', 'titre' => 'Appel à projets', 'echeance' => '2026-11-30', 'cle_source' => 'frq_appels:4', 'niveau' => 'B', 'statut' => 'publie']);
+        $d->integrer($a);
+        $a2 = clone $a; $a2->echeance = '2026-12-15';
+        $this->assertSame('mis_a_jour', $d->integrer($a2));
+        $this->assertSame('2026-12-15', $e->trouver_par_cle_source('frq_appels:4')->echeance);
+        $a3 = clone $a; $a3->echeance = null;
+        $this->assertSame('inchange', $d->integrer($a3));
+        $this->assertSame('2026-12-15', $e->trouver_par_cle_source('frq_appels:4')->echeance);
+    }
+
+    public function test_titre_source_pose_a_la_creation_et_suivi(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $f = $this->fiche(['titre' => 'FHIR North 2026', 'debut' => '2026-10-27', 'cle_source' => 'dhc:1', 'niveau' => 'A']);
+        $d->integrer($f);
+        $this->assertSame('FHIR North 2026', $e->trouver_par_cle_source('dhc:1')->titre_source);
+        // Même depuis une clé moins fiable, le dernier titre vu à la source est noté ; le titre affiché ne bouge pas.
+        $d->integrer($this->fiche(['titre' => 'FHIR North 2026', 'debut' => '2026-10-27', 'cle_source' => 'frq:2', 'niveau' => 'B']));
+        $b = $this->fiche(['titre' => 'FHIR North 2026 (complet)', 'debut' => '2026-10-27', 'cle_source' => 'frq:2', 'niveau' => 'B']);
+        $this->assertSame('mis_a_jour', $d->integrer($b));
+        $x = $e->trouver_par_cle_source('dhc:1');
+        $this->assertSame(['FHIR North 2026 (complet)', 'FHIR North 2026'], [$x->titre_source, $x->titre]);
     }
 
     public function test_fusion_par_url(): void {
@@ -127,9 +171,9 @@ final class DepotTest extends TestCase {
 
     public function test_absence_apres_deux_collectes_reussies_seulement(): void {
         $e = new EntrepotMemoire(); $d = new Depot($e);
-        $d->integrer($this->fiche(['titre' => 'FHIR North 2026', 'debut' => '2026-10-27', 'cle_source' => 'dhc:1', 'niveau' => 'A', 'statut' => 'publie']));
-        $d->integrer($this->fiche(['titre' => 'À approuver', 'debut' => '2026-10-28', 'cle_source' => 'dhc:2', 'niveau' => 'A', 'statut' => 'a_approuver']));
-        $d->integrer($this->fiche(['titre' => 'Autre source', 'debut' => '2026-10-29', 'cle_source' => 'rqrv:1', 'niveau' => 'A', 'statut' => 'publie']));
+        $d->integrer($this->fiche(['titre' => 'FHIR North 2026', 'debut' => '2026-11-27', 'cle_source' => 'dhc:1', 'niveau' => 'A', 'statut' => 'publie']));
+        $d->integrer($this->fiche(['titre' => 'À approuver', 'debut' => '2026-11-28', 'cle_source' => 'dhc:2', 'niveau' => 'A', 'statut' => 'a_approuver']));
+        $d->integrer($this->fiche(['titre' => 'Autre source', 'debut' => '2026-11-29', 'cle_source' => 'rqrv:1', 'niveau' => 'A', 'statut' => 'publie']));
 
         $d->signaler_absents('dhc', [], false, '2026-10-25');
         $x = $e->trouver_par_cle_source('dhc:1');
@@ -157,11 +201,25 @@ final class DepotTest extends TestCase {
         $this->assertSame([0, null], [$x->absences, $x->absent_depuis]);
     }
 
+    public function test_absence_ignore_evenements_passes_et_appels(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $d->integrer($this->fiche(['titre' => 'Fini', 'debut' => '2026-08-30', 'fin' => '2026-09-01', 'cle_source' => 'dhc:1', 'niveau' => 'A', 'statut' => 'publie']));
+        $d->integrer($this->fiche(['type' => 'appel', 'titre' => 'Appel', 'echeance' => '2026-12-01', 'cle_source' => 'dhc:2', 'niveau' => 'A', 'statut' => 'publie']));
+        $d->integrer($this->fiche(['titre' => 'Commencé, pas fini', 'debut' => '2026-10-20', 'fin' => '2026-10-30', 'cle_source' => 'dhc:3', 'niveau' => 'A', 'statut' => 'publie']));
+        $d->integrer($this->fiche(['titre' => 'Aujourd’hui', 'debut' => '2026-10-25', 'cle_source' => 'dhc:4', 'niveau' => 'A', 'statut' => 'publie']));
+        $d->signaler_absents('dhc', [], true, '2026-10-25');
+        $d->signaler_absents('dhc', [], true, '2026-10-25');
+        foreach (['dhc:1' => [0, null], 'dhc:2' => [0, null], 'dhc:3' => [2, '2026-10-25'], 'dhc:4' => [2, '2026-10-25']] as $cle => $attendu) {
+            $x = $e->trouver_par_cle_source($cle);
+            $this->assertSame($attendu, [$x->absences, $x->absent_depuis], $cle);
+        }
+    }
+
     public function test_absence_une_seule_fois_puis_revue_remet_le_compteur(): void {
         $e = new EntrepotMemoire(); $d = new Depot($e);
         // Fiche fusionnée : la clé de la source dhc n'est pas la première.
-        $d->integrer($this->fiche(['titre' => 'Déjeuner', 'debut' => '2026-10-27', 'cle_source' => 'rsn:5', 'niveau' => 'A', 'statut' => 'publie']));
-        $d->integrer($this->fiche(['titre' => 'Déjeuner', 'debut' => '2026-10-27', 'cle_source' => 'dhc:8', 'niveau' => 'A']));
+        $d->integrer($this->fiche(['titre' => 'Déjeuner', 'debut' => '2026-11-27', 'cle_source' => 'rsn:5', 'niveau' => 'A', 'statut' => 'publie']));
+        $d->integrer($this->fiche(['titre' => 'Déjeuner', 'debut' => '2026-11-27', 'cle_source' => 'dhc:8', 'niveau' => 'A']));
         $d->signaler_absents('dhc', ['dhc:99'], true, '2026-10-25');
         $this->assertSame(1, $e->trouver_par_cle_source('dhc:8')->absences);
         $d->signaler_absents('dhc', ['dhc:8'], true, '2026-10-26');
@@ -186,10 +244,25 @@ final class DepotTest extends TestCase {
         $this->assertSame('a_approuver', $e->trouver_par_cle_source('rsn:3')->statut);
         // Déjà à approuver : rien ne change.
         $this->assertFalse($d->annuler_si_necessaire($annule));
+
+        // L'équipe republie la fiche à la main : le même titre annulé ne la renvoie plus à l'approbation.
+        $e->mettre_a_jour(1, ['statut' => 'publie', 'manuel' => true]);
+        $this->assertSame('Atelier ANNULÉ : données de santé', $e->trouver_par_cle_source('rsn:3')->titre_source);
+        $this->assertSame('inchange', $d->integrer(clone $annule));
+        $this->assertFalse($d->annuler_si_necessaire($annule));
+        $this->assertSame('publie', $e->trouver_par_cle_source('rsn:3')->statut);
+    }
+
+    public function test_annulation_des_la_creation(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $f = $this->fiche(['titre' => 'Webinaire reporté', 'debut' => '2026-11-16', 'cle_source' => 'rsn:4', 'niveau' => 'A', 'statut' => 'publie']);
+        $d->integrer($f);
+        $this->assertTrue($d->annuler_si_necessaire($f));
+        $this->assertSame('a_approuver', $e->trouver_par_cle_source('rsn:4')->statut);
     }
 
     public function test_mots_d_annulation(): void {
-        foreach (['Atelier annulé', 'Colloque reporté', 'Webinar CANCELLED', 'Event canceled', 'Summit postponed', 'Atelier annule', 'Journée Reportée'] as $titre) {
+        foreach (['Atelier annulé', 'Colloque reporté', 'Webinar CANCELLED', 'Event canceled', 'Summit postponed', 'Atelier annule', 'Journée Reportée', 'Atelier : annulation'] as $titre) {
             $e = new EntrepotMemoire(); $d = new Depot($e);
             $d->integrer($this->fiche(['titre' => 'X', 'debut' => '2026-11-16', 'cle_source' => 's:1', 'statut' => 'publie']));
             $f = $this->fiche(['titre' => $titre, 'debut' => '2026-11-16', 'cle_source' => 's:1']);
