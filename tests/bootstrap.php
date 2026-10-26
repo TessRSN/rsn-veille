@@ -15,8 +15,17 @@ function wp_strip_all_tags(string $texte): string {
     return trim(strip_tags($texte));
 }
 
+/**
+ * Proche de _sanitize_text_fields de WordPress : un `<` qui n'ouvre pas de balise devient `&lt;`,
+ * balises retirées, espaces réduites, octets `%xx` retirés.
+ */
 function sanitize_text_field(string $texte): string {
-    return trim(preg_replace('/\s+/', ' ', strip_tags($texte)));
+    if (str_contains($texte, '<')) {
+        $texte = strip_tags((string) preg_replace('/<(?![a-zA-Z\/!?])/', '&lt;', $texte));
+    }
+    $texte = trim((string) preg_replace('/[\r\n\t ]+/', ' ', $texte));
+    $sans_octets = (string) preg_replace('/%[a-f0-9]{2}/i', '', $texte);
+    return $sans_octets === $texte ? $texte : trim((string) preg_replace('/ +/', ' ', $sans_octets));
 }
 
 function __(string $texte, string $domaine = 'default'): string {
