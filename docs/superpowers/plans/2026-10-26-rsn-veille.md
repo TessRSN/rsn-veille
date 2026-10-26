@@ -113,10 +113,12 @@ final class SqueletteTest extends \PHPUnit\Framework\TestCase {
 - [ ] **Étape 6 : premier commit et dépôt distant**
 
 ```bash
-git add -A && git commit -m "chore: squelette de l'extension rsn-veille, outillage de test et documents de conception"
+git add -A && git commit -m "chore: squelette de l'extension rsn-veille et outillage de test"
+gh auth status            # le compte ACTIF doit être TessRSN ; sinon : gh auth switch --user TessRSN
+gh api user --jq .login   # doit afficher TessRSN
 gh repo create TessRSN/rsn-veille --private --source=. --push
 ```
-Si `gh` n'est pas connecté, laisser le dépôt local et le signaler à Tess.
+La machine a plusieurs comptes GitHub (forkin-hell, TessRSN) : tout dépôt du RSN appartient à **TessRSN**, jamais à un autre compte. Si `gh` refuse, laisser le dépôt local et le signaler à Tess.
 
 ---
 
