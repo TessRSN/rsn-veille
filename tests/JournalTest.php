@@ -46,4 +46,18 @@ final class JournalTest extends TestCase {
         Journal::consigner('dhc', ['lus' => 3]);
         $this->assertSame(['dhc' => [['lus' => 3]]], get_option(Journal::OPTION));
     }
+
+    public function test_erreurs_plafonnees_a_10(): void {
+        $erreurs = [];
+        for ($i = 1; $i <= 15; $i++) {
+            $erreurs[] = 'Erreur ' . $i;
+        }
+        Journal::consigner('ivado', ['lus' => 3, 'erreurs' => $erreurs]);
+        $ligne = Journal::derniere('ivado');
+        $this->assertCount(11, $ligne['erreurs']);
+        $this->assertSame('Erreur 10', $ligne['erreurs'][9]);
+        $this->assertSame('… et 5 autres', $ligne['erreurs'][10]);
+        Journal::consigner('dhc', ['erreurs' => array_slice($erreurs, 0, 10)]);
+        $this->assertCount(10, Journal::derniere('dhc')['erreurs']);
+    }
 }

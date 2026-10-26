@@ -17,12 +17,22 @@ final class Journal {
     /** Entrées gardées par source. */
     public const MAX = 60;
 
+    /** Messages d'erreur gardés par entrée. */
+    public const MAX_ERREURS = 10;
+
     /**
-     * Ajoute une entrée en tête de la liste de la source et ne garde que les 60 plus récentes.
+     * Ajoute une entrée en tête de la liste de la source et ne garde que les 60 plus récentes. Au-delà
+     * de 10 erreurs, les suivantes sont résumées par « … et N autres ».
      *
      * @param array<string,mixed> $ligne
      */
     public static function consigner(string $id_source, array $ligne): void {
+        if (isset($ligne['erreurs']) && is_array($ligne['erreurs']) && count($ligne['erreurs']) > self::MAX_ERREURS) {
+            $reste = count($ligne['erreurs']) - self::MAX_ERREURS;
+            $ligne['erreurs'] = array_slice(array_values($ligne['erreurs']), 0, self::MAX_ERREURS);
+            /* translators: %d : nombre d'erreurs non affichées. */
+            $ligne['erreurs'][] = sprintf(__('… et %d autres', 'rsn-veille'), $reste);
+        }
         $tout = self::tout();
         $entrees = $tout[$id_source] ?? [];
         array_unshift($entrees, $ligne);

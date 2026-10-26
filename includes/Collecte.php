@@ -57,6 +57,15 @@ final class Collecte {
      */
     public static ?\Closure $obtenir_pour_tests = null;
 
+    /** Horloge de remplacement pour les tests (secondes, comme `microtime(true)`). Null en production. */
+    public static ?\Closure $horloge_pour_tests = null;
+
+    /** Durée au-delà de laquelle un verrou est tenu pour abandonné, en secondes. */
+    private const VERROU_PERIME = 600;
+
+    /** Limite d'exécution demandée pour une source (une page IVADO, son flux et le budget des résolutions). */
+    private const LIMITE_EXECUTION = 120;
+
     /** Vrai pendant l'intégration d'une source : la purge est faite une fois à la fin, pas à chaque fiche. */
     private static bool $purge_suspendue = false;
 
@@ -100,6 +109,7 @@ final class Collecte {
     /** Accroche la collecte et les purges aux actions de WordPress (chargement de l'extension). */
     public static function accrocher(): void {
         add_action(self::CROCHET_NUIT, [self::class, 'mettre_en_file']);
+        add_action(self::CROCHET_NUIT, [self::class, 'recaler_nuit'], 20);
         add_action(self::CROCHET_SOURCE, [self::class, 'traiter_une_source']);
         add_action('save_post_' . TypeContenu::TYPE, [self::class, 'purger_apres_ecriture']);
         add_action('deleted_post', [self::class, 'purger_apres_suppression'], 10, 2);
@@ -147,10 +157,7 @@ final class Collecte {
 
     // --- File ---
 
-    /**
-     * Met en file les sources actives, sauf les flux de nouvelles (lus à la volée par le radar), et
-     * recale la collecte quotidienne sur l'heure voulue (changement d'heure, réglage modifié).
-     */
+    /** Met en file les sources actives, sauf les flux de nouvelles (lus à la volée par le radar). */
     public static function mettre_en_file(): void {
         $ids = [];
         foreach (self::sources() as $id => $source) {
@@ -162,7 +169,6 @@ final class Collecte {
         if ($ids !== []) {
             self::planifier_source(self::DELAI_PREMIERE);
         }
-        self::recaler_nuit();
     }
 
     /**
@@ -171,29 +177,40 @@ final class Collecte {
      * Si un autre traitement tient le verrou, la tâche est seulement replanifiée.
      */
     public static function traiter_une_source(): void {
-        $file = get_option(self::OPTION_FILE, []);
-        $file = is_array($file) ? array_values($file) : [];
-        if ($file === []) {
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(self::LIMITE_EXECUTION);
+        }
+        $jeton = Verrou::prendre(self::VERROU, self::VERROU_PERIME);
+        if ($jeton === null) {
+            if (self::file() !== []) {
+                self::planifier_source(self::DELAI_SUIVANTE);
+            }
             return;
         }
-        if (get_transient(self::VERROU) !== false) {
-            self::planifier_source(self::DELAI_SUIVANTE);
-            return;
-        }
-        set_transient(self::VERROU, 1, 10 * MINUTE_IN_SECONDS);
         try {
-            $id = (string) array_shift($file);
+            // File relue sous le verrou : un autre traitement a pu la dépiler entre-temps.
+            $file = self::file();
+            if ($file === []) {
+                return;
+            }
+            $id = array_shift($file);
             update_option(self::OPTION_FILE, $file, false);
             if ($file !== []) {
                 self::planifier_source(self::DELAI_SUIVANTE);
             }
 
-            $source = self::sources()[$id] ?? null;
-            if ($source === null) {
+            try {
+                $source = self::sources()[$id] ?? null;
+                if ($source === null) {
+                    $ligne = self::ligne_vide();
+                    $ligne['erreurs'][] = __('Source inconnue ou désactivée', 'rsn-veille');
+                } else {
+                    $ligne = self::collecter_source($source, new Depot(new EntrepotWordPress()), self::pertinence());
+                }
+            } catch (\Throwable $e) {
                 $ligne = self::ligne_vide();
-                $ligne['erreurs'][] = __('Source inconnue ou désactivée', 'rsn-veille');
-            } else {
-                $ligne = self::collecter_source($source, new Depot(new EntrepotWordPress()), self::pertinence());
+                /* translators: %s : message de l'exception. */
+                $ligne['erreurs'][] = sprintf(__('Erreur : %s', 'rsn-veille'), $e->getMessage());
             }
             Journal::consigner($id, $ligne);
 
@@ -201,7 +218,7 @@ final class Collecte {
                 self::terminer();
             }
         } finally {
-            delete_transient(self::VERROU);
+            Verrou::liberer(self::VERROU, $jeton);
         }
     }
 
@@ -257,7 +274,8 @@ final class Collecte {
         $type = (string) ($source['type'] ?? '');
         $reussie = false;
         $cles_vues = [];
-        $ecrites = 0;
+        $compteurs = self::compteurs_vides();
+        $echec = false;
         self::$purge_suspendue = true;
         try {
             [$accept, $reconnaitre] = self::CONTENUS[str_starts_with($type, 'html_') ? 'html' : $type] ?? ['any', null];
@@ -282,25 +300,31 @@ final class Collecte {
                 $reussie = $resultat->fiches !== [] || $resultat->ignores > 0;
 
                 if ($type === 'html_ivado') {
-                    $resolution = ResolutionIvado::resoudre($resultat->fiches, $source, $depot, [self::class, 'obtenir']);
-                    $resultat->fiches = $resolution['fiches'];
+                    // Chaque fiche est intégrée dès qu'elle est résolue.
+                    $integrer = static function (Fiche $fiche) use ($source, $depot, $pertinence, &$compteurs): void {
+                        self::integrer_fiche($fiche, $source, $depot, $pertinence, $compteurs);
+                    };
+                    $resolution = ResolutionIvado::resoudre($resultat->fiches, $source, $depot, [self::class, 'obtenir'], $integrer, ResolutionIvado::MAX, ResolutionIvado::BUDGET, [self::class, 'horloge']);
                     $ligne['en_attente'] = $resolution['en_attente'];
                     array_push($ligne['erreurs'], ...$resolution['erreurs']);
+                } else {
+                    // Fiche par fiche (comme integrer_resultat) : les compteurs restent justes après une exception.
+                    foreach ($resultat->fiches as $fiche) {
+                        self::integrer_fiche($fiche, $source, $depot, $pertinence, $compteurs);
+                    }
                 }
-                $compteurs = self::integrer_resultat($resultat, $source, $depot, $pertinence);
-                $ligne = array_merge($ligne, $compteurs);
-                $ecrites = $compteurs['crees'] + $compteurs['fusionnes'] + $compteurs['mis_a_jour'] + $compteurs['annules'];
             }
             $depot->signaler_absents($id, $cles_vues, $reussie, \rsn_veille_aujourdhui());
         } catch (\Throwable $e) {
             /* translators: %s : message de l'exception. */
             $ligne['erreurs'][] = sprintf(__('Erreur : %s', 'rsn-veille'), $e->getMessage());
             // Des fiches ont pu être écrites avant l'exception.
-            $ecrites = 1;
+            $echec = true;
         } finally {
             self::$purge_suspendue = false;
         }
-        if ($ecrites > 0) {
+        $ligne = array_merge($ligne, $compteurs);
+        if ($echec || $compteurs['crees'] + $compteurs['fusionnes'] + $compteurs['mis_a_jour'] + $compteurs['annules'] > 0) {
             self::purger_caches();
         }
         $ligne['duree_ms'] = (int) round((microtime(true) - $debut) * 1000);
@@ -314,24 +338,39 @@ final class Collecte {
      * @return array{crees: int, fusionnes: int, mis_a_jour: int, inchanges: int, ecartes: int, annules: int}
      */
     public static function integrer_resultat(Resultat $r, array $source, Depot $d, Pertinence $p): array {
-        $compteurs = ['crees' => 0, 'fusionnes' => 0, 'mis_a_jour' => 0, 'inchanges' => 0, 'ecartes' => 0, 'annules' => 0];
-        $noms = ['cree' => 'crees', 'fusionne' => 'fusionnes', 'mis_a_jour' => 'mis_a_jour', 'inchange' => 'inchanges'];
+        $compteurs = self::compteurs_vides();
         foreach ($r->fiches as $fiche) {
-            if (!$d->existe($fiche)) {
-                $texte = $fiche->titre . ' ' . $fiche->resume;
-                $fiche->statut = $p->statut((string) ($source['type_source'] ?? ''), $texte);
-                $fiche->themes = $p->themes($texte);
-                if ($fiche->statut === 'ecarte') {
-                    $compteurs['ecartes']++;
-                    continue;
-                }
-            }
-            $compteurs[$noms[$d->integrer($fiche)]]++;
-            if ($d->annuler_si_necessaire($fiche)) {
-                $compteurs['annules']++;
-            }
+            self::integrer_fiche($fiche, $source, $d, $p, $compteurs);
         }
         return $compteurs;
+    }
+
+    /** Intègre une fiche (voir `integrer_resultat`) et incrémente le compteur correspondant. */
+    private static function integrer_fiche(Fiche $fiche, array $source, Depot $d, Pertinence $p, array &$compteurs): void {
+        if (!$d->existe($fiche)) {
+            $texte = $fiche->titre . ' ' . $fiche->resume;
+            $fiche->statut = $p->statut((string) ($source['type_source'] ?? ''), $texte);
+            $fiche->themes = $p->themes($texte);
+            if ($fiche->statut === 'ecarte') {
+                $compteurs['ecartes']++;
+                return;
+            }
+        }
+        $noms = ['cree' => 'crees', 'fusionne' => 'fusionnes', 'mis_a_jour' => 'mis_a_jour', 'inchange' => 'inchanges'];
+        $compteurs[$noms[$d->integrer($fiche)]]++;
+        if ($d->annuler_si_necessaire($fiche)) {
+            $compteurs['annules']++;
+        }
+    }
+
+    /** @return array{crees: int, fusionnes: int, mis_a_jour: int, inchanges: int, ecartes: int, annules: int} */
+    private static function compteurs_vides(): array {
+        return ['crees' => 0, 'fusionnes' => 0, 'mis_a_jour' => 0, 'inchanges' => 0, 'ecartes' => 0, 'annules' => 0];
+    }
+
+    /** Secondes (`microtime(true)`), ou l'horloge de test. */
+    public static function horloge(): float {
+        return self::$horloge_pour_tests !== null ? (float) (self::$horloge_pour_tests)() : microtime(true);
     }
 
     /** Client HTTP de la collecte : `Http::obtenir`, ou son remplaçant de test. */
@@ -356,16 +395,37 @@ final class Collecte {
     }
 
     /**
-     * La récurrence « daily » compte 24 h : au changement d'heure, ou si l'heure des réglages change,
-     * la prochaine collecte quotidienne est replacée à l'heure voulue.
+     * Rappel de `rsn_veille_nuit` (après la mise en file) : la récurrence « daily » compte 24 h, donc au
+     * changement d'heure, ou si l'heure des réglages change, la prochaine collecte quotidienne est
+     * replacée à l'heure voulue, jamais à moins de 12 h de celle-ci.
      */
-    private static function recaler_nuit(): void {
+    public static function recaler_nuit(): void {
+        self::recaler_nuit_depuis(time());
+    }
+
+    /** `recaler_nuit` à l'instant $maintenant (tests). */
+    public static function recaler_nuit_depuis(int $maintenant): void {
         $prevue = wp_next_scheduled(self::CROCHET_NUIT);
-        $voulue = self::prochaine_collecte();
+        $voulue = self::prochaine_collecte($maintenant + 12 * HOUR_IN_SECONDS);
         if ($prevue !== false && $prevue !== $voulue) {
             wp_unschedule_event($prevue, self::CROCHET_NUIT);
             wp_schedule_event($voulue, 'daily', self::CROCHET_NUIT);
         }
+    }
+
+    /** @return string[] File des sources, éléments illisibles ignorés. */
+    private static function file(): array {
+        $file = get_option(self::OPTION_FILE, []);
+        if (!is_array($file)) {
+            return [];
+        }
+        $ids = [];
+        foreach ($file as $id) {
+            if ((is_string($id) || is_int($id)) && (string) $id !== '') {
+                $ids[] = (string) $id;
+            }
+        }
+        return $ids;
     }
 
     private static function planifier_source(int $delai): void {

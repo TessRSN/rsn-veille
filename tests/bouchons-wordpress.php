@@ -21,6 +21,9 @@ if (!defined('ABSPATH')) {
 if (!defined('DAY_IN_SECONDS')) {
     define('DAY_IN_SECONDS', 86400);
 }
+if (!defined('HOUR_IN_SECONDS')) {
+    define('HOUR_IN_SECONDS', 3600);
+}
 if (!defined('MINUTE_IN_SECONDS')) {
     define('MINUTE_IN_SECONDS', 60);
 }
@@ -101,6 +104,15 @@ function get_option(string $nom, mixed $defaut = false): mixed {
 }
 
 function update_option(string $nom, mixed $valeur, mixed $chargement_auto = null): bool {
+    $GLOBALS['rsn_veille_wp']['options'][$nom] = $valeur;
+    return true;
+}
+
+/** Comme WordPress : échoue si l'option existe déjà. */
+function add_option(string $nom, mixed $valeur = '', string $deprecie = '', mixed $chargement_auto = null): bool {
+    if (array_key_exists($nom, $GLOBALS['rsn_veille_wp']['options'])) {
+        return false;
+    }
     $GLOBALS['rsn_veille_wp']['options'][$nom] = $valeur;
     return true;
 }

@@ -26,11 +26,13 @@ final class CollecteTest extends TestCase {
         Collecte::accrocher();
         $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-10-25';
         Collecte::$obtenir_pour_tests = null;
+        Collecte::$horloge_pour_tests = null;
         $this->demandes = [];
     }
 
     protected function tearDown(): void {
         Collecte::$obtenir_pour_tests = null;
+        Collecte::$horloge_pour_tests = null;
     }
 
     private static function fixture(string $nom): string {
@@ -159,16 +161,21 @@ final class CollecteTest extends TestCase {
             return self::reponse('text/html', '<html><head><title>Événement ' . $id . ' | IVADO</title></head></html>', 'https://ivado.ca/evenements/' . $id . '/');
         };
 
-        $resolution = ResolutionIvado::resoudre($fiches, ['id' => 'ivado'], new Depot($entrepot), $obtenir);
+        $integrees = [];
+        $integrer = static function (Fiche $f) use (&$integrees): void {
+            $integrees[] = $f;
+        };
+        $resolution = ResolutionIvado::resoudre($fiches, ['id' => 'ivado'], new Depot($entrepot), $obtenir, $integrer);
 
         $this->assertCount(25, $this->demandes);
         $this->assertNotContains('https://ivado.ca/?p=1', $this->demandes);
         $this->assertSame('https://ivado.ca/?p=26', end($this->demandes));
         $this->assertSame(4, $resolution['en_attente']);
         $this->assertCount(2, $resolution['erreurs']);
-        $this->assertCount(24, $resolution['fiches']);
+        $this->assertSame(23, $resolution['resolues']);
+        $this->assertCount(24, $integrees);
         $par_cle = [];
-        foreach ($resolution['fiches'] as $f) {
+        foreach ($integrees as $f) {
             $par_cle[$f->cle_source] = $f;
         }
         $this->assertSame(['Déjà connue', 'https://ivado.ca/evenements/connue/'], [$par_cle['ivado:1']->titre, $par_cle['ivado:1']->url]);
@@ -188,10 +195,65 @@ final class CollecteTest extends TestCase {
             }
             return self::reponse('text/html', '<title>Deux | IVADO</title>', 'https://ivado.ca/evenements/deux/');
         };
-        $resolution = ResolutionIvado::resoudre($fiches, ['id' => 'ivado'], new Depot(new EntrepotMemoire()), $obtenir);
-        $this->assertCount(1, $resolution['fiches']);
-        $this->assertSame('Deux', $resolution['fiches'][0]->titre);
+        $integrees = [];
+        $resolution = ResolutionIvado::resoudre($fiches, ['id' => 'ivado'], new Depot(new EntrepotMemoire()), $obtenir, static function (Fiche $f) use (&$integrees): void {
+            $integrees[] = $f;
+        });
+        $this->assertCount(1, $integrees);
+        $this->assertSame('Deux', $integrees[0]->titre);
         $this->assertStringContainsString('délai dépassé', $resolution['erreurs'][0]);
+    }
+
+    public function test_resolution_ivado_dans_un_budget_de_temps_et_integration_au_fil_de_l_eau(): void {
+        $temps = 0.0;
+        $journal = [];
+        $fiches = [];
+        for ($id = 1; $id <= 8; $id++) {
+            $fiches[] = self::fiche(['titre' => '', 'cle_source' => 'ivado:' . $id, 'url' => 'https://ivado.ca/?p=' . $id]);
+        }
+        // Chaque page « prend » 6 s : budget de 20 s → 4 résolutions (départs à 0, 6, 12 et 18 s).
+        $obtenir = static function (string $url) use (&$temps, &$journal): array {
+            $journal[] = 'requête ' . $url;
+            $temps += 6.0;
+            return self::reponse('text/html', '<title>Page | IVADO</title>', $url . '&final');
+        };
+        $integrer = static function (Fiche $f) use (&$journal): void {
+            $journal[] = 'intégration ' . $f->cle_source;
+        };
+        $horloge = static function () use (&$temps): float {
+            return $temps;
+        };
+        $resolution = ResolutionIvado::resoudre($fiches, ['id' => 'ivado'], new Depot(new EntrepotMemoire()), $obtenir, $integrer, 25, 20.0, $horloge);
+        $this->assertSame(4, $resolution['resolues']);
+        $this->assertSame(4, $resolution['en_attente']);
+        $this->assertSame([
+            'requête https://ivado.ca/?p=1', 'intégration ivado:1',
+            'requête https://ivado.ca/?p=2', 'intégration ivado:2',
+            'requête https://ivado.ca/?p=3', 'intégration ivado:3',
+            'requête https://ivado.ca/?p=4', 'intégration ivado:4',
+        ], $journal);
+    }
+
+    public function test_collecte_ivado_au_budget_ecrit_les_fiches_resolues(): void {
+        self::activer_seulement(['ivado']);
+        $temps = 0.0;
+        $this->brancher_http();
+        $http = Collecte::$obtenir_pour_tests;
+        Collecte::$obtenir_pour_tests = static function (string $url, array $options = []) use ($http, &$temps): array {
+            if (str_contains($url, '?p=')) {
+                $temps += 6.0;
+            }
+            return $http($url, $options);
+        };
+        Collecte::$horloge_pour_tests = static function () use (&$temps): float {
+            return $temps;
+        };
+        Collecte::mettre_en_file();
+        rsn_veille_bouchons_executer_cron(Collecte::CROCHET_SOURCE);
+        $ivado = Journal::derniere('ivado');
+        // 4 pages dans le budget, dont celle sans titre ; 2 fiches attendront la nuit suivante.
+        $this->assertSame([6, 3, 2, 1], [$ivado['lus'], $ivado['crees'], $ivado['en_attente'], count($ivado['erreurs'])]);
+        $this->assertCount(3, (new EntrepotWordPress())->lister(''));
     }
 
     // --- Configuration ---
@@ -254,15 +316,40 @@ final class CollecteTest extends TestCase {
         $this->assertFalse(wp_next_scheduled(Collecte::CROCHET_SOURCE));
     }
 
-    public function test_mettre_en_file_recale_la_collecte_quotidienne(): void {
+    public function test_la_tache_quotidienne_recale_la_collecte_quotidienne(): void {
         // Collecte quotidienne décalée d'une heure (changement d'heure) : replacée à 3 h, heure de Montréal.
-        wp_schedule_event(Collecte::prochaine_collecte() + 3600, 'daily', Collecte::CROCHET_NUIT);
-        Collecte::mettre_en_file();
+        wp_schedule_event(Collecte::prochaine_collecte(time() + 12 * 3600) + 3600, 'daily', Collecte::CROCHET_NUIT);
+        do_action(Collecte::CROCHET_NUIT);
         $nuit = rsn_veille_bouchons_planifies(Collecte::CROCHET_NUIT);
         $this->assertCount(1, $nuit);
-        $this->assertSame(Collecte::prochaine_collecte(), $nuit[0]['horodatage']);
+        $this->assertSame(Collecte::prochaine_collecte(time() + 12 * 3600), $nuit[0]['horodatage']);
         $this->assertSame('daily', $nuit[0]['recurrence']);
         $this->assertSame('03:00', (new DateTimeImmutable('@' . $nuit[0]['horodatage']))->setTimezone(new DateTimeZone('America/Toronto'))->format('H:i'));
+    }
+
+    public function test_passage_a_l_heure_normale_sans_seconde_collecte_la_meme_nuit(): void {
+        $montreal = new DateTimeZone('America/Toronto');
+        // 1er novembre 2026 : la tâche de 3 h HAE s'exécute à 2 h HNE ; WordPress l'a replanifiée 24 h plus tard (2 h HNE le 2).
+        $maintenant = (new DateTimeImmutable('2026-11-01 02:00', $montreal))->getTimestamp();
+        wp_schedule_event($maintenant + DAY_IN_SECONDS, 'daily', Collecte::CROCHET_NUIT);
+        Collecte::recaler_nuit_depuis($maintenant);
+        $nuit = rsn_veille_bouchons_planifies(Collecte::CROCHET_NUIT);
+        $this->assertCount(1, $nuit);
+        $this->assertSame('2026-11-02 03:00', (new DateTimeImmutable('@' . $nuit[0]['horodatage']))->setTimezone($montreal)->format('Y-m-d H:i'));
+
+        // Même si la prochaine était déjà placée une heure plus tard le même jour : jamais à moins de 12 h.
+        wp_clear_scheduled_hook(Collecte::CROCHET_NUIT);
+        wp_schedule_event($maintenant + 3600, 'daily', Collecte::CROCHET_NUIT);
+        Collecte::recaler_nuit_depuis($maintenant);
+        $nuit = rsn_veille_bouchons_planifies(Collecte::CROCHET_NUIT);
+        $this->assertSame('2026-11-02 03:00', (new DateTimeImmutable('@' . $nuit[0]['horodatage']))->setTimezone($montreal)->format('Y-m-d H:i'));
+    }
+
+    public function test_lancement_manuel_l_apres_midi_ne_saute_pas_la_nuit_suivante(): void {
+        Collecte::planifier_nuit();
+        $prevue = wp_next_scheduled(Collecte::CROCHET_NUIT);
+        Collecte::mettre_en_file();
+        $this->assertSame($prevue, wp_next_scheduled(Collecte::CROCHET_NUIT));
     }
 
     // --- File de collecte (faux WordPress) ---
@@ -356,7 +443,7 @@ final class CollecteTest extends TestCase {
         $this->assertIsInt(get_option(Collecte::OPTION_DERNIERE));
         $this->assertCount(1, rsn_veille_bouchons_declenchements('rsn_veille_apres_collecte'));
         $this->assertGreaterThanOrEqual(3, count(rsn_veille_bouchons_declenchements('litespeed_purge_post')));
-        $this->assertFalse(get_transient(Collecte::VERROU));
+        $this->assertFalse(get_option(Collecte::VERROU));
     }
 
     public function test_exception_d_une_source_consignee_et_file_poursuivie(): void {
@@ -369,7 +456,7 @@ final class CollecteTest extends TestCase {
         $this->assertStringContainsString('connexion refusée', Journal::derniere('dhc')['erreurs'][0]);
         $this->assertSame(['sommeil'], get_option(Collecte::OPTION_FILE));
         $this->assertNotFalse(wp_next_scheduled(Collecte::CROCHET_SOURCE));
-        $this->assertFalse(get_transient(Collecte::VERROU));
+        $this->assertFalse(get_option(Collecte::VERROU));
     }
 
     public function test_erreur_http_consignee_sans_compter_d_absence(): void {
@@ -397,15 +484,83 @@ final class CollecteTest extends TestCase {
         $this->brancher_http();
         Collecte::mettre_en_file();
         wp_clear_scheduled_hook(Collecte::CROCHET_SOURCE);
-        set_transient(Collecte::VERROU, 1, 600);
+        add_option(Collecte::VERROU, ['jeton' => 'autre', 'depuis' => time()], '', 'no');
         Collecte::traiter_une_source();
         $this->assertSame(['dhc'], get_option(Collecte::OPTION_FILE));
         $this->assertNull(Journal::derniere('dhc'));
         // Replanifiée pour reprendre une fois le verrou libéré.
         $this->assertNotFalse(wp_next_scheduled(Collecte::CROCHET_SOURCE));
-        delete_transient(Collecte::VERROU);
+        $this->assertSame(['jeton' => 'autre'], array_intersect_key(get_option(Collecte::VERROU), ['jeton' => 1]));
+        delete_option(Collecte::VERROU);
         rsn_veille_bouchons_executer_cron(Collecte::CROCHET_SOURCE);
         $this->assertSame(18, Journal::derniere('dhc')['crees']);
+    }
+
+    public function test_deux_traitements_simultanes_une_seule_source_depilee(): void {
+        self::activer_seulement(['dhc', 'sommeil']);
+        $this->brancher_http();
+        $http = Collecte::$obtenir_pour_tests;
+        $verrou_pendant = null;
+        $second_lance = false;
+        // Pendant le téléchargement de dhc, une seconde exécution démarre.
+        Collecte::$obtenir_pour_tests = static function (string $url, array $options = []) use ($http, &$second_lance, &$verrou_pendant): array {
+            if (!$second_lance) {
+                $second_lance = true;
+                Collecte::traiter_une_source();
+                $verrou_pendant = get_option(Collecte::VERROU);
+            }
+            return $http($url, $options);
+        };
+        Collecte::mettre_en_file();
+        Collecte::traiter_une_source();
+        $this->assertSame(['sommeil'], get_option(Collecte::OPTION_FILE));
+        $this->assertNull(Journal::derniere('sommeil'));
+        $this->assertSame(18, Journal::derniere('dhc')['crees']);
+        $this->assertIsArray($verrou_pendant, 'la seconde exécution ne libère pas le verrou de la première');
+        $this->assertFalse(get_option(Collecte::VERROU));
+    }
+
+    public function test_verrou_repris_par_un_autre_traitement_non_libere(): void {
+        self::activer_seulement(['dhc']);
+        $this->brancher_http();
+        $http = Collecte::$obtenir_pour_tests;
+        // Pendant le traitement, un autre traitement a jugé le verrou périmé et l'a repris.
+        Collecte::$obtenir_pour_tests = static function (string $url, array $options = []) use ($http): array {
+            update_option(Collecte::VERROU, ['jeton' => 'autre', 'depuis' => time()]);
+            return $http($url, $options);
+        };
+        Collecte::mettre_en_file();
+        Collecte::traiter_une_source();
+        $this->assertSame('autre', get_option(Collecte::VERROU)['jeton']);
+    }
+
+    public function test_verrou_perime_repris(): void {
+        self::activer_seulement(['dhc']);
+        $this->brancher_http();
+        Collecte::mettre_en_file();
+        add_option(Collecte::VERROU, ['jeton' => 'abandonné', 'depuis' => time() - 11 * 60], '', 'no');
+        Collecte::traiter_une_source();
+        $this->assertSame(18, Journal::derniere('dhc')['crees']);
+        $this->assertFalse(get_option(Collecte::VERROU));
+    }
+
+    public function test_reglages_malformes_consignes_et_file_poursuivie(): void {
+        self::activer_seulement(['dhc', 'sommeil'], ['themes' => [['nom' => 'Sans mots']]]);
+        $this->brancher_http();
+        Collecte::mettre_en_file();
+        Collecte::traiter_une_source();
+        $this->assertNotEmpty(Journal::derniere('dhc')['erreurs']);
+        $this->assertSame(['sommeil'], get_option(Collecte::OPTION_FILE));
+        $this->assertNotFalse(wp_next_scheduled(Collecte::CROCHET_SOURCE));
+    }
+
+    public function test_element_non_scalaire_de_la_file_ignore(): void {
+        self::activer_seulement(['dhc']);
+        $this->brancher_http();
+        update_option(Collecte::OPTION_FILE, [['abîmé'], null, 'dhc']);
+        Collecte::traiter_une_source();
+        $this->assertSame(18, Journal::derniere('dhc')['crees']);
+        $this->assertSame([], get_option(Collecte::OPTION_FILE));
     }
 
     public function test_file_vide_ne_fait_rien(): void {
