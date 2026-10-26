@@ -11,6 +11,10 @@ if (!defined('ABSPATH')) {
  * Intègre les fiches collectées dans l'entrepôt : création, mise à jour des champs factuels,
  * fusion des doublons selon le niveau des sources, annulations et absences (devis § 4.3).
  *
+ * Usage : pour chaque fiche collectée, appeler `integrer()` puis `annuler_si_necessaire()` sur la
+ * même instance, fiche par fiche : l'annulation compare le titre entrant au titre que la même clé de
+ * source avait avant cette intégration.
+ *
  * Classe pure : aucune fonction WordPress.
  */
 final class Depot {
@@ -30,10 +34,11 @@ final class Depot {
     private const ABSENCES_AVANT_DRAPEAU = 2;
 
     /**
-     * Titre à la source de chaque fiche avant sa dernière intégration par ce dépôt (id => titre),
-     * pour qu'`annuler_si_necessaire` voie la transition même appelé après `integrer`.
+     * Titre vu par chaque clé de source avant sa dernière intégration par ce dépôt
+     * (id => [clé => titre], '' pour une clé nouvelle), pour qu'`annuler_si_necessaire` voie la
+     * transition même appelé après `integrer`.
      *
-     * @var array<int,string>
+     * @var array<int,array<string,string>>
      */
     private array $titres_precedents = [];
 
@@ -53,13 +58,14 @@ final class Depot {
 
         // 1. Déjà connue de cette source : seuls les champs factuels suivent la source, et
         //    seulement si elle est au moins aussi fiable que la fiche (sinon elle comble les vides).
+        $cle = self::cle_entrante($f);
         $existante = $this->trouver_par_cles($cles);
         if ($existante !== null) {
-            $this->titres_precedents[$existante->id] = $existante->titre_source;
+            $this->noter_titre_precedent($existante, $cle);
             $champs = self::rang($f->niveau) <= self::rang($existante->niveau)
                 ? $this->champs_factuels($existante, $f)
                 : $this->champs_a_combler($existante, $f);
-            $champs += $this->champ_titre_source($existante, $f);
+            $champs += $this->champ_titres_source($existante, $f, $cle);
             if ($champs === []) {
                 return 'inchange';
             }
@@ -70,7 +76,7 @@ final class Depot {
         // 2. Doublon venu d'une autre source : on fusionne, jamais de seconde fiche.
         $existante = $this->trouver_doublon($f);
         if ($existante !== null) {
-            $this->titres_precedents[$existante->id] = $existante->titre_source;
+            $this->noter_titre_precedent($existante, $cle);
             $champs = ['cles_source' => array_values(array_unique(array_merge($existante->cles_source, $cles)))];
             if (self::rang($f->niveau) < self::rang($existante->niveau)) {
                 // Source plus fiable : elle fournit dates, heure, URL, image, prix et lieu.
@@ -81,7 +87,7 @@ final class Depot {
                 // Source égale ou moins fiable : elle ne fait que combler une image ou une URL manquante.
                 $champs += $this->champs_a_combler($existante, $f);
             }
-            $champs += $this->champ_titre_source($existante, $f);
+            $champs += $this->champ_titres_source($existante, $f, $cle);
             $this->entrepot->mettre_a_jour($existante->id, $champs);
             return 'fusionne';
         }
@@ -90,15 +96,19 @@ final class Depot {
         $nouvelle = clone $f;
         $nouvelle->id = null;
         $nouvelle->cles_source = $cles;
-        $nouvelle->titre_source = $f->titre;
-        $this->titres_precedents[$this->entrepot->creer($nouvelle)] = '';
+        $nouvelle->titres_source = $cle !== '' ? [$cle => $f->titre] : [];
+        $id = $this->entrepot->creer($nouvelle);
+        if ($cle !== '') {
+            $this->titres_precedents[$id][$cle] = '';
+        }
         return 'cree';
     }
 
     /**
-     * Repasse « à approuver » une fiche publiée quand son titre à la source se met à annoncer une
-     * annulation ou un report (transition seulement : une fiche republiée par l'équipe avec un titre
-     * déjà annulé reste publiée). Renvoie vrai si le statut a changé.
+     * Repasse « à approuver » une fiche publiée quand le titre de la clé de source entrante se met à
+     * annoncer une annulation ou un report (transition sur cette clé seulement, '' si elle est
+     * nouvelle : une fiche republiée par l'équipe avec un titre déjà annulé reste publiée).
+     * Renvoie vrai si le statut a changé.
      */
     public function annuler_si_necessaire(Fiche $f): bool {
         if (!self::annonce_annulation($f->titre)) {
@@ -108,7 +118,8 @@ final class Depot {
         if ($existante === null || $existante->statut !== 'publie') {
             return false;
         }
-        $precedent = $this->titres_precedents[$existante->id] ?? $existante->titre_source;
+        $cle = self::cle_entrante($f);
+        $precedent = $this->titres_precedents[$existante->id][$cle] ?? $existante->titres_source[$cle] ?? '';
         if (self::annonce_annulation($precedent)) {
             return false;
         }
@@ -176,7 +187,7 @@ final class Depot {
 
     /** Événement pas encore fini (fin, sinon début, aujourd'hui ou plus tard). */
     private static function evenement_a_venir(Fiche $f, string $aujourdhui): bool {
-        $date = $f->fin ?? $f->debut ?? '';
+        $date = ($f->fin ?? '') !== '' ? $f->fin : ($f->debut ?? '');
         return $f->type === 'evenement' && $date !== '' && $date >= $aujourdhui;
     }
 
@@ -195,16 +206,30 @@ final class Depot {
         return $champs;
     }
 
+    /** Clé de source de la fiche entrante : `cle_source`, sinon la première de `cles_source`. */
+    private static function cle_entrante(Fiche $f): string {
+        return $f->cle_source !== '' ? $f->cle_source : (string) ($f->cles_source[0] ?? '');
+    }
+
+    private function noter_titre_precedent(Fiche $existante, string $cle): void {
+        if ($cle !== '') {
+            $this->titres_precedents[$existante->id][$cle] = $existante->titres_source[$cle] ?? '';
+        }
+    }
+
     /**
-     * Dernier titre vu à la source, quel que soit le niveau de la source.
+     * Titre vu par la clé entrante, quel que soit le niveau de la source. Seule l'entrée de cette clé
+     * est modifiée : une autre source au titre différent ne change rien.
      *
-     * @return array<string,string>
+     * @return array<string,array<string,string>>
      */
-    private function champ_titre_source(Fiche $existante, Fiche $entrante): array {
-        if ($entrante->titre === '' || $entrante->titre === $existante->titre_source) {
+    private function champ_titres_source(Fiche $existante, Fiche $entrante, string $cle): array {
+        if ($cle === '' || $entrante->titre === '' || ($existante->titres_source[$cle] ?? null) === $entrante->titre) {
             return [];
         }
-        return ['titre_source' => $entrante->titre];
+        $titres = $existante->titres_source;
+        $titres[$cle] = $entrante->titre;
+        return ['titres_source' => $titres];
     }
 
     /** @return string[] Clés de source de la fiche (`cles_source` et `cle_source`), sans doublon ni vide. */

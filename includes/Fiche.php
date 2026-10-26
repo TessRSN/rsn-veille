@@ -67,10 +67,10 @@ final class Fiche {
     public string $statut = 'a_approuver';
     /** Identifiant stable de la source, au format « source:id ». */
     public string $cle_source = '';
-    /** Dernier titre vu à la source (posé et suivi par le dépôt, pour repérer une annulation). */
-    public string $titre_source = '';
     /** @var string[] Toutes les clés de source fusionnées sur cette fiche. */
     public array $cles_source = [];
+    /** @var array<string,string> Dernier titre vu par clé de source (posé et suivi par le dépôt, pour repérer une annulation). */
+    public array $titres_source = [];
     /** Catégorie propre aux appels. */
     public string $categorie = '';
     /** Date limite propre aux appels (Y-m-d). */
@@ -212,9 +212,15 @@ final class Fiche {
         return (bool) $valeur;
     }
 
-    /** @return string[] Les éléments scalaires, convertis en chaînes. */
+    /**
+     * Les éléments scalaires, convertis en chaînes. Une liste est renumérotée ; un tableau associatif
+     * garde ses clés.
+     *
+     * @return array<string>|array<string,string>
+     */
     private static function vers_liste_de_chaines(array $valeurs): array {
-        return array_values(array_map('strval', array_filter($valeurs, 'is_scalar')));
+        $chaines = array_map('strval', array_filter($valeurs, 'is_scalar'));
+        return array_keys($valeurs) === array_keys(array_values($valeurs)) ? array_values($chaines) : $chaines;
     }
 
     /** Minuscules, sans accents, toute ponctuation (traits d'union compris) réduite à une espace. */

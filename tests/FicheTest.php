@@ -74,7 +74,7 @@ final class FicheTest extends TestCase {
         $f->niveau = 'A';
         $f->statut = 'approuve';
         $f->cle_source = 'ivado:123';
-        $f->titre_source = 'Appel à projets – IA en santé (source)';
+        $f->titres_source = ['ivado:123' => 'Appel à projets – IA en santé (source)', 'crm:456' => 'Appel IA santé'];
         $f->cles_source = ['ivado:123', 'crm:456'];
         $f->categorie = 'Subvention';
         $f->echeance = '2027-03-01';
@@ -99,6 +99,7 @@ final class FicheTest extends TestCase {
             'id' => '', 'debut' => '', 'fin' => '', 'echeance' => '', 'absent_depuis' => '',
             'manuel' => 'false',
             'themes' => ['IA', 3, null, ['x']], 'cles_source' => [7],
+            'titres_source' => ['dhc:1' => 2026, 'rsn:2' => 'Atelier', 'x:3' => ['non'], 'x:4' => null],
         ]);
         $this->assertNull($f->id);
         $this->assertNull($f->debut);
@@ -108,6 +109,8 @@ final class FicheTest extends TestCase {
         $this->assertFalse($f->manuel);
         $this->assertSame(['IA', '3'], $f->themes);
         $this->assertSame(['7'], $f->cles_source);
+        // Tableau associatif : les clés sont gardées, les valeurs converties en chaînes.
+        $this->assertSame(['dhc:1' => '2026', 'rsn:2' => 'Atelier'], $f->titres_source);
 
         foreach (['0', '', 'false', false, 0] as $faux) {
             $this->assertFalse(Fiche::depuis_tableau(['manuel' => $faux])->manuel);

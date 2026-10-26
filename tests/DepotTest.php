@@ -141,17 +141,63 @@ final class DepotTest extends TestCase {
         $this->assertSame('2026-12-15', $e->trouver_par_cle_source('frq_appels:4')->echeance);
     }
 
-    public function test_titre_source_pose_a_la_creation_et_suivi(): void {
+    public function test_titres_source_par_cle(): void {
         $e = new EntrepotMemoire(); $d = new Depot($e);
         $f = $this->fiche(['titre' => 'FHIR North 2026', 'debut' => '2026-10-27', 'cle_source' => 'dhc:1', 'niveau' => 'A']);
         $d->integrer($f);
-        $this->assertSame('FHIR North 2026', $e->trouver_par_cle_source('dhc:1')->titre_source);
-        // Même depuis une clé moins fiable, le dernier titre vu à la source est noté ; le titre affiché ne bouge pas.
+        $this->assertSame(['dhc:1' => 'FHIR North 2026'], $e->trouver_par_cle_source('dhc:1')->titres_source);
+        // Même depuis une clé moins fiable, le titre vu par cette clé est noté ; le titre affiché ne bouge pas.
         $d->integrer($this->fiche(['titre' => 'FHIR North 2026', 'debut' => '2026-10-27', 'cle_source' => 'frq:2', 'niveau' => 'B']));
         $b = $this->fiche(['titre' => 'FHIR North 2026 (complet)', 'debut' => '2026-10-27', 'cle_source' => 'frq:2', 'niveau' => 'B']);
         $this->assertSame('mis_a_jour', $d->integrer($b));
         $x = $e->trouver_par_cle_source('dhc:1');
-        $this->assertSame(['FHIR North 2026 (complet)', 'FHIR North 2026'], [$x->titre_source, $x->titre]);
+        $this->assertSame(['dhc:1' => 'FHIR North 2026', 'frq:2' => 'FHIR North 2026 (complet)'], $x->titres_source);
+        $this->assertSame('FHIR North 2026', $x->titre);
+    }
+
+    public function test_deux_sources_aux_titres_differents_restent_inchangees(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $rsn = $this->fiche(['titre' => 'Atelier données', 'debut' => '2026-11-16', 'url' => 'https://rsn.quebec/atelier/', 'cle_source' => 'rsn:1', 'niveau' => 'A', 'statut' => 'publie']);
+        $dhc = $this->fiche(['titre' => 'Data Workshop (Montréal)', 'debut' => '2026-11-16', 'url' => 'https://rsn.quebec/atelier/', 'cle_source' => 'dhc:1', 'niveau' => 'A']);
+        $this->assertSame('cree', $d->integrer($rsn));
+        $this->assertSame('fusionne', $d->integrer($dhc));
+        for ($nuit = 0; $nuit < 3; $nuit++) {
+            $this->assertSame('inchange', $d->integrer(clone $rsn));
+            $this->assertSame('inchange', $d->integrer(clone $dhc));
+        }
+        $this->assertSame(['rsn:1' => 'Atelier données', 'dhc:1' => 'Data Workshop (Montréal)'], $e->lister()[0]->titres_source);
+    }
+
+    public function test_source_reportee_deja_connue_ne_rebascule_pas_une_fiche_republiee(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $rsn = $this->fiche(['titre' => 'Atelier données', 'debut' => '2026-11-16', 'url' => 'https://rsn.quebec/atelier/', 'cle_source' => 'rsn:1', 'niveau' => 'A', 'statut' => 'publie']);
+        $dhc = $this->fiche(['titre' => 'Atelier données — reporté', 'debut' => '2026-11-16', 'url' => 'https://rsn.quebec/atelier/', 'cle_source' => 'dhc:1', 'niveau' => 'A']);
+        $d->integrer($rsn);
+        $d->integrer($dhc);
+        $this->assertTrue($d->annuler_si_necessaire($dhc));
+        $e->mettre_a_jour(1, ['statut' => 'publie', 'manuel' => true]);
+        // Collectes alternées : ni rsn ni dhc ne renvoient la fiche à l'approbation.
+        for ($nuit = 0; $nuit < 2; $nuit++) {
+            $this->assertSame('inchange', $d->integrer(clone $dhc));
+            $this->assertFalse($d->annuler_si_necessaire($dhc));
+            $this->assertSame('inchange', $d->integrer(clone $rsn));
+            $this->assertFalse($d->annuler_si_necessaire($rsn));
+        }
+        $this->assertSame('publie', $e->trouver_par_cle_source('dhc:1')->statut);
+        // Avec une nouvelle instance (exécution suivante), le titre stocké de la clé sert de référence.
+        $d2 = new Depot($e);
+        $this->assertSame('inchange', $d2->integrer(clone $dhc));
+        $this->assertFalse($d2->annuler_si_necessaire($dhc));
+        $this->assertSame('publie', $e->trouver_par_cle_source('dhc:1')->statut);
+    }
+
+    public function test_nouvelle_cle_annoncant_une_annulation(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $d->integrer($this->fiche(['titre' => 'Atelier données', 'debut' => '2026-11-16', 'url' => 'https://rsn.quebec/atelier/', 'cle_source' => 'rsn:1', 'niveau' => 'A', 'statut' => 'publie']));
+        $dhc = $this->fiche(['titre' => 'Atelier données annulé', 'debut' => '2026-11-16', 'url' => 'https://rsn.quebec/atelier/', 'cle_source' => 'dhc:1', 'niveau' => 'A']);
+        $this->assertSame('fusionne', $d->integrer($dhc));
+        $this->assertTrue($d->annuler_si_necessaire($dhc));
+        $this->assertSame('a_approuver', $e->trouver_par_cle_source('rsn:1')->statut);
     }
 
     public function test_fusion_par_url(): void {
@@ -207,9 +253,11 @@ final class DepotTest extends TestCase {
         $d->integrer($this->fiche(['type' => 'appel', 'titre' => 'Appel', 'echeance' => '2026-12-01', 'cle_source' => 'dhc:2', 'niveau' => 'A', 'statut' => 'publie']));
         $d->integrer($this->fiche(['titre' => 'Commencé, pas fini', 'debut' => '2026-10-20', 'fin' => '2026-10-30', 'cle_source' => 'dhc:3', 'niveau' => 'A', 'statut' => 'publie']));
         $d->integrer($this->fiche(['titre' => 'Aujourd’hui', 'debut' => '2026-10-25', 'cle_source' => 'dhc:4', 'niveau' => 'A', 'statut' => 'publie']));
+        $e->creer($this->fiche(['titre' => 'Fin vide', 'debut' => '2026-11-02', 'cle_source' => 'dhc:5', 'niveau' => 'A', 'statut' => 'publie']));
+        $e->mettre_a_jour(5, ['fin' => '']);
         $d->signaler_absents('dhc', [], true, '2026-10-25');
         $d->signaler_absents('dhc', [], true, '2026-10-25');
-        foreach (['dhc:1' => [0, null], 'dhc:2' => [0, null], 'dhc:3' => [2, '2026-10-25'], 'dhc:4' => [2, '2026-10-25']] as $cle => $attendu) {
+        foreach (['dhc:1' => [0, null], 'dhc:2' => [0, null], 'dhc:3' => [2, '2026-10-25'], 'dhc:4' => [2, '2026-10-25'], 'dhc:5' => [2, '2026-10-25']] as $cle => $attendu) {
             $x = $e->trouver_par_cle_source($cle);
             $this->assertSame($attendu, [$x->absences, $x->absent_depuis], $cle);
         }
@@ -247,7 +295,7 @@ final class DepotTest extends TestCase {
 
         // L'équipe republie la fiche à la main : le même titre annulé ne la renvoie plus à l'approbation.
         $e->mettre_a_jour(1, ['statut' => 'publie', 'manuel' => true]);
-        $this->assertSame('Atelier ANNULÉ : données de santé', $e->trouver_par_cle_source('rsn:3')->titre_source);
+        $this->assertSame(['rsn:3' => 'Atelier ANNULÉ : données de santé'], $e->trouver_par_cle_source('rsn:3')->titres_source);
         $this->assertSame('inchange', $d->integrer(clone $annule));
         $this->assertFalse($d->annuler_si_necessaire($annule));
         $this->assertSame('publie', $e->trouver_par_cle_source('rsn:3')->statut);
