@@ -31,6 +31,26 @@ final class FicheTest extends TestCase {
         $this->assertSame('Hors Québec', Fiche::deviner_region('Calgary', '', 'Présentiel'));
     }
 
+    public function test_region_liste_elargie_et_mentions(): void {
+        $this->assertSame('Québec', Fiche::deviner_region('Lévis, QC', '', 'Présentiel'));
+        $this->assertSame('Québec', Fiche::deviner_region('Trois Rivières', '', 'Présentiel'));
+        $this->assertSame('Québec', Fiche::deviner_region('', 'Hôtel Sept-Îles', 'Présentiel'));
+        $this->assertSame('Québec', Fiche::deviner_region('Val-d\'Or', '', 'Présentiel'));
+        $this->assertSame('Québec', Fiche::deviner_region('Granby', '', 'Présentiel'));
+        $this->assertSame('Québec', Fiche::deviner_region('Ailleurs', 'Salle X, Quebec', 'Présentiel'));
+        $this->assertSame('Hors Québec', Fiche::deviner_region('Ottawa', 'Centre Shaw', 'Présentiel'));
+        $this->assertSame('Hors Québec', Fiche::deviner_region('Paris', 'Rue Qcx', 'Présentiel'));
+    }
+
+    public function test_nettoyage_separe_les_blocs(): void {
+        $this->assertSame(
+            'Lieu : En virtuel Titre : X',
+            Fiche::nettoyer_texte('<p>Lieu : En virtuel</p><p>Titre : X</p>')
+        );
+        $this->assertSame('Date Lieu', Fiche::nettoyer_texte('Date<br>Lieu'));
+        $this->assertSame('mot entier', Fiche::nettoyer_texte('<strong>mot</strong> entier'));
+    }
+
     public function test_aller_retour_tableau(): void {
         $f = new Fiche();
         $f->type = 'appel';
@@ -71,5 +91,30 @@ final class FicheTest extends TestCase {
         $this->assertSame('fr', $defaut->langue);
         $this->assertSame('a_approuver', $defaut->statut);
         $this->assertNull($defaut->id);
+    }
+
+    public function test_depuis_tableau_valeurs_vides_et_types(): void {
+        $f = Fiche::depuis_tableau([
+            'id' => '', 'debut' => '', 'fin' => '', 'echeance' => '', 'absent_depuis' => '',
+            'manuel' => 'false',
+            'themes' => ['IA', 3, null, ['x']], 'cles_source' => [7],
+        ]);
+        $this->assertNull($f->id);
+        $this->assertNull($f->debut);
+        $this->assertNull($f->fin);
+        $this->assertNull($f->echeance);
+        $this->assertNull($f->absent_depuis);
+        $this->assertFalse($f->manuel);
+        $this->assertSame(['IA', '3'], $f->themes);
+        $this->assertSame(['7'], $f->cles_source);
+
+        foreach (['0', '', 'false', false, 0] as $faux) {
+            $this->assertFalse(Fiche::depuis_tableau(['manuel' => $faux])->manuel);
+        }
+        foreach (['1', 'true', true, 1] as $vrai) {
+            $this->assertTrue(Fiche::depuis_tableau(['manuel' => $vrai])->manuel);
+        }
+        $this->assertSame(42, Fiche::depuis_tableau(['id' => '42'])->id);
+        $this->assertSame('2027-01-01', Fiche::depuis_tableau(['debut' => '2027-01-01'])->debut);
     }
 }

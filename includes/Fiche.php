@@ -17,6 +17,11 @@ final class Fiche {
     private const VILLES_QUEBEC = [
         'montreal', 'quebec', 'laval', 'sherbrooke', 'trois-rivieres', 'drummondville',
         'gatineau', 'longueuil', 'brossard', 'rimouski', 'saguenay', 'chicoutimi',
+        'levis', 'granby', 'shawinigan', 'saint-hyacinthe', 'saint-jean-sur-richelieu',
+        'saint-jerome', 'terrebonne', 'repentigny', 'boucherville', 'victoriaville',
+        'rouyn-noranda', 'sept-iles', 'riviere-du-loup', 'baie-comeau', 'val-d\'or', 'joliette',
+        'magog', 'mont-tremblant', 'sainte-anne-de-bellevue', 'pointe-claire', 'dorval',
+        'westmount',
     ];
 
     /** Mots qui indiquent une activité en ligne. */
@@ -81,6 +86,8 @@ final class Fiche {
     public static function nettoyer_texte(string $html): string {
         $texte = preg_replace('/<!\[CDATA\[(.*?)\]\]>/s', '$1', $html) ?? $html;
         $texte = html_entity_decode($texte, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        // Les balises de bloc et les sauts de ligne deviennent une espace (pas de mots collés).
+        $texte = preg_replace('/<\/?(?:br|p|div|li|ul|ol|h[1-6]|tr|td|th|table|blockquote|section|article)\b[^>]*>/i', ' ', $texte) ?? $texte;
         $texte = strip_tags($texte);
         $texte = preg_replace('/[\s\x{00A0}]+/u', ' ', $texte) ?? $texte;
         return trim($texte);
@@ -131,12 +138,17 @@ final class Fiche {
         if ($format === 'Virtuel') {
             return 'En ligne';
         }
-        $endroit = self::simplifier($ville . ' ' . $lieu);
-        if (trim($endroit) === '') {
+        $endroit = self::plier($ville . ' ' . $lieu);
+        if ($endroit === '') {
+            return 'Québec';
+        }
+        // Mentions explicites (mot entier) : « QC », « Québec », « Quebec ».
+        $mots = ' ' . $endroit . ' ';
+        if (str_contains($mots, ' qc ')) {
             return 'Québec';
         }
         foreach (self::VILLES_QUEBEC as $ville_quebec) {
-            if (str_contains($endroit, $ville_quebec)) {
+            if (str_contains($mots, ' ' . self::plier($ville_quebec) . ' ')) {
                 return 'Québec';
             }
         }
@@ -176,14 +188,37 @@ final class Fiche {
                 }
                 continue;
             }
+            if ($valeur === '' && $type->allowsNull()) {
+                $fiche->$nom = null;
+                continue;
+            }
             $fiche->$nom = match ($type->getName()) {
                 'int' => (int) $valeur,
-                'bool' => (bool) $valeur,
-                'array' => is_array($valeur) ? $valeur : [],
+                'bool' => self::vers_booleen($valeur),
+                'array' => is_array($valeur) ? self::vers_liste_de_chaines($valeur) : [],
                 default => (string) $valeur,
             };
         }
         return $fiche;
+    }
+
+    /** Valeur booléenne tolérante : '0', '', 'false', false et 0 sont faux. */
+    private static function vers_booleen(mixed $valeur): bool {
+        if (is_string($valeur)) {
+            return !in_array(strtolower(trim($valeur)), ['', '0', 'false'], true);
+        }
+        return (bool) $valeur;
+    }
+
+    /** @return string[] Les éléments scalaires, convertis en chaînes. */
+    private static function vers_liste_de_chaines(array $valeurs): array {
+        return array_values(array_map('strval', array_filter($valeurs, 'is_scalar')));
+    }
+
+    /** Minuscules, sans accents, toute ponctuation (traits d'union compris) réduite à une espace. */
+    private static function plier(string $texte): string {
+        $texte = preg_replace('/[^a-z0-9]+/', ' ', self::simplifier($texte)) ?? '';
+        return trim($texte);
     }
 
     /** Minuscules et sans accents. */
