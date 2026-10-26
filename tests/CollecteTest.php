@@ -534,6 +534,22 @@ final class CollecteTest extends TestCase {
         $this->assertSame('autre', get_option(Collecte::VERROU)['jeton']);
     }
 
+    public function test_jeton_ecrase_par_un_ajout_concurrent_le_premier_abandonne(): void {
+        self::activer_seulement(['dhc']);
+        $this->brancher_http();
+        Collecte::mettre_en_file();
+        wp_clear_scheduled_hook(Collecte::CROCHET_SOURCE);
+        // Un second processus insère la même option juste après nous et écrase notre jeton.
+        $GLOBALS['rsn_veille_wp']['apres_add_option'] = static function (string $nom): void {
+            update_option($nom, ['jeton' => 'concurrent', 'depuis' => time()]);
+        };
+        Collecte::traiter_une_source();
+        $this->assertSame(['dhc'], get_option(Collecte::OPTION_FILE));
+        $this->assertNull(Journal::derniere('dhc'));
+        $this->assertSame('concurrent', get_option(Collecte::VERROU)['jeton']);
+        $this->assertNotFalse(wp_next_scheduled(Collecte::CROCHET_SOURCE));
+    }
+
     public function test_verrou_perime_repris(): void {
         self::activer_seulement(['dhc']);
         $this->brancher_http();

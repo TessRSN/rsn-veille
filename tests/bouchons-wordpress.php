@@ -108,12 +108,25 @@ function update_option(string $nom, mixed $valeur, mixed $chargement_auto = null
     return true;
 }
 
-/** Comme WordPress : échoue si l'option existe déjà. */
+/**
+ * Comme WordPress : échoue si l'option existe déjà. `apres_add_option` (rappel de test, facultatif) est
+ * appelé après une insertion réussie, pour imiter un processus concurrent qui écrit la même option
+ * (le `INSERT … ON DUPLICATE KEY UPDATE` de WordPress laisse alors réussir les deux).
+ */
 function add_option(string $nom, mixed $valeur = '', string $deprecie = '', mixed $chargement_auto = null): bool {
     if (array_key_exists($nom, $GLOBALS['rsn_veille_wp']['options'])) {
         return false;
     }
     $GLOBALS['rsn_veille_wp']['options'][$nom] = $valeur;
+    $concurrent = $GLOBALS['rsn_veille_wp']['apres_add_option'] ?? null;
+    if ($concurrent !== null) {
+        $GLOBALS['rsn_veille_wp']['apres_add_option'] = null;
+        $concurrent($nom);
+    }
+    return true;
+}
+
+function wp_cache_delete(string $cle, string $groupe = ''): bool {
     return true;
 }
 
