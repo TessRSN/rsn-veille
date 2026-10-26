@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
  * Classe pure : aucune fonction WordPress.
  */
 final class Ical {
-    /** Transient du calendrier généré (une heure), vidé avec le JSON public. */
+    /** Base du transient du calendrier généré (une heure, suffixé par la langue : Donnees::transient), vidé avec le JSON public. */
     public const TRANSIENT = 'rsn_veille_ics';
 
     private const FUSEAU = 'America/Toronto';

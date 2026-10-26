@@ -24,7 +24,8 @@ final class Rest {
         add_action('rest_api_init', [self::class, 'enregistrer']);
         add_action('init', [self::class, 'ajouter_regle']);
         add_filter('query_vars', [self::class, 'variables']);
-        add_action('template_redirect', [self::class, 'servir_ics']);
+        // Priorité 0 : avant redirect_canonical, qui ajouterait une barre oblique à /veille.ics.
+        add_action('template_redirect', [self::class, 'servir_ics'], 0);
     }
 
     /** Route `GET rsn/v1/veille`, publique. */
@@ -78,14 +79,15 @@ final class Rest {
         exit;
     }
 
-    /** Le calendrier iCal, depuis le transient d'une heure ou régénéré (vidé avec le JSON public). */
+    /** Le calendrier iCal, depuis le transient d'une heure (par langue) ou régénéré (vidé avec le JSON public). */
     public static function ics(): string {
-        $ics = get_transient(Ical::TRANSIENT);
+        $cle = Donnees::transient(Ical::TRANSIENT);
+        $ics = get_transient($cle);
         if (is_string($ics) && $ics !== '') {
             return $ics;
         }
         $ics = Ical::generer(Donnees::elements(new EntrepotWordPress(), EvenementsRsn::lire()), \rsn_veille_aujourdhui());
-        set_transient(Ical::TRANSIENT, $ics, HOUR_IN_SECONDS);
+        set_transient($cle, $ics, HOUR_IN_SECONDS);
         return $ics;
     }
 

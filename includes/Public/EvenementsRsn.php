@@ -20,8 +20,8 @@ final class EvenementsRsn {
     /** Taxonomie des catégories d'événements de TEC. */
     private const TAXONOMIE = 'tribe_events_cat';
 
-    /** Catégories du site reconnues, par ordre de préférence quand un événement en a plusieurs. */
-    private const CATEGORIES = ['Événements RSN', 'Événements partenaires', 'Écosystème numérique'];
+    /** Catégories du site reconnues (« Qui organise »), par ordre de préférence quand un événement en a plusieurs. */
+    private const ORDRE = ['rsn', 'partenaires'];
 
     /**
      * Événements publiés depuis $depuis (passés compris), au format fiche (`source = 'RSN'`).
@@ -77,6 +77,7 @@ final class EvenementsRsn {
             $format = 'Hybride';
         }
         $image = get_the_post_thumbnail_url($article, 'medium_large');
+        [$categorie, $organise_par] = self::categorie($article);
         $prix = function_exists('tribe_get_cost') ? Fiche::nettoyer_texte((string) tribe_get_cost($article->ID, true)) : '';
 
         return [
@@ -86,7 +87,8 @@ final class EvenementsRsn {
             'fin' => preg_match('/^\d{4}-\d{2}-\d{2}$/', $fin) === 1 && $fin >= $debut ? $fin : $debut,
             'heure' => preg_match('/^\d{2}:\d{2}$/', $heure) === 1 ? $heure : '',
             'organisateur' => $organisateur !== '' ? $organisateur : 'RSN',
-            'categorie_rsn' => self::categorie($article),
+            'categorie_rsn' => $categorie,
+            'organise_par' => $organise_par,
             'lieu' => $lieu,
             'ville' => $ville,
             'region' => Fiche::deviner_region($ville, $lieu, $format),
@@ -104,15 +106,31 @@ final class EvenementsRsn {
         ];
     }
 
-    /** Catégorie RSN reconnue parmi celles de l'événement, sinon la première, sinon « Événements RSN ». */
-    private static function categorie(\WP_Post $article): string {
+    /**
+     * Catégorie de l'événement et « Qui organise », reconnus par le slug du terme (`evenements-rsn`,
+     * `evenements-partenaires`, traductions WPML suffixées comprises) ou par son nom : RSN d'abord, puis
+     * partenaires, sinon le premier terme (écosystème). Sans catégorie : « Événements RSN ».
+     *
+     * @return array{0: string, 1: string}
+     */
+    private static function categorie(\WP_Post $article): array {
         $termes = get_the_terms($article, self::TAXONOMIE);
-        $noms = is_array($termes) ? array_map(static fn($t): string => Fiche::nettoyer_texte((string) $t->name), $termes) : [];
-        foreach (self::CATEGORIES as $categorie) {
-            if (in_array($categorie, $noms, true)) {
-                return $categorie;
+        $termes = is_array($termes) ? array_values($termes) : [];
+        if ($termes === []) {
+            return ['Événements RSN', 'rsn'];
+        }
+        $reconnus = [];
+        foreach ($termes as $terme) {
+            $par_slug = Donnees::organise_par((string) ($terme->slug ?? ''));
+            $par_nom = Donnees::organise_par((string) ($terme->name ?? ''));
+            $qui = $par_slug !== 'ecosysteme' ? $par_slug : $par_nom;
+            $reconnus[$qui] ??= Fiche::nettoyer_texte((string) ($terme->name ?? ''));
+        }
+        foreach (self::ORDRE as $qui) {
+            if (isset($reconnus[$qui])) {
+                return [$reconnus[$qui], $qui];
             }
         }
-        return $noms[0] ?? 'Événements RSN';
+        return [Fiche::nettoyer_texte((string) ($termes[0]->name ?? '')), 'ecosysteme'];
     }
 }

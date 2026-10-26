@@ -20,13 +20,20 @@ if (!defined('ABSPATH')) {
  * `construire` ne fait aucune écriture : elle lit l'entrepôt, le registre des sources et le journal.
  */
 final class Donnees {
-    /** Transient du JSON public (une heure), vidé par la collecte et par toute écriture de fiche. */
+    /** Transient du JSON public (une heure, un par langue), vidé par la collecte et par toute écriture de fiche. */
     public const TRANSIENT = 'rsn_veille_json';
+
+    /** Langues vidées sans WPML (ou si WPML ne répond pas). */
+    private const LANGUES_PAR_DEFAUT = ['fr', 'en'];
+
+    /** Valeurs de « Qui organise ». */
+    public const ORGANISE_PAR = ['rsn', 'partenaires', 'ecosysteme'];
 
     /** Clés d'une fiche montrées au public, dans cet ordre. Tout le reste (clés de source, courriel, absences…) est privé. */
     private const CLES_PUBLIQUES = [
         'id', 'type', 'titre', 'debut', 'fin', 'heure', 'organisateur', 'categorie_rsn', 'lieu', 'ville', 'region',
         'format', 'prix', 'langue', 'themes', 'resume', 'url', 'image_url', 'statut', 'categorie', 'echeance',
+        'organise_par',
     ];
 
     /** Clés ajoutées pour l'équipe seulement : source technique et niveau de fiabilité. */
@@ -47,6 +54,9 @@ final class Donnees {
             foreach ($cles as $cle) {
                 $item[$cle] = $element[$cle] ?? null;
             }
+            $item['organise_par'] = in_array($element['organise_par'] ?? null, self::ORGANISE_PAR, true)
+                ? $element['organise_par']
+                : self::organise_par((string) ($element['categorie_rsn'] ?? ''));
             $items[] = $item;
         }
         $derniere = get_option(Collecte::OPTION_DERNIERE, 0);
@@ -86,12 +96,17 @@ final class Donnees {
             if ($rsn->titre === '' || $rsn->debut === null) {
                 continue;
             }
+            $tableau = $rsn->vers_tableau();
+            // « Qui organise » déjà établi par EvenementsRsn (catégorie TEC lue par son slug).
+            if (in_array($brut['organise_par'] ?? null, self::ORGANISE_PAR, true)) {
+                $tableau['organise_par'] = $brut['organise_par'];
+            }
             $position = $positions[$rsn->cle_dedoublonnage()] ?? null;
             if ($position === null) {
-                $evenements[] = $rsn->vers_tableau();
+                $evenements[] = $tableau;
             } elseif ((string) $evenements[$position]['image_url'] === '') {
                 // Doublon : la fiche collectée gagne si elle a une image, sinon l'événement du RSN.
-                $evenements[$position] = $rsn->vers_tableau();
+                $evenements[$position] = $tableau;
             }
         }
 
@@ -108,19 +123,55 @@ final class Donnees {
      * @return array{genere_le: string, sources: array<int,array<string,mixed>>, items: array<int,array<string,mixed>>}
      */
     public static function en_cache(): array {
-        $donnees = get_transient(self::TRANSIENT);
+        $cle = self::transient(self::TRANSIENT);
+        $donnees = get_transient($cle);
         if (is_array($donnees) && isset($donnees['items'], $donnees['sources'], $donnees['genere_le'])) {
             return $donnees;
         }
         $donnees = self::construire(\rsn_veille_aujourdhui(), new EntrepotWordPress(), EvenementsRsn::lire());
-        set_transient(self::TRANSIENT, $donnees, HOUR_IN_SECONDS);
+        set_transient($cle, $donnees, HOUR_IN_SECONDS);
         return $donnees;
     }
 
-    /** Vide les caches publics (JSON et iCal) : collecte terminée, fiche modifiée, événement du RSN modifié. */
+    /** Nom du transient pour la langue courante (WPML), « {base}_fr » sans WPML. */
+    public static function transient(string $base, ?string $langue = null): string {
+        $langue ??= apply_filters('wpml_current_language', null);
+        $langue = is_string($langue) && $langue !== '' && $langue !== 'all' ? sanitize_key($langue) : 'fr';
+        return $base . '_' . $langue;
+    }
+
+    /**
+     * Langues dont les caches sont vidés : celles de WPML, sinon français et anglais.
+     *
+     * @return string[]
+     */
+    public static function langues(): array {
+        $actives = apply_filters('wpml_active_languages', null);
+        $langues = is_array($actives) ? array_map('strval', array_keys($actives)) : [];
+        return array_values(array_unique(array_merge($langues === [] ? self::LANGUES_PAR_DEFAUT : $langues, ['fr'])));
+    }
+
+    /** Vide les caches publics (JSON et iCal) de chaque langue : collecte terminée, fiche modifiée, événement du RSN modifié. */
     public static function vider_cache(): void {
-        delete_transient(self::TRANSIENT);
-        delete_transient(Ical::TRANSIENT);
+        foreach (self::langues() as $langue) {
+            delete_transient(self::transient(self::TRANSIENT, $langue));
+            delete_transient(self::transient(Ical::TRANSIENT, $langue));
+        }
+    }
+
+    /**
+     * « Qui organise » d'après le nom (ou le slug) de la catégorie du site : RSN, partenaires, sinon écosystème.
+     */
+    public static function organise_par(string $categorie): string {
+        $slug = strtr(mb_strtolower(trim($categorie)), ['é' => 'e', 'è' => 'e', 'ê' => 'e', 'à' => 'a', 'â' => 'a', 'ô' => 'o', 'î' => 'i', 'ç' => 'c']);
+        $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', $slug), '-');
+        if (str_starts_with($slug, 'evenements-rsn') || str_starts_with($slug, 'rsn-events')) {
+            return 'rsn';
+        }
+        if (str_starts_with($slug, 'evenements-partenaires') || str_starts_with($slug, 'partner-events')) {
+            return 'partenaires';
+        }
+        return 'ecosysteme';
     }
 
     /**

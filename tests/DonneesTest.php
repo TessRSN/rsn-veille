@@ -88,7 +88,7 @@ final class DonneesTest extends TestCase {
         $this->entrepot->creer($this->fiche(['themes' => ['IA', 'Éthique'], 'image_url' => 'https://www.obvia.ca/i.jpg']));
         $item = Donnees::construire('2026-10-25', $this->entrepot, [])['items'][0];
         $attendues = ['id', 'type', 'titre', 'debut', 'fin', 'heure', 'organisateur', 'categorie_rsn', 'lieu', 'ville', 'region',
-            'format', 'prix', 'langue', 'themes', 'resume', 'url', 'image_url', 'statut', 'categorie', 'echeance'];
+            'format', 'prix', 'langue', 'themes', 'resume', 'url', 'image_url', 'statut', 'categorie', 'echeance', 'organise_par'];
         $this->assertSame($attendues, array_keys($item));
         $this->assertSame(['IA', 'Éthique'], $item['themes']);
         $this->assertSame('https://www.obvia.ca/i.jpg', $item['image_url']);
@@ -174,6 +174,38 @@ final class DonneesTest extends TestCase {
         $this->assertSame('2026-10-25', Donnees::construire('2026-10-25', $this->entrepot, [])['genere_le']);
         update_option('rsn_veille_derniere_collecte', 1793000000);
         $this->assertSame(wp_date('c', 1793000000), Donnees::construire('2026-10-25', $this->entrepot, [])['genere_le']);
+    }
+
+    public function test_qui_organise_calcule_d_apres_la_categorie(): void {
+        $this->entrepot->creer($this->fiche(['titre' => 'A', 'categorie_rsn' => 'Événements RSN', 'cle_source' => 'x:1']));
+        $this->entrepot->creer($this->fiche(['titre' => 'B', 'categorie_rsn' => 'Événements partenaires', 'cle_source' => 'x:2']));
+        $this->entrepot->creer($this->fiche(['titre' => 'C', 'categorie_rsn' => 'Écosystème numérique', 'cle_source' => 'x:3']));
+        $this->entrepot->creer($this->fiche(['titre' => 'D', 'categorie_rsn' => '', 'cle_source' => 'x:4']));
+        $this->entrepot->creer($this->fiche(['titre' => 'E', 'categorie_rsn' => 'RSN Events', 'cle_source' => 'x:5']));
+        $items = array_column(Donnees::construire('2026-10-25', $this->entrepot, [])['items'], 'organise_par', 'titre');
+        $this->assertSame(['A' => 'rsn', 'B' => 'partenaires', 'C' => 'ecosysteme', 'D' => 'ecosysteme', 'E' => 'rsn'], $items);
+    }
+
+    public function test_qui_organise_fourni_par_evenements_rsn_garde(): void {
+        // Catégorie reconnue par son slug dans TEC : le nom (traduit, renommé) ne compte plus.
+        $items = Donnees::construire('2026-10-25', $this->entrepot, [$this->evenement_rsn(['categorie_rsn' => 'Partner events', 'organise_par' => 'partenaires'])])['items'];
+        $this->assertSame('partenaires', $items[0]['organise_par']);
+        $items = Donnees::construire('2026-10-25', $this->entrepot, [$this->evenement_rsn(['organise_par' => 'inconnu'])])['items'];
+        $this->assertSame('rsn', $items[0]['organise_par'], 'valeur invalide : recalculée depuis la catégorie');
+    }
+
+    public function test_slugs_de_categorie(): void {
+        $this->assertSame('rsn', Donnees::organise_par('evenements-rsn'));
+        $this->assertSame('rsn', Donnees::organise_par('evenements-rsn-en'));
+        $this->assertSame('partenaires', Donnees::organise_par('evenements-partenaires'));
+        $this->assertSame('ecosysteme', Donnees::organise_par('ecosysteme-numerique'));
+    }
+
+    public function test_transients_par_langue(): void {
+        $this->assertSame('rsn_veille_json_fr', Donnees::transient(Donnees::TRANSIENT));
+        add_filter('wpml_current_language', static fn() => 'en');
+        $this->assertSame('rsn_veille_json_en', Donnees::transient(Donnees::TRANSIENT));
+        $this->assertSame('rsn_veille_ics_fr', Donnees::transient('rsn_veille_ics', 'fr'));
     }
 
     public function test_evenement_rsn_partiel_complete_par_les_valeurs_de_fiche(): void {

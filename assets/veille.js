@@ -3,16 +3,21 @@
  * Repris du JS de docs/maquette/gabarit-v6.1.html, réduit aux parties publiques : filtres, mois (avec
  * « Plus tard » et « Événements passés »), thèmes repliés, liste et calendrier, glissement, formulaire.
  * Les actions de l'équipe (publier, écarter, infolettre) vivent dans wp-admin.
- * Données : <script type="application/json" id="rsn-veille-donnees"> ; textes : #rsn-veille-textes.
+ * Données : <script type="application/json" id="rsn-veille-donnees" data-rsn-veille-donnees> (suffixé
+ * « -2 », « -3 »… si le raccourci figure plusieurs fois) ; textes : [data-rsn-veille-textes] du même bloc.
+ * Chaque bloc .rsn-veille est animé à partir de son nœud de données, indépendamment des autres.
  */
 (function () {
   'use strict';
-  const racine = document.querySelector('.rsn-veille');
-  const noeudDonnees = document.getElementById('rsn-veille-donnees');
-  if (!racine || !noeudDonnees) return;
+  document.querySelectorAll('script[data-rsn-veille-donnees]').forEach(noeud => {
+    const racine = noeud.closest('.rsn-veille');
+    if (racine) animer(racine, noeud);
+  });
+
+function animer(racine, noeudDonnees) {
   let D, T;
   try { D = JSON.parse(noeudDonnees.textContent); } catch (e) { return; }
-  try { T = JSON.parse((document.getElementById('rsn-veille-textes') || {}).textContent || '{}'); } catch (e) { T = {}; }
+  try { T = JSON.parse((racine.querySelector('script[data-rsn-veille-textes]') || {}).textContent || '{}'); } catch (e) { T = {}; }
 
   const pad = n => String(n).padStart(2, '0');
   const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -35,9 +40,14 @@
   let onglet = racine.dataset.section === 'appels' ? 'appels' : 'agenda';
   const filtres = { mois: '', qui: '', format: '', region: '', theme: '', orga: '', q: '' };
 
-  // Textes : « %d » reçoit le nombre, chaque « %s » la valeur suivante ; pluriel à la française (2 et plus).
-  const t = (cle, ...valeurs) => { let s = String(T[cle] !== undefined ? T[cle] : cle); for (const v of valeurs) s = s.replace('%s', v); return s; };
-  const n = (cle, nombre, ...valeurs) => { const f = Array.isArray(T[cle]) ? T[cle] : [cle, cle]; let s = String(f[nombre > 1 ? 1 : 0]).replace('%d', nombre); for (const v of valeurs) s = s.replace('%s', v); return s; };
+  // Textes : « %d » reçoit le nombre, « %1$s », « %2$s »… la valeur de ce rang (l'ordre peut changer à la
+  // traduction), un « %s » simple la valeur suivante ; pluriel à la française (2 et plus).
+  const remplir = (modele, valeurs) => {
+    let i = 0;
+    return String(modele).replace(/%(\d+)\$s|%s/g, (m, rang) => { const v = rang ? valeurs[rang - 1] : valeurs[i++]; return v === undefined ? '' : String(v); });
+  };
+  const t = (cle, ...valeurs) => remplir(T[cle] !== undefined ? T[cle] : cle, valeurs);
+  const n = (cle, nombre, ...valeurs) => { const f = Array.isArray(T[cle]) ? T[cle] : [cle, cle]; return remplir(String(f[nombre > 1 ? 1 : 0]).replace('%d', nombre), valeurs); };
   const d = s => { const [a, m, j] = String(s || '').split('-').map(Number); return { a, m, j }; };
   const cap = s => s ? s[0].toUpperCase() + s.slice(1) : '';
   const premier = j => j === 1 ? t('premier_du_mois') : j;
@@ -47,8 +57,8 @@
   // Liens et images : http(s) seulement.
   const lien = u => /^https?:\/\//i.test(String(u || '')) ? esc(u) : '#';
   const lieuTexte = k => [k.lieu, k.ville].filter(Boolean).filter((v, i, l) => l.indexOf(v) === i).join(' – ');
-  // Qui organise, d'après la catégorie du site.
-  const qui = k => k.categorie_rsn === 'Événements RSN' ? 'rsn' : k.categorie_rsn === 'Événements partenaires' ? 'partenaires' : 'ecosysteme';
+  // Qui organise : calculé côté serveur (Donnees, d'après la catégorie du site).
+  const qui = k => ['rsn', 'partenaires', 'ecosysteme'].includes(k.organise_par) ? k.organise_par : 'ecosysteme';
   const estRSN = k => qui(k) === 'rsn';
   const libelle = (groupe, v) => (T[groupe] && T[groupe][v]) || v;
 
@@ -295,4 +305,5 @@
   }
 
   rendreSources(); tout();
+}
 })();

@@ -34,7 +34,7 @@ final class RaccourciTest extends TestCase {
 
     /** Le JSON incorporé dans #rsn-veille-donnees, décodé. */
     private function donnees_incorporees(string $html): array {
-        $this->assertSame(1, preg_match('#<script type="application/json" id="rsn-veille-donnees">(.*?)</script>#s', $html, $m));
+        $this->assertSame(1, preg_match('#<script type="application/json" id="rsn-veille-donnees" data-rsn-veille-donnees>(.*?)</script>#s', $html, $m));
         $donnees = json_decode($m[1], true, 512, JSON_THROW_ON_ERROR);
         $this->assertIsArray($donnees);
         return $donnees;
@@ -44,7 +44,8 @@ final class RaccourciTest extends TestCase {
         $this->publier();
         $html = do_shortcode('[rsn_veille]');
 
-        $this->assertStringStartsWith('<main class="rsn-veille" data-section="tout">', trim($html));
+        $this->assertStringStartsWith('<div class="rsn-veille" role="region" aria-label="Veille de l&#039;écosystème" data-section="tout">', trim($html));
+        $this->assertStringNotContainsString('<main', $html, 'le gabarit du site a déjà son <main>');
         $donnees = $this->donnees_incorporees($html);
         $this->assertSame(['genere_le', 'sources', 'items'], array_keys($donnees));
         $this->assertCount(1, $donnees['items']);
@@ -62,7 +63,8 @@ final class RaccourciTest extends TestCase {
         $this->assertStringContainsString('id="vue-appels" hidden', $html);
         $this->assertStringContainsString('id="tbl-sources"', $html);
         $textes = [];
-        $this->assertSame(1, preg_match('#<script type="application/json" id="rsn-veille-textes">(.*?)</script>#s', $html, $textes));
+        $this->assertSame(1, preg_match('#<script type="application/json" id="rsn-veille-textes" data-rsn-veille-textes>(.*?)</script>#s', $html, $textes));
+        $this->assertStringContainsString('<h2>Proposer un événement</h2>', $html);
         $this->assertSame('Envoi non encore branché.', json_decode($textes[1], true)['envoi_non_branche']);
     }
 
@@ -80,7 +82,7 @@ final class RaccourciTest extends TestCase {
     public function test_json_incorpore_echappe(): void {
         // Données telles qu'elles sortiraient d'une source mal nettoyée (le cache court-circuite l'entrepôt).
         $titre = 'Atelier </script><script>alert(1)</script> & « IA »';
-        set_transient(Donnees::TRANSIENT, ['genere_le' => '2026-10-25', 'sources' => [], 'items' => [
+        set_transient('rsn_veille_json_fr', ['genere_le' => '2026-10-25', 'sources' => [], 'items' => [
             ['type' => 'evenement', 'titre' => $titre, 'debut' => '2026-11-12', 'url' => 'https://exemple.test/?a=1&b=2'],
         ]], 3600);
         $html = Raccourci::rendre([]);
@@ -114,9 +116,13 @@ final class RaccourciTest extends TestCase {
         $this->assertStringContainsString('data-section="tout"', Raccourci::rendre(['section' => '<b>inconnue</b>']));
     }
 
-    public function test_une_seule_fois_par_page(): void {
-        $this->assertNotSame('', Raccourci::rendre([]));
-        $this->assertSame('', Raccourci::rendre([]));
+    public function test_deux_raccourcis_dans_la_page_ont_des_noeuds_de_donnees_distincts(): void {
+        $premier = Raccourci::rendre(['section' => 'agenda']);
+        $second = Raccourci::rendre(['section' => 'appels']);
+        $this->assertStringContainsString('id="rsn-veille-donnees" data-rsn-veille-donnees', $premier);
+        $this->assertStringContainsString('id="rsn-veille-donnees-2" data-rsn-veille-donnees', $second);
+        $this->assertStringContainsString('id="rsn-veille-textes-2" data-rsn-veille-textes', $second);
+        $this->assertStringContainsString('<div id="vue-appels">', $second);
     }
 
     public function test_ressources_mises_en_file_au_rendu_sans_polices_par_defaut(): void {
@@ -172,24 +178,53 @@ final class RaccourciTest extends TestCase {
     public function test_json_en_cache_une_heure_et_vide_par_la_purge_et_la_collecte(): void {
         $this->publier();
         Raccourci::rendre([]);
-        $this->assertIsArray(get_transient(Donnees::TRANSIENT));
-        $this->assertGreaterThan(time() + 3500, $GLOBALS['rsn_veille_wp']['transients'][Donnees::TRANSIENT]['expire']);
+        $this->assertIsArray(get_transient('rsn_veille_json_fr'));
+        $this->assertGreaterThan(time() + 3500, $GLOBALS['rsn_veille_wp']['transients']['rsn_veille_json_fr']['expire']);
 
         // Nouvelle fiche : la purge (déclenchée par l'écriture) vide le cache.
         $this->publier(['titre' => 'Deuxième', 'cle_source' => 'obvia:43', 'cles_source' => ['obvia:43']]);
         do_action('rsn_veille_caches_purges');
-        $this->assertFalse(get_transient(Donnees::TRANSIENT));
+        $this->assertFalse(get_transient('rsn_veille_json_fr'));
         Raccourci::reinitialiser();
         $this->assertCount(2, $this->donnees_incorporees(Raccourci::rendre([]))['items']);
 
-        set_transient('rsn_veille_ics', 'BEGIN:VCALENDAR', 3600);
+        set_transient('rsn_veille_ics_fr', 'BEGIN:VCALENDAR', 3600);
         do_action('rsn_veille_apres_collecte');
-        $this->assertFalse(get_transient(Donnees::TRANSIENT));
-        $this->assertFalse(get_transient('rsn_veille_ics'));
+        $this->assertFalse(get_transient('rsn_veille_json_fr'));
+        $this->assertFalse(get_transient('rsn_veille_ics_fr'));
+    }
+
+    public function test_un_cache_par_langue_wpml_tous_vides(): void {
+        $langue = 'fr';
+        add_filter('wpml_current_language', static function () use (&$langue): string {
+            return $langue;
+        });
+        add_filter('wpml_active_languages', static fn() => ['fr' => ['code' => 'fr'], 'en' => ['code' => 'en']]);
+        $this->publier();
+        Raccourci::rendre([]);
+        $langue = 'en';
+        Raccourci::rendre([]);
+        set_transient('rsn_veille_ics_en', 'BEGIN:VCALENDAR', 3600);
+        $this->assertIsArray(get_transient('rsn_veille_json_fr'));
+        $this->assertIsArray(get_transient('rsn_veille_json_en'));
+        $this->assertFalse(get_transient('rsn_veille_json'), 'jamais de transient commun');
+
+        do_action('rsn_veille_caches_purges');
+        foreach (['rsn_veille_json_fr', 'rsn_veille_json_en', 'rsn_veille_ics_en'] as $cle) {
+            $this->assertFalse(get_transient($cle), $cle);
+        }
+    }
+
+    public function test_sans_wpml_francais_et_anglais_vides(): void {
+        set_transient('rsn_veille_json_fr', ['x'], 3600);
+        set_transient('rsn_veille_json_en', ['x'], 3600);
+        Donnees::vider_cache();
+        $this->assertFalse(get_transient('rsn_veille_json_fr'));
+        $this->assertFalse(get_transient('rsn_veille_json_en'));
     }
 
     public function test_cache_relu_sans_reconstruire(): void {
-        set_transient(Donnees::TRANSIENT, ['genere_le' => '2026-10-01', 'sources' => [], 'items' => [['titre' => 'Depuis le cache']]], 3600);
+        set_transient('rsn_veille_json_fr', ['genere_le' => '2026-10-01', 'sources' => [], 'items' => [['titre' => 'Depuis le cache']]], 3600);
         $this->assertSame('Depuis le cache', $this->donnees_incorporees(Raccourci::rendre([]))['items'][0]['titre']);
     }
 }

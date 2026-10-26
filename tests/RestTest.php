@@ -55,6 +55,11 @@ final class RestTest extends TestCase {
         $this->assertSame(2, $GLOBALS['rsn_veille_wp']['regles_regenerees']);
     }
 
+    public function test_veille_ics_servi_avant_redirect_canonical(): void {
+        $crochets = $GLOBALS['rsn_veille_wp']['actions']['template_redirect'];
+        $this->assertSame(0, $crochets[0]['priorite']);
+    }
+
     public function test_hors_veille_ics_rien_n_est_servi(): void {
         ob_start();
         do_action('template_redirect');
@@ -73,7 +78,7 @@ final class RestTest extends TestCase {
         $ics = Rest::ics();
         $this->assertSame(1, substr_count($ics, 'BEGIN:VEVENT'));
         $this->assertStringContainsString('UID:' . md5('obvia:1') . '@rsn.quebec', $ics);
-        $this->assertSame($ics, get_transient('rsn_veille_ics'));
+        $this->assertSame($ics, get_transient('rsn_veille_ics_fr'));
     }
 
     public function test_sans_the_events_calendar_aucun_evenement_rsn(): void {

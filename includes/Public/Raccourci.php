@@ -28,8 +28,8 @@ final class Raccourci {
 
     private const HEX = '<svg class="hex" viewBox="0 0 24 26" aria-hidden="true"><path d="M12 2 21.5 7.5v11L12 24 2.5 18.5v-11Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg>';
 
-    /** Vrai une fois la page rendue : ses identifiants (#rsn-veille-donnees…) sont uniques dans la page. */
-    private static bool $rendu = false;
+    /** Rendus dans la requête : le deuxième raccourci de la page reçoit #rsn-veille-donnees-2, etc. */
+    private static int $rendus = 0;
 
     /** Accroche le raccourci, les ressources et l'invalidation des caches publics. */
     public static function accrocher(): void {
@@ -74,11 +74,8 @@ final class Raccourci {
      * @param array<string,mixed>|string $attributs
      */
     public static function rendre(mixed $attributs = []): string {
-        if (self::$rendu) {
-            // Une seule page de veille par page : les identifiants du gabarit seraient en double.
-            return '';
-        }
-        self::$rendu = true;
+        self::$rendus++;
+        $suffixe = self::$rendus > 1 ? '-' . self::$rendus : '';
         $attributs = shortcode_atts(['section' => 'tout'], is_array($attributs) ? $attributs : [], self::NOM);
         $section = strtolower(trim((string) $attributs['section']));
         if (!in_array($section, self::SECTIONS, true)) {
@@ -100,13 +97,14 @@ final class Raccourci {
         return is_string($json) ? $json : '{}';
     }
 
-    /** Pour les tests : permet un nouveau rendu dans la même requête. */
+    /** Pour les tests : remet le compteur de rendus à zéro. */
     public static function reinitialiser(): void {
-        self::$rendu = false;
+        self::$rendus = 0;
     }
 
     /**
-     * Textes du JS, traduisibles. Pluriels : [singulier, pluriel] ; « %d » reçoit le nombre, « %s » les valeurs.
+     * Textes du JS, traduisibles. Pluriels : [singulier, pluriel] ; « %d » reçoit le nombre, « %1$s », « %2$s »… (ou « %s »)
+     * les valeurs.
      *
      * @return array<string,mixed>
      */
@@ -121,9 +119,9 @@ final class Raccourci {
             /* translators: premier jour du mois, dans une date (« 1er novembre »). */
             'premier_du_mois' => __('1er', 'rsn-veille'),
             /* translators: 1 : jour de début, 2 : jour de fin, 3 : mois, 4 : année. */
-            'du_au_meme_mois' => __('Du %s au %s %s %s', 'rsn-veille'),
+            'du_au_meme_mois' => __('Du %1$s au %2$s %3$s %4$s', 'rsn-veille'),
             /* translators: 1 : date de début, 2 : date de fin. */
-            'du_au' => __('Du %s au %s', 'rsn-veille'),
+            'du_au' => __('Du %1$s au %2$s', 'rsn-veille'),
             'en_anglais' => __('En anglais', 'rsn-veille'),
             'plus_info' => __("Plus d'information", 'rsn-veille'),
             'date_limite' => __('date limite', 'rsn-veille'),
@@ -167,7 +165,7 @@ final class Raccourci {
             /* translators: %s : date de la collecte. */
             'collecte_du' => __('collecte du %s', 'rsn-veille'),
             /* translators: 1 : date de la collecte, 2 : heure (« 3 h 05 »). */
-            'collecte_du_a' => __('collecte du %s à %s', 'rsn-veille'),
+            'collecte_du_a' => __('collecte du %1$s à %2$s', 'rsn-veille'),
             'envoi_non_branche' => __('Envoi non encore branché.', 'rsn-veille'),
         ];
     }

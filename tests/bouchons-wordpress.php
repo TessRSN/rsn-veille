@@ -112,7 +112,7 @@ if (!function_exists('sanitize_text_field')) {
 }
 
 function add_action(string $crochet, callable $rappel, int $priorite = 10, int $nb_arguments = 1): void {
-    $GLOBALS['rsn_veille_wp']['actions'][$crochet][] = ['rappel' => $rappel, 'nb_arguments' => $nb_arguments];
+    $GLOBALS['rsn_veille_wp']['actions'][$crochet][] = ['rappel' => $rappel, 'nb_arguments' => $nb_arguments, 'priorite' => $priorite];
 }
 
 /**

@@ -5,9 +5,13 @@
  * Actualités ni la copie pour l'infolettre (tout cela vit dans wp-admin).
  *
  * Variables : $section (tout|agenda|appels), $json_donnees et $json_textes (JSON déjà échappé pour
- * un <script>, voir Raccourci::json), $hex (hexagone SVG).
+ * un <script>, voir Raccourci::json), $hex (hexagone SVG), $suffixe (« » au premier rendu de la page,
+ * « -2 » au deuxième… : identifiants des nœuds de données uniques).
+ *
+ * Conteneur <div role="region"> et non <main> : le gabarit du site a déjà le sien.
  *
  * @var string $section
+ * @var string $suffixe
  * @var string $json_donnees
  * @var string $json_textes
  * @var string $hex
@@ -22,7 +26,7 @@ $avec_appels = $section !== 'agenda';
 $avec_onglets = $section === 'tout';
 $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12 12 4M6 4h6v6"/></svg>';
 ?>
-<main class="rsn-veille" data-section="<?php echo esc_attr($section); ?>"><div class="wrap">
+<div class="rsn-veille" role="region" aria-label="<?php echo esc_attr__("Veille de l'écosystème", 'rsn-veille'); ?>" data-section="<?php echo esc_attr($section); ?>"><div class="wrap">
 <?php if ($avec_agenda) : ?>
   <div class="intro">
     <p><?php echo esc_html__("Les événements et les appels en santé numérique au Québec, ceux du RSN comme ceux de ses partenaires et de l'écosystème : réseaux thématiques du FRQ, IVADO, Obvia, Mila, universités et organismes publics, rassemblés automatiquement à partir de leurs flux.", 'rsn-veille'); ?></p>
@@ -32,7 +36,7 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
   </div>
 
   <section class="encadre" id="dialogue" hidden>
-    <h2><?php echo esc_html__('Proposer un événement ou une nouvelle', 'rsn-veille'); ?></h2>
+    <h2><?php echo esc_html__('Proposer un événement', 'rsn-veille'); ?></h2>
     <p><?php echo esc_html__("Votre proposition entre dans la file d'approbation de l'équipe du RSN. Elle sera publiée ici et, si elle s'y prête, reprise dans l'infolettre.", 'rsn-veille'); ?></p>
     <form id="form-proposition">
       <div class="champs">
@@ -117,6 +121,6 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
   </section>
 <?php endif; ?>
 </div>
-<script type="application/json" id="rsn-veille-donnees"><?php echo $json_donnees; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON échappé (JSON_HEX_TAG | JSON_HEX_AMP). ?></script>
-<script type="application/json" id="rsn-veille-textes"><?php echo $json_textes; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON échappé (JSON_HEX_TAG | JSON_HEX_AMP). ?></script>
-</main>
+<script type="application/json" id="rsn-veille-donnees<?php echo esc_attr($suffixe); ?>" data-rsn-veille-donnees><?php echo $json_donnees; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON échappé (JSON_HEX_TAG | JSON_HEX_AMP). ?></script>
+<script type="application/json" id="rsn-veille-textes<?php echo esc_attr($suffixe); ?>" data-rsn-veille-textes><?php echo $json_textes; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON échappé (JSON_HEX_TAG | JSON_HEX_AMP). ?></script>
+</div>

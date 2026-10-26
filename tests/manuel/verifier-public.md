@@ -30,15 +30,16 @@ WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se lancent par `n
 - [ ] Style conforme à la maquette v6.1 : titres de mois en DM Serif Display avec hexagone et trait
       #3D6A99 qui continue, frise à hexagones, fiches sans contour, image à gauche étirée à la hauteur
       du texte, bloc date serif, thèmes en petites capitales, « Plus d'information » souligné de jaune.
-- [ ] Qui organise : RSN ne garde que la catégorie « Événements RSN », Partenaires « Événements
-      partenaires », Écosystème le reste ; un second clic retire le filtre.
+- [ ] Qui organise : RSN ne garde que la catégorie TEC de slug `evenements-rsn` (ou nommée « Événements
+      RSN »), Partenaires `evenements-partenaires`, Écosystème le reste ; un second clic retire le
+      filtre. Renommer la catégorie dans TEC sans changer son slug ne change rien.
 - [ ] « Événements passés » : lignes compactes sans image, du plus récent au plus ancien, compteur
       « N événements passés depuis {mois année} ».
 - [ ] Calendrier : grille lundi → dimanche, flèches, Aujourd'hui, flèches du clavier sur la grille,
       glissement tactile (mobile), événements RSN en jaune, clic sur un jour → fiches dessous.
 - [ ] Appels : triés par date limite, tuile jaune (date limite) ou grise (publication) ; un appel dont
       l'échéance est passée n'apparaît plus.
-- [ ] « Proposer un événement » ouvre le formulaire, « Annuler » le ferme, « Envoyer » affiche
+- [ ] « Proposer un événement » ouvre le formulaire (titre « Proposer un événement »), « Annuler » le ferme, « Envoyer » affiche
       « Envoi non encore branché. » sans créer de fiche (`wp post list --post_type=rsn_veille` inchangé).
 - [ ] Le titre piégé s'affiche en texte (aucune alerte) ; dans le code source, le JSON de
       `#rsn-veille-donnees` contient `</script>` et `&`.
@@ -46,9 +47,12 @@ WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se lancent par `n
 - [ ] Largeur mobile (375 px, outils de développement) : aucun défilement horizontal
       (`document.documentElement.scrollWidth === innerWidth`), image en bannière au-dessus du texte,
       colonne de filtres au-dessus de la liste, points de couleur dans le calendrier.
-- [ ] Bureau : la colonne de filtres reste collante et défile seule quand elle dépasse la fenêtre.
+- [ ] Bureau : la colonne de filtres reste collante, sans barre de défilement (4 mois, Plus tard,
+      thèmes repliés la gardent courte).
 - [ ] `[rsn_veille section="agenda"]` : agenda seul (sans onglets, appels ni sources) ;
-      `[rsn_veille section="appels"]` : appels seuls.
+      `[rsn_veille section="appels"]` : appels seuls. Les deux sur la même page : chacun fonctionne
+      (nœuds `#rsn-veille-donnees` et `#rsn-veille-donnees-2`).
+- [ ] Le bloc est un `<div class="rsn-veille" role="region">` : la page n'a qu'un seul `<main>` (celui du thème).
 
 ## Ressources et cohabitation
 
@@ -61,8 +65,10 @@ WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se lancent par `n
       boutons, titres et liens de la veille ne prennent pas les styles du kit Elementor ni d'UiCore
       (majuscules, fonds, couleurs) ; l'éditeur Elementor s'ouvre sans erreur.
 - [ ] Cache : publier une fiche dans la file d'approbation puis recharger la page Veille (hors
-      connexion) → la fiche apparaît (transient `rsn_veille_json` vidé, page LiteSpeed et cache
-      Elementor purgés) ; `wp transient get rsn_veille_json` est vide juste après.
+      connexion) → la fiche apparaît (transient `rsn_veille_json_fr` vidé, page LiteSpeed et cache
+      Elementor purgés) ; `wp transient get rsn_veille_json_fr` est vide juste après.
+- [ ] WPML : la page en anglais remplit `rsn_veille_json_en`, distinct de `rsn_veille_json_fr` ;
+      une purge vide les deux.
 - [ ] Modifier un événement TEC → la page Veille montre la modification au rechargement.
 
 ## REST et iCal
@@ -70,7 +76,7 @@ WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se lancent par `n
 - [ ] `curl -i http://localhost:8888/wp-json/rsn/v1/veille` : 200, `Cache-Control: public, max-age=3600`,
       JSON `{genere_le, sources, items}` sans `niveau`, `source`, `cle_source`, `cles_source`,
       `courriel_proposant`, `absences`, `manuel` ; les fiches à approuver absentes.
-- [ ] `curl -i http://localhost:8888/veille.ics` : 200, `Content-Type: text/calendar; charset=utf-8`,
+- [ ] `curl -i http://localhost:8888/veille.ics` : 200 sans redirection vers `/veille.ics/`, `Content-Type: text/calendar; charset=utf-8`,
       `Content-Disposition: inline; filename="veille.ics"`, fins de ligne CRLF (`curl -s … | od -c | head`).
 - [ ] Le fichier passe le validateur https://icalendar.org/validator.html.
 - [ ] Abonnement dans Google Agenda, Apple Calendrier ou Outlook (URL publique, ou import du fichier) :
