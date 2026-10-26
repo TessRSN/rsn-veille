@@ -108,8 +108,34 @@ final class PageFile {
         } catch (\RuntimeException $erreur) {
             return ['ok' => false, 'message' => __("Le changement de statut n'a pas pu être enregistré.", 'rsn-veille')];
         }
+        $fiches = $e->lister('');
+        if ($statut === 'ecarte') {
+            foreach ($fiches as $fiche) {
+                if ($fiche->id === $id && $fiche->est_proposition()) {
+                    self::retirer_image_proposee($e, $id);
+                    break;
+                }
+            }
+        }
         Collecte::purger_caches();
-        return ['ok' => true, 'statut' => $statut, 'compteurs' => self::compteurs($e->lister(''))];
+        return ['ok' => true, 'statut' => $statut, 'compteurs' => self::compteurs($fiches)];
+    }
+
+    /**
+     * Proposition du public écartée : son image (téléversée par un anonyme, publique à son adresse) est
+     * supprimée de la médiathèque, fichier compris, et la fiche n'a plus d'image.
+     */
+    private static function retirer_image_proposee(Entrepot $e, int $id): void {
+        $piece = (int) get_post_thumbnail_id($id);
+        if ($piece <= 0) {
+            return;
+        }
+        wp_delete_attachment($piece, true);
+        try {
+            $e->mettre_a_jour($id, ['image_url' => '']);
+        } catch (\RuntimeException $erreur) {
+            // L'image est supprimée ; l'adresse restée dans la fiche ne mène plus à rien.
+        }
     }
 
     /**

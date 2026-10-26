@@ -32,7 +32,8 @@
  * Formulaire public : `wp_salt` déterministe, `wp_check_filetype_and_ext` (extension parmi `mimes` et
  * type réel lu par finfo), `media_handle_upload` imité (appels notés dans `televersements`, échec forcé
  * par `televersement_erreur`), `set_post_thumbnail` (méta `_thumbnail_id`) et
- * `wp_get_attachment_image_url`. La vérification de référence est la section Formulaire de
+ * `wp_get_attachment_image_url`, `get_post_thumbnail_id` et `wp_delete_attachment` (noté dans
+ * `pieces_supprimees`, métas `_thumbnail_id` retirées). La vérification de référence est la section Formulaire de
  * `tests/manuel/verifier-public.md`.
  *
  * Chargé seulement par les tests qui en ont besoin (`require_once` en tête du fichier de test),
@@ -343,8 +344,12 @@ function taxonomy_exists(string $taxonomie): bool {
     return isset($GLOBALS['rsn_veille_wp']['taxonomies'][$taxonomie]);
 }
 
-function wp_generate_password(int $longueur): string {
-    return substr(md5((string) mt_rand()), 0, $longueur);
+function wp_generate_password(int $longueur = 12, bool $speciaux = true, bool $extra = false): string {
+    $texte = '';
+    while (strlen($texte) < $longueur) {
+        $texte .= md5((string) mt_rand());
+    }
+    return substr($texte, 0, $longueur);
 }
 
 function wp_check_invalid_utf8(string $texte): string {
@@ -959,4 +964,24 @@ function set_post_thumbnail(int $article, int $piece): int|bool {
 
 function wp_get_attachment_image_url(int $piece, string $taille = 'thumbnail'): string|false {
     return isset($GLOBALS['rsn_veille_wp']['posts'][$piece]) ? 'https://exemple.test/wp-content/uploads/' . $piece . '-' . $taille . '.png' : false;
+}
+
+function get_post_thumbnail_id(int $article): int|false {
+    return isset($GLOBALS['rsn_veille_wp']['posts'][$article]) ? (int) get_post_meta($article, '_thumbnail_id', true) : false;
+}
+
+/** Comme WordPress : supprime la pièce jointe et les métas `_thumbnail_id` qui la désignent ; noté dans `pieces_supprimees`. */
+function wp_delete_attachment(int $piece, bool $definitif = false): WP_Post|false|null {
+    $post = get_post($piece);
+    if ($post === null || $post->post_type !== 'attachment') {
+        return false;
+    }
+    foreach ($GLOBALS['rsn_veille_wp']['meta'] as $id => $metas) {
+        if (isset($metas['_thumbnail_id']) && (int) get_post_meta((int) $id, '_thumbnail_id', true) === $piece) {
+            delete_post_meta((int) $id, '_thumbnail_id');
+        }
+    }
+    unset($GLOBALS['rsn_veille_wp']['posts'][$piece], $GLOBALS['rsn_veille_wp']['meta'][$piece]);
+    $GLOBALS['rsn_veille_wp']['pieces_supprimees'][] = ['id' => $piece, 'definitif' => $definitif];
+    return $post;
 }

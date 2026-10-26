@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace RSN\Veille\Public;
 
-use RSN\Veille\Depot;
 use RSN\Veille\EntrepotWordPress;
 use RSN\Veille\Fiche;
 use RSN\Veille\Pertinence;
@@ -32,11 +31,17 @@ final class Formulaire {
 
     public const PREFIXE_DEBIT = 'rsn_veille_debit_';
     public const ENVOIS_PAR_HEURE = 5;
+    /** Plafond de tout le site : propositions valides par heure, toutes adresses confondues. */
+    public const CLE_DEBIT_GLOBAL = 'rsn_veille_debit_global';
+    public const PROPOSITIONS_PAR_HEURE = 30;
     private const FENETRE = 3600;
 
     /** Types d'image permis (clés au format de WordPress, pour `mimes`). */
     public const MIMES = ['jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'];
     public const TAILLE_MAX = 3 * 1024 * 1024;
+    /** Dimensions maximales d'une image (une petite image compressée peut se décompresser en gigaoctets). */
+    public const PIXELS_MAX = 25000000;
+    public const COTE_MAX = 8000;
 
     private const META_COURRIEL = TypeContenu::PREFIXE . 'courriel_proposant';
 
@@ -119,25 +124,26 @@ final class Formulaire {
         $fiche->resume = $resume;
         $fiche->langue = 'fr';
         $fiche->themes = (new Pertinence())->themes($titre . ' ' . $resume);
-        $fiche->source = 'proposition';
+        $fiche->source = Fiche::SOURCE_PROPOSITION;
         $fiche->niveau = 'M';
         $fiche->statut = 'a_approuver';
         $fiche->cle_source = 'proposition:' . uniqid('', true);
         $fiche->cles_source = [$fiche->cle_source];
+        $fiche->titres_source = [$fiche->cle_source => $titre];
         return ['fiche' => $fiche, 'erreurs' => [], 'courriel' => $courriel];
     }
 
     /**
-     * Compte un envoi pour cette clé et dit si la limite est dépassée (le refus n'est pas compté).
-     * Fenêtre fixe d'une heure à partir du premier envoi.
+     * Compte un envoi pour cette clé et dit si la limite ($max par heure) est dépassée (le refus n'est
+     * pas compté). Fenêtre fixe d'une heure à partir du premier envoi.
      */
-    public static function debit_depasse(string $cle): bool {
+    public static function debit_depasse(string $cle, int $max = self::ENVOIS_PAR_HEURE): bool {
         $maintenant = time();
         $etat = get_transient($cle);
         if (!is_array($etat) || !isset($etat['n'], $etat['debut']) || (int) $etat['debut'] + self::FENETRE <= $maintenant) {
             $etat = ['n' => 0, 'debut' => $maintenant];
         }
-        if ((int) $etat['n'] >= self::ENVOIS_PAR_HEURE) {
+        if ((int) $etat['n'] >= $max) {
             return true;
         }
         $etat['n'] = (int) $etat['n'] + 1;
@@ -145,9 +151,28 @@ final class Formulaire {
         return false;
     }
 
-    /** Nom du transient de débit d'une adresse : l'adresse n'est jamais stockée en clair. */
+    /**
+     * Nom du transient de débit d'une adresse : l'adresse n'est jamais stockée en clair. Une IPv6 est
+     * ramenée à son préfixe /64 (un abonné en reçoit souvent un entier) ; une IPv4 en IPv6 (::ffff:a.b.c.d)
+     * à son IPv4.
+     */
     public static function cle_debit(string $adresse): string {
-        return self::PREFIXE_DEBIT . hash('sha256', $adresse . wp_salt('nonce'));
+        return self::PREFIXE_DEBIT . hash('sha256', self::reseau($adresse) . wp_salt('nonce'));
+    }
+
+    /** L'adresse telle qu'elle est comptée : IPv4 telle quelle, IPv6 réduite à son /64. */
+    public static function reseau(string $adresse): string {
+        if (filter_var($adresse, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) === false) {
+            return $adresse;
+        }
+        $octets = inet_pton($adresse);
+        if ($octets === false || strlen($octets) !== 16) {
+            return $adresse;
+        }
+        if (substr($octets, 0, 12) === str_repeat("\0", 10) . "\xff\xff") {
+            return (string) inet_ntop(substr($octets, 12));
+        }
+        return (string) inet_ntop(substr($octets, 0, 8) . str_repeat("\0", 8)) . '/64';
     }
 
     /**
@@ -188,6 +213,12 @@ final class Formulaire {
             wp_send_json_error(['ok' => false, 'erreurs' => $erreurs], 400);
             return;
         }
+        // Plafond de tout le site, compté sur les propositions valides seulement (un robot pris au piège
+        // ou un formulaire incomplet ne bloque pas les autres visiteurs).
+        if (self::debit_depasse(self::CLE_DEBIT_GLOBAL, self::PROPOSITIONS_PAR_HEURE)) {
+            wp_send_json_error(['ok' => false, 'message' => __('Trop de propositions, réessayez plus tard.', 'rsn-veille')], 429);
+            return;
+        }
 
         try {
             $deja = self::enregistrer($fiche, $resultat['courriel'], $image !== null);
@@ -205,25 +236,23 @@ final class Formulaire {
 
     /**
      * Crée la fiche, puis la méta du courriel et l'image. Rend vrai, sans rien écrire, si l'événement est
-     * déjà dans la veille (même date, même début de titre) : une proposition anonyme ne modifie jamais
-     * une fiche existante (pas de fusion qui lui donnerait ses dates ou son URL).
+     * déjà publié dans la veille (même date, même début de titre). Création directe, sans le dépôt : une
+     * proposition anonyme ne modifie jamais une fiche existante (pas de fusion qui lui donnerait ses
+     * dates ou son URL), et l'entrepôt ne lui écrit pas de clé de dédoublonnage (voir
+     * `Fiche::est_proposition`).
      */
     private static function enregistrer(Fiche $fiche, string $courriel, bool $avec_image): bool {
         $entrepot = new EntrepotWordPress();
-        if ($entrepot->trouver_par_dedoublonnage($fiche->cle_dedoublonnage()) !== null) {
+        $existante = $entrepot->trouver_par_dedoublonnage($fiche->cle_dedoublonnage());
+        if ($existante !== null && $existante->statut === 'publie') {
             return true;
         }
-        // Sans recherche par URL : une page d'agenda commune ne fait pas d'une proposition un doublon.
-        (new Depot($entrepot))->integrer($fiche, false);
-        $creee = $entrepot->trouver_par_cle_source($fiche->cle_source);
-        if ($creee === null || $creee->id === null) {
-            throw new \RuntimeException('Fiche introuvable après sa création.');
-        }
+        $id = $entrepot->creer($fiche);
         if ($courriel !== '') {
-            update_post_meta($creee->id, self::META_COURRIEL, wp_slash($courriel));
+            update_post_meta($id, self::META_COURRIEL, wp_slash($courriel));
         }
         if ($avec_image) {
-            self::attacher_image($creee->id, $entrepot);
+            self::attacher_image($id, $entrepot);
         }
         return false;
     }
@@ -262,6 +291,11 @@ final class Formulaire {
         if (!is_array($infos) || !in_array($infos['mime'] ?? '', self::MIMES, true)) {
             return $mauvais_type;
         }
+        $largeur = (int) ($infos[0] ?? 0);
+        $hauteur = (int) ($infos[1] ?? 0);
+        if ($largeur <= 0 || $hauteur <= 0 || $largeur > self::COTE_MAX || $hauteur > self::COTE_MAX || $largeur * $hauteur > self::PIXELS_MAX) {
+            return __('Image trop grande (8 000 pixels de côté au plus).', 'rsn-veille');
+        }
         return '';
     }
 
@@ -274,7 +308,11 @@ final class Formulaire {
         return $fichier;
     }
 
-    /** Téléverse `image` dans la médiathèque et en fait la vignette (et l'image) de la fiche. Un échec laisse la fiche sans image. */
+    /**
+     * Téléverse `image` dans la médiathèque, rattachée à la fiche (sa page de pièce jointe suit le statut
+     * `pending`), sous un nom aléatoire (adresse imprévisible), et en fait la vignette et l'image de la
+     * fiche. Un échec laisse la fiche sans image.
+     */
     private static function attacher_image(int $id, EntrepotWordPress $entrepot): void {
         if (!function_exists('media_handle_upload')) {
             require_once ABSPATH . 'wp-admin/includes/image.php';
@@ -282,7 +320,11 @@ final class Formulaire {
             require_once ABSPATH . 'wp-admin/includes/media.php';
         }
         // `mimes` : WordPress revérifie le type réel et refuse tout autre type que ces trois-là.
-        $piece = media_handle_upload('image', 0, [], ['test_form' => false, 'mimes' => self::MIMES]);
+        $piece = media_handle_upload('image', $id, [], [
+            'test_form' => false,
+            'mimes' => self::MIMES,
+            'unique_filename_callback' => [self::class, 'nom_aleatoire'],
+        ]);
         if (is_wp_error($piece)) {
             return;
         }
@@ -291,6 +333,18 @@ final class Formulaire {
         if (is_string($url) && $url !== '') {
             $entrepot->mettre_a_jour($id, ['image_url' => $url]);
         }
+    }
+
+    /**
+     * Rappel `unique_filename_callback` de WordPress ($extension avec son point, « .png ») : 20 lettres et
+     * chiffres aléatoires, extension en minuscules.
+     */
+    public static function nom_aleatoire(string $dossier, string $nom, string $extension): string {
+        $extension = strtolower($extension);
+        if (preg_match('/^\.(?:jpe?g|jpe|png|webp)$/', $extension) !== 1) {
+            $extension = '.jpg';
+        }
+        return wp_generate_password(20, false, false) . $extension;
     }
 
     private static function repondre_merci(): void {
@@ -315,9 +369,13 @@ final class Formulaire {
         }
     }
 
-    /** URL http(s) avec un hôte, sans espace ni caractère de balisage ; sinon ''. */
+    /** URL http(s) avec un hôte, sans identifiants (`@`), espace ni caractère de balisage ; sinon ''. */
     private static function url(string $url): string {
-        if (strlen($url) > 2000 || preg_match('#^https?://[^\s/?\#<>"\'`]+[^\s<>"\'`]*$#i', $url) !== 1) {
+        if (strlen($url) > 2000 || preg_match('#^https?://([^\s/?\#<>"\'`]+)[^\s<>"\'`]*$#i', $url, $m) !== 1) {
+            return '';
+        }
+        $hote = parse_url($url, PHP_URL_HOST);
+        if (str_contains($m[1], '@') || !is_string($hote) || trim($hote, '.[]:') === '') {
             return '';
         }
         return $url;

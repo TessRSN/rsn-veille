@@ -382,4 +382,45 @@ final class DepotTest extends TestCase {
         $this->assertSame('fusionne', $d->integrer($f));
         $this->assertCount(2, $e->lister(''));
     }
+
+    // --- Propositions du public : jamais cibles d'une fusion ---
+
+    private function proposition(string $statut): Fiche {
+        return $this->fiche([
+            'titre' => 'Colloque santé numérique', 'debut' => '2026-11-20', 'url' => 'https://proposant.example/page',
+            'source' => 'proposition', 'niveau' => 'M', 'statut' => $statut, 'cle_source' => 'proposition:abc',
+        ]);
+    }
+
+    public function test_fiche_collectee_apres_une_proposition_en_attente_creee_a_part(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $e->creer($this->proposition('a_approuver'));
+        $b = $this->fiche(['titre' => 'Colloque santé numérique', 'debut' => '2026-11-20', 'url' => 'https://proposant.example/page',
+            'source' => 'Obvia', 'niveau' => 'B', 'statut' => 'publie', 'cle_source' => 'obvia:1']);
+        $this->assertFalse($d->existe($b));
+        $this->assertSame('cree', $d->integrer($b));
+        $this->assertCount(2, $e->lister(''));
+        $proposition = $e->trouver_par_cle_source('proposition:abc');
+        $this->assertSame(['proposition', 'M', ['proposition:abc'], 'https://proposant.example/page'], [$proposition->source, $proposition->niveau, $proposition->cles_source, $proposition->url]);
+        $this->assertSame('Obvia', $e->trouver_par_cle_source('obvia:1')->source);
+    }
+
+    public function test_fiche_collectee_apres_une_proposition_ecartee_creee_et_publiee(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $e->creer($this->proposition('ecarte'));
+        $a = $this->fiche(['titre' => 'Colloque santé numérique', 'debut' => '2026-11-20', 'url' => 'https://rsn.quebec/colloque',
+            'source' => 'RSN', 'niveau' => 'A', 'statut' => 'publie', 'cle_source' => 'rsn:1']);
+        $this->assertSame('cree', $d->integrer($a));
+        $this->assertSame('publie', $e->trouver_par_cle_source('rsn:1')->statut);
+        $this->assertSame('ecarte', $e->trouver_par_cle_source('proposition:abc')->statut);
+        $this->assertCount(1, $e->lister('publie'));
+    }
+
+    public function test_une_fiche_collectee_fusionne_encore_avec_une_autre_fiche_collectee(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $e->creer($this->proposition('a_approuver'));
+        $d->integrer($this->fiche(['titre' => 'Colloque santé numérique', 'debut' => '2026-11-20', 'source' => 'Obvia', 'niveau' => 'B', 'statut' => 'publie', 'cle_source' => 'obvia:1']));
+        $this->assertSame('fusionne', $d->integrer($this->fiche(['titre' => 'Colloque santé numérique', 'debut' => '2026-11-20', 'source' => 'RSN', 'niveau' => 'A', 'statut' => 'publie', 'cle_source' => 'rsn:1'])));
+        $this->assertCount(2, $e->lister(''));
+    }
 }

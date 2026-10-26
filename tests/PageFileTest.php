@@ -307,4 +307,47 @@ final class PageFileTest extends TestCase {
         $this->assertStringContainsString('Aucune fiche', $vide);
         $this->assertStringContainsString('<option value="appel" selected>', $vide);
     }
+
+    // --- Image d'une proposition écartée ---
+
+    /** Fiche dans l'imitation de WordPress, avec une pièce jointe en vignette ; rend [entrepôt, id, pièce]. */
+    private static function fiche_avec_vignette(string $source): array {
+        $e = new EntrepotWordPress();
+        $f = self::fiche(['source' => $source, 'image_url' => 'https://exemple.test/wp-content/uploads/a.png']);
+        $f->id = null;
+        $id = $e->creer($f);
+        $piece = wp_insert_post(['post_type' => 'attachment', 'post_status' => 'inherit', 'post_title' => 'a.png']);
+        set_post_thumbnail($id, $piece);
+        return [$e, $id, $piece];
+    }
+
+    public function test_proposition_ecartee_perd_son_image(): void {
+        [$e, $id, $piece] = self::fiche_avec_vignette('proposition');
+        $this->assertTrue(PageFile::changer_statut($e, $id, 'ecarte')['ok']);
+        $this->assertSame([['id' => $piece, 'definitif' => true]], $GLOBALS['rsn_veille_wp']['pieces_supprimees']);
+        $this->assertNull(get_post($piece));
+        $this->assertSame(0, get_post_thumbnail_id($id));
+        $this->assertSame('', $e->obtenir($id)->image_url);
+        $this->assertSame('ecarte', $e->obtenir($id)->statut);
+    }
+
+    public function test_image_gardee_pour_une_fiche_collectee_ou_une_proposition_publiee(): void {
+        [$e, $id, $piece] = self::fiche_avec_vignette('Mila : événements');
+        PageFile::changer_statut($e, $id, 'ecarte');
+        [$e2, $id2, $piece2] = self::fiche_avec_vignette('proposition');
+        PageFile::changer_statut($e2, $id2, 'publie');
+        $this->assertSame([], $GLOBALS['rsn_veille_wp']['pieces_supprimees'] ?? []);
+        $this->assertSame($piece, get_post_thumbnail_id($id));
+        $this->assertSame($piece2, get_post_thumbnail_id($id2));
+        $this->assertNotSame('', $e2->obtenir($id2)->image_url);
+    }
+
+    public function test_proposition_ecartee_sans_image(): void {
+        $e = new EntrepotWordPress();
+        $f = self::fiche(['source' => 'proposition']);
+        $f->id = null;
+        $id = $e->creer($f);
+        $this->assertTrue(PageFile::changer_statut($e, $id, 'ecarte')['ok']);
+        $this->assertSame([], $GLOBALS['rsn_veille_wp']['pieces_supprimees'] ?? []);
+    }
 }

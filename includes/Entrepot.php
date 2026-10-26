@@ -14,7 +14,10 @@ interface Entrepot {
     /** La fiche dont `cles_source` contient cette clé, sinon null. */
     public function trouver_par_cle_source(string $cle): ?Fiche;
 
-    /** La fiche dont la clé de dédoublonnage (`Fiche::cle_dedoublonnage()`) vaut cette clé, sinon null. */
+    /**
+     * La fiche dont la clé de dédoublonnage (`Fiche::cle_dedoublonnage()`) vaut cette clé, sinon null.
+     * Les propositions du public (`Fiche::est_proposition()`) ne sont jamais rendues.
+     */
     public function trouver_par_dedoublonnage(string $cle): ?Fiche;
 
     /** La fiche qui a exactement cette URL d'information, sinon null (null aussi pour une URL vide). */

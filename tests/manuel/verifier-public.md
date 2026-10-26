@@ -96,6 +96,15 @@ débit : `wp transient list --search='rsn_veille_debit_*'` puis `wp transient de
       plus de 24 h, ou ESI activé), l'envoi réussit aussi.
 - [ ] Connecté comme administrateur : l'envoi fonctionne aussi (action `wp_ajax_rsn_veille_proposer`).
 - [ ] Mobile (375 px) : champs sur une colonne, aucun défilement horizontal, messages lisibles.
+- [ ] Image : le fichier de la médiathèque porte un nom aléatoire de 20 caractères (pas le nom
+      d'origine) et est « attaché à » la fiche ; sa page de pièce jointe n'est pas visible hors connexion
+      tant que la fiche est en attente. Une image de plus de 8 000 pixels de côté → « Image trop grande ».
+- [ ] Écarter la proposition dans la file : l'image disparaît de la médiathèque et son adresse répond
+      404 ; écarter une fiche collectée ne touche pas à son image.
+- [ ] Collecte après une proposition de même date et de même titre (`wp eval-file
+      tests/manuel/lancer-collecte.php`) : la fiche collectée est créée à part ; la proposition garde sa
+      source, son lien et ses dates.
+- [ ] Plafond du site : au-delà de 30 propositions valides dans l'heure (toutes adresses), refus 429.
 
 ## Ressources et cohabitation
 

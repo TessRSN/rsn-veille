@@ -42,6 +42,9 @@ final class Fiche {
         'œ' => 'oe', 'æ' => 'ae',
     ];
 
+    /** Source des fiches proposées par le public (formulaire de la page Veille). */
+    public const SOURCE_PROPOSITION = 'proposition';
+
     /** @var string evenement|appel|nouvelle */
     public string $type = '';
     public string $titre = '';
@@ -164,6 +167,14 @@ final class Fiche {
     public function cle_dedoublonnage(): string {
         $titre = preg_replace('/[^a-z0-9]/', '', self::simplifier($this->titre)) ?? '';
         return ($this->debut ?? '') . '|' . substr($titre, 0, 22);
+    }
+
+    /**
+     * Fiche proposée par le public : jamais cible du dédoublonnage (une collecte ne fusionne pas un vrai
+     * événement dans une proposition, qui garderait les dates et l'URL du proposant).
+     */
+    public function est_proposition(): bool {
+        return $this->source === self::SOURCE_PROPOSITION;
     }
 
     /**

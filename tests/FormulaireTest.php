@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/bouchons-wordpress.php';
 
 use PHPUnit\Framework\TestCase;
+use RSN\Veille\Depot;
 use RSN\Veille\EntrepotWordPress;
 use RSN\Veille\Fiche;
 use RSN\Veille\Public\Formulaire;
@@ -365,8 +366,13 @@ final class FormulaireTest extends TestCase {
         $televersements = $GLOBALS['rsn_veille_wp']['televersements'];
         $this->assertCount(1, $televersements);
         $this->assertSame('image', $televersements[0]['champ']);
-        $this->assertSame(0, $televersements[0]['parent']);
+        $this->assertSame($id, $televersements[0]['parent'], 'rattachée à la fiche (page de pièce jointe en attente)');
         $this->assertSame(['jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'], $televersements[0]['substitutions']['mimes']);
+        $this->assertFalse($televersements[0]['substitutions']['test_form']);
+        $rappel = $televersements[0]['substitutions']['unique_filename_callback'];
+        $nom = $rappel('/uploads/2026/10', 'affiche.png', '.png');
+        $this->assertMatchesRegularExpression('/^[a-z0-9]{20}\.png$/i', $nom);
+        $this->assertNotSame($nom, $rappel('/uploads/2026/10', 'affiche.png', '.png'), 'nom aléatoire à chaque appel');
         $piece = (int) get_post_meta($id, '_thumbnail_id', true);
         $this->assertSame($televersements[0]['id'], $piece);
         $this->assertSame(wp_get_attachment_image_url($piece, 'medium_large'), (new EntrepotWordPress())->obtenir($id)->image_url);
@@ -416,6 +422,113 @@ final class FormulaireTest extends TestCase {
         $this->assertTrue($reponse['data']['ok']);
         $this->assertCount(1, self::fiches());
         $this->assertFalse(metadata_exists('post', self::fiches()[0]->ID, '_thumbnail_id'));
+    }
+
+    public function test_nom_aleatoire_garde_une_extension_permise(): void {
+        $this->assertMatchesRegularExpression('/^[a-z0-9]{20}\.jpeg$/i', Formulaire::nom_aleatoire('/d', 'A.JPEG', '.JPEG'));
+        $this->assertMatchesRegularExpression('/^[a-z0-9]{20}\.webp$/i', Formulaire::nom_aleatoire('/d', 'a.webp', '.webp'));
+        $this->assertMatchesRegularExpression('/^[a-z0-9]{20}\.jpg$/i', Formulaire::nom_aleatoire('/d', 'a.php', '.php'));
+        $this->assertMatchesRegularExpression('/^[a-z0-9]{20}\.jpg$/i', Formulaire::nom_aleatoire('/d', 'a', ''));
+    }
+
+    /** En-tête PNG (signature et IHDR) annonçant ces dimensions : getimagesize ne lit que lui. */
+    private static function png_de(int $largeur, int $hauteur): string {
+        $ihdr = 'IHDR' . pack('NN', $largeur, $hauteur) . "\x08\x02\x00\x00\x00";
+        return "\x89PNG\r\n\x1a\n" . pack('N', 13) . $ihdr . pack('N', crc32($ihdr));
+    }
+
+    public function test_image_aux_dimensions_demesurees_refusee(): void {
+        foreach ([[9000, 10], [10, 8001], [6000, 6000]] as [$largeur, $hauteur]) {
+            $image = $this->image('affiche.png', self::png_de($largeur, $hauteur));
+            $this->assertSame([$largeur, $hauteur], array_slice(getimagesize($image['tmp_name']), 0, 2));
+            $this->assertNotSame('', Formulaire::verifier_image($image), "$largeur × $hauteur");
+        }
+        $this->assertSame('', Formulaire::verifier_image($this->image('affiche.png', self::png_de(5000, 5000))));
+        $this->assertSame('', Formulaire::verifier_image($this->image('affiche.png', self::png_de(8000, 3000))));
+
+        $_FILES['image'] = $this->image('affiche.png', self::png_de(20000, 20000));
+        [$reponse, $statut] = $this->envoyer(self::champs());
+        $this->assertSame(400, $statut);
+        $this->assertArrayHasKey('image', $reponse['data']['erreurs']);
+        $this->assertSame([], self::fiches());
+        $this->assertSame([], $GLOBALS['rsn_veille_wp']['televersements'] ?? []);
+    }
+
+    public function test_ipv6_ramenee_au_prefixe_64(): void {
+        $this->assertSame(Formulaire::cle_debit('2001:db8:1:2::1'), Formulaire::cle_debit('2001:0db8:0001:0002:ffff:eeee:dddd:cccc'));
+        $this->assertNotSame(Formulaire::cle_debit('2001:db8:1:2::1'), Formulaire::cle_debit('2001:db8:1:3::1'));
+        $this->assertSame('2001:db8:1:2::/64', Formulaire::reseau('2001:db8:1:2:a:b:c:d'));
+        $this->assertSame('203.0.113.7', Formulaire::reseau('::ffff:203.0.113.7'));
+        $this->assertSame('203.0.113.7', Formulaire::reseau('203.0.113.7'));
+
+        // Deux adresses du même /64 partagent le compteur.
+        $_SERVER['REMOTE_ADDR'] = '2001:db8:1:2::1';
+        for ($i = 1; $i <= 5; $i++) {
+            [, $statut] = $this->envoyer(self::champs(['titre' => 'Atelier ' . $i]));
+            $this->assertSame(200, $statut);
+        }
+        $_SERVER['REMOTE_ADDR'] = '2001:db8:1:2:9999::42';
+        [, $statut] = $this->envoyer(self::champs(['titre' => 'Atelier 6']));
+        $this->assertSame(429, $statut);
+        $_SERVER['REMOTE_ADDR'] = '2001:db8:1:3::1';
+        [, $statut] = $this->envoyer(self::champs(['titre' => 'Atelier 7']));
+        $this->assertSame(200, $statut);
+    }
+
+    public function test_plafond_global_de_30_propositions_par_heure(): void {
+        // Le piège et les formulaires invalides ne comptent pas dans le plafond global.
+        $_SERVER['REMOTE_ADDR'] = '192.0.2.250';
+        $this->envoyer(self::champs(['site_web' => 'x']));
+        $this->envoyer(self::champs(['debut' => '']));
+        for ($i = 1; $i <= 30; $i++) {
+            $_SERVER['REMOTE_ADDR'] = '198.51.100.' . $i;
+            [, $statut] = $this->envoyer(self::champs(['titre' => 'Atelier numéro ' . $i]));
+            $this->assertSame(200, $statut, "proposition $i");
+        }
+        $_SERVER['REMOTE_ADDR'] = '198.51.100.31';
+        [$reponse, $statut] = $this->envoyer(self::champs(['titre' => 'Atelier numéro 31']));
+        $this->assertSame(429, $statut);
+        $this->assertSame('Trop de propositions, réessayez plus tard.', $reponse['data']['message']);
+        $this->assertCount(30, self::fiches());
+    }
+
+    public function test_url_avec_identifiants_ou_sans_hote_videe(): void {
+        foreach (['https://www.obvia.ca@hameconnage.example/', 'https://user:mdp@exemple.org/', 'https://@exemple.org', 'https://./', 'https://[]/', 'http://:80/'] as $url) {
+            $this->assertSame('', Formulaire::valider(self::champs(['url' => $url]), self::AUJOURDHUI)['fiche']->url, $url);
+        }
+        $this->assertSame('https://exemple.org/@equipe', Formulaire::valider(self::champs(['url' => 'https://exemple.org/@equipe']), self::AUJOURDHUI)['fiche']->url);
+    }
+
+    public function test_doublon_d_une_fiche_non_publiee_cree_la_proposition(): void {
+        (new EntrepotWordPress())->creer(Fiche::depuis_tableau([
+            'type' => 'evenement', 'titre' => 'Colloque sur la souveraineté numérique en santé', 'debut' => '2026-11-20',
+            'organisateur' => 'Obvia', 'source' => 'Obvia : événements', 'niveau' => 'B', 'statut' => 'ecarte',
+            'cle_source' => 'obvia:9', 'cles_source' => ['obvia:9'],
+        ]));
+        [$reponse] = $this->envoyer(self::champs());
+        $this->assertSame("Merci ! Votre proposition est dans la file d'approbation de l'équipe du RSN.", $reponse['data']['message']);
+        $this->assertCount(2, self::fiches());
+    }
+
+    public function test_proposition_sans_cle_de_dedoublonnage_ni_fusion_par_la_collecte(): void {
+        $this->envoyer(self::champs());
+        $proposition = self::fiches()[0];
+        $this->assertFalse(metadata_exists('post', $proposition->ID, 'rsn_veille_cle_dedoublonnage'));
+        $fiche = (new EntrepotWordPress())->obtenir($proposition->ID);
+        $this->assertSame([$fiche->cle_source => 'Colloque sur la souveraineté numérique en santé'], $fiche->titres_source);
+
+        // La collecte de nuit trouve le même événement : il est créé à part, la proposition ne change pas.
+        $entrepot = new EntrepotWordPress();
+        $avant = serialize($GLOBALS['rsn_veille_wp']['meta'][$proposition->ID]);
+        $collectee = Fiche::depuis_tableau([
+            'type' => 'evenement', 'titre' => 'Colloque sur la souveraineté numérique en santé', 'debut' => '2026-11-20',
+            'organisateur' => 'Obvia', 'source' => 'Obvia : événements', 'niveau' => 'B', 'statut' => 'publie',
+            'cle_source' => 'obvia:9', 'url' => 'https://www.obvia.ca/colloque',
+        ]);
+        $this->assertSame('cree', (new Depot($entrepot))->integrer($collectee));
+        $this->assertCount(2, self::fiches());
+        $this->assertSame($avant, serialize($GLOBALS['rsn_veille_wp']['meta'][$proposition->ID]));
+        $this->assertNotSame($proposition->ID, $entrepot->trouver_par_cle_source('obvia:9')->id);
     }
 
     public function test_jeton_renouvele(): void {

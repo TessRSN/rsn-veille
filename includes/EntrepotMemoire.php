@@ -21,7 +21,7 @@ final class EntrepotMemoire implements Entrepot {
     }
 
     public function trouver_par_dedoublonnage(string $cle): ?Fiche {
-        return $this->premiere(static fn(Fiche $f): bool => $f->cle_dedoublonnage() === $cle);
+        return $this->premiere(static fn(Fiche $f): bool => !$f->est_proposition() && $f->cle_dedoublonnage() === $cle);
     }
 
     public function trouver_par_url(string $url): ?Fiche {

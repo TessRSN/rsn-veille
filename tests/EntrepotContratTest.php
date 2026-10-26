@@ -245,4 +245,18 @@ final class EntrepotContratTest extends TestCase {
         $this->assertSame('Données & modèles', $f->resume);
         $this->assertSame(['Santé & IA'], $f->themes);
     }
+
+    /** @dataProvider entrepots */
+    public function test_une_proposition_n_est_jamais_rendue_par_le_dedoublonnage(string $nom): void {
+        $e = self::entrepot($nom);
+        $proposition = self::fiche(['source' => 'proposition', 'niveau' => 'M', 'statut' => 'a_approuver', 'cle_source' => 'proposition:1', 'cles_source' => ['proposition:1']]);
+        $id = $e->creer($proposition);
+        $this->assertNull($e->trouver_par_dedoublonnage($proposition->cle_dedoublonnage()));
+        // La fiche reste retrouvable par sa clé et par son URL (le dépôt l'ignore comme doublon).
+        $this->assertSame($id, $e->trouver_par_cle_source('proposition:1')->id);
+        $this->assertSame($id, $e->trouver_par_url('https://exemple.ca/atelier?id=1')->id);
+        // Une fiche collectée ensuite est, elle, rendue.
+        $collectee = $e->creer(self::fiche(['cle_source' => 'ex:2', 'cles_source' => ['ex:2']]));
+        $this->assertSame($collectee, $e->trouver_par_dedoublonnage($proposition->cle_dedoublonnage())->id);
+    }
 }

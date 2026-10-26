@@ -265,16 +265,19 @@ final class Depot {
         return null;
     }
 
-    /** Même date de début et même début de titre (si la fiche a une date), sinon même URL (si $par_url). */
+    /**
+     * Même date de début et même début de titre (si la fiche a une date), sinon même URL (si $par_url).
+     * Une proposition du public n'est jamais un doublon : la collecte crée sa propre fiche à côté.
+     */
     private function trouver_doublon(Fiche $f, bool $par_url = true): ?Fiche {
         $fiche = null;
         if (($f->debut ?? '') !== '') {
             $fiche = $this->entrepot->trouver_par_dedoublonnage($f->cle_dedoublonnage());
         }
-        if ($fiche === null && $par_url && $f->url !== '') {
+        if (($fiche === null || $fiche->est_proposition()) && $par_url && $f->url !== '') {
             $fiche = $this->entrepot->trouver_par_url($f->url);
         }
-        return $fiche;
+        return $fiche !== null && $fiche->est_proposition() ? null : $fiche;
     }
 
     /**

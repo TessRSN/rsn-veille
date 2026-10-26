@@ -63,7 +63,7 @@ final class EntrepotWordPress implements Entrepot {
         }
         $this->ecrire_cles($id, $f->cles_source);
         // Clé calculée sur la fiche reçue, comme celle que le dépôt cherchera à la prochaine collecte.
-        update_post_meta($id, TypeContenu::META_DEDOUBLONNAGE, wp_slash($f->cle_dedoublonnage()));
+        $this->ecrire_dedoublonnage($id, $f);
         // Thèmes en dernier : s'ils échouent, la fiche reste retrouvable par ses clés.
         $this->ecrire_themes($id, $f->themes);
         return $id;
@@ -111,8 +111,8 @@ final class EntrepotWordPress implements Entrepot {
         if (array_key_exists('themes', $champs)) {
             $this->ecrire_themes($id, $fiche->themes);
         }
-        if (array_key_exists('titre', $champs) || array_key_exists('debut', $champs)) {
-            update_post_meta($id, TypeContenu::META_DEDOUBLONNAGE, wp_slash($fiche->cle_dedoublonnage()));
+        if (array_key_exists('titre', $champs) || array_key_exists('debut', $champs) || array_key_exists('source', $champs)) {
+            $this->ecrire_dedoublonnage($id, $fiche);
         }
     }
 
@@ -258,6 +258,15 @@ final class EntrepotWordPress implements Entrepot {
             return;
         }
         update_post_meta($id, $cle, wp_slash(TypeContenu::nettoyer_meta($nom, $valeur)));
+    }
+
+    /** Clé de dédoublonnage de la fiche ; aucune pour une proposition du public (jamais cible d'une fusion). */
+    private function ecrire_dedoublonnage(int $id, Fiche $f): void {
+        if ($f->est_proposition()) {
+            delete_post_meta($id, TypeContenu::META_DEDOUBLONNAGE);
+            return;
+        }
+        update_post_meta($id, TypeContenu::META_DEDOUBLONNAGE, wp_slash($f->cle_dedoublonnage()));
     }
 
     /** Une ligne `rsn_veille_cle` par clé de source. */
