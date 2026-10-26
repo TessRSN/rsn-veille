@@ -108,3 +108,44 @@
 		white-space: normal;
 	}
 }
+
+/* Réglages */
+
+.rsn-veille-reglages h2 {
+	margin-top: 28px;
+}
+
+.rsn-veille-etat {
+	margin: 0 0 8px;
+}
+
+.rsn-veille-details {
+	margin: 0 0 8px 18px;
+	list-style: disc;
+}
+
+.rsn-veille-sources th[scope="row"] {
+	font-weight: 600;
+}
+
+.rsn-veille-url {
+	margin-top: 2px;
+	color: #50575e;
+	font-weight: 400;
+	font-size: 12px;
+	overflow-wrap: anywhere;
+}
+
+/* Les espaces de bordure des mots-clés comptent : police à chasse fixe, lignes jamais repliées. */
+.rsn-veille-reglages textarea.code {
+	white-space: pre;
+	overflow-x: auto;
+	tab-size: 4;
+}
+
+@media (max-width: 782px) {
+	.rsn-veille-sources td,
+	.rsn-veille-sources th {
+		padding: 8px 6px;
+	}
+}

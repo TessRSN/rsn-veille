@@ -365,4 +365,21 @@ final class DepotTest extends TestCase {
         $this->assertSame('rsn:1', $d->fiche_de_cle($this->fiche(['cle_source' => 'rsn:1']))->cle_source);
         $this->assertCount(1, $e->lister(''));
     }
+
+    public function test_sans_doublon_par_url_les_evenements_d_une_meme_page_restent_distincts(): void {
+        // Une infolettre annonce plusieurs événements avec la même adresse (celle du numéro).
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $a = $this->fiche(['titre' => 'Colloque A', 'debut' => '2026-11-03', 'url' => 'https://mailchi.mp/x/numero', 'cle_source' => 'infolettre:a', 'niveau' => 'M']);
+        $b = $this->fiche(['titre' => 'Symposium B', 'debut' => '2026-11-04', 'url' => 'https://mailchi.mp/x/numero', 'cle_source' => 'infolettre:b', 'niveau' => 'M']);
+        $this->assertSame('cree', $d->integrer($a, false));
+        $this->assertSame('cree', $d->integrer($b, false));
+        $this->assertCount(2, $e->lister(''));
+        // Même date et même titre : toujours un doublon.
+        $c = $this->fiche(['titre' => 'Symposium B', 'debut' => '2026-11-04', 'cle_source' => 'rsn:9', 'niveau' => 'A']);
+        $this->assertSame('fusionne', $d->integrer($c, false));
+        // Par défaut, la même adresse suffit à fusionner.
+        $f = $this->fiche(['titre' => 'Atelier C', 'debut' => '2026-11-05', 'url' => 'https://mailchi.mp/x/numero', 'cle_source' => 'frq:1', 'niveau' => 'B']);
+        $this->assertSame('fusionne', $d->integrer($f));
+        $this->assertCount(2, $e->lister(''));
+    }
 }

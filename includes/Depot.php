@@ -52,8 +52,12 @@ final class Depot {
 
     /**
      * Intègre une fiche collectée : cree, fusionne, mis_a_jour ou inchange.
+     *
+     * @param bool $doublon_par_url Faux quand l'adresse de la fiche n'est pas propre à l'événement (le
+     *                              numéro d'une infolettre en annonce plusieurs) : seuls la clé de
+     *                              source et le couple date-titre repèrent alors un doublon.
      */
-    public function integrer(Fiche $f): string {
+    public function integrer(Fiche $f, bool $doublon_par_url = true): string {
         $cles = $this->cles($f);
 
         // 1. Déjà connue de cette source : seuls les champs factuels suivent la source, et
@@ -74,7 +78,7 @@ final class Depot {
         }
 
         // 2. Doublon venu d'une autre source : on fusionne, jamais de seconde fiche.
-        $existante = $this->trouver_doublon($f);
+        $existante = $this->trouver_doublon($f, $doublon_par_url);
         if ($existante !== null) {
             $this->noter_titre_precedent($existante, $cle);
             $champs = ['cles_source' => array_values(array_unique(array_merge($existante->cles_source, $cles)))];
@@ -261,13 +265,13 @@ final class Depot {
         return null;
     }
 
-    /** Même date de début et même début de titre (si la fiche a une date), sinon même URL. */
-    private function trouver_doublon(Fiche $f): ?Fiche {
+    /** Même date de début et même début de titre (si la fiche a une date), sinon même URL (si $par_url). */
+    private function trouver_doublon(Fiche $f, bool $par_url = true): ?Fiche {
         $fiche = null;
         if (($f->debut ?? '') !== '') {
             $fiche = $this->entrepot->trouver_par_dedoublonnage($f->cle_dedoublonnage());
         }
-        if ($fiche === null && $f->url !== '') {
+        if ($fiche === null && $par_url && $f->url !== '') {
             $fiche = $this->entrepot->trouver_par_url($f->url);
         }
         return $fiche;

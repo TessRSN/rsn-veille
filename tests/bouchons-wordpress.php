@@ -14,6 +14,13 @@
  * `RsnVeilleArretRequete` au lieu d'arrêter PHP. La vérification de référence est
  * `tests/manuel/verifier-admin.md`.
  *
+ * Réglages : `register_setting` pose le filtre `sanitize_option_{option}`, appliqué par `update_option`
+ * (deux fois quand l'option n'existe pas encore, comme WordPress qui passe alors par `add_option`) ;
+ * `update_option` déclenche `add_option_{option}` ou, si la valeur change, `update_option_{option}`.
+ * `add_settings_error` note les messages (`erreurs_reglages`), `spawn_cron` compte ses appels
+ * (`cron_lances`). La vérification de référence des réglages est la section Réglages de
+ * `tests/manuel/verifier-admin.md`.
+ *
  * Chargé seulement par les tests qui en ont besoin (`require_once` en tête du fichier de test),
  * jamais par `tests/bootstrap.php`. Les bouchons déjà définis par le bootstrap sont gardés.
  * `rsn_veille_bouchons_reinitialiser()` remet l'état à zéro et réenregistre le type de contenu.
@@ -43,6 +50,8 @@ function rsn_veille_bouchons_reinitialiser(): void {
         // Administration : menus, capacités de l'utilisateur courant, rôles, scripts et styles en file.
         'menus' => [], 'sous_menus' => [], 'crochets_menus' => [], 'capacites' => [], 'ecritures_roles' => 0,
         'scripts' => [], 'styles' => [], 'localisations' => [],
+        // Réglages : options enregistrées, messages d'erreur des champs, lancements de WP-Cron.
+        'reglages' => [], 'erreurs_reglages' => [], 'cron_lances' => 0,
     ];
     $GLOBALS['rsn_veille_wp']['roles'] = [
         'administrator' => new WP_Role('administrator', ['manage_options' => true, 'edit_posts' => true]),
@@ -127,9 +136,25 @@ function get_option(string $nom, mixed $defaut = false): mixed {
     return $wp['cache_options'][$nom] ?? $defaut;
 }
 
+/**
+ * Écrit toujours (contrairement à WordPress, qui n'écrit pas une valeur inchangée). La valeur passe par
+ * `sanitize_option_{nom}` ; option absente : nettoyée une seconde fois et `add_option_{nom}` ($nom,
+ * $valeur) ; option changée : `update_option_{nom}` ($ancienne, $nouvelle, $nom).
+ */
 function update_option(string $nom, mixed $valeur, mixed $chargement_auto = null): bool {
+    $existait = array_key_exists($nom, $GLOBALS['rsn_veille_wp']['options']);
+    $ancienne = $existait ? get_option($nom) : null;
+    $valeur = apply_filters('sanitize_option_' . $nom, $valeur, $nom);
+    if (!$existait) {
+        $valeur = apply_filters('sanitize_option_' . $nom, $valeur, $nom);
+    }
     $GLOBALS['rsn_veille_wp']['options'][$nom] = $valeur;
     $GLOBALS['rsn_veille_wp']['cache_options'][$nom] = $valeur;
+    if (!$existait) {
+        do_action('add_option_' . $nom, $nom, $valeur);
+    } elseif ($ancienne !== $valeur) {
+        do_action('update_option_' . $nom, $ancienne, $valeur, $nom);
+    }
     return true;
 }
 
@@ -616,9 +641,14 @@ class WP_Role {
 class WP_Roles {
     /** @var array<string,WP_Role> */
     public array $role_objects = [];
+    /** @var array<string,array{name: string, capabilities: array<string,bool>}> Comme WordPress : nom affiché et capacités. */
+    public array $roles = [];
 
     public function __construct() {
         $this->role_objects = $GLOBALS['rsn_veille_wp']['roles'];
+        foreach ($this->role_objects as $nom => $role) {
+            $this->roles[$nom] = ['name' => ucfirst($nom), 'capabilities' => $role->capabilities];
+        }
     }
 }
 
@@ -679,4 +709,84 @@ function wp_enqueue_script(string $nom, string $source = '', array $dependances 
 function wp_localize_script(string $nom, string $objet, array $donnees): bool {
     $GLOBALS['rsn_veille_wp']['localisations'][$nom][$objet] = $donnees;
     return true;
+}
+
+// --- Réglages (API Settings), téléversement, WP-Cron ---
+
+/** Comme WordPress : le nettoyage est un filtre `sanitize_option_{option}` (un seul argument passé au rappel). */
+function register_setting(string $groupe, string $option, array $arguments = []): void {
+    $GLOBALS['rsn_veille_wp']['reglages'][$option] = ['groupe' => $groupe] + $arguments;
+    if (isset($arguments['sanitize_callback']) && is_callable($arguments['sanitize_callback'])) {
+        $rappel = $arguments['sanitize_callback'];
+        add_filter('sanitize_option_' . $option, static fn(mixed $valeur): mixed => $rappel($valeur));
+    }
+}
+
+function add_settings_error(string $reglage, string $code, string $message, string $type = 'error'): void {
+    $GLOBALS['rsn_veille_wp']['erreurs_reglages'][] = ['setting' => $reglage, 'code' => $code, 'message' => $message, 'type' => $type];
+}
+
+/** Messages notés par `add_settings_error` (outil de test). */
+function rsn_veille_bouchons_erreurs_reglages(): array {
+    return $GLOBALS['rsn_veille_wp']['erreurs_reglages'];
+}
+
+/** Champs cachés du formulaire d'options.php : groupe, action, jeton « {groupe}-options ». */
+function settings_fields(string $groupe): void {
+    echo '<input type="hidden" name="option_page" value="' . esc_attr($groupe) . '">'
+        . '<input type="hidden" name="action" value="update">'
+        . '<input type="hidden" name="_wpnonce" value="' . esc_attr(wp_create_nonce($groupe . '-options')) . '">';
+}
+
+/** Affiche les messages notés, comme des notices de wp-admin. */
+function settings_errors(string $reglage = '', bool $nettoyer = false, bool $masquer = false): void {
+    foreach ($GLOBALS['rsn_veille_wp']['erreurs_reglages'] as $erreur) {
+        if ($reglage === '' || $erreur['setting'] === $reglage) {
+            echo '<div class="notice notice-' . esc_attr($erreur['type']) . '"><p>' . esc_html($erreur['message']) . '</p></div>';
+        }
+    }
+}
+
+function is_email(string $courriel): string|false {
+    return filter_var($courriel, FILTER_VALIDATE_EMAIL) !== false ? $courriel : false;
+}
+
+function esc_textarea(string $texte): string {
+    return htmlspecialchars($texte, ENT_QUOTES, 'UTF-8');
+}
+
+function get_current_user_id(): int {
+    return 1;
+}
+
+/** Comme WordPress : sans jeton valide dans `$_REQUEST['_wpnonce']`, la requête s'arrête (403). */
+function check_admin_referer(string|int $action = -1, string $champ = '_wpnonce'): int|false {
+    $resultat = wp_verify_nonce($_REQUEST[$champ] ?? '', $action);
+    if ($resultat === false) {
+        wp_die('Le lien a expiré.', '', 403);
+    }
+    return $resultat;
+}
+
+/** Compte les lancements (outil de test : `cron_lances`). */
+function spawn_cron(int $horodatage = 0): bool {
+    $GLOBALS['rsn_veille_wp']['cron_lances']++;
+    return true;
+}
+
+/**
+ * Pages (`post_type` « page ») dont le statut est dans `post_status` (liste ou chaîne séparée par des
+ * virgules, « publish » par défaut), triées par titre.
+ *
+ * @return WP_Post[]
+ */
+function get_pages(array $arguments = []): array {
+    $statuts = $arguments['post_status'] ?? 'publish';
+    $statuts = is_array($statuts) ? $statuts : array_map('trim', explode(',', (string) $statuts));
+    $pages = array_values(array_filter(
+        $GLOBALS['rsn_veille_wp']['posts'],
+        static fn(WP_Post $p): bool => $p->post_type === 'page' && in_array($p->post_status, $statuts, true)
+    ));
+    usort($pages, static fn(WP_Post $a, WP_Post $b): int => strcmp($a->post_title, $b->post_title));
+    return array_map(static fn(WP_Post $p): WP_Post => clone $p, $pages);
 }

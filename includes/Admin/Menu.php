@@ -38,6 +38,8 @@ final class Menu {
         add_action('admin_enqueue_scripts', [self::class, 'charger_ressources']);
         // Connectés seulement : pas de wp_ajax_nopriv_.
         add_action('wp_ajax_' . PageFile::ACTION_AJAX, [PageFile::class, 'ajax_changer_statut']);
+        // Réglages : option rsn_veille_reglages (options.php), lancement de la collecte et import (admin-post.php).
+        PageReglages::accrocher();
     }
 
     /**
@@ -82,7 +84,7 @@ final class Menu {
             self::SLUG_RADAR => [__('Radar', 'rsn-veille'), [self::class, 'afficher_radar']],
             self::SLUG_INFOLETTRE => [__('Infolettre', 'rsn-veille'), [self::class, 'afficher_infolettre']],
             self::SLUG_JOURNAL => [__('Journal', 'rsn-veille'), [PageJournal::class, 'afficher']],
-            self::SLUG_REGLAGES => [__('Réglages', 'rsn-veille'), [self::class, 'afficher_reglages']],
+            self::SLUG_REGLAGES => [__('Réglages', 'rsn-veille'), [PageReglages::class, 'afficher']],
         ];
         foreach ($pages as $slug => [$titre, $rappel]) {
             $crochets[] = add_submenu_page(self::SLUG, $titre, $titre, self::CAPACITE, $slug, $rappel);
@@ -116,11 +118,6 @@ final class Menu {
     /** Page Infolettre (tâche 16). */
     public static function afficher_infolettre(): void {
         self::afficher_a_venir(__('Infolettre', 'rsn-veille'));
-    }
-
-    /** Page Réglages (tâche 12). */
-    public static function afficher_reglages(): void {
-        self::afficher_a_venir(__('Réglages', 'rsn-veille'));
     }
 
     /** Page provisoire d'une fonction pas encore livrée. */

@@ -1,4 +1,4 @@
-# Vérification manuelle de l'administration (tâche 11)
+# Vérification manuelle de l'administration (tâches 11 et 12)
 
 À faire dans un WordPress réel (`npx @wordpress/env start`, extension active), les tests PHPUnit
 n'utilisant qu'une imitation de WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se
@@ -31,7 +31,7 @@ lancent par `npx wp-env run cli wp …`.
 ## Vérifications
 
 - [ ] **Éditeur** (compte `redaction`) : le menu « Veille » (icône de flux) apparaît sous « Commentaires »,
-      avec File d'approbation, Radar, Infolettre, Journal, Réglages. Radar, Infolettre et Réglages
+      avec File d'approbation, Radar, Infolettre, Journal, Réglages. Radar et Infolettre
       affichent « Cette page est à venir. ».
 - [ ] **Abonné** (compte `lecteur`) : pas de menu « Veille » ; l'adresse
       `/wp-admin/admin.php?page=rsn-veille` répond « Désolé, vous n'avez pas l'autorisation… ».
@@ -64,7 +64,60 @@ lancent par `npx wp-env run cli wp …`.
       Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.1.0`.
 - [ ] Aucune erreur PHP dans `wp-content/debug.log` ni dans la console du navigateur.
 
+## Réglages (tâche 12)
+
+- [ ] **Éditeur** (compte `redaction`) : la page Réglages s'ouvre, et **Enregistrer les réglages** réussit
+      (« Réglages enregistrés. »), sans « Désolé, vous n'avez pas l'autorisation » d'options.php.
+- [ ] **Abonné** : `/wp-admin/admin.php?page=rsn-veille-reglages` refusé ; un envoi direct à
+      `/wp-admin/admin-post.php` avec `action=rsn_veille_collecter` répond en 403.
+- [ ] Haut de page : « Dernière collecte terminée » (ou « aucune pour l'instant ») et « Prochaine collecte
+      planifiée » en heure de Montréal, identique à `wp cron event list --hook=rsn_veille_nuit` (heure UTC
+      convertie).
+- [ ] Avec `define('DISABLE_WP_CRON', true);` dans `wp-config.php` : avertissement « la tâche cron du
+      serveur doit appeler wp-cron.php ». Le retirer ensuite.
+- [ ] **Sources** : décocher « Gouvernement du Québec : fil de presse » (`quebec_ca`) et « Obvia :
+      événements », enregistrer ; `wp option get rsn_veille_reglages --format=json` montre
+      `"obvia":{"actif":false,…}`. **Lancer la collecte maintenant** → message « Collecte lancée : N sources
+      en file » ; `wp option get rsn_veille_file` ne contient ni `obvia` ni `quebec_ca` ;
+      `wp cron event list --hook=rsn_veille_source` montre une tâche échue (pas dans 60 s) ; quelques
+      minutes plus tard, le Journal ne montre pas de nouvelle ligne pour Obvia. Recocher ensuite.
+- [ ] Niveau : passer une source au niveau M, enregistrer, recharger : M reste choisi.
+- [ ] **Mots-clés bordés** : la zone « Mots-clés numérique » montre ` ia ` (espaces visibles en
+      sélectionnant la ligne). Ajouter une ligne ` iot ` (espace avant et après) et une ligne `Robotique`,
+      enregistrer : `wp option get rsn_veille_reglages --format=json` contient `" iot "` (espaces gardées)
+      et `"robotique"` (minuscules) ; recharger la page : la ligne ` iot ` a toujours ses deux espaces ;
+      `wp eval 'var_dump(RSN\Veille\Collecte::pertinence()->touche("Atelier IoT en santé"), RSN\Veille\Collecte::pertinence()->touche("Patriote"));'`
+      → numérique vrai pour le premier, faux pour le second (« iot » ne touche pas « Patriote »).
+- [ ] **Thèmes** : ajouter la ligne `Objets connectés :  iot , capteur` (deux espaces avant `iot`),
+      enregistrer, recharger : la ligne revient identique ; l'option contient
+      `{"nom":"Objets connectés","mots":[" iot ","capteur"]}`. Une ligne sans « : » est signalée
+      (« Thème ignoré (ligne N) ») et retirée.
+- [ ] Valeurs invalides (outils du navigateur : changer `value` du champ heure en `25:00`, une adresse
+      `pas-une-adresse` dans les destinataires) : enregistrer → messages d'erreur pour l'heure et
+      l'adresse, l'heure revient à 03:00, l'adresse est retirée, les autres adresses gardées.
+- [ ] **Rôles** : la case Administrateur est cochée et grisée. Cocher Auteur, enregistrer :
+      `wp cap list author | grep rsn_veille_gerer` affiche la capacité ; décocher : elle disparaît.
+      Décocher Éditeur : l'éditeur perd l'accès, l'administrateur le garde. Remettre Éditeur.
+- [ ] **Heure** : passer à 04:30, enregistrer : `wp cron event list --hook=rsn_veille_nuit` montre une
+      seule tâche, au prochain 04:30 de Montréal. Remettre 03:00.
+- [ ] **Page Veille** : la liste montre les pages publiées et en brouillon ; en choisir une, enregistrer ;
+      changer le statut d'une fiche dans la file : `wp post meta get <page> _elementor_element_cache` est vide.
+- [ ] **Import** : importer `docs/maquette/evenements-infolettres-2025-2026.json` après une collecte du RSN →
+      « Import terminé : 24 lus, N créés, M fusionnés, … » avec M ≥ 1 (le Hackathon en santé numérique 2025
+      et les autres événements du RSN déjà collectés) et N + M = 24 ; aucun doublon dans la file
+      (onglet Publiées). Réimporter le même fichier → « 0 créé, 0 fusionné, 24 inchangés ».
+- [ ] Une fiche importée (onglet Publiées) : source `infolettre`, niveau M, organisateur réel, thèmes des
+      étiquettes du fichier ; les événements d'un même numéro d'infolettre (même adresse) restent distincts.
+- [ ] Import refusé : un fichier `.csv` → « Le fichier doit porter l'extension .json » ; un fichier
+      `.json` de plus de 2 Mo → « Fichier trop gros » ; un `.json` invalide → « Fichier illisible » ;
+      aucune fiche créée.
+- [ ] Jeton : recharger la page, changer la valeur du champ caché `_wpnonce` d'un formulaire d'action
+      dans les outils du navigateur, envoyer → page « Le lien que vous avez suivi a expiré », rien n'est fait.
+- [ ] Largeur mobile (outils du navigateur, 375 px) : pas de défilement horizontal de la page ; les zones
+      de mots-clés défilent seules.
+
 ## Nettoyage
 
 `wp post delete $(wp post list --post_type=rsn_veille --meta_key=rsn_veille_source --meta_value=Vérification --format=ids --post_status=any) --force`
-puis `wp user delete redaction lecteur --yes`.
+puis `wp user delete redaction lecteur --yes`. Fiches importées :
+`wp post delete $(wp post list --post_type=rsn_veille --meta_key=rsn_veille_source --meta_value=infolettre --format=ids --post_status=any) --force`.
