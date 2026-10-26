@@ -84,11 +84,54 @@ final class LecteurRssTest extends TestCase {
     public function test_atom(): void {
         $xml = '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><title>A</title>'
             . '<entry><title>Entrée</title><id>urn:uuid:1</id><link rel="self" href="https://x.test/self"/><link rel="alternate" href="https://x.test/e1"/>'
-            . '<updated>2026-10-21T08:00:00Z</updated><summary>Résumé &lt;b&gt;court&lt;/b&gt;</summary><category term="Appel"/></entry></feed>';
-        $r = (new LecteurRss())->lire($xml, ['id' => 'a', 'nom' => 'A', 'mode' => 'appels', 'categories' => ['Appel']]);
+            . '<updated>2026-10-21T08:00:00Z</updated><summary>Résumé &lt;b&gt;court&lt;/b&gt;</summary><category term="Appel"/><category term="Autre"/></entry>'
+            . '<entry><title>Seconde</title><id>urn:uuid:2</id><link href="https://x.test/e2"/><updated>2026-10-22T08:00:00Z</updated><category term="Appel"/></entry></feed>';
+        $r = (new LecteurRss())->lire($xml, ['id' => 'a', 'nom' => 'A', 'mode' => 'appels', 'categories' => ['Autre']]);
+        $this->assertSame([], $r->erreurs);
         $this->assertCount(1, $r->fiches);
         $f = $r->fiches[0];
-        $this->assertSame(['https://x.test/e1', '2026-10-21', 'Résumé court', 'a:urn:uuid:1'], [$f->url, $f->debut, $f->resume, $f->cle_source]);
+        $this->assertSame(['https://x.test/e1', '2026-10-21', 'Résumé court', 'a:urn:uuid:1', 'Autre'], [$f->url, $f->debut, $f->resume, $f->cle_source, $f->categorie]);
+
+        $r = (new LecteurRss())->lire($xml, ['id' => 'a', 'nom' => 'A', 'mode' => 'nouvelles']);
+        $this->assertSame([], $r->erreurs);
+        $this->assertCount(2, $r->fiches);
+        $this->assertSame('https://x.test/e2', $r->fiches[0]->url);
+    }
+
+    public function test_atom_prefixe(): void {
+        $xml = '<?xml version="1.0"?><a:feed xmlns:a="http://www.w3.org/2005/Atom"><a:entry><a:title>P</a:title><a:id>1</a:id><a:link href="https://x.test/p"/><a:updated>2026-10-21T08:00:00Z</a:updated></a:entry></a:feed>';
+        $r = (new LecteurRss())->lire($xml, ['id' => 'a', 'nom' => 'A', 'mode' => 'nouvelles']);
+        $this->assertSame([], $r->erreurs);
+        $this->assertSame(['P', 'https://x.test/p'], [$r->fiches[0]->titre, $r->fiches[0]->url]);
+    }
+
+    public function test_atom_deux_categories_exactement(): void {
+        $xml = '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><entry><title>T</title><id>1</id><link href="https://x.test/1"/><updated>2026-10-21T08:00:00Z</updated><category term="Appel"/><category term="Concours"/></entry></feed>';
+        $r = (new LecteurRss())->lire($xml, ['id' => 'a', 'nom' => 'A', 'mode' => 'appels', 'categories' => ['Concours']]);
+        $this->assertSame('Concours', $r->fiches[0]->categorie);
+        $m = new ReflectionMethod(LecteurRss::class, 'categories');
+        $m->setAccessible(true);
+        $this->assertSame(['Appel', 'Concours'], $m->invoke(new LecteurRss(), simplexml_load_string($xml)->entry));
+    }
+
+    public function test_contenu_precede_de_sauts_de_ligne_ou_bom(): void {
+        $source = ['id' => 'sommeil', 'nom' => 'S', 'mode' => 'evenements'];
+        $contenu = file_get_contents(FIXTURES . '/sommeil.xml');
+        $this->assertCount(3, (new LecteurRss())->lire("\n\n" . $contenu, $source)->fiches);
+        $this->assertCount(3, (new LecteurRss())->lire("\xEF\xBB\xBF" . $contenu, $source)->fiches);
+    }
+
+    public function test_lien_atom_jamais_self_ni_enclosure(): void {
+        $xml = '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><entry><title>T</title><id>1</id><link rel="enclosure" href="https://x.test/fichier.mp3"/><updated>2026-10-21T08:00:00Z</updated></entry></feed>';
+        $r = (new LecteurRss())->lire($xml, ['id' => 'a', 'nom' => 'A', 'mode' => 'nouvelles']);
+        $this->assertSame([], $r->fiches);
+        $this->assertCount(1, $r->erreurs);
+    }
+
+    public function test_fuseau_propre_de_la_date_du_flux(): void {
+        $xml = $this->rss('<item><title>Minuit</title><link>https://x.test/1</link><pubDate>Wed, 28 Oct 2026 00:00:00 +0000</pubDate></item>');
+        $f = (new LecteurRss())->lire($xml, ['id' => 'x', 'nom' => 'X', 'mode' => 'evenements'])->fiches[0];
+        $this->assertSame(['2026-10-28', ''], [$f->debut, $f->heure]);
     }
 
     public function test_item_sans_titre_ou_sans_lien_en_erreur(): void {
