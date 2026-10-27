@@ -425,4 +425,45 @@ final class EntrepotContratTest extends TestCase {
         $this->assertSame([], $e->lister(''));
         $this->assertSame(['a_approuver' => 0, 'publie' => 0, 'ecarte' => 0, 'a_verifier' => 0], $e->compter());
     }
+
+    public function test_lecture_remplit_cree_a_depuis_post_date_gmt(): void {
+        $e = new EntrepotWordPress();
+        $id = $e->creer(self::fiche());
+        wp_update_post(['ID' => $id, 'post_date_gmt' => '2026-10-27 14:00:00']);
+        $this->assertSame(strtotime('2026-10-27 14:00:00 UTC'), $e->obtenir($id)->cree_a);
+        $this->assertSame(strtotime('2026-10-27 14:00:00 UTC'), $e->lister('')[0]->cree_a);
+    }
+
+    public function test_cree_a_null_sans_date_gmt(): void {
+        $e = new EntrepotWordPress();
+        $id = $e->creer(self::fiche());
+        $GLOBALS['rsn_veille_wp']['posts'][$id]->post_date_gmt = '0000-00-00 00:00:00';
+        $this->assertNull($e->obtenir($id)->cree_a);
+        $GLOBALS['rsn_veille_wp']['posts'][$id]->post_date_gmt = '';
+        $this->assertNull($e->obtenir($id)->cree_a);
+    }
+
+    public function test_image_manuelle_depuis_l_image_mise_en_avant(): void {
+        $e = new EntrepotWordPress();
+        $id = $e->creer(self::fiche(['image_url' => 'https://exemple.ca/source.jpg']));
+        $this->assertSame('', $e->obtenir($id)->image_manuelle);
+
+        $piece = wp_insert_post(['post_type' => 'attachment', 'post_status' => 'inherit', 'post_parent' => $id, 'post_title' => 'affiche']);
+        set_post_thumbnail($id, $piece);
+        $fiche = $e->obtenir($id);
+        $this->assertSame(wp_get_attachment_image_url($piece, 'large'), $fiche->image_manuelle);
+        $this->assertStringContainsString('large', $fiche->image_manuelle);
+        $this->assertSame('https://exemple.ca/source.jpg', $fiche->image_url, 'l\'image de la source reste intacte');
+
+        delete_post_meta($id, '_thumbnail_id');
+        $this->assertSame('', $e->obtenir($id)->image_manuelle);
+    }
+
+    public function test_cree_a_et_image_manuelle_ne_sont_jamais_ecrits_en_meta(): void {
+        $e = new EntrepotWordPress();
+        $id = $e->creer(self::fiche(['cree_a' => 1761000000, 'image_manuelle' => 'https://exemple.ca/a.jpg']));
+        $this->assertFalse(metadata_exists('post', $id, 'rsn_veille_cree_a'));
+        $this->assertFalse(metadata_exists('post', $id, 'rsn_veille_image_manuelle'));
+        $this->assertSame('', $e->obtenir($id)->image_manuelle);
+    }
 }

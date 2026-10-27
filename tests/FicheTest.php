@@ -94,6 +94,19 @@ final class FicheTest extends TestCase {
         $this->assertNull($defaut->id);
     }
 
+    public function test_vers_tableau_expose_cree_a_et_image_manuelle(): void {
+        $f = new Fiche();
+        $f->titre = 'X';
+        $f->debut = '2026-11-01';
+        $f->cree_a = 1761000000;
+        $f->image_manuelle = 'https://rsn.quebec/wp-content/uploads/a.jpg';
+        $t = $f->vers_tableau();
+        $this->assertSame(1761000000, $t['cree_a']);
+        $this->assertSame('https://rsn.quebec/wp-content/uploads/a.jpg', $t['image_manuelle']);
+        $this->assertNull((new Fiche())->cree_a);
+        $this->assertSame('', (new Fiche())->image_manuelle);
+    }
+
     public function test_depuis_tableau_valeurs_vides_et_types(): void {
         $f = Fiche::depuis_tableau([
             'id' => '', 'debut' => '', 'fin' => '', 'echeance' => '', 'absent_depuis' => '',
