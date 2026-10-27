@@ -210,6 +210,15 @@ final class RaccourciTest extends TestCase {
         $this->assertArrayHasKey('rsn-veille', $GLOBALS['rsn_veille_wp']['scripts']);
     }
 
+    public function test_ressources_en_tete_sur_la_traduction_wpml_de_la_page_veille(): void {
+        update_option('rsn_veille_reglages', ['page_veille_id' => 9]);
+        add_filter('wpml_active_languages', static fn() => ['fr' => ['code' => 'fr'], 'en' => ['code' => 'en']]);
+        add_filter('wpml_object_id', static fn($id, $type = '', $original = false, $langue = null) => $langue === 'en' ? 19 : $id);
+        $GLOBALS['rsn_veille_wp']['objet_demande'] = $this->page(19, '');
+        do_action('wp_enqueue_scripts');
+        $this->assertArrayHasKey('rsn-veille', $GLOBALS['rsn_veille_wp']['scripts']);
+    }
+
     public function test_json_en_cache_une_heure_et_vide_par_la_purge_et_la_collecte(): void {
         $this->publier();
         Raccourci::rendre([]);

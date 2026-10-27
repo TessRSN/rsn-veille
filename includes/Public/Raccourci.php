@@ -50,14 +50,14 @@ final class Raccourci {
 
     /**
      * Ressources en tête de page quand la page affichée contient le raccourci (contenu de l'article, ou
-     * page Veille des réglages pour une page Elementor). Sinon, `rendre` les met en file au rendu.
+     * page Veille des réglages et ses traductions pour une page Elementor). Sinon, `rendre` les met en file au rendu.
      */
     public static function charger_si_present(): void {
         $article = get_queried_object();
         $present = false;
         if (is_singular() && $article instanceof \WP_Post) {
-            $id_page = (int) (Collecte::reglages()['page_veille_id'] ?? 0);
-            $present = has_shortcode((string) $article->post_content, self::NOM) || ($id_page > 0 && $article->ID === $id_page);
+            // Page Veille des réglages ou l'une de ses traductions WPML (page Elementor : raccourci hors du contenu).
+            $present = has_shortcode((string) $article->post_content, self::NOM) || in_array($article->ID, Collecte::pages_veille(), true);
         }
         if ((bool) apply_filters('rsn_veille_charger_ressources', $present)) {
             self::mettre_en_file();

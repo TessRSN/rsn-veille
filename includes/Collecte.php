@@ -12,6 +12,7 @@ use RSN\Veille\Lecteurs\LecteurObvia;
 use RSN\Veille\Lecteurs\LecteurRss;
 use RSN\Veille\Lecteurs\LecteurTec;
 use RSN\Veille\Lecteurs\Resultat;
+use RSN\Veille\Public\Donnees;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -232,17 +233,38 @@ final class Collecte {
     // --- Purge des caches ---
 
     /**
-     * Purge LiteSpeed et le cache Elementor de la page Veille (réglage `page_veille_id`), puis déclenche
-     * `rsn_veille_caches_purges` (cache du JSON public, etc.). Appelée par la collecte et par toute
-     * modification de fiches.
+     * Purge LiteSpeed et le cache Elementor de la page Veille (réglage `page_veille_id`) et de ses
+     * traductions WPML, puis déclenche `rsn_veille_caches_purges` (cache du JSON public, etc.). Appelée par
+     * la collecte et par toute modification de fiches.
      */
     public static function purger_caches(): void {
-        $id_page = (int) (self::reglages()['page_veille_id'] ?? 0);
-        if ($id_page > 0) {
+        foreach (self::pages_veille() as $id_page) {
             do_action('litespeed_purge_post', $id_page);
             delete_post_meta($id_page, self::META_ELEMENTOR);
         }
         do_action('rsn_veille_caches_purges');
+    }
+
+    /**
+     * Identifiants de la page Veille (réglage `page_veille_id`) et de ses traductions WPML, sans doublon ;
+     * vide si aucune page n'est choisie. Sans WPML, le filtre `wpml_object_id` n'existe pas et rend
+     * l'identifiant reçu ; une langue sans traduction (WPML rend null ou false) est ignorée.
+     *
+     * @return int[]
+     */
+    public static function pages_veille(): array {
+        $id_page = (int) (self::reglages()['page_veille_id'] ?? 0);
+        if ($id_page <= 0) {
+            return [];
+        }
+        $ids = [$id_page];
+        foreach (Donnees::langues() as $langue) {
+            $traduite = apply_filters('wpml_object_id', $id_page, 'page', false, $langue);
+            if (is_numeric($traduite) && (int) $traduite > 0) {
+                $ids[] = (int) $traduite;
+            }
+        }
+        return array_values(array_unique($ids));
     }
 
     /** Rappel de `save_post_rsn_veille` : purge, sauf pendant l'intégration d'une source (purgée à la fin). */

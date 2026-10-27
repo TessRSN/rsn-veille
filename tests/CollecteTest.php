@@ -623,6 +623,30 @@ final class CollecteTest extends TestCase {
         $this->assertCount(1, rsn_veille_bouchons_declenchements('rsn_veille_caches_purges'));
     }
 
+    public function test_purge_des_pages_traduites_par_wpml(): void {
+        update_option(Collecte::OPTION_REGLAGES, ['page_veille_id' => 42]);
+        add_filter('wpml_active_languages', static fn() => ['fr' => ['code' => 'fr'], 'en' => ['code' => 'en'], 'es' => ['code' => 'es']]);
+        // Page traduite en anglais (43) ; pas de traduction espagnole (WPML rend null).
+        add_filter('wpml_object_id', static fn($id, $type = '', $original = false, $langue = null) => match ($langue) {
+            'fr' => $id, 'en' => 43, default => null,
+        });
+        update_post_meta(42, '_elementor_element_cache', 'rendu fr');
+        update_post_meta(43, '_elementor_element_cache', 'rendu en');
+
+        Collecte::purger_caches();
+        $this->assertSame([[42], [43]], rsn_veille_bouchons_declenchements('litespeed_purge_post'));
+        $this->assertSame('', get_post_meta(42, '_elementor_element_cache', true));
+        $this->assertSame('', get_post_meta(43, '_elementor_element_cache', true));
+        $this->assertSame([42, 43], Collecte::pages_veille());
+    }
+
+    public function test_sans_wpml_seule_la_page_des_reglages_est_purgee(): void {
+        update_option(Collecte::OPTION_REGLAGES, ['page_veille_id' => 42]);
+        Collecte::purger_caches();
+        $this->assertSame([[42]], rsn_veille_bouchons_declenchements('litespeed_purge_post'));
+        $this->assertSame([42], Collecte::pages_veille());
+    }
+
     public function test_purge_a_la_suppression_d_une_fiche_seulement(): void {
         update_option(Collecte::OPTION_REGLAGES, ['page_veille_id' => 42]);
         $article = wp_insert_post(['post_type' => 'post', 'post_title' => 'Article', 'post_status' => 'publish']);

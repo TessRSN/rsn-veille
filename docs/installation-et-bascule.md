@@ -115,9 +115,10 @@ Installer l'extension, faire les réglages (section 3), lancer la collecte, impo
 
 ### Temps 3 : la version anglaise avec WPML
 
-1. Traduire la page `/calendrier-evenements/` avec WPML (le raccourci `[rsn_veille]` se retrouve tel quel dans la version anglaise). L'extension garde ses caches (JSON et iCal) **par langue** (`rsn_veille_json_fr`, `rsn_veille_json_en`) et les vide tous ensemble.
-2. Les textes de l'extension passent par la traduction de WordPress (domaine `rsn-veille`). La version 0.1.0 ne livre **aucun fichier de traduction** : la page anglaise affiche les textes français tant que les chaînes ne sont pas traduites. Les traduire avec WPML › String Translation (chaînes du domaine « rsn-veille »), ou avec une extension comme Loco Translate.
-3. Vérifier la page anglaise : les mêmes fiches, les dates, le formulaire, `veille.ics`.
+1. Dans WPML › Réglages › **Traduction des types de publication** et **Traduction des taxonomies**, régler « Fiches de veille » (`rsn_veille`) et « Thèmes » (`rsn_theme`) sur **Non traduisible** : les fiches restent communes aux deux langues et l'écran des fiches n'est pas filtré par langue.
+2. Traduire la page `/calendrier-evenements/` avec WPML (le raccourci `[rsn_veille]` se retrouve tel quel dans la version anglaise). L'extension garde ses caches (JSON et iCal) **par langue** (`rsn_veille_json_fr`, `rsn_veille_json_en`) et les vide tous ensemble ; elle purge aussi LiteSpeed et le cache Elementor de la page traduite (retrouvée par WPML à partir de la page choisie dans Réglages › Page Veille, qui reste la page française).
+3. Les textes de l'extension passent par la traduction de WordPress (domaine `rsn-veille`). La version 0.1.0 ne livre **aucun fichier de traduction** : la page anglaise affiche les textes français tant que les chaînes ne sont pas traduites. Les traduire avec WPML › String Translation (chaînes du domaine « rsn-veille »), ou avec une extension comme Loco Translate.
+4. Vérifier la page anglaise : les mêmes fiches, les dates, le formulaire, `veille.ics` ; retirer une fiche dans la file et vérifier qu'elle disparaît aussi de la page anglaise (hors connexion).
 
 ## 6. Dépannage
 
