@@ -103,3 +103,94 @@
 			});
 	});
 })();
+
+/**
+ * RSN Veille : radar des nouvelles. Les boutons (`data-act` : garder, ignorer, retirer) envoient
+ * l'adresse de la nouvelle en fetch vers admin-ajax.php ; le serveur reprend titre et résumé dans son
+ * cache. Au succès, la ligne disparaît et le compteur suit ; en cas d'échec, le message s'affiche
+ * dans la zone `role="status"`. Aucune dépendance.
+ */
+(function () {
+	'use strict';
+
+	var config = window.rsnVeilleAdmin && window.rsnVeilleAdmin.radar;
+	var page = document.querySelector('.rsn-veille-radar');
+	if (!config || !page) {
+		return;
+	}
+	var message = page.querySelector('.rsn-veille-message');
+
+	function annoncer(texte, erreur) {
+		message.textContent = texte;
+		message.classList.toggle('rsn-veille-message-erreur', !!erreur);
+	}
+
+	function occuper(ligne, occupee) {
+		ligne.setAttribute('aria-busy', occupee ? 'true' : 'false');
+		ligne.querySelectorAll('.rsn-veille-radar-action').forEach(function (bouton) {
+			bouton.disabled = occupee;
+		});
+	}
+
+	/** Le message « aucune nouvelle » d'une section réapparaît quand elle n'a plus de ligne. */
+	function majVides() {
+		page.querySelectorAll('[data-section]').forEach(function (section) {
+			var vide = section.querySelector('.rsn-veille-vide');
+			if (vide) {
+				vide.hidden = !!section.querySelector('li[data-url]');
+			}
+		});
+	}
+
+	function retirerLigne(ligne) {
+		var liste = ligne.parentNode;
+		liste.removeChild(ligne);
+		var groupe = liste.closest('.rsn-veille-groupe');
+		if (groupe && !liste.querySelector('li[data-url]')) {
+			groupe.parentNode.removeChild(groupe);
+		}
+		majVides();
+	}
+
+	page.addEventListener('click', function (evenement) {
+		var bouton = evenement.target.closest('.rsn-veille-radar-action');
+		if (!bouton) {
+			return;
+		}
+		var acte = bouton.getAttribute('data-act');
+		var ligne = bouton.closest('li[data-url]');
+		if (!ligne || !config.actions[acte]) {
+			return;
+		}
+		var donnees = new FormData();
+		donnees.append('action', config.actions[acte]);
+		donnees.append('nonce', config.nonce);
+		donnees.append('url', ligne.getAttribute('data-url'));
+
+		occuper(ligne, true);
+		fetch(window.rsnVeilleAdmin.ajaxurl, { method: 'POST', credentials: 'same-origin', body: donnees })
+			.then(function (reponse) {
+				return reponse.json().catch(function () {
+					return null;
+				});
+			})
+			.then(function (json) {
+				if (!json || !json.success || !json.data || !json.data.ok) {
+					var refus = new Error(json && json.data && json.data.message ? json.data.message : config.textes.erreur);
+					refus.serveur = true;
+					throw refus;
+				}
+				var compteur = page.querySelector('[data-compteur-gardees]');
+				if (compteur && json.data.libelle) {
+					compteur.textContent = json.data.libelle;
+				}
+				retirerLigne(ligne);
+				annoncer(acte === 'garder' ? config.textes.gardee : (acte === 'ignorer' ? config.textes.ignoree : config.textes.retiree), false);
+			})
+			.catch(function (erreur) {
+				occuper(ligne, false);
+				// Message du serveur s'il y en a un ; sinon (réseau, réponse illisible) le message générique.
+				annoncer(erreur && erreur.serveur ? erreur.message : config.textes.erreur, true);
+			});
+	});
+})();

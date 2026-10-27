@@ -1,4 +1,4 @@
-# Vérification manuelle de l'administration (tâches 11 et 12)
+# Vérification manuelle de l'administration (tâches 11, 12 et 15)
 
 À faire dans un WordPress réel (`npx @wordpress/env start`, extension active), les tests PHPUnit
 n'utilisant qu'une imitation de WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se
@@ -116,8 +116,44 @@ lancent par `npx wp-env run cli wp …`.
 - [ ] Largeur mobile (outils du navigateur, 375 px) : pas de défilement horizontal de la page ; les zones
       de mots-clés défilent seules.
 
+## Radar (tâche 15)
+
+Page Veille > Radar (`/wp-admin/admin.php?page=rsn-veille-radar`). Le premier affichage lit les 12
+flux de nouvelles (jusqu'à quelques dizaines de secondes si une source est lente), puis le résultat est
+gardé une heure (transient `rsn_veille_radar`).
+
+- [ ] La page s'ouvre sans erreur PHP. En haut : bouton **Rafraîchir**, « 0 gardées », « Flux lus le … » ;
+      section « Gardées pour l'infolettre » (message « Aucune nouvelle gardée pour l'instant. ») puis
+      « Nouvelles du radar », groupées par source, la plus récente d'abord.
+- [ ] Chaque nouvelle montre la date, le titre (lien qui s'ouvre dans un nouvel onglet), « Repérée » ou
+      « À trier », un extrait, et les boutons **Garder pour l'infolettre** et **Ignorer**. Aucune nouvelle
+      de plus de 60 jours. Une source généraliste (FRQ, Acfas) donne surtout des « À trier ».
+- [ ] Les sources en erreur (un 403, un flux devenu une page HTML) sont listées en bas, repliées, sous
+      « N sources en erreur », sans casser les autres sources.
+- [ ] **Garder** deux nouvelles : chaque ligne disparaît du radar, le message « Nouvelle gardée pour
+      l'infolettre. » est annoncé (zone `role="status"`) et le compteur passe à « 1 gardée », « 2 gardées ».
+      Recharger : les deux sont en tête, la plus récemment gardée d'abord, avec « gardée le … » et un
+      bouton **Retirer** ; elles ne sont plus dans le radar.
+      `wp option get rsn_veille_nouvelles_gardees --format=json` : champs `url, titre, date, source,
+      organisateur, resume, gardee_le`.
+- [ ] **Retirer** une gardée : la ligne disparaît, le compteur baisse ; après rechargement la nouvelle
+      réapparaît dans le radar (si elle est encore dans le flux).
+- [ ] **Ignorer** une nouvelle : elle disparaît ; après rechargement et après **Rafraîchir**, elle ne
+      reparaît pas. `wp option get rsn_veille_nouvelles_ignorees --format=json` contient son adresse.
+- [ ] **Rafraîchir** : la page se recharge (lecture des flux de nouveau, un peu plus longue) et « Flux
+      lus le … » indique la minute courante. `wp transient get rsn_veille_radar` existe ensuite.
+- [ ] Titre et résumé ne viennent jamais de la requête : dans la console du navigateur, envoyer
+      `fetch(ajaxurl, {method:'POST', body:new URLSearchParams({action:'rsn_veille_garder', nonce:rsnVeilleAdmin.radar.nonce, url:'https://exemple.org/pirate', titre:'forgé'})})`
+      → réponse 404 « Cette nouvelle n'est plus dans le radar », rien d'enregistré. Avec l'adresse d'une
+      nouvelle du radar et un `titre` forgé, la gardée porte le vrai titre du flux.
+- [ ] Jeton et droits : même requête sans `nonce` → 403 ; connecté comme abonné
+      (`wp user create lecteur lecteur@exemple.test --role=subscriber`) → la page est refusée (403) et les
+      actions AJAX répondent 403. Une adresse `javascript:alert(1)` ou `ftp://x` → 400.
+- [ ] Largeur mobile (375 px) : pas de défilement horizontal de la page ; les boutons passent à la ligne.
+
 ## Nettoyage
 
 `wp post delete $(wp post list --post_type=rsn_veille --meta_key=rsn_veille_source --meta_value=Vérification --format=ids --post_status=any) --force`
-puis `wp user delete redaction lecteur --yes`. Fiches importées :
+puis `wp user delete redaction lecteur --yes`. Radar : `wp option delete rsn_veille_nouvelles_gardees rsn_veille_nouvelles_ignorees`
+et `wp transient delete rsn_veille_radar`. Fiches importées :
 `wp post delete $(wp post list --post_type=rsn_veille --meta_key=rsn_veille_source --meta_value=infolettre --format=ids --post_status=any) --force`.

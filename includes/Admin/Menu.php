@@ -40,6 +40,8 @@ final class Menu {
         add_action('wp_ajax_' . PageFile::ACTION_AJAX, [PageFile::class, 'ajax_changer_statut']);
         // Réglages : option rsn_veille_reglages (options.php), lancement de la collecte et import (admin-post.php).
         PageReglages::accrocher();
+        // Radar : actions AJAX garder, ignorer et retirer ; rafraîchissement (admin-post.php).
+        PageRadar::accrocher();
     }
 
     /**
@@ -81,7 +83,7 @@ final class Menu {
         $pages = [
             // Même slug que le menu : la file d'approbation est la page par défaut.
             self::SLUG => [__("File d'approbation", 'rsn-veille'), [PageFile::class, 'afficher']],
-            self::SLUG_RADAR => [__('Radar', 'rsn-veille'), [self::class, 'afficher_radar']],
+            self::SLUG_RADAR => [__('Radar', 'rsn-veille'), [PageRadar::class, 'afficher']],
             self::SLUG_INFOLETTRE => [__('Infolettre', 'rsn-veille'), [self::class, 'afficher_infolettre']],
             self::SLUG_JOURNAL => [__('Journal', 'rsn-veille'), [PageJournal::class, 'afficher']],
             self::SLUG_REGLAGES => [__('Réglages', 'rsn-veille'), [PageReglages::class, 'afficher']],
@@ -107,12 +109,22 @@ final class Menu {
                 'erreur' => __('Le changement de statut a échoué. Réessayez ou rechargez la page.', 'rsn-veille'),
                 'vide' => __('Aucune fiche.', 'rsn-veille'),
             ],
+            // Page Radar : une action AJAX par bouton (`data-act`), jeton `rsn_veille_radar`.
+            'radar' => [
+                'nonce' => wp_create_nonce(PageRadar::NONCE),
+                'actions' => [
+                    'garder' => PageRadar::ACTION_GARDER,
+                    'ignorer' => PageRadar::ACTION_IGNORER,
+                    'retirer' => PageRadar::ACTION_RETIRER,
+                ],
+                'textes' => [
+                    'erreur' => __("L'action a échoué. Réessayez ou rechargez la page.", 'rsn-veille'),
+                    'gardee' => __("Nouvelle gardée pour l'infolettre.", 'rsn-veille'),
+                    'ignoree' => __('Nouvelle ignorée.', 'rsn-veille'),
+                    'retiree' => __('Nouvelle retirée des gardées.', 'rsn-veille'),
+                ],
+            ],
         ]);
-    }
-
-    /** Page Radar (tâche 15). */
-    public static function afficher_radar(): void {
-        self::afficher_a_venir(__('Radar', 'rsn-veille'));
     }
 
     /** Page Infolettre (tâche 16). */
