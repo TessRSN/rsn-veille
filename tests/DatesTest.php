@@ -39,4 +39,18 @@ final class DatesTest extends TestCase {
         $this->assertSame('', Dates::date_heure(''));
         $this->assertSame('', Dates::date_heure('hier'));
     }
+
+    public function test_mois_court_numero_de_jour_et_date_courte(): void {
+        $this->assertSame('janv.', Dates::mois_court('2026-01-15'));
+        $this->assertSame('sept.', Dates::mois_court('2026-09-28'));
+        $this->assertSame('mai', Dates::mois_court('2026-05-02'));
+        $this->assertSame('', Dates::mois_court('2026-13-01'));
+        $this->assertSame('', Dates::mois_court(null));
+        $this->assertSame('1', Dates::numero_jour('2026-01-01'));
+        $this->assertSame('28', Dates::numero_jour('2026-09-28'));
+        $this->assertSame('', Dates::numero_jour('bientôt'));
+        $this->assertSame('1 janv. 2026', Dates::date_courte('2026-01-01'));
+        $this->assertSame('28 sept. 2026', Dates::date_courte('2026-09-28'));
+        $this->assertSame('', Dates::date_courte('2026-02-30'));
+    }
 }

@@ -42,6 +42,8 @@ final class Menu {
         PageReglages::accrocher();
         // Radar : actions AJAX garder, ignorer et retirer ; rafraîchissement (admin-post.php).
         PageRadar::accrocher();
+        // Infolettre : vider les nouvelles gardées (admin-post.php).
+        PageInfolettre::accrocher();
     }
 
     /**
@@ -84,7 +86,7 @@ final class Menu {
             // Même slug que le menu : la file d'approbation est la page par défaut.
             self::SLUG => [__("File d'approbation", 'rsn-veille'), [PageFile::class, 'afficher']],
             self::SLUG_RADAR => [__('Radar', 'rsn-veille'), [PageRadar::class, 'afficher']],
-            self::SLUG_INFOLETTRE => [__('Infolettre', 'rsn-veille'), [self::class, 'afficher_infolettre']],
+            self::SLUG_INFOLETTRE => [__('Infolettre', 'rsn-veille'), [PageInfolettre::class, 'afficher']],
             self::SLUG_JOURNAL => [__('Journal', 'rsn-veille'), [PageJournal::class, 'afficher']],
             self::SLUG_REGLAGES => [__('Réglages', 'rsn-veille'), [PageReglages::class, 'afficher']],
         ];
@@ -124,20 +126,15 @@ final class Menu {
                     'retiree' => __('Nouvelle retirée des gardées.', 'rsn-veille'),
                 ],
             ],
+            // Page Infolettre : copie des blocs (collage enrichi ou code HTML) et confirmation du vidage.
+            'infolettre' => [
+                'textes' => [
+                    'copie' => __('Bloc copié : collez-le dans Mailchimp.', 'rsn-veille'),
+                    'code' => __('Code HTML copié : collez-le dans un bloc Code de Mailchimp.', 'rsn-veille'),
+                    'erreur' => __("La copie a échoué. Sélectionnez l'aperçu et copiez-le à la main.", 'rsn-veille'),
+                    'confirmer_vider' => __('Vider toutes les nouvelles gardées pour l’infolettre ?', 'rsn-veille'),
+                ],
+            ],
         ]);
-    }
-
-    /** Page Infolettre (tâche 16). */
-    public static function afficher_infolettre(): void {
-        self::afficher_a_venir(__('Infolettre', 'rsn-veille'));
-    }
-
-    /** Page provisoire d'une fonction pas encore livrée. */
-    private static function afficher_a_venir(string $titre): void {
-        if (!current_user_can(self::CAPACITE)) {
-            wp_die(esc_html__("Vous n'avez pas accès à cette page.", 'rsn-veille'), '', 403);
-        }
-        echo '<div class="wrap rsn-veille-admin"><h1>' . esc_html($titre) . '</h1><p>'
-            . esc_html__('Cette page est à venir.', 'rsn-veille') . '</p></div>';
     }
 }

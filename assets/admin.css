@@ -221,3 +221,45 @@
 .rsn-veille-radar .rsn-veille-vide[hidden] {
 	display: none;
 }
+
+/* Infolettre */
+
+.rsn-veille-infolettre .rsn-veille-bloc {
+	max-width: 960px;
+	margin: 0 0 32px;
+}
+
+.rsn-veille-infolettre .rsn-veille-bloc h2 {
+	margin-top: 28px;
+}
+
+.rsn-veille-infolettre .rsn-veille-compteur {
+	margin-left: 8px;
+	font-size: 13px;
+	font-weight: 400;
+	color: #50575e;
+}
+
+.rsn-veille-reglages-bloc,
+.rsn-veille-infolettre .rsn-veille-vider {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 12px;
+	align-items: center;
+	margin: 0 0 12px;
+}
+
+.rsn-veille-bloc-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin: 0 0 12px;
+}
+
+.rsn-veille-apercu {
+	display: block;
+	width: 100%;
+	min-height: 120px;
+	border: 1px solid #dcdcde;
+	background: #fff;
+}

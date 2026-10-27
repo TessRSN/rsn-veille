@@ -68,6 +68,7 @@ final class MenuTest extends TestCase {
         $this->assertSame("File d'approbation", $sous['rsn-veille']['titre_menu']);
         $this->assertSame([PageJournal::class, 'afficher'], $sous['rsn-veille-journal']['rappel']);
         $this->assertSame([\RSN\Veille\Admin\PageRadar::class, 'afficher'], $sous['rsn-veille-radar']['rappel']);
+        $this->assertSame([\RSN\Veille\Admin\PageInfolettre::class, 'afficher'], $sous['rsn-veille-infolettre']['rappel']);
         foreach ($sous as $page) {
             $this->assertSame(Menu::CAPACITE, $page['capacite']);
         }
@@ -93,6 +94,7 @@ final class MenuTest extends TestCase {
         $this->assertSame('rsn_veille_changer_statut', $config['action']);
         $this->assertSame(wp_create_nonce('rsn_veille_radar'), $config['radar']['nonce']);
         $this->assertSame(['garder' => 'rsn_veille_garder', 'ignorer' => 'rsn_veille_ignorer', 'retirer' => 'rsn_veille_retirer_gardee'], $config['radar']['actions']);
+        $this->assertSame(['copie', 'code', 'erreur', 'confirmer_vider'], array_keys($config['infolettre']['textes']));
     }
 
     public function test_page_principale_charge_aussi_les_ressources(): void {
@@ -121,5 +123,6 @@ final class MenuTest extends TestCase {
             $this->assertArrayNotHasKey('wp_ajax_nopriv_' . $action, $actions, $action);
         }
         $this->assertArrayHasKey('admin_post_rsn_veille_radar_rafraichir', $actions);
+        $this->assertArrayHasKey('admin_post_rsn_veille_infolettre_vider', $actions);
     }
 }

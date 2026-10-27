@@ -1,4 +1,4 @@
-# Vérification manuelle de l'administration (tâches 11, 12 et 15)
+# Vérification manuelle de l'administration (tâches 11, 12, 15 et 16)
 
 À faire dans un WordPress réel (`npx @wordpress/env start`, extension active), les tests PHPUnit
 n'utilisant qu'une imitation de WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se
@@ -31,8 +31,7 @@ lancent par `npx wp-env run cli wp …`.
 ## Vérifications
 
 - [ ] **Éditeur** (compte `redaction`) : le menu « Veille » (icône de flux) apparaît sous « Commentaires »,
-      avec File d'approbation, Radar, Infolettre, Journal, Réglages. Radar et Infolettre
-      affichent « Cette page est à venir. ».
+      avec File d'approbation, Radar, Infolettre, Journal, Réglages.
 - [ ] **Abonné** (compte `lecteur`) : pas de menu « Veille » ; l'adresse
       `/wp-admin/admin.php?page=rsn-veille` répond « Désolé, vous n'avez pas l'autorisation… ».
 - [ ] Le titre `<script>` s'affiche en texte (aucune alerte), avec le lien « Modifier » qui ouvre
@@ -160,9 +159,63 @@ copie de 24 h (`rsn_veille_radar_dernier`). Un verrou de 2 min (`rsn_veille_rada
       actions AJAX répondent 403. Une adresse `javascript:alert(1)` ou `ftp://x` → 400.
 - [ ] Largeur mobile (375 px) : pas de défilement horizontal de la page ; les boutons passent à la ligne.
 
+## Infolettre (tâche 16)
+
+Page Veille > Infolettre (`/wp-admin/admin.php?page=rsn-veille-infolettre`). Trois blocs HTML aux styles en
+ligne (tableaux), calqués sur l'infolettre de septembre 2026 : **Agenda** (événements à venir publiés et
+événements du RSN, comme la page publique), **Appels** (appels publiés non échus et programmes du RSN ouverts,
+articles de la catégorie 149 pour lesquels `rsn_appel_etat()` répond « ouvert »), **Nouvelles gardées**
+(option `rsn_veille_nouvelles_gardees`, la plus récente d'abord). Préparation : publier quelques fiches
+(événements et un appel avec date limite), garder deux nouvelles dans le Radar, et, pour les programmes,
+avoir des articles de la catégorie 149 avec l'extrait 45 du site actif.
+
+- [ ] La page s'ouvre sans erreur PHP, avec trois sections (Agenda, Appels, Nouvelles gardées), chacune
+      avec un compteur (« 8 événements »), un aperçu rendu dans un cadre, les boutons **Copier** et
+      **Copier le code HTML**. L'aperçu montre un tableau lisible : colonne de date de 64 px (jour en
+      bleu marine, mois en capitales), titre en gras, organisateur · lieu en gris, thèmes en capitales
+      bleues, résumé, « Plus d'information → ».
+- [ ] **Copier (collage enrichi)** sur le bloc Agenda, puis coller dans un éditeur enrichi (LibreOffice
+      Writer, ou le corps d'un courriel) : la mise en forme est conservée (gras, couleurs, colonnes). Coller
+      dans un éditeur de texte brut : la version texte (une information par ligne, adresse après chaque lien).
+      Message « Bloc copié : collez-le dans Mailchimp. » annoncé sous le titre de la page.
+- [ ] **Copier le code HTML** puis coller dans un bloc **Code** de Mailchimp (ou un fichier .html) : le code
+      commence par le commentaire `<!-- Agenda — événements à venir (généré par la veille de l'écosystème, … ) -->`,
+      ne contient ni `<script>` ni `<style>`, et l'aperçu Mailchimp reproduit celui de la page.
+- [ ] Même vérification pour les blocs **Appels** (« Date limite » ou « Publié », jour, mois ; « Consulter
+      l'appel → ») et **Nouvelles gardées** (« 20 oct. 2026 · Source », titre en gras, « Lire la suite → »).
+- [ ] Repli sans API moderne : dans la console, `delete window.ClipboardItem` puis **Copier** : la copie
+      fonctionne encore (sélection du rendu de l'aperçu, `execCommand`).
+- [ ] **Nombre d'événements** : choisir 6, puis 12, **Appliquer** : l'adresse porte `&nombre=6` et l'agenda
+      montre 6 événements au plus (le compteur suit). Une date dans « ou jusqu'au » remplace le nombre :
+      tous les événements jusqu'à cette date (compris). Une valeur forgée dans l'adresse (`nombre=7`,
+      `jusqu_au=pas-une-date`) est ignorée (8 événements, sans horizon).
+- [ ] Un événement dont le titre contient `<b>gras</b> & <script>alert(1)</script>` (voir la préparation)
+      s'affiche en texte dans l'aperçu, dans le code copié (`&lt;b&gt;…`) et dans le texte : aucune alerte.
+- [ ] Dates : un événement de plusieurs jours du même mois montre « 1–3 » ; sur deux mois,
+      « 28 nov. – 2 » avec le mois de fin. Un événement terminé hier n'apparaît pas ; un événement en cours,
+      si.
+- [ ] **Appels** : un appel dont la date limite est passée est absent ; l'ordre va de la date limite la plus
+      proche à celle sans date limite. Un programme du RSN ouvert (catégorie 149) apparaît avec
+      « RSN · Programme du RSN » ; avec sa période « date limite : … », « Date limite » + la date ; sans date
+      lisible, « Publié » + sa date de publication. Un appel collecté qui pointe vers la même page n'est pas
+      répété. Sans la fonction `rsn_appel_etat` (extrait désactivé), aucun programme et aucune erreur.
+- [ ] Bloc sans élément : le message « Aucun élément à inclure pour le moment. » s'affiche dans l'aperçu et
+      les deux boutons de copie sont grisés.
+- [ ] **Vider les nouvelles gardées** : le bouton demande confirmation ; confirmer vide la liste
+      (`wp option get rsn_veille_nouvelles_gardees --format=json` → `[]`), retourne sur la page avec
+      « Nouvelles gardées vidées. » et un bloc Nouvelles vide. Annuler ne fait rien. Le Radar ne montre plus
+      de gardées.
+- [ ] Jeton et droits : changer la valeur du champ caché `_wpnonce` du formulaire « Vider » dans les outils du
+      navigateur, envoyer → « Le lien que vous avez suivi a expiré », rien n'est vidé. Compte `lecteur` :
+      `/wp-admin/admin.php?page=rsn-veille-infolettre` est refusé, et un POST direct vers `admin-post.php`
+      (`action=rsn_veille_infolettre_vider`) répond 403.
+- [ ] Le cadre d'aperçu n'exécute aucun script (attribut `sandbox` sans `allow-scripts`) ; un clic sur un
+      lien de l'aperçu ouvre un nouvel onglet, la page ne change pas.
+- [ ] Largeur mobile (375 px) : pas de défilement horizontal de la page.
+
 ## Nettoyage
 
 `wp post delete $(wp post list --post_type=rsn_veille --meta_key=rsn_veille_source --meta_value=Vérification --format=ids --post_status=any) --force`
-puis `wp user delete redaction lecteur --yes`. Radar : `wp option delete rsn_veille_nouvelles_gardees rsn_veille_nouvelles_ignorees`
+puis `wp user delete redaction lecteur --yes`. Radar et Infolettre : `wp option delete rsn_veille_nouvelles_gardees rsn_veille_nouvelles_ignorees`
 et `wp transient delete rsn_veille_radar rsn_veille_radar_dernier rsn_veille_radar_lecture`. Fiches importées :
 `wp post delete $(wp post list --post_type=rsn_veille --meta_key=rsn_veille_source --meta_value=infolettre --format=ids --post_status=any) --force`.

@@ -75,6 +75,33 @@ final class Dates {
         return sprintf(__('%1$d h %2$s', 'rsn-veille'), $h, $m[2]);
     }
 
+    /** Mois abrégé de la date (« janv. », « mai », « sept. ») ; vide si la date n'est pas une date `Y-m-d` valide. */
+    public static function mois_court(?string $date): string {
+        $p = self::parties($date);
+        if ($p === null) {
+            return '';
+        }
+        $noms = [
+            1 => __('janv.', 'rsn-veille'), 2 => __('févr.', 'rsn-veille'), 3 => __('mars', 'rsn-veille'),
+            4 => __('avr.', 'rsn-veille'), 5 => __('mai', 'rsn-veille'), 6 => __('juin', 'rsn-veille'),
+            7 => __('juil.', 'rsn-veille'), 8 => __('août', 'rsn-veille'), 9 => __('sept.', 'rsn-veille'),
+            10 => __('oct.', 'rsn-veille'), 11 => __('nov.', 'rsn-veille'), 12 => __('déc.', 'rsn-veille'),
+        ];
+        return $noms[$p[1]];
+    }
+
+    /** Numéro du jour sans « er » (« 1 », « 28 ») ; vide si la date n'est pas valide. */
+    public static function numero_jour(?string $date): string {
+        $p = self::parties($date);
+        return $p === null ? '' : (string) $p[2];
+    }
+
+    /** « 28 sept. 2026 » (le 1er reste « 1 ») ; vide si la date n'est pas valide. */
+    public static function date_courte(?string $date): string {
+        $p = self::parties($date);
+        return $p === null ? '' : $p[2] . ' ' . self::mois_court($date) . ' ' . $p[0];
+    }
+
     /** @return array{0:int,1:int,2:int}|null [année, mois, jour] d'une date `Y-m-d` valide. */
     private static function parties(?string $date): ?array {
         if ($date === null || preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $m) !== 1) {

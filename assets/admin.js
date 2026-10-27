@@ -194,3 +194,138 @@
 			});
 	});
 })();
+
+/**
+ * RSN Veille : page Infolettre. « Copier » met le bloc dans le presse-papiers en HTML et en texte
+ * (`ClipboardItem`), pour un collage enrichi dans l'éditeur de Mailchimp ; repli : sélection du rendu
+ * de l'aperçu et `execCommand('copy')`. « Copier le code HTML » copie le code source (`writeText`, repli
+ * sur une zone de texte temporaire). Les codes viennent de zones de texte cachées, déjà échappées par le
+ * serveur. Le cadre d'aperçu prend la hauteur de son contenu. Aucune dépendance.
+ */
+(function () {
+	'use strict';
+
+	var config = window.rsnVeilleAdmin && window.rsnVeilleAdmin.infolettre;
+	var page = document.querySelector('.rsn-veille-infolettre');
+	if (!config || !page) {
+		return;
+	}
+	var message = page.querySelector('.rsn-veille-message');
+
+	function annoncer(texte, erreur) {
+		message.textContent = texte;
+		message.classList.toggle('rsn-veille-message-erreur', !!erreur);
+	}
+
+	function lire(bloc, role) {
+		var zone = bloc.querySelector('[data-role="' + role + '"]');
+		return zone ? zone.value : '';
+	}
+
+	/** Copie un texte brut : API asynchrone, sinon zone de texte temporaire et execCommand. */
+	function copierTexte(texte) {
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			return navigator.clipboard.writeText(texte).catch(function () {
+				return repliTexte(texte);
+			});
+		}
+		return repliTexte(texte);
+	}
+
+	function repliTexte(texte) {
+		return new Promise(function (resolu, refuse) {
+			var zone = document.createElement('textarea');
+			zone.value = texte;
+			zone.setAttribute('readonly', '');
+			zone.style.position = 'fixed';
+			zone.style.opacity = '0';
+			document.body.appendChild(zone);
+			zone.select();
+			var ok = false;
+			try {
+				ok = document.execCommand('copy');
+			} catch (e) {
+				ok = false;
+			}
+			document.body.removeChild(zone);
+			return ok ? resolu() : refuse(new Error('copie'));
+		});
+	}
+
+	/** Copie enrichie : HTML et texte ensemble ; sinon sélection du rendu dans le cadre d'aperçu. */
+	function copierRiche(bloc) {
+		var html = lire(bloc, 'html');
+		var texte = lire(bloc, 'texte');
+		if (navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {
+			var element = new window.ClipboardItem({
+				'text/html': new Blob([html], { type: 'text/html' }),
+				'text/plain': new Blob([texte], { type: 'text/plain' })
+			});
+			return navigator.clipboard.write([element]).catch(function () {
+				return repliRiche(bloc);
+			});
+		}
+		return repliRiche(bloc);
+	}
+
+	function repliRiche(bloc) {
+		return new Promise(function (resolu, refuse) {
+			var cadre = bloc.querySelector('iframe.rsn-veille-apercu');
+			var doc = cadre && cadre.contentDocument;
+			if (!doc || !doc.body || !cadre.contentWindow) {
+				return refuse(new Error('apercu'));
+			}
+			var selection = cadre.contentWindow.getSelection();
+			var plage = doc.createRange();
+			plage.selectNodeContents(doc.body);
+			selection.removeAllRanges();
+			selection.addRange(plage);
+			var ok = false;
+			try {
+				ok = doc.execCommand('copy');
+			} catch (e) {
+				ok = false;
+			}
+			selection.removeAllRanges();
+			return ok ? resolu() : refuse(new Error('copie'));
+		});
+	}
+
+	function ajusterCadre(cadre) {
+		var doc = cadre.contentDocument;
+		if (doc && doc.documentElement) {
+			cadre.style.height = Math.max(120, doc.documentElement.scrollHeight + 4) + 'px';
+		}
+	}
+
+	page.querySelectorAll('iframe.rsn-veille-apercu').forEach(function (cadre) {
+		cadre.addEventListener('load', function () {
+			ajusterCadre(cadre);
+		});
+		if (cadre.contentDocument && cadre.contentDocument.readyState === 'complete') {
+			ajusterCadre(cadre);
+		}
+	});
+
+	page.addEventListener('click', function (evenement) {
+		var bouton = evenement.target.closest('.rsn-veille-copier');
+		if (!bouton || bouton.disabled) {
+			return;
+		}
+		var bloc = bouton.closest('[data-bloc]');
+		var code = bouton.getAttribute('data-mode') === 'code';
+		var copie = code ? copierTexte(lire(bloc, 'html')) : copierRiche(bloc);
+		copie.then(function () {
+			annoncer(code ? config.textes.code : config.textes.copie, false);
+		}).catch(function () {
+			annoncer(config.textes.erreur, true);
+		});
+	});
+
+	// Vider les nouvelles gardées : confirmation avant l'envoi (le serveur vérifie jeton et droits).
+	page.addEventListener('submit', function (evenement) {
+		if (evenement.target.classList.contains('rsn-veille-vider') && !window.confirm(config.textes.confirmer_vider)) {
+			evenement.preventDefault();
+		}
+	});
+})();
