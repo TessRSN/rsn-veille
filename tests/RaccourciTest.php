@@ -376,6 +376,12 @@ final class RaccourciTest extends TestCase {
         $this->assertSame(['page', 'rsn-veille-page'], $classes);
     }
 
+    public function test_classe_body_rend_telle_quelle_une_valeur_qui_n_est_pas_un_tableau(): void {
+        // Un filtre `body_class` en amont peut rendre autre chose qu'un tableau : on ne plante pas (pas de TypeError).
+        $GLOBALS['rsn_veille_wp']['objet_demande'] = $this->page(5, '[rsn_veille]');
+        $this->assertSame('page', apply_filters('body_class', 'page'));
+    }
+
     public function test_classe_body_absente_ailleurs(): void {
         $this->assertSame(['page'], apply_filters('body_class', ['page']), 'aucun objet demandé');
 

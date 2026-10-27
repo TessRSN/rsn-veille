@@ -206,8 +206,8 @@ final class Fiche {
     }
 
     /**
-     * Appel encore en cours le jour $aujourdhui (Y-m-d), règle unique de la page publique, du JSON, de
-     * l'iCal, de l'infolettre et du courriel : sa date limite (`limite_appel`) n'est pas passée ; sans date
+     * Appel encore en cours le jour $aujourdhui (Y-m-d), règle unique de la page publique, du JSON,
+     * de l'infolettre et du courriel : sa date limite (`limite_appel`) n'est pas passée ; sans date
      * limite, il a été publié il y a moins de 30 jours. La date de publication est le début (date de la
      * source), sinon le jour de création dans la veille : une première collecte ne rajeunit pas un appel
      * publié il y a des mois. Sans aucune date, l'appel n'est pas tenu pour en cours.

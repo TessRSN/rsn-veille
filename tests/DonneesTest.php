@@ -139,6 +139,7 @@ final class DonneesTest extends TestCase {
     public function test_tri_evenements_par_debut_puis_appels_par_echeance(): void {
         $this->entrepot->creer($this->fiche(['titre' => 'Décembre', 'debut' => '2026-12-03', 'cle_source' => 'a:1']));
         $this->entrepot->creer($this->fiche(['titre' => 'Novembre', 'debut' => '2026-11-02', 'cle_source' => 'a:2']));
+        // Publié le 2026-10-05, soit moins de 30 jours avant le jour du test (2026-10-25) : sans date limite, il reste en cours.
         $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Appel sans échéance', 'debut' => '2026-10-05', 'cle_source' => 'b:1']));
         $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Appel tardif', 'debut' => '2026-08-01', 'echeance' => '2027-01-15', 'cle_source' => 'b:2']));
         $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Appel proche', 'debut' => '2026-10-01', 'echeance' => '2026-11-30', 'cle_source' => 'b:3']));
@@ -152,6 +153,8 @@ final class DonneesTest extends TestCase {
     public function test_appels_perimes_absents_du_json_et_des_elements(): void {
         $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Récent sans limite', 'debut' => '2026-10-23', 'fin' => '2026-10-23', 'cle_source' => 'a:1']));
         $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Vieux sans limite', 'debut' => '2026-06-22', 'fin' => '2026-06-22', 'cree_le' => '2026-10-25', 'cle_source' => 'a:2']));
+        // Publié le 2026-09-20, soit 35 jours avant le jour du test (2026-10-25) : au-delà des 30 jours, absent (il serait présent avec 90).
+        $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Sans limite, publié il y a 35 jours', 'debut' => '2026-09-20', 'fin' => '2026-09-20', 'cle_source' => 'a:6']));
         $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Échéance passée', 'debut' => '2026-10-01', 'echeance' => '2026-10-24', 'cle_source' => 'a:3']));
         $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Fin passée', 'debut' => '2026-10-01', 'fin' => '2026-10-20', 'cle_source' => 'a:4']));
         $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Vieux avec échéance à venir', 'debut' => '2025-01-01', 'echeance' => '2026-12-01', 'cle_source' => 'a:5']));

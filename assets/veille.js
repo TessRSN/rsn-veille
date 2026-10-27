@@ -1,6 +1,6 @@
 /*
  * RSN : veille de l'écosystème, page publique ([rsn_veille]).
- * Repris du JS de docs/maquette/gabarit-v8.html, réduit aux parties publiques : filtres (Afficher, Qui organise, mois
+ * Repris du JS de docs/maquette/gabarit-v9.html, réduit aux parties publiques : filtres (Afficher, Qui organise, mois
  * avec « Plus tard » et « Événements passés », thèmes repliés), liste unifiée événements + appels groupée par mois,
  * calendrier, glissement, formulaire de proposition.
  * Les actions de l'équipe (publier, écarter, infolettre) vivent dans wp-admin.
@@ -152,7 +152,8 @@ function animer(racine, noeudDonnees) {
   const deuxTypes = () => visibles('evenement').concat(visibles('appel'));
   const aVenir = () => deuxTypes().filter(k => !estPasse(k));
   const passes = () => deuxTypes().filter(k => estPasse(k));
-  // Mois où un élément à venir est classé : celui de sa clé de tri (le mois courant si elle est déjà passée).
+  // Mois où un élément à venir est classé : celui de sa clé de tri. Le plancher à AUJ ne joue plus pour les éléments à venir
+  // (leur clé de tri n'est jamais antérieure à aujourd'hui) ; il ne sert que de garde-fou.
   const moisClasse = k => (cleTri(k) < AUJ ? AUJ : cleTri(k)).slice(0, 7);
   // Un événement compte dans chaque mois qu'il traverse, un appel dans le mois de sa date limite.
   const dansMois = (k, m) => k.type === 'appel' ? moisClasse(k) === m : k.debut.slice(0, 7) <= m && (k.fin || k.debut).slice(0, 7) >= m;

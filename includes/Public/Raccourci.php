@@ -78,7 +78,11 @@ final class Raccourci {
      * @param array<int|string,string> $classes
      * @return array<int|string,string>
      */
-    public static function classe_body(array $classes): array {
+    public static function classe_body($classes) {
+        // Un filtre `body_class` en amont a pu rendre autre chose qu'un tableau : on le laisse tel quel.
+        if (!is_array($classes)) {
+            return $classes;
+        }
         if (self::page_affiche_raccourci() && !in_array('rsn-veille-page', $classes, true)) {
             $classes[] = 'rsn-veille-page';
         }
