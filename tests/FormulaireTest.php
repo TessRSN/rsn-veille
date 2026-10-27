@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/bouchons-wordpress.php';
 
 use PHPUnit\Framework\TestCase;
+use RSN\Veille\Collecte;
 use RSN\Veille\Depot;
 use RSN\Veille\EntrepotWordPress;
 use RSN\Veille\Fiche;
@@ -75,6 +76,12 @@ final class FormulaireTest extends TestCase {
         $this->assertSame(['IA', 'Données'], $fiche->themes);
         $this->assertArrayNotHasKey('courriel', $fiche->vers_tableau());
         $this->assertStringNotContainsString('personne@exemple.org', serialize($fiche->vers_tableau()));
+    }
+
+    public function test_themes_des_reglages_et_non_ceux_par_defaut(): void {
+        update_option(Collecte::OPTION_REGLAGES, ['themes' => [['nom' => 'Souveraineté', 'mots' => ['souveraineté']]]]);
+        $fiche = Formulaire::valider(self::champs(), self::AUJOURDHUI)['fiche'];
+        $this->assertSame(['Souveraineté'], $fiche->themes);
     }
 
     public function test_deux_propositions_ont_des_cles_distinctes(): void {
@@ -292,6 +299,21 @@ final class FormulaireTest extends TestCase {
         $this->assertSame('a_approuver', $fiche->statut);
         $this->assertSame('personne@exemple.org', get_post_meta($fiches[0]->ID, 'rsn_veille_courriel_proposant', true));
         $this->assertStringNotContainsString('personne@exemple.org', json_encode($reponse));
+    }
+
+    public function test_une_proposition_ne_purge_aucun_cache(): void {
+        Collecte::accrocher();
+        update_option(Collecte::OPTION_REGLAGES, ['page_veille_id' => 42]);
+        $_FILES['image'] = $this->image();
+        [, $statut] = $this->envoyer(self::champs());
+        $this->assertSame(200, $statut);
+        $this->assertCount(1, self::fiches());
+        $this->assertSame([], rsn_veille_bouchons_declenchements('litespeed_purge_post'));
+        $this->assertSame([], rsn_veille_bouchons_declenchements('rsn_veille_caches_purges'));
+
+        // Hors proposition, une écriture de fiche purge toujours.
+        wp_insert_post(['post_type' => 'rsn_veille', 'post_title' => 'Fiche', 'post_status' => 'publish']);
+        $this->assertSame([[42]], rsn_veille_bouchons_declenchements('litespeed_purge_post'));
     }
 
     public function test_sans_courriel_aucune_meta(): void {

@@ -4,9 +4,9 @@ declare(strict_types=1);
 namespace RSN\Veille\Public;
 
 use RSN\Veille\Admin\Menu;
+use RSN\Veille\Collecte;
 use RSN\Veille\EntrepotWordPress;
 use RSN\Veille\Fiche;
-use RSN\Veille\Pertinence;
 use RSN\Veille\TypeContenu;
 
 if (!defined('ABSPATH')) {
@@ -126,7 +126,8 @@ final class Formulaire {
         $fiche->url = self::url($brut('url'));
         $fiche->resume = $resume;
         $fiche->langue = 'fr';
-        $fiche->themes = (new Pertinence())->themes($titre . ' ' . $resume);
+        // Thèmes des réglages de l'équipe (comme la collecte), pas ceux par défaut.
+        $fiche->themes = Collecte::pertinence()->themes($titre . ' ' . $resume);
         $fiche->source = Fiche::SOURCE_PROPOSITION;
         $fiche->niveau = 'M';
         $fiche->statut = 'a_approuver';
@@ -226,7 +227,9 @@ final class Formulaire {
         }
 
         try {
-            $deja = self::enregistrer($fiche, $resultat['courriel'], $image !== null);
+            // Une proposition reste à approuver : rien de public ne change, aucune purge de cache (page ni JSON),
+            // qu'une requête anonyme pourrait sinon déclencher à volonté.
+            $deja = Collecte::sans_purge(static fn(): bool => self::enregistrer($fiche, $resultat['courriel'], $image !== null));
         } catch (\Throwable $e) {
             error_log('rsn-veille : proposition non enregistrée : ' . $e->getMessage());
             wp_send_json_error(['ok' => false, 'message' => __("L'envoi a échoué. Réessayez plus tard.", 'rsn-veille')], 500);

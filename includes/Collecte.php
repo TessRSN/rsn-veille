@@ -267,6 +267,20 @@ final class Collecte {
         return array_values(array_unique($ids));
     }
 
+    /**
+     * Exécute $travail sans purge des caches par les écritures de fiches (proposition du public : rien de
+     * public ne change), puis rétablit l'état précédent ; rend le résultat de $travail.
+     */
+    public static function sans_purge(callable $travail): mixed {
+        $avant = self::$purge_suspendue;
+        self::$purge_suspendue = true;
+        try {
+            return $travail();
+        } finally {
+            self::$purge_suspendue = $avant;
+        }
+    }
+
     /** Rappel de `save_post_rsn_veille` : purge, sauf pendant l'intégration d'une source (purgée à la fin). */
     public static function purger_apres_ecriture(): void {
         if (!self::$purge_suspendue) {
