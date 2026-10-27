@@ -28,10 +28,13 @@
 .rsn-veille .hex{width:13px;height:14px;flex:0 0 auto;overflow:visible}
 .rsn-veille .wrap{max-width:1140px;margin:0 auto}
 
-/* Texte d'introduction et actions */
-.rsn-veille .actions{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:18px 30px;margin:52px 0 40px}
-.rsn-veille .actions p{margin:0;max-width:56ch;font-size:16px}
-.rsn-veille .actions .act{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px}
+/* Bandeau d'introduction : texte et boutons, sur le même bleu que l'en-tête de page du thème et que « À la une »,
+   pour que les trois bandes se lisent comme un seul bloc continu. Comme « À la une », le fond garde la largeur de la
+   colonne et est peint jusqu'aux bords de la fenêtre par une ombre étalée, rognée verticalement par clip-path. */
+.rsn-veille .bandeau{background:var(--navy);color:#fff;padding-block:22px 30px;box-shadow:0 0 0 100vmax var(--navy);clip-path:inset(0 -100vmax)}
+.rsn-veille .bandeau .tete{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:18px 40px}
+.rsn-veille .bandeau p{margin:0;max-width:56ch;font-size:15.5px;line-height:1.5;color:rgba(255,255,255,.82)}
+.rsn-veille .bandeau .act{display:flex;flex-wrap:wrap;gap:12px}
 .rsn-veille.rsn-veille .btn{display:inline-flex;align-items:center;gap:9px;padding:11px 20px;border-radius:10px;background:var(--yellow-tint);color:var(--ink);font-weight:600;font-size:14.5px;border:1px solid transparent;transition:background .2s,border-color .2s}
 .rsn-veille.rsn-veille .btn svg{width:15px;height:15px;color:var(--yellow-ink);transition:transform .2s}
 .rsn-veille.rsn-veille .btn:hover{border-color:var(--yellow-ink);background:#fff}
@@ -39,6 +42,13 @@
 .rsn-veille.rsn-veille .btn.sobre{background:var(--tint)}
 .rsn-veille.rsn-veille .btn.sobre svg{color:var(--navy)}
 .rsn-veille.rsn-veille .btn.sobre:hover{border-color:var(--navy)}
+/* Boutons du bandeau : « clair » (contour blanc sur fond bleu) et « jaune » (action principale). */
+.rsn-veille.rsn-veille .btn.clair{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+.rsn-veille.rsn-veille .btn.clair svg{color:#fff}
+.rsn-veille.rsn-veille .btn.clair:hover{background:rgba(255,255,255,.1);border-color:#fff}
+.rsn-veille.rsn-veille .btn.jaune{background:var(--yellow);color:var(--navy)}
+.rsn-veille.rsn-veille .btn.jaune svg{color:var(--navy)}
+.rsn-veille.rsn-veille .btn.jaune:hover{background:#fff;border-color:var(--yellow)}
 
 /* v8 : bande « À la une », dates limites, pastilles, appels dans la frise */
 
@@ -46,7 +56,8 @@
    La bande garde la largeur de la colonne (aucune marge négative, donc aucun débordement horizontal) ; son fond
    est peint jusqu'aux bords de la fenêtre par une ombre étalée, rognée verticalement par clip-path. Le contenu
    reste aligné sur celui du reste de la page : le .wrap commun (1140 px, centré) suffit, sans gouttière de plus. */
-.rsn-veille .alaune{background:#07285A;color:#fff;padding-block:22px 26px;margin-bottom:36px;box-shadow:0 0 0 100vmax #07285A;clip-path:inset(0 -100vmax)}
+.rsn-veille .alaune{background:var(--navy);color:#fff;padding-block:20px 26px;margin-bottom:36px;box-shadow:0 0 0 100vmax var(--navy);clip-path:inset(0 -100vmax)}
+.rsn-veille .alaune .wrap{border-top:1px solid rgba(255,255,255,.18);padding-top:20px}
 .rsn-veille .alaune .tete{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
 .rsn-veille .alaune .titre{display:inline-flex;align-items:center;gap:10px;font-family:var(--serif);font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--yellow)}
 .rsn-veille .alaune .titre i{width:7px;height:7px;border-radius:50%;background:var(--green)}
@@ -71,7 +82,14 @@
 .rsn-veille[data-section="appels"] .limites{margin-top:36px}
 .rsn-veille .limites .lab{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--navy);white-space:nowrap}
 .rsn-veille .limites .lab svg{width:16px;height:16px;color:var(--yellow-ink)}
-.rsn-veille .limites .defile{display:flex;gap:8px;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}
+.rsn-veille .limites .defile{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;scroll-behavior:smooth;flex:1 1 auto;min-width:0;padding:2px 0}
+.rsn-veille .limites .defile::-webkit-scrollbar{display:none}
+/* Flèches de défilement : boutons ronds (préfixe doublé pour passer devant le thème, comme .cal-nav). */
+.rsn-veille .limites .fleches{display:flex;gap:6px;flex:0 0 auto}
+.rsn-veille.rsn-veille .limites .fleches button{width:30px;height:30px;border-radius:50%;border:1px solid #F1DFA6;background:#fff;color:var(--navy);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .2s,border-color .2s}
+.rsn-veille.rsn-veille .limites .fleches button svg{width:14px;height:14px}
+.rsn-veille.rsn-veille .limites .fleches button:hover{border-color:var(--yellow-ink);background:var(--yellow)}
+.rsn-veille.rsn-veille .limites .fleches button:disabled{opacity:.35;cursor:default;background:#fff;border-color:#F1DFA6}
 .rsn-veille.rsn-veille .lim{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;background:#fff;border:1px solid #F1DFA6;border-radius:999px;padding:6px 12px;font-size:13px;color:var(--ink)}
 .rsn-veille .lim b{color:var(--navy);font-weight:700}
 .rsn-veille .lim .p{font-size:11px;font-weight:700;color:var(--navy);background:var(--yellow);border-radius:999px;padding:1px 7px}
@@ -81,7 +99,8 @@
 .rsn-veille .pills{display:flex;flex-wrap:wrap;gap:5px 6px;margin:0 0 7px}
 .rsn-veille .pill{display:inline-block;font-size:11.5px;font-weight:600;line-height:1;border-radius:999px;padding:5px 9px;background:var(--tint);color:var(--ink)}
 .rsn-veille .pill.type{background:var(--navy);color:#fff}
-.rsn-veille .pill.type.appel{background:var(--yellow);color:var(--navy)}
+.rsn-veille .pill.type.appel{background:#fff;color:var(--navy);box-shadow:inset 0 0 0 1.5px var(--navy)}
+.rsn-veille .pill.etat{background:var(--yellow-tint);color:var(--navy)}
 .rsn-veille .pill.rsn{background:var(--yellow);color:var(--navy);font-weight:700}
 .rsn-veille .pill.part{background:#E3ECF7;color:var(--navy)}
 .rsn-veille .pill.orga{background:#E8EEF5;color:var(--navy)}
@@ -186,17 +205,28 @@
 .rsn-veille .legende b{color:var(--ink);font-weight:600}
 
 /* Fiches d'événements à venir : lignes séparées par un trait fin, image à gauche à la hauteur du texte, bloc date sobre */
-.rsn-veille .ev.avec-image{grid-template-columns:44px 230px minmax(0,1fr);column-gap:12px}
+.rsn-veille .ev .corps{min-width:0}
+.rsn-veille .ev.avec-image{grid-template-columns:44px minmax(0,1fr)}
+.rsn-veille .ev.avec-image .corps{display:grid;grid-template-columns:230px minmax(0,1fr);column-gap:12px}
 .rsn-veille .ev.avec-image .tx{padding-left:10px}
 .rsn-veille .ev .im{display:block;align-self:stretch;min-height:150px;max-height:230px;border-radius:10px 0 0 10px;background:var(--tint) center/cover no-repeat;overflow:hidden}
 .rsn-veille .ev .im img{width:100%;height:100%;object-fit:cover;display:block}
 .rsn-veille .ev .infos{display:flex;flex-direction:column;gap:2px;font-size:14px;color:var(--ink);margin-top:3px}
 .rsn-veille .ev .infos span{display:flex;gap:8px;align-items:flex-start}
 .rsn-veille .ev .infos svg{width:15px;height:15px;flex:0 0 auto;margin-top:3px;color:var(--muted)}
+/* Fiches RSN : le corps (image + texte) forme un bloc sur fond gris très pâle, avec un trait jaune à gauche. */
+.rsn-veille .ev.rsn .corps{border-left:4px solid var(--yellow);border-radius:14px;overflow:hidden;background:#F6F8FA}
+.rsn-veille .ev.rsn .tx{padding:14px 18px 16px}
+.rsn-veille .ev.rsn.avec-image .tx{padding-left:12px}
+.rsn-veille .ev.rsn .im{border-radius:0;align-self:stretch;max-height:none}
+.rsn-veille .ev.rsn .im img{height:100%}
 @media (max-width:820px){
   .rsn-veille .ev.avec-image{grid-template-columns:52px minmax(0,1fr)}
-  .rsn-veille .ev.avec-image .im{grid-column:2;width:100%;max-width:none;aspect-ratio:16/9;max-height:none;min-height:0;align-self:start;border-radius:10px 10px 0 0}
-  .rsn-veille .ev.avec-image .tx{grid-column:2;padding-left:0}
+  .rsn-veille .ev.avec-image .corps{grid-template-columns:minmax(0,1fr)}
+  .rsn-veille .ev.avec-image .im{grid-column:1;width:100%;max-width:none;aspect-ratio:16/9;max-height:none;min-height:0;align-self:start;border-radius:10px 10px 0 0}
+  .rsn-veille .ev.avec-image .tx{grid-column:1;padding-left:0}
+  .rsn-veille .ev.rsn.avec-image .tx{padding:14px 16px 16px}
+  .rsn-veille .ev.rsn.avec-image .im{border-radius:0}
 }
 
 /* Affichage liste / calendrier */
@@ -249,13 +279,14 @@
 @media (max-width:820px){
   .rsn-veille .deux{grid-template-columns:minmax(0,1fr);gap:34px}
   .rsn-veille .cote{position:static}
-  .rsn-veille .actions{margin-top:36px}
   .rsn-veille .ev{grid-template-columns:52px minmax(0,1fr);gap:14px;padding-left:22px}
   .rsn-veille .jour{font-size:22px}
   .rsn-veille .tuile{width:64px}
   .rsn-veille .shead h2{font-size:24px}
   .rsn-veille .unes{grid-template-columns:1fr}
-  .rsn-veille .limites{flex-direction:column;align-items:stretch}
+  .rsn-veille .limites{flex-wrap:wrap}
+  .rsn-veille .limites .defile{order:3;flex-basis:100%}
+  .rsn-veille .limites .fleches{margin-left:auto}
   .rsn-veille .ev.appel-ev{grid-template-columns:52px minmax(0,1fr)}
   .rsn-veille .ev.appel-ev .tuile{width:52px}
 }
@@ -263,17 +294,36 @@
 /* Mêmes règles selon la largeur du bloc lui-même (colonne de contenu étroite dans une fenêtre large). */
 @container rsn-veille (max-width:760px){
   .rsn-veille .ev.avec-image{grid-template-columns:52px minmax(0,1fr)}
-  .rsn-veille .ev.avec-image .im{grid-column:2;width:100%;max-width:none;aspect-ratio:16/9;max-height:none;min-height:0;align-self:start;border-radius:10px 10px 0 0}
-  .rsn-veille .ev.avec-image .tx{grid-column:2;padding-left:0}
+  .rsn-veille .ev.avec-image .corps{grid-template-columns:minmax(0,1fr)}
+  .rsn-veille .ev.avec-image .im{grid-column:1;width:100%;max-width:none;aspect-ratio:16/9;max-height:none;min-height:0;align-self:start;border-radius:10px 10px 0 0}
+  .rsn-veille .ev.avec-image .tx{grid-column:1;padding-left:0}
+  .rsn-veille .ev.rsn.avec-image .tx{padding:14px 16px 16px}
+  .rsn-veille .ev.rsn.avec-image .im{border-radius:0}
   .rsn-veille .deux{grid-template-columns:minmax(0,1fr);gap:34px}
   .rsn-veille .cote{position:static}
-  .rsn-veille .actions{margin-top:36px}
   .rsn-veille .ev{grid-template-columns:52px minmax(0,1fr);gap:14px;padding-left:22px}
   .rsn-veille .jour{font-size:22px}
   .rsn-veille .tuile{width:64px}
   .rsn-veille .shead h2{font-size:24px}
   .rsn-veille .unes{grid-template-columns:1fr}
-  .rsn-veille .limites{flex-direction:column;align-items:stretch}
+  .rsn-veille .limites{flex-wrap:wrap}
+  .rsn-veille .limites .defile{order:3;flex-basis:100%}
+  .rsn-veille .limites .fleches{margin-left:auto}
   .rsn-veille .ev.appel-ev{grid-template-columns:52px minmax(0,1fr)}
   .rsn-veille .ev.appel-ev .tuile{width:52px}
+}
+
+/*
+ * Adaptation au thème Vault (UiCore) de rsn.quebec.
+ * Cette section n'agit que sur la page qui porte la classe body `rsn-veille-page` (posée par l'extension, sur la page
+ * qui affiche le raccourci) et que sur l'en-tête de page de ce thème (.uicore-page-title). Ailleurs elle est inerte :
+ * sans cette classe, aucune règle ne s'applique ; avec un autre thème, les sélecteurs ne trouvent rien.
+ * Elle resserre l'en-tête (marges verticales et titre sur toute la largeur) pour que le bandeau bleu de la veille
+ * suive sans coupure. Le préfixe `body.rsn-veille-page` donne une spécificité supérieure aux règles du thème
+ * (.uicore-page-title…, y compris celles des requêtes de média), qui n'ont donc pas besoin de !important.
+ */
+body.rsn-veille-page .uicore-page-title.uicore-section>.uicore{padding:44px 0 30px}
+body.rsn-veille-page .uicore-page-title h1.uicore-title{max-width:none;margin:.3em 0 0}
+@media (max-width:820px){
+  body.rsn-veille-page .uicore-page-title.uicore-section>.uicore{padding:30px 0 22px}
 }
