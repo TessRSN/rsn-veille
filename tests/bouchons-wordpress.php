@@ -75,7 +75,7 @@ function rsn_veille_bouchons_reinitialiser(): void {
         'menus' => [], 'sous_menus' => [], 'crochets_menus' => [], 'capacites' => [], 'ecritures_roles' => 0,
         'scripts' => [], 'styles' => [], 'localisations' => [],
         // Réglages : options enregistrées, messages d'erreur des champs, lancements de WP-Cron.
-        'reglages' => [], 'erreurs_reglages' => [], 'cron_lances' => 0,
+        'metaboxes' => [], 'reglages' => [], 'erreurs_reglages' => [], 'cron_lances' => 0,
         // Public : raccourcis, routes REST, règles de réécriture, variables de requête, page demandée.
         'raccourcis' => [], 'routes' => [], 'regles' => [], 'variables_requete' => [], 'objet_demande' => null,
         'regles_regenerees' => 0,
@@ -732,6 +732,11 @@ function add_submenu_page(string $parent, string $titre_page, string $titre_menu
         return 'toplevel_page_' . $slug;
     }
     return ($GLOBALS['rsn_veille_wp']['crochets_menus'][$parent] ?? 'admin') . '_page_' . $slug;
+}
+
+/** Note la métabox (id, titre, rappel, écran, contexte, priorité) dans `metaboxes`, consultable par un test. */
+function add_meta_box(string $id, string $titre, callable $rappel, string|array|null $ecran = null, string $contexte = 'advanced', string $priorite = 'default', ?array $args = null): void {
+    $GLOBALS['rsn_veille_wp']['metaboxes'][$id] = compact('id', 'titre', 'rappel', 'ecran', 'contexte', 'priorite', 'args');
 }
 
 /** Capacités de l'utilisateur courant : liste posée par le test (`capacites`). */

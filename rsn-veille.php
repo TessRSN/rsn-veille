@@ -40,6 +40,8 @@ if (function_exists('add_action')) {
     \RSN\Veille\Courriel::accrocher();
     // Menu Veille de wp-admin, capacité rsn_veille_gerer, ressources et action AJAX de la file d'approbation.
     \RSN\Veille\Admin\Menu::accrocher();
+    // Métabox « Image de la fiche » de l'éditeur : image de la source et rappel de l'image mise en avant.
+    \RSN\Veille\Admin\MetaboxImage::accrocher();
     // Page publique : raccourci [rsn_veille], ressources seulement si la page le contient, cache du JSON.
     \RSN\Veille\Public\Raccourci::accrocher();
     // Formulaire « Proposer un événement » : actions AJAX rsn_veille_proposer et rsn_veille_jeton, avec et sans connexion.
