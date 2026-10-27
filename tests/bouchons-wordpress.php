@@ -537,27 +537,56 @@ function wp_get_object_terms(int|array $ids, string $taxonomie, array $arguments
     return $resultat;
 }
 
+/**
+ * Comme wp_count_posts : un objet qui a une propriété par statut (0 pour un statut sans article), compté sur
+ * tous les articles du type.
+ */
+function wp_count_posts(string $type = 'post', string $perm = ''): stdClass {
+    $nombres = array_fill_keys(['publish', 'future', 'draft', 'pending', 'private', 'trash', 'auto-draft', 'inherit'], 0);
+    foreach ($GLOBALS['rsn_veille_wp']['posts'] as $post) {
+        if ($post->post_type === $type) {
+            $nombres[$post->post_status] = ($nombres[$post->post_status] ?? 0) + 1;
+        }
+    }
+    return (object) $nombres;
+}
+
 class WP_Query {
     /** @var array<int|WP_Post> */
     public array $posts = [];
+    /** Nombre total d'articles trouvés, sans la limite `posts_per_page` (0 si `no_found_rows`, comme WordPress). */
+    public int $found_posts = 0;
 
+    /**
+     * Imite `post_type`, `post_status`, `post__in` (une liste vide est ignorée, comme WordPress),
+     * `meta_query`, `orderby` ID avec `order` ASC ou DESC, `posts_per_page` (-1 : tout), `fields` et
+     * `no_found_rows`.
+     */
     public function __construct(array $arguments) {
         $GLOBALS['rsn_veille_wp']['requetes'][] = $arguments;
         $ids = array_keys($GLOBALS['rsn_veille_wp']['posts']);
         sort($ids);
+        if (strtoupper((string) ($arguments['order'] ?? 'DESC')) === 'DESC') {
+            $ids = array_reverse($ids);
+        }
+        $parmi = !empty($arguments['post__in']) ? array_flip(array_map('intval', (array) $arguments['post__in'])) : null;
+        $trouves = [];
         foreach ($ids as $id) {
             $post = $GLOBALS['rsn_veille_wp']['posts'][$id];
             if ($post->post_type !== $arguments['post_type'] || !in_array($post->post_status, (array) $arguments['post_status'], true)) {
                 continue;
             }
+            if ($parmi !== null && !isset($parmi[$id])) {
+                continue;
+            }
             if (!self::groupe($id, $arguments['meta_query'] ?? [])) {
                 continue;
             }
-            $this->posts[] = ($arguments['fields'] ?? 'all') === 'ids' ? $id : clone $post;
-            if (($arguments['posts_per_page'] ?? 10) > 0 && count($this->posts) >= $arguments['posts_per_page']) {
-                break;
-            }
+            $trouves[] = ($arguments['fields'] ?? 'all') === 'ids' ? $id : clone $post;
         }
+        $par_page = (int) ($arguments['posts_per_page'] ?? 10);
+        $this->posts = $par_page > 0 ? array_slice($trouves, 0, $par_page) : $trouves;
+        $this->found_posts = empty($arguments['no_found_rows']) && $this->posts !== [] ? count($trouves) : 0;
     }
 
     /**
@@ -582,7 +611,8 @@ class WP_Query {
     /**
      * `=` (exact si BINARY, sinon insensible à la casse comme la collation MySQL), `!=` (une valeur
      * présente et différente : une méta absente ne satisfait pas `!=`, comme le JOIN de WordPress), LIKE
-     * (« contient »), EXISTS et NOT EXISTS.
+     * (« contient »), EXISTS et NOT EXISTS, et `>=`, `>`, `<=`, `<` (comparaison de chaînes : octet par
+     * octet si BINARY, sinon insensible à la casse ; une méta absente ne les satisfait pas).
      */
     private static function satisfait(int $id, array $clause): bool {
         $compare = strtoupper((string) ($clause['compare'] ?? '='));
@@ -592,6 +622,14 @@ class WP_Query {
         }
         foreach (array_map('unserialize', $GLOBALS['rsn_veille_wp']['meta'][$id][$clause['key']] ?? []) as $valeur) {
             $valeur = (string) $valeur;
+            $ecart = ($clause['type'] ?? '') === 'BINARY' ? strcmp($valeur, (string) $clause['value']) : strcasecmp($valeur, (string) $clause['value']);
+            if (in_array($compare, ['>=', '>', '<=', '<'], true)) {
+                $vrai = match ($compare) { '>=' => $ecart >= 0, '>' => $ecart > 0, '<=' => $ecart <= 0, default => $ecart < 0 };
+                if ($vrai) {
+                    return true;
+                }
+                continue;
+            }
             $egal = ($clause['type'] ?? '') === 'BINARY' ? $valeur === $clause['value'] : strcasecmp($valeur, (string) $clause['value']) === 0;
             if ($compare === '!=') {
                 if (!$egal) {

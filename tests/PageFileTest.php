@@ -308,6 +308,57 @@ final class PageFileTest extends TestCase {
         $this->assertStringContainsString('<option value="appel" selected>', $vide);
     }
 
+    public function test_changer_statut_ne_charge_pas_toute_la_base(): void {
+        $e = new EntrepotWordPress();
+        for ($i = 1; $i <= 3; $i++) {
+            $f = self::fiche(['statut' => 'publie', 'titre' => 'Fiche ' . $i]);
+            $f->id = null;
+            $f->cles_source = ['mila:' . $i];
+            $e->creer($f);
+        }
+        $id = self::fiche_wordpress();
+        $GLOBALS['rsn_veille_wp']['requetes'] = [];
+
+        $r = PageFile::changer_statut($e, $id, 'ecarte');
+        $this->assertSame(['a_approuver' => 0, 'publie' => 3, 'ecarte' => 1, 'a_verifier' => 0], $r['compteurs']);
+        foreach ($GLOBALS['rsn_veille_wp']['requetes'] as $requete) {
+            $this->assertFalse(($requete['posts_per_page'] ?? 0) === -1, 'aucune requête sans borne');
+        }
+    }
+
+    public function test_onglets_publiees_et_ecartees_plafonnes_aux_plus_recentes(): void {
+        $e = new EntrepotMemoire();
+        $creer = static function (array $champs) use ($e): int {
+            $f = self::fiche($champs);
+            $f->id = null;
+            return $e->creer($f);
+        };
+        $premiere = $creer(['statut' => 'ecarte', 'titre' => 'La plus ancienne']);
+        for ($i = 1; $i <= PageFile::PLAFOND; $i++) {
+            $creer(['statut' => 'ecarte', 'titre' => 'Écartée ' . $i]);
+        }
+        for ($i = 1; $i <= 3; $i++) {
+            $creer(['statut' => 'a_approuver', 'titre' => 'En attente ' . $i]);
+        }
+
+        [$fiches, $plafond] = PageFile::fiches_de_l_onglet($e, 'ecarte', '');
+        $this->assertCount(200, $fiches);
+        $this->assertTrue($plafond);
+        $this->assertNotContains($premiere, array_map(static fn(Fiche $f): ?int => $f->id, $fiches));
+        [$fiches, $plafond] = PageFile::fiches_de_l_onglet($e, 'a_approuver', '');
+        $this->assertCount(3, $fiches);
+        $this->assertFalse($plafond);
+        [$fiches, $plafond] = PageFile::fiches_de_l_onglet($e, 'publie', '');
+        $this->assertSame([[], false], [$fiches, $plafond]);
+
+        $html = PageFile::page_html($fiches, 'ecarte', '', '', 'https://exemple.test/wp-admin/admin.php?page=rsn-veille', self::OPTIONS + [
+            'compteurs' => $e->compter(), 'plafond_atteint' => true,
+        ]);
+        $this->assertStringContainsString('Les 200 plus récentes sont affichées', $html);
+        $this->assertStringContainsString('data-compteur="ecarte">(201)<', $html);
+        $this->assertStringNotContainsString('plus récentes sont affichées', PageFile::page_html([], 'ecarte', '', '', 'https://exemple.test/', self::OPTIONS));
+    }
+
     // --- Image d'une proposition écartée ---
 
     /**

@@ -1,9 +1,12 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/bouchons-wordpress.php';
+
 use PHPUnit\Framework\TestCase;
 use RSN\Veille\Depot;
 use RSN\Veille\EntrepotMemoire;
+use RSN\Veille\EntrepotWordPress;
 use RSN\Veille\Fiche;
 
 final class DepotTest extends TestCase {
@@ -245,6 +248,23 @@ final class DepotTest extends TestCase {
         $d->signaler_absents('dhc', ['dhc:1'], true, '2026-10-28');
         $x = $e->trouver_par_cle_source('dhc:1');
         $this->assertSame([0, null], [$x->absences, $x->absent_depuis]);
+    }
+
+    public function test_absences_chargent_seulement_les_fiches_de_la_source(): void {
+        rsn_veille_bouchons_reinitialiser();
+        $e = new EntrepotWordPress(); $d = new Depot($e);
+        $d->integrer($this->fiche(['titre' => 'FHIR North 2026', 'debut' => '2026-11-27', 'cle_source' => 'dhc:1', 'niveau' => 'A', 'statut' => 'publie']));
+        for ($i = 1; $i <= 5; $i++) {
+            $d->integrer($this->fiche(['titre' => 'Autre ' . $i, 'debut' => '2026-11-2' . $i, 'cle_source' => 'rqrv:' . $i, 'niveau' => 'A', 'statut' => 'publie']));
+        }
+        $GLOBALS['rsn_veille_wp']['requetes'] = [];
+
+        $d->signaler_absents('dhc', [], true, '2026-10-25');
+        $this->assertSame(1, $e->trouver_par_cle_source('dhc:1')->absences);
+        foreach ($GLOBALS['rsn_veille_wp']['requetes'] as $requete) {
+            $this->assertFalse(($requete['posts_per_page'] ?? 0) === -1 && empty($requete['meta_query']) && empty($requete['post__in']), 'aucune requête sans borne');
+        }
+        $this->assertContains([1], array_column($GLOBALS['rsn_veille_wp']['requetes'], 'post__in'));
     }
 
     public function test_absence_ignore_evenements_passes_et_appels(): void {

@@ -161,13 +161,14 @@ final class Depot {
         }
         $prefixe = $id_source . ':';
         $vues = array_flip($cles_vues);
+        // Seulement les fiches de cette source (jamais toute la base).
         $publiees = [];
-        foreach ($this->entrepot->lister('publie') as $fiche) {
+        foreach ($this->entrepot->lister_par_ids($ids) as $fiche) {
             $publiees[$fiche->id] = $fiche;
         }
         foreach ($ids as $id) {
             $fiche = $publiees[$id] ?? null;
-            if ($fiche === null) {
+            if ($fiche === null || $fiche->statut !== 'publie') {
                 continue;
             }
             $revue = false;

@@ -237,6 +237,9 @@ final class EntrepotContratTest extends TestCase {
         $this->assertSame([], $f->cles_source);
         $this->assertSame([], $f->titres_source);
         $this->assertSame([], $f->themes);
+        // Sans jour de création enregistré : le jour du post (âge d'un appel sans date) ; la méta reste absente.
+        $this->assertSame(substr(get_post($id)->post_date, 0, 10), $f->cree_le);
+        $this->assertFalse(metadata_exists('post', $id, 'rsn_veille_cree_le'));
     }
 
     public function test_wordpress_fiche_publiee_a_date_future_reste_publiee(): void {
@@ -302,5 +305,102 @@ final class EntrepotContratTest extends TestCase {
         $id = $e->creer(self::fiche());
         delete_post_meta($id, 'rsn_veille_source');
         $this->assertSame($id, $e->trouver_par_url('https://exemple.ca/atelier?id=1')->id);
+    }
+    /** Identifiants des fiches, dans l'ordre rendu. */
+    private static function ids(array $fiches): array {
+        return array_map(static fn(Fiche $f): ?int => $f->id, $fiches);
+    }
+
+    /** @dataProvider entrepots */
+    public function test_obtenir_et_lister_par_ids(string $nom): void {
+        $e = self::entrepot($nom);
+        $a = $e->creer(self::fiche());
+        $b = $e->creer(self::fiche(['statut' => 'ecarte', 'cle_source' => 'ex:2', 'cles_source' => ['ex:2'], 'themes' => ['Financement']]));
+        $c = $e->creer(self::fiche(['cle_source' => 'ex:3', 'cles_source' => ['ex:3']]));
+
+        $this->assertSame($b, $e->obtenir($b)->id);
+        $this->assertSame('ecarte', $e->obtenir($b)->statut);
+        $this->assertNull($e->obtenir(999));
+        // Ordre des identifiants (croissant), tous statuts, sans les inconnus ; liste vide : aucune fiche.
+        $this->assertSame([$a, $c], self::ids($e->lister_par_ids([$c, 999, $a])));
+        $par_ids = $e->lister_par_ids([$b]);
+        $this->assertSame(['Financement'], $par_ids[0]->themes);
+        $this->assertSame(['ex:2'], $par_ids[0]->cles_source);
+        $this->assertSame([], $e->lister_par_ids([]));
+        if ($nom === 'wordpress') {
+            $requete = end($GLOBALS['rsn_veille_wp']['requetes']);
+            $this->assertSame([$b], $requete['post__in']);
+            $this->assertSame(1, $requete['posts_per_page']);
+        }
+    }
+
+    /** @dataProvider entrepots */
+    public function test_compter_par_onglet_sans_charger_les_fiches(string $nom): void {
+        $e = self::entrepot($nom);
+        $e->creer(self::fiche());
+        $absente = $e->creer(self::fiche(['cle_source' => 'ex:2', 'cles_source' => ['ex:2']]));
+        $e->marquer_absent($absente, '2026-10-20');
+        $e->creer(self::fiche(['statut' => 'a_approuver', 'cle_source' => 'ex:3', 'cles_source' => ['ex:3']]));
+        $e->creer(self::fiche(['statut' => 'ecarte', 'cle_source' => 'ex:4', 'cles_source' => ['ex:4']]));
+        $e->creer(self::fiche(['statut' => 'ecarte', 'cle_source' => 'ex:5', 'cles_source' => ['ex:5'], 'absent_depuis' => '2026-10-01']));
+
+        $this->assertSame(['a_approuver' => 1, 'publie' => 2, 'ecarte' => 2, 'a_verifier' => 1], $e->compter());
+        $this->assertSame([$absente], self::ids($e->lister_absentes()));
+    }
+
+    /** @dataProvider entrepots */
+    public function test_lister_crees_depuis_par_meta_sans_les_fiches_sans_jour_de_creation(string $nom): void {
+        $e = self::entrepot($nom);
+        $recente = $e->creer(self::fiche(['cree_le' => '2026-10-20']));
+        $e->creer(self::fiche(['cle_source' => 'ex:2', 'cles_source' => ['ex:2'], 'cree_le' => '2026-10-18']));
+        $attente = $e->creer(self::fiche(['statut' => 'a_approuver', 'cle_source' => 'ex:3', 'cles_source' => ['ex:3'], 'cree_le' => '2026-10-19']));
+        $limite = $e->creer(self::fiche(['cle_source' => 'ex:4', 'cles_source' => ['ex:4'], 'cree_le' => '2026-10-19']));
+
+        $this->assertSame([$recente, $limite], self::ids($e->lister_crees_depuis('2026-10-19', 'publie')));
+        $this->assertSame([$attente], self::ids($e->lister_crees_depuis('2026-10-19', 'a_approuver')));
+        $this->assertSame([$recente, $attente, $limite], self::ids($e->lister_crees_depuis('2026-10-19')));
+        if ($nom === 'wordpress') {
+            delete_post_meta($recente, 'rsn_veille_cree_le');
+            $this->assertSame([$limite], self::ids($e->lister_crees_depuis('2026-10-19', 'publie')));
+            $requete = end($GLOBALS['rsn_veille_wp']['requetes']);
+            $this->assertSame(['key' => 'rsn_veille_cree_le', 'value' => '2026-10-19', 'compare' => '>=', 'type' => 'CHAR'], $requete['meta_query'][0]);
+        }
+    }
+
+    /** @dataProvider entrepots */
+    public function test_lister_recentes_plafonne_les_plus_recentes_d_abord(string $nom): void {
+        $e = self::entrepot($nom);
+        $ids = [];
+        for ($i = 1; $i <= 4; $i++) {
+            $ids[] = $e->creer(self::fiche(['statut' => 'ecarte', 'type' => $i === 2 ? 'appel' : 'evenement', 'cle_source' => 'ex:' . $i, 'cles_source' => ['ex:' . $i]]));
+        }
+        $e->creer(self::fiche(['cle_source' => 'ex:9', 'cles_source' => ['ex:9']]));
+
+        $this->assertSame([$ids[3], $ids[2]], self::ids($e->lister_recentes('ecarte', 2)));
+        $this->assertSame([$ids[3], $ids[2], $ids[0]], self::ids($e->lister_recentes('ecarte', 5, 'evenement')));
+        $this->assertSame([], $e->lister_recentes('inconnu', 5));
+    }
+
+    /** @dataProvider entrepots */
+    public function test_lister_pour_page_borne_les_evenements_anciens_et_les_appels_perimes(string $nom): void {
+        $e = self::entrepot($nom);
+        $ev = static fn(string $cle, array $c): Fiche => self::fiche($c + ['cle_source' => $cle, 'cles_source' => [$cle]]);
+        $ap = static fn(string $cle, array $c): Fiche => self::fiche($c + ['type' => 'appel', 'debut' => null, 'fin' => null, 'cle_source' => $cle, 'cles_source' => [$cle]]);
+        $garde = [
+            $e->creer($ev('e:1', ['debut' => '2025-11-01'])),
+            $e->creer($ev('e:2', ['debut' => '2024-01-01', 'fin' => '2025-12-01'])),
+            $e->creer($ap('a:1', ['echeance' => '2026-10-25', 'cree_le' => '2026-01-01'])),
+            $e->creer($ap('a:2', ['debut' => '2026-01-01', 'fin' => '2026-11-01', 'cree_le' => '2026-01-01'])),
+            $e->creer($ap('a:3', ['debut' => '2026-08-01', 'cree_le' => '2026-01-01'])),
+            $e->creer($ap('a:4', ['cree_le' => '2026-08-01'])),
+        ];
+        $e->creer($ev('e:3', ['debut' => '2025-09-01', 'fin' => '2025-09-02']));
+        $e->creer($ev('e:4', ['debut' => '2026-11-01', 'statut' => 'a_approuver']));
+        $e->creer($ap('a:5', ['debut' => '2026-01-01', 'echeance' => '2026-03-01', 'fin' => '2026-03-01', 'cree_le' => '2026-01-01']));
+        $e->creer($ap('a:6', ['debut' => '2026-05-01', 'fin' => '2026-05-01', 'cree_le' => '2026-05-01']));
+        $e->creer(self::fiche(['type' => 'nouvelle', 'cle_source' => 'n:1', 'cles_source' => ['n:1']]));
+
+        // Sur-ensemble : la règle exacte des appels est appliquée ensuite par Donnees.
+        $this->assertSame($garde, self::ids($e->lister_pour_page('2025-10-25', '2026-10-25', '2026-07-27')));
     }
 }

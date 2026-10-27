@@ -141,10 +141,114 @@ final class EntrepotWordPress implements Entrepot {
         }
         $arguments = self::requete($statut === '' ? self::STATUTS_WP : [TypeContenu::statut_wp($statut)]);
         $arguments['posts_per_page'] = -1;
-        $arguments['update_post_meta_cache'] = true;
         if ($type !== '') {
-            $arguments['meta_query'] = [['key' => TypeContenu::PREFIXE . 'type', 'value' => $type, 'compare' => '=', 'type' => 'BINARY']];
+            $arguments['meta_query'] = [self::clause_type($type)];
         }
+        return $this->charger($arguments);
+    }
+
+    public function lister_par_ids(array $ids): array {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn(int $id): bool => $id > 0)));
+        if ($ids === []) {
+            // WordPress ignore un post__in vide : il rendrait toutes les fiches.
+            return [];
+        }
+        $arguments = self::requete(self::STATUTS_WP);
+        $arguments['post__in'] = $ids;
+        $arguments['posts_per_page'] = count($ids);
+        return $this->charger($arguments);
+    }
+
+    public function compter(): array {
+        // Une requête groupée par statut (mise en cache par WordPress), sans charger de fiche.
+        $nombres = wp_count_posts(TypeContenu::TYPE);
+        $compteurs = [];
+        foreach (['a_approuver', 'publie', 'ecarte'] as $statut) {
+            $statut_wp = TypeContenu::statut_wp($statut);
+            $compteurs[$statut] = (int) ($nombres->$statut_wp ?? 0);
+        }
+        $arguments = self::requete_absentes();
+        $arguments['fields'] = 'ids';
+        $arguments['posts_per_page'] = 1;
+        $arguments['no_found_rows'] = false;
+        $compteurs['a_verifier'] = (new \WP_Query($arguments))->found_posts;
+        return $compteurs;
+    }
+
+    public function lister_absentes(): array {
+        $arguments = self::requete_absentes();
+        $arguments['posts_per_page'] = -1;
+        return $this->charger($arguments);
+    }
+
+    public function lister_crees_depuis(string $date, string $statut = ''): array {
+        if ($statut !== '' && !isset(TypeContenu::STATUTS[$statut])) {
+            return [];
+        }
+        $arguments = self::requete($statut === '' ? self::STATUTS_WP : [TypeContenu::statut_wp($statut)]);
+        $arguments['posts_per_page'] = -1;
+        // Jour au format AAAA-MM-JJ : l'ordre des chaînes est celui des dates. Sans méta : pas de jointure, pas de fiche.
+        $arguments['meta_query'] = [self::clause_au_moins('cree_le', $date)];
+        return $this->charger($arguments);
+    }
+
+    public function lister_recentes(string $statut, int $max, string $type = ''): array {
+        if (!isset(TypeContenu::STATUTS[$statut]) || $max <= 0) {
+            return [];
+        }
+        $arguments = self::requete([TypeContenu::statut_wp($statut)]);
+        $arguments['order'] = 'DESC';
+        $arguments['posts_per_page'] = $max;
+        if ($type !== '') {
+            $arguments['meta_query'] = [self::clause_type($type)];
+        }
+        return $this->charger($arguments);
+    }
+
+    public function lister_pour_page(string $limite_evenements, string $aujourdhui, string $limite_appels): array {
+        $evenements = self::requete(['publish']);
+        $evenements['posts_per_page'] = -1;
+        $evenements['meta_query'] = [
+            'relation' => 'AND',
+            self::clause_type('evenement'),
+            [
+                'relation' => 'OR',
+                self::clause_au_moins('debut', $limite_evenements),
+                self::clause_au_moins('fin', $limite_evenements),
+                ['key' => TypeContenu::PREFIXE . 'debut', 'compare' => 'NOT EXISTS'],
+            ],
+        ];
+        $appels = self::requete(['publish']);
+        $appels['posts_per_page'] = -1;
+        $appels['meta_query'] = [
+            'relation' => 'AND',
+            self::clause_type('appel'),
+            [
+                'relation' => 'OR',
+                self::clause_au_moins('echeance', $aujourdhui),
+                self::clause_au_moins('fin', $aujourdhui),
+                self::clause_au_moins('debut', $limite_appels),
+                self::clause_au_moins('cree_le', $limite_appels),
+                [
+                    'relation' => 'AND',
+                    ['key' => TypeContenu::PREFIXE . 'debut', 'compare' => 'NOT EXISTS'],
+                    ['key' => TypeContenu::PREFIXE . 'cree_le', 'compare' => 'NOT EXISTS'],
+                ],
+            ],
+        ];
+        $fiches = array_merge($this->charger($evenements), $this->charger($appels));
+        usort($fiches, static fn(Fiche $a, Fiche $b): int => (int) $a->id <=> (int) $b->id);
+        return $fiches;
+    }
+
+    /**
+     * Fiches d'une requête, métas en cache et thèmes de toutes les fiches lus en une requête.
+     *
+     * @param array<string,mixed> $arguments
+     * @return Fiche[]
+     */
+    private function charger(array $arguments): array {
+        $arguments['update_post_meta_cache'] = true;
         $posts = (new \WP_Query($arguments))->posts;
         if ($posts === []) {
             return [];
@@ -162,6 +266,23 @@ final class EntrepotWordPress implements Entrepot {
             $fiches[] = $this->vers_fiche($post, $themes[$post->ID]);
         }
         return $fiches;
+    }
+
+    /** @return array<string,mixed> Requête des fiches publiées signalées absentes (méta `absent_depuis` non vide). */
+    private static function requete_absentes(): array {
+        $arguments = self::requete(['publish']);
+        $arguments['meta_query'] = [['key' => TypeContenu::PREFIXE . 'absent_depuis', 'value' => '', 'compare' => '!=']];
+        return $arguments;
+    }
+
+    /** @return array<string,string> Clause « type de fiche exactement $type ». */
+    private static function clause_type(string $type): array {
+        return ['key' => TypeContenu::PREFIXE . 'type', 'value' => $type, 'compare' => '=', 'type' => 'BINARY'];
+    }
+
+    /** @return array<string,string> Clause « date $nom (AAAA-MM-JJ) au moins $date » ; une méta absente ne la satisfait pas. */
+    private static function clause_au_moins(string $nom, string $date): array {
+        return ['key' => TypeContenu::PREFIXE . $nom, 'value' => $date, 'compare' => '>=', 'type' => 'CHAR'];
     }
 
     public function ids_publies_de_source(string $id_source): array {
@@ -218,6 +339,10 @@ final class EntrepotWordPress implements Entrepot {
         if ($themes === null) {
             $termes = wp_get_object_terms($post->ID, TypeContenu::TAXONOMIE, ['fields' => 'names', 'orderby' => 'term_order']);
             $themes = is_array($termes) ? array_map(static fn(string $nom): string => self::texte($nom), $termes) : [];
+        }
+        // Fiche créée dans l'éditeur de WordPress (sans jour de création) : le jour de son post.
+        if (!isset($donnees['cree_le']) && preg_match('/^\d{4}-\d{2}-\d{2}/', $post->post_date) === 1) {
+            $donnees['cree_le'] = substr($post->post_date, 0, 10);
         }
         $donnees['themes'] = array_values($themes);
         $donnees['cles_source'] = is_array($donnees['cles_source'] ?? null) ? array_values($donnees['cles_source']) : [];

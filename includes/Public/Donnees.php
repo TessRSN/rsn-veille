@@ -42,6 +42,9 @@ final class Donnees {
     /** Types de fiches publiés sur la page (les nouvelles restent dans le radar de l'équipe). */
     private const TYPES = ['evenement', 'appel'];
 
+    /** Un événement fini depuis plus de tant de mois n'est plus envoyé (le JSON est inclus dans chaque page). */
+    public const MOIS_EVENEMENTS_PASSES = 12;
+
     /**
      * @param array<int,array<string,mixed>> $evenements_rsn Événements de The Events Calendar du site, au format fiche.
      * @return array{genere_le: string, sources: array<int,array<string,mixed>>, items: array<int,array<string,mixed>>}
@@ -71,23 +74,31 @@ final class Donnees {
      * Fiches publiées (événements et appels en cours) et événements du RSN, dédoublonnés et triés, complets
      * (clés de source comprises : `Ical` s'en sert pour ses UID). À expurger avant toute sortie publique.
      * Un appel n'y figure que s'il est en cours (`Fiche::appel_en_cours`) : les appels périmés ne sont
-     * jamais envoyés au navigateur.
+     * jamais envoyés au navigateur. Un événement fini depuis plus de 12 mois non plus. Les fiches sont lues
+     * avec ces bornes (`Entrepot::lister_pour_page`) : jamais toute la base.
      *
      * @param array<int,array<string,mixed>> $evenements_rsn
      * @return array<int,array<string,mixed>>
      */
     public static function elements(Entrepot $e, array $evenements_rsn, ?string $aujourdhui = null): array {
         $aujourdhui ??= \rsn_veille_aujourdhui();
+        $jour = \DateTimeImmutable::createFromFormat('!Y-m-d', $aujourdhui) ?: new \DateTimeImmutable('today');
+        $limite_evenements = $jour->modify('-' . self::MOIS_EVENEMENTS_PASSES . ' months')->format('Y-m-d');
+        $limite_appels = $jour->modify('-' . Fiche::JOURS_APPEL_SANS_LIMITE . ' days')->format('Y-m-d');
+        $recent = static function (Fiche $f) use ($limite_evenements): bool {
+            $fin = ($f->fin ?? '') !== '' && $f->fin > (string) $f->debut ? $f->fin : (string) $f->debut;
+            return $fin === '' || $fin >= $limite_evenements;
+        };
         $evenements = [];
         $appels = [];
         /** @var array<string,int> $positions Clé de dédoublonnage => position de la première fiche qui l'a. */
         $positions = [];
-        foreach ($e->lister('publie') as $fiche) {
+        foreach ($e->lister_pour_page($limite_evenements, $aujourdhui, $limite_appels) as $fiche) {
             if ($fiche->type === 'appel') {
                 if ($fiche->appel_en_cours($aujourdhui)) {
                     $appels[] = $fiche->vers_tableau();
                 }
-            } elseif ($fiche->type === 'evenement') {
+            } elseif ($fiche->type === 'evenement' && $recent($fiche)) {
                 $cle = $fiche->cle_dedoublonnage();
                 $position = $positions[$cle] ?? null;
                 if ($position === null) {
@@ -106,7 +117,7 @@ final class Donnees {
                 continue;
             }
             $rsn = Fiche::depuis_tableau(array_merge($brut, ['type' => 'evenement', 'statut' => 'publie', 'source' => 'RSN']));
-            if ($rsn->titre === '' || $rsn->debut === null) {
+            if ($rsn->titre === '' || $rsn->debut === null || !$recent($rsn)) {
                 continue;
             }
             $tableau = $rsn->vers_tableau();

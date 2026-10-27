@@ -152,6 +152,20 @@ final class DonneesTest extends TestCase {
         $this->assertSame($titres, array_column(Donnees::elements($this->entrepot, [], '2026-10-25'), 'titre'));
     }
 
+    public function test_evenements_finis_depuis_plus_de_douze_mois_absents(): void {
+        $this->entrepot->creer($this->fiche(['titre' => 'Fini il y a treize mois', 'debut' => '2025-09-20', 'fin' => '2025-09-24', 'cle_source' => 'e:1']));
+        $this->entrepot->creer($this->fiche(['titre' => 'Fini il y a onze mois', 'debut' => '2025-11-20', 'cle_source' => 'e:2']));
+        $this->entrepot->creer($this->fiche(['titre' => 'Commencé il y a deux ans, fini le mois prochain', 'debut' => '2024-10-01', 'fin' => '2026-11-30', 'cle_source' => 'e:3']));
+        $rsn = [
+            $this->evenement_rsn(['titre' => 'RSN ancien', 'debut' => '2025-05-01', 'fin' => '2025-05-01']),
+            $this->evenement_rsn(['titre' => 'RSN récent', 'debut' => '2025-10-25', 'fin' => '2025-10-25']),
+        ];
+
+        $titres = array_column(Donnees::construire('2026-10-25', $this->entrepot, $rsn)['items'], 'titre');
+        sort($titres);
+        $this->assertSame(['Commencé il y a deux ans, fini le mois prochain', 'Fini il y a onze mois', 'RSN récent'], $titres);
+    }
+
     public function test_sources_publiques_sans_niveau_avec_nombre_d_elements(): void {
         Journal::consigner('obvia', ['date' => '2026-10-25 03:05', 'lus' => 12]);
         $sources = Donnees::construire('2026-10-25', $this->entrepot, [])['sources'];

@@ -59,6 +59,60 @@ final class EntrepotMemoire implements Entrepot {
         return $resultat;
     }
 
+    public function obtenir(int $id): ?Fiche {
+        return isset($this->fiches[$id]) ? clone $this->fiches[$id] : null;
+    }
+
+    public function lister_par_ids(array $ids): array {
+        $voulus = array_flip(array_map('intval', $ids));
+        return $this->filtrer(static fn(Fiche $f): bool => isset($voulus[$f->id]));
+    }
+
+    public function compter(): array {
+        $compteurs = ['a_approuver' => 0, 'publie' => 0, 'ecarte' => 0, 'a_verifier' => 0];
+        foreach ($this->fiches as $fiche) {
+            if (isset($compteurs[$fiche->statut])) {
+                $compteurs[$fiche->statut]++;
+            }
+            if (self::absente($fiche)) {
+                $compteurs['a_verifier']++;
+            }
+        }
+        return $compteurs;
+    }
+
+    public function lister_absentes(): array {
+        return $this->filtrer(static fn(Fiche $f): bool => self::absente($f));
+    }
+
+    public function lister_crees_depuis(string $date, string $statut = ''): array {
+        return $this->filtrer(static fn(Fiche $f): bool => ($statut === '' || $f->statut === $statut)
+            && $f->cree_le !== null && $f->cree_le >= $date);
+    }
+
+    public function lister_recentes(string $statut, int $max, string $type = ''): array {
+        $fiches = array_reverse($this->filtrer(static fn(Fiche $f): bool => $f->statut === $statut && ($type === '' || $f->type === $type)));
+        return array_slice($fiches, 0, max(0, $max));
+    }
+
+    public function lister_pour_page(string $limite_evenements, string $aujourdhui, string $limite_appels): array {
+        $au_moins = static fn(?string $date, string $limite): bool => ($date ?? '') !== '' && $date >= $limite;
+        return $this->filtrer(static function (Fiche $f) use ($au_moins, $limite_evenements, $aujourdhui, $limite_appels): bool {
+            if ($f->statut !== 'publie') {
+                return false;
+            }
+            if ($f->type === 'evenement') {
+                return ($f->debut ?? '') === '' || $au_moins($f->debut, $limite_evenements) || $au_moins($f->fin, $limite_evenements);
+            }
+            if ($f->type === 'appel') {
+                return $au_moins($f->echeance, $aujourdhui) || $au_moins($f->fin, $aujourdhui)
+                    || $au_moins($f->debut, $limite_appels) || $au_moins($f->cree_le, $limite_appels)
+                    || (($f->debut ?? '') === '' && ($f->cree_le ?? '') === '');
+            }
+            return false;
+        });
+    }
+
     public function ids_publies_de_source(string $id_source): array {
         $prefixe = $id_source . ':';
         $ids = [];
@@ -82,6 +136,22 @@ final class EntrepotMemoire implements Entrepot {
 
     public function lever_absent(int $id): void {
         $this->fiche($id)->absent_depuis = null;
+    }
+
+    /** @return Fiche[] Copies des fiches qui satisfont le critère, par identifiant croissant. */
+    private function filtrer(callable $critere): array {
+        $resultat = [];
+        foreach ($this->fiches as $fiche) {
+            if ($critere($fiche)) {
+                $resultat[] = clone $fiche;
+            }
+        }
+        return $resultat;
+    }
+
+    /** Publiée et signalée absente de sa source. */
+    private static function absente(Fiche $f): bool {
+        return $f->statut === 'publie' && ($f->absent_depuis ?? '') !== '';
     }
 
     /** Copie de la première fiche qui satisfait le critère, sinon null. */

@@ -36,6 +36,9 @@ final class PageFile {
     /** Longueur de l'extrait affiché. */
     private const LONGUEUR_EXTRAIT = 180;
 
+    /** Fiches affichées au plus dans les onglets Publiées et Écartées (les plus récentes). */
+    public const PLAFOND = 200;
+
     // --- WordPress : page et action AJAX ---
 
     /** Affiche la page (rappel du menu). */
@@ -46,16 +49,34 @@ final class PageFile {
         $onglet = self::parametre('statut');
         $type = self::parametre('type');
         $source = isset($_GET['source']) && is_string($_GET['source']) ? sanitize_text_field(wp_unslash($_GET['source'])) : '';
-        $fiches = (new EntrepotWordPress())->lister('');
+        $onglet = in_array($onglet, self::ONGLETS, true) ? $onglet : 'a_approuver';
+        $type = in_array($type, self::TYPES, true) ? $type : '';
+        $entrepot = new EntrepotWordPress();
+        [$fiches, $plafond_atteint] = self::fiches_de_l_onglet($entrepot, $onglet, $type);
         // Sortie entièrement échappée par les méthodes de rendu.
-        echo self::page_html(
-            $fiches,
-            in_array($onglet, self::ONGLETS, true) ? $onglet : 'a_approuver',
-            in_array($type, self::TYPES, true) ? $type : '',
-            $source,
-            admin_url('admin.php?page=' . Menu::SLUG),
-            ['url_admin' => admin_url()]
-        );
+        echo self::page_html($fiches, $onglet, $type, $source, admin_url('admin.php?page=' . Menu::SLUG), [
+            'url_admin' => admin_url(),
+            'compteurs' => $entrepot->compter(),
+            'plafond_atteint' => $plafond_atteint,
+        ]);
+    }
+
+    /**
+     * Fiches à afficher pour un onglet : la file « À approuver » et « À vérifier » en entier ; « Publiées »
+     * et « Écartées », les `PLAFOND` plus récentes seulement (du type demandé). Rend [fiches, plafond atteint].
+     *
+     * @return array{0: Fiche[], 1: bool}
+     */
+    public static function fiches_de_l_onglet(Entrepot $e, string $onglet, string $type): array {
+        if ($onglet === 'a_verifier') {
+            return [$e->lister_absentes(), false];
+        }
+        if ($onglet === 'publie' || $onglet === 'ecarte') {
+            // Une de plus que le plafond : savoir s'il est atteint sans compter à part.
+            $fiches = $e->lister_recentes($onglet, self::PLAFOND + 1, $type);
+            return [array_slice($fiches, 0, self::PLAFOND), count($fiches) > self::PLAFOND];
+        }
+        return [$e->lister('a_approuver', $type), false];
     }
 
     /**
@@ -109,17 +130,14 @@ final class PageFile {
         } catch (\RuntimeException $erreur) {
             return ['ok' => false, 'message' => __("Le changement de statut n'a pas pu être enregistré.", 'rsn-veille')];
         }
-        $fiches = $e->lister('');
         if ($statut === 'ecarte') {
-            foreach ($fiches as $fiche) {
-                if ($fiche->id === $id && $fiche->est_proposition()) {
-                    self::retirer_image_proposee($e, $id);
-                    break;
-                }
+            $fiche = $e->obtenir($id);
+            if ($fiche !== null && $fiche->est_proposition()) {
+                self::retirer_image_proposee($e, $id);
             }
         }
         Collecte::purger_caches();
-        return ['ok' => true, 'statut' => $statut, 'compteurs' => self::compteurs($fiches)];
+        return ['ok' => true, 'statut' => $statut, 'compteurs' => $e->compter()];
     }
 
     /**
@@ -200,15 +218,26 @@ final class PageFile {
     /**
      * Page complète : titre, onglets, filtres, zone de message et tableau.
      *
-     * @param Fiche[] $fiches Toutes les fiches (les compteurs portent sur toutes).
-     * @param array{url_admin?: string} $options
+     * @param Fiche[] $fiches Fiches chargées (celles de l'onglet, ou toutes).
+     * @param array{url_admin?: string, compteurs?: array<string,int>, plafond_atteint?: bool} $options
+     *        `compteurs` : nombres par onglet de l'entrepôt (`Entrepot::compter`), sinon comptés sur $fiches ;
+     *        `plafond_atteint` : l'onglet ne montre que les `PLAFOND` fiches les plus récentes.
      */
     public static function page_html(array $fiches, string $onglet, string $type, string $source, string $url_page, array $options): string {
+        $compteurs = is_array($options['compteurs'] ?? null) ? $options['compteurs'] : self::compteurs($fiches);
+        $mention = !empty($options['plafond_atteint'])
+            ? '<p class="description rsn-veille-plafond">' . esc_html(sprintf(
+                /* translators: %d : nombre de fiches affichées au plus dans l'onglet. */
+                __('Les %d plus récentes sont affichées.', 'rsn-veille'),
+                self::PLAFOND
+            )) . '</p>'
+            : '';
         return '<div class="wrap rsn-veille-admin">'
             . '<h1>' . esc_html__("File d'approbation", 'rsn-veille') . '</h1>'
-            . self::onglets_html($onglet, self::compteurs($fiches), $type, $source, $url_page)
+            . self::onglets_html($onglet, $compteurs, $type, $source, $url_page)
             . self::filtres_html($onglet, $type, $source, self::sources_distinctes($fiches))
             . '<div class="rsn-veille-message" role="status" aria-live="polite"></div>'
+            . $mention
             . self::tableau_html(self::filtrer($fiches, $onglet, $type, $source), $onglet, $options)
             . '</div>';
     }

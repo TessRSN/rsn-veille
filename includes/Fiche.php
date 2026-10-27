@@ -86,7 +86,11 @@ final class Fiche {
     public ?string $absent_depuis = null;
     public int $absences = 0;
     public bool $manuel = false;
-    /** Jour de création de la fiche dans l'extension (Y-m-d), posé par l'entrepôt ; sert au courriel hebdomadaire. */
+    /**
+     * Jour de création de la fiche dans l'extension (Y-m-d), posé par l'entrepôt ; sert au courriel hebdomadaire
+     * et à l'âge d'un appel sans date. Une fiche créée dans l'éditeur de WordPress, sans cette méta, reçoit à la
+     * lecture le jour de son post (`EntrepotWordPress`).
+     */
     public ?string $cree_le = null;
 
     /**
