@@ -270,7 +270,7 @@ final class PageReglages {
             $roles[(string) $nom] = function_exists('translate_user_role') ? translate_user_role($libelle) : $libelle;
         }
         $pages = [];
-        foreach (get_pages(['post_status' => 'publish,draft', 'sort_column' => 'post_title']) ?: [] as $page) {
+        foreach (get_pages(['post_status' => 'publish,draft,private', 'sort_column' => 'post_title']) ?: [] as $page) {
             $pages[(int) $page->ID] = $page->post_title;
         }
         ob_start();
