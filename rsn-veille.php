@@ -4,7 +4,10 @@
  * Description: Collecte et présente la veille de l'écosystème de la santé numérique au Québec.
  * Version: 0.1.0
  * Author: Réseau santé numérique
+ * Requires at least: 6.0
  * Requires PHP: 8.0
+ * GitHub Plugin URI: TessRSN/rsn-veille
+ * Primary Branch: main
  * Text Domain: rsn-veille
  */
 
