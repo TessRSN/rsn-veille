@@ -21,24 +21,29 @@ WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se lancent par `n
 
 ## Page publique
 
-- [ ] La page affiche l'intro, « Proposer un événement », les onglets Agenda et Appels, la colonne de
-      filtres (recherche, Mois avec « Plus tard » et « Événements passés », **Qui organise** au-dessus
-      de Format, Lieu, Thèmes repliés à six avec « Plus… », Organisateur, Réinitialiser) et « Sources lues ».
+- [ ] La page affiche l'intro, « S'abonner au calendrier » (lien vers `/veille.ics`) et « Proposer un
+      événement », la bande « À la une du RSN », la bande « Dates limites », puis la colonne de filtres
+      (recherche, **Afficher**, **Qui organise**, Mois avec « Plus tard » et « Événements passés », Format, Lieu,
+      Thèmes repliés à six avec « Plus… », Organisateur, Réinitialiser), la liste unifiée et « Sources lues ».
+      Plus d'onglets Agenda et Appels. (Le détail des bandes et des filtres : `PARCOURS.md`, étape 7.)
 - [ ] Aucune trace du mode équipe : ni case « Mode équipe », ni file d'approbation, ni onglet
       Actualités, ni bouton « Copier pour l'infolettre », ni niveau A/B/C/M, ni nom de source
       technique, ni le mot « Prototype ». Les fiches à approuver n'apparaissent pas.
-- [ ] Style conforme à la maquette v6.1 : titres de mois en DM Serif Display avec hexagone et trait
+- [ ] Style conforme à la maquette v8 : titres de mois en DM Serif Display avec hexagone et trait
       #3D6A99 qui continue, frise à hexagones, fiches sans contour, image à gauche étirée à la hauteur
       du texte, bloc date serif, thèmes en petites capitales, « Plus d'information » souligné de jaune.
-- [ ] Qui organise : RSN ne garde que la catégorie TEC de slug `evenements-rsn` (ou nommée « Événements
-      RSN »), Partenaires `evenements-partenaires`, Écosystème le reste ; un second clic retire le
-      filtre. Renommer la catégorie dans TEC sans changer son slug ne change rien.
+- [ ] Qui organise : RSN ne garde que la catégorie TEC de slug `rsn` (ou nommée « Événements RSN » /
+      « RSN Events »), les fiches de la source du RSN et celles dont l'organisateur est « RSN » (appels
+      compris) ; Partenaires la catégorie de slug `partenaires` (ou « Événements partenaires »), Écosystème
+      le reste (dont le slug `ecosysteme`) ; un second clic retire le filtre. Renommer la catégorie dans TEC
+      sans changer son slug ne change rien.
 - [ ] « Événements passés » : lignes compactes sans image, du plus récent au plus ancien, compteur
       « N événements passés depuis {mois année} ».
 - [ ] Calendrier : grille lundi → dimanche, flèches, Aujourd'hui, flèches du clavier sur la grille,
-      glissement tactile (mobile), événements RSN en jaune, clic sur un jour → fiches dessous.
-- [ ] Appels : triés par date limite, tuile jaune (date limite) ou grise (publication) ; un appel dont
-      l'échéance est passée n'apparaît plus.
+      glissement tactile (mobile), événements RSN en jaune, clic sur un jour → fiches dessous ; un appel
+      apparaît le jour de sa date limite (« Date limite · … »).
+- [ ] Appels (dans la liste unifiée, avec leur mois de date limite) : tuile jaune (date limite) ou grise
+      (publication) ; un appel dont l'échéance est passée n'apparaît plus.
 - [ ] « Proposer un événement » ouvre le formulaire (titre « Proposer un événement »), « Annuler » le ferme
       (envoi : voir la section Formulaire ci-dessous).
 - [ ] Le titre piégé s'affiche en texte (aucune alerte) ; dans le code source, le JSON de
@@ -49,8 +54,9 @@ WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se lancent par `n
       colonne de filtres au-dessus de la liste, points de couleur dans le calendrier.
 - [ ] Bureau : la colonne de filtres reste collante, sans barre de défilement (4 mois, Plus tard,
       thèmes repliés la gardent courte).
-- [ ] `[rsn_veille section="agenda"]` : agenda seul (sans onglets, appels ni sources) ;
-      `[rsn_veille section="appels"]` : appels seuls. Les deux sur la même page : chacun fonctionne
+- [ ] `[rsn_veille section="agenda"]` : événements seuls (sans appels, bandes ni sources) ;
+      `[rsn_veille section="appels"]` : dates limites puis appels seuls ; `[rsn_veille une="0"]` : sans la bande
+      « À la une ». Les deux sur la même page : chacun fonctionne
       (nœuds `#rsn-veille-donnees` et `#rsn-veille-donnees-2`).
 - [ ] Le bloc est un `<div class="rsn-veille" role="region">` : la page n'a qu'un seul `<main>` (celui du thème).
 
@@ -108,7 +114,7 @@ débit : `wp transient list --search='rsn_veille_debit_*'` puis `wp transient de
 
 ## Ressources et cohabitation
 
-- [ ] Sur la page Veille, `veille.css` et `veille.js` sont chargés avec `?ver=0.1.0` (onglet Réseau) ;
+- [ ] Sur la page Veille, `veille.css` et `veille.js` sont chargés avec `?ver=0.2.0` (onglet Réseau) ;
       sur une autre page du site (accueil, Nouvelles), ni l'un ni l'autre.
 - [ ] Les polices Google ne sont pas chargées une seconde fois par l'extension (pas de feuille
       `rsn-veille-polices`) ; `add_filter('rsn_veille_charger_polices', '__return_true')` dans un

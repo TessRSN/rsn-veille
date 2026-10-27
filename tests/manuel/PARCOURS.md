@@ -1,4 +1,4 @@
-# Parcours de vérification de bout en bout (version 0.1.0)
+# Parcours de vérification de bout en bout (version 0.2.0)
 
 Ce parcours enchaîne, dans l'ordre d'un vrai usage, toutes les listes de vérification manuelles :
 `verifier-admin.md` (administration), `verifier-public.md` (page publique, formulaire, REST et iCal) et
@@ -55,6 +55,8 @@ Fichier `verifier-admin.md`, section **Réglages (tâche 12)**, **toutes les cas
 collecte maintenant » (étape 4) et « Import » (étape 5). Cela couvre : accès éditeur/abonné, état de la collecte,
 avertissement `DISABLE_WP_CRON`, sources décochées, niveau, mots-clés bordés, thèmes, valeurs invalides, rôles,
 heure de collecte (replanification), choix de la page Veille (créer d'abord une page vide), jeton expiré, mobile.
+En plus : **la liste « Page Veille » propose aussi les pages privées** (créer une page en visibilité « Privée » et
+une en brouillon : les deux apparaissent dans la liste ; la choisir et enregistrer ne la perd pas au rechargement).
 Dans la même étape, la case **Rôles** de la section Vérifications (« Réglage des rôles ») et les cases
 « Éditeur », « Abonné » et « Les fichiers `admin.css` et `admin.js` ne sont chargés que sur les pages Veille ».
 
@@ -68,6 +70,11 @@ Dans la même étape, la case **Rôles** de la section Vérifications (« Régla
    lancée : N sources en file », tâche `rsn_veille_source` échue immédiatement, aucune ligne pour une source décochée),
    puis laisser WP-Cron (`wp cron event run --due-now`, répété) vider la file.
 3. `verifier-admin.md`, case **Journal** : « Dernière collecte terminée », une ligne par source, erreurs repliées.
+
+4. Si l'événement « IA en santé 2026 » est encore dans la source IVADO : sa fiche garde le titre de la liste et son
+   adresse est celle de la page cible (`https://event.fourwaves.com/aihealthsymposium`), pas l'adresse `ivado.ca`
+   d'une page de redirection (`wp post meta get <ID> rsn_veille_url`). Les autres fiches IVADO gardent leur adresse
+   `ivado.ca` et leur résumé complété.
 
 **Terminé quand** : le Journal montre les 13 sources, au plus quelques erreurs de réseau expliquées (un 403 est
 une erreur consignée, pas un défaut), et la file `rsn_veille_file` est vide.
@@ -86,25 +93,95 @@ une erreur consignée, pas un défaut), et la file `rsn_veille_file` est vide.
 donné assez de fiches à approuver), puis section **Vérifications** : titre `<script>` en texte, onglet
 « À approuver » (**Publier**, **Écarter**), onglet « Publiées » (**Retirer**), onglet « Écartées » (**Publier**),
 filtres, onglet « À vérifier » (**Garder publiée**, **Retirer**), jeton expiré, largeur mobile.
+**Tri et repère « Nouveau »** (créer au moins deux fiches à approuver à des jours d'arrivée différents :
+`wp post meta update <ID> rsn_veille_cree_le AAAA-MM-JJ`, avec la date du jour, celle d'hier et une date plus
+ancienne ; l'une doit aussi avoir une date d'événement plus lointaine que les autres) :
+- « À approuver » et « À vérifier » sont triés par jour d'arrivée décroissant, pas par date d'événement : la fiche
+  arrivée aujourd'hui est en tête même si son événement est le plus lointain ;
+- le repère jaune « Nouveau » suit le titre des fiches arrivées aujourd'hui ou hier, et seulement celles-là, dans
+  ces deux onglets ; il n'existe pas dans « Publiées » ni dans « Écartées », qui restent triés par date d'événement ;
+- une fiche sans `rsn_veille_cree_le` (`wp post meta delete <ID> rsn_veille_cree_le`) passe en dernier, sans repère.
+
+**Image de la fiche** (ouvrir une fiche dans l'éditeur WordPress) :
+- la boîte « Image de la fiche » est dans la colonne latérale ; elle montre l'image de la source (ou « Aucune image
+  de la source ») et dit : « Pour la remplacer, choisissez une image mise en avant : elle prime et la collecte ne
+  l'écrase jamais. » Elle n'a aucun champ à remplir ;
+- choisir une **image mise en avant**, mettre à jour la fiche : la page publique (étape 7) et le JSON
+  (`/wp-json/rsn/v1/veille`, clé `image_url` de la fiche) montrent l'image mise en avant ; lancer la collecte de la
+  source de cette fiche (étape 4) : l'image mise en avant ne change pas ; retirer l'image mise en avant : la page
+  revient à l'image de la source.
+
 Contrôler au passage la purge : après un changement de statut, `wp post meta get <page> _elementor_element_cache`
 est vide pour la page Veille choisie.
 
 **Terminé quand** : toutes les cases de « Vérifications » sont cochées, y compris « Aucune erreur PHP dans
 `debug.log` ni dans la console du navigateur ».
 
-## 7. Page publique
+## 7. Page publique (page « Événements et appels »)
 
 1. `verifier-public.md`, section **Préparation**, points 2 à 4 (fiches publiées, à approuver, passées, avec image,
    avec échéance ; événements TEC ; page « Veille » contenant `[rsn_veille]`, bloc Code court puis widget
-   Code court d'Elementor, choisie dans Veille › Réglages).
-2. Section **Page publique** : liste, filtres, calendrier, appels, événements passés, style de la maquette v6.1,
-   absence du mode équipe, titre piégé en texte, mobile, `section="agenda"` et `section="appels"`.
-3. Section **Ressources et cohabitation** : ressources seulement sur la page Veille, polices, Elementor, cache
-   (publier une fiche puis recharger hors connexion), WPML si installé.
-4. Section **REST et iCal** : `/wp-json/rsn/v1/veille`, `/veille.ics` (CRLF, en-têtes, validateur iCal,
-   abonnement dans un agenda).
+   Code court d'Elementor, choisie dans Veille › Réglages). Pour essayer la page sans la publier, la mettre en
+   visibilité « Privée » (étape 3) et la regarder connecté.
+2. Section **Page publique** de `verifier-public.md` : barre d'actions, bandes, liste unifiée, filtres, calendrier,
+   événements passés, style de la maquette v8, absence du mode équipe, titre piégé en texte, mobile,
+   `section="agenda"`, `section="appels"` et `une="0"`.
+3. Jeu de fiches pour les étapes suivantes (à créer dans la file, publiées, avec `wp post meta update` ou l'éditeur ; pour un
+   appel, la date de publication est `rsn_veille_debut` et la date limite `rsn_veille_echeance` ; « du RSN » veut dire `rsn_veille_organisateur` = `RSN`) :
+   - un **appel du RSN** publié il y a 3 jours, avec une date limite dans 30 jours (étiquette « Nouveau ») ;
+   - un **appel du RSN** publié il y a 40 jours, avec une date limite dans 10 jours (« Ferme dans 10 jours ») ;
+   - un **appel du RSN** publié il y a 40 jours, avec une date limite dans 60 jours (« Date limite : … ») ;
+   - un **appel d'un autre organisateur** (Obvia, par exemple) avec une date limite dans 20 jours ;
+   - un **appel du RSN sans aucune date limite** (ni `rsn_veille_echeance` ni date de fin), publié il y a 5 jours ;
+   - un **événement du RSN commencé hier et qui finit demain** ;
+   - un événement du RSN dans 90 jours (au-delà des autres éléments de la bande), un événement de partenaire et un
+     événement de l'écosystème.
+   Purger le cache de la page (`wp transient delete rsn_veille_json_fr`) après chaque changement de fiche.
+4. **Bande « À la une du RSN »** : trois cartes au plus, que des éléments du RSN, triées par date (la tuile jaune
+   donne le jour et le mois) ; l'appel « Nouveau » porte l'étiquette rouge « Nouveau » ; l'appel dont la date limite
+   est dans 10 jours porte « Ferme dans 10 jours » (« Ferme demain » à 1 jour, « Ferme aujourd'hui » à 0, et
+   « Date limite : … » au-delà de 21 jours : la bande ne garde que les trois éléments les plus proches ; pour voir
+   cette dernière étiquette, repousser temporairement la date limite de l'appel de 10 jours à 40 jours) ; **l'événement du RSN commencé hier et qui finit demain est à la une**
+   (il compte parmi les trois cartes, avec son jour de début) ; l'appel d'un autre organisateur n'y est pas ;
+   **l'appel du RSN sans date limite n'y est pas**. Cliquer « Tout ce que le RSN organise et finance → » : la page
+   défile jusqu'à la liste avec « Qui organise › RSN » actif. Sans aucun élément du RSN à venir, la bande disparaît.
+5. **Bande « Dates limites »** : une puce par appel en cours qui a une date limite (les quatre appels à date
+   limite), triées par date, avec l'organisateur (« RSN » en jaune) ; **l'appel sans date limite n'y est pas** ; la
+   rangée défile horizontalement si elle dépasse. Sans appel à date limite, la bande disparaît.
+6. **Appel sans date limite** : il est dans la liste, **seulement** (ni dans « À la une », ni dans « Dates limites »),
+   classé dans le **mois courant**, et jamais dans « Événements passés ».
+7. **Filtre Afficher** : Tout / Événements / Appels, avec les compteurs ; « Appels » ne montre que les appels (liste,
+   compteur de la barre « N appels », calendrier) ; « Événements » que les événements. Le filtre **Qui organise**
+   (rubrique, comme Mois) : l'appel du RSN est compté et listé sous RSN (et non sous Écosystème) ; les compteurs
+   croisent les deux filtres ; Réinitialiser remet tout à « Tout » et « Tous ».
+8. **Liste unifiée** : événements et appels mêlés par mois, en-tête « N événements · M appels » ; pastilles de
+   type, d'organisateur, de format, de langue et de thèmes ; hexagone doré pour un élément du RSN.
+9. **Calendrier** : l'appel apparaît le jour de sa date limite, en puce jaune « Date limite · … » ; cliquer le jour :
+   les événements du jour puis les appels de ce jour ; la légende contient « Date limite d'un appel ». Avec
+   « Afficher › Appels », seuls les appels restent dans la grille.
+10. **Attributs** : `[rsn_veille une="0"]` : pas de bande « À la une », le reste intact ;
+    `[rsn_veille section="appels"]` : bande « Dates limites » puis les appels seuls, triés par date limite (sans date
+    limite en dernier), sans bande « À la une » ni colonne de filtres ; `[rsn_veille section="agenda"]` : événements
+    seuls, filtre Afficher absent, ni « À la une » ni « Dates limites ».
+11. **Débordement de la bande dans le thème** (page Elementor, widget Code court dans une section **pleine
+    largeur**, puis dans une section à largeur limitée) : le fond marine de « À la une » va d'un bord à l'autre de
+    la fenêtre alors que les cartes restent centrées (1140 px au plus). Contrôler **avec une barre de défilement
+    verticale visible** (Windows, ou macOS avec « Toujours afficher les barres de défilement ») :
+    `document.documentElement.scrollWidth === document.documentElement.clientWidth` dans la console du navigateur.
+    S'il y a un léger défilement horizontal : `une="0"`, ou `overflow-x:clip` sur le conteneur du thème (voir le
+    guide, section 4) ; consigner le constat dans le tableau des écarts. Vérifier aussi à 375 px (cartes empilées).
+12. Section **Ressources et cohabitation** de `verifier-public.md` : ressources seulement sur la page Veille
+    (chargées avec `?ver=0.2.0`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
+    si installé (sur la page anglaise, les textes des bandes s'affichent en français tant qu'ils ne sont pas traduits :
+    limite connue, pas un écart).
+13. Section **REST et iCal** : `/wp-json/rsn/v1/veille` (aucune clé retirée), `/veille.ics` (CRLF, en-têtes,
+    validateur iCal, abonnement dans un agenda).
+14. **Qui organise des catégories TEC** : une catégorie TEC de slug `rsn` classe ses événements sous RSN, `partenaires`
+    sous Partenaires, `ecosysteme` (ou toute autre) sous Écosystème ; renommer la catégorie sans changer le slug ne
+    change rien.
 
-**Terminé quand** : toutes les cases de ces trois sections sont cochées, sauf celles du formulaire (étape 8).
+**Terminé quand** : toutes les cases de ces sections de `verifier-public.md` sont cochées, sauf celles du formulaire
+(étape 8), et chacune des étapes 4 à 11 ci-dessus donne le résultat attendu.
 
 ## 8. Formulaire « Proposer un événement »
 

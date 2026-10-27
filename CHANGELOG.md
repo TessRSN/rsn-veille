@@ -1,5 +1,39 @@
 # Journal des modifications
 
+## 0.2.0 (2026-10-27)
+
+La page publique devient la page « Événements et appels » (maquette `docs/maquette/gabarit-v8.html`) et six corrections d'exploitation, relevées à l'usage de la 0.1.0 sur rsn.quebec, sont faites. Les clés du JSON public `/wp-json/rsn/v1/veille` sont inchangées ; l'attribut `section`, le calendrier, le formulaire, l'iCal, les caches et WPML continuent de fonctionner comme en 0.1.0. Aucune migration : rien à refaire dans les réglages.
+
+### Page publique
+- Les onglets Agenda et Appels disparaissent : une seule liste, groupée par mois, mêle événements et appels (clé de tri : début d'un événement, date limite d'un appel). L'en-tête de mois indique « N événements · M appels ».
+- Bande « À la une du RSN » : les trois prochains éléments organisés par le RSN, événements à venir ou en cours et appels en cours **avec une date limite**, triés par date. Étiquettes : « Événement du RSN », « Nouveau » (appel publié depuis 7 jours ou moins), « Ferme dans N jours » (21 jours ou moins avant la date limite, « Ferme demain », « Ferme aujourd'hui »), sinon « Date limite : … ». Le lien « Tout ce que le RSN organise et finance » applique le filtre Qui organise › RSN et mène à la liste. La bande déborde sur toute la largeur de la fenêtre (`margin-inline:calc(50% - 50vw)`) ; sans élément du RSN, elle ne s'affiche pas.
+- Bande « Dates limites » : une puce par appel en cours qui a une date limite, triées par date, avec l'organisateur.
+- Un appel **sans date limite** reste visible dans la liste seulement : classé dans le mois courant, jamais « passé », absent de « À la une » et de « Dates limites » (la règle des 90 jours de la 0.1.0 est inchangée).
+- Un événement du RSN en cours (commencé, pas fini) reste à la une.
+- Filtres : nouvelle rubrique **Afficher** (Tout, Événements, Appels) et rubrique **Qui organise** (Tous, RSN, Partenaires, Écosystème) au-dessus du Mois, avec compteurs ; la recherche porte aussi sur les thèmes.
+- Fiches : pastilles (Événement ou Appel, organisateur, format, « En anglais », thèmes) à la place de la ligne organisateur et de la ligne de thèmes en capitales ; l'hexagone de la frise est doré pour un élément du RSN.
+- Calendrier : un appel apparaît le jour de sa date limite (puce jaune « Date limite · … »), et le détail du jour liste les événements puis les appels ; le filtre Afficher s'applique aussi au calendrier.
+- Boutons « S'abonner au calendrier » (lien vers `/veille.ics`) et « Proposer un événement ».
+- Nouvel attribut `une="0"` du raccourci : retire la bande « À la une ». Les valeurs de `section` restent `tout`, `agenda` (filtre Afficher verrouillé sur Événements, sans bande des dates limites) et `appels` (bande des dates limites puis appels seuls, triés par date limite).
+- Mobile et colonnes étroites : les cartes « À la une » s'empilent, la bande des dates limites passe son libellé au-dessus des puces.
+- Les nouveaux textes passent tous par la traduction de WordPress (domaine `rsn-veille`).
+
+### Corrections d'exploitation
+1. **Qui organise des appels du RSN** : les fiches des sources `rsn:` et `rsn_appels:`, et toute fiche dont l'organisateur canonique est « RSN », sont classées RSN (les appels du RSN sortaient « Écosystème »).
+2. **Catégories TEC par slug nu** : les catégories de The Events Calendar sont aussi reconnues par leurs slugs `rsn`, `partenaires` et `ecosysteme` (en plus de leurs noms français et anglais).
+3. **Liste « Page Veille »** des réglages : elle propose aussi les pages privées (une page privée convient pour l'essai).
+4. **Tri de la file** : « À approuver » et « À vérifier » sont triées par arrivée (jour `cree_le`, puis identifiant, du plus récent au plus ancien), avec un repère « Nouveau » pour une fiche arrivée aujourd'hui ou hier ; « Publiées » et « Écartées » restent triées par date d'événement.
+5. **Image d'une fiche** : l'**image mise en avant** de WordPress prime sur l'image de la source (que la collecte réécrit chaque nuit) dans la page et le JSON public. Nouvelle propriété de fiche `image_manuelle` (lue, jamais écrite) et métabox « Image de la fiche » : elle montre l'image de la source et renvoie vers l'image mise en avant (elle n'a aucun champ).
+6. **Pages IVADO de redirection** : quand la page d'un événement IVADO n'est qu'une redirection (titre ou `<h1>` « Redirect », `meta refresh`, ou affectation de `window.location` par une adresse), la fiche garde le titre et le résumé de la liste, et l'adresse cible (par exemple `event.fourwaves.com`) remplace l'adresse IVADO. La fiche déjà en base est corrigée à la collecte suivante.
+
+### Livraison
+- Numéro de version 0.2.0 (`rsn-veille.php`, `RSN_VEILLE_VERSION`, donc `?ver=0.2.0` sur `veille.css` et `veille.js`).
+- Guide d'installation (section 4 : page privée, attribut `une`, bande pleine largeur ; catégories TEC par slug nu), `LISEZMOI.md` et parcours de vérification manuelle (`tests/manuel/PARCOURS.md`) mis à jour.
+- 526 tests PHPUnit. Le parcours manuel de la nouvelle page n'a pas encore été déroulé dans un WordPress réel : la bande pleine largeur (barre de défilement verticale) et l'éditeur Elementor restent à vérifier sur la copie de préproduction.
+
+### Limites connues
+Voir « Limites connues de la version 0.2.0 » dans `LISEZMOI.md`.
+
 ## 0.1.0 (2026-10-26)
 
 Première version de l'extension.

@@ -1,6 +1,6 @@
 # Installation et bascule sur rsn.quebec
 
-Ce guide dit comment installer l'extension **RSN : veille de l'écosystème** (version 0.1.0) sur le site, quoi régler le premier jour, comment faire passer la page Veille à la place de la page Événements, et que faire quand quelque chose ne va pas. Rien n'est fait sur le site tant que la personne qui porte le projet ne l'a pas décidé : les étapes de la bascule se font une à une, avec un accord à chaque étape.
+Ce guide dit comment installer l'extension **RSN : veille de l'écosystème** (version 0.2.0) sur le site, quoi régler le premier jour, comment faire passer la page Veille à la place de la page Événements, et que faire quand quelque chose ne va pas. Rien n'est fait sur le site tant que la personne qui porte le projet ne l'a pas décidé : les étapes de la bascule se font une à une, avec un accord à chaque étape.
 
 ## 1. Prérequis
 
@@ -41,7 +41,7 @@ Sans cron du serveur (c'est-à-dire sans `DISABLE_WP_CRON`), l'extension fonctio
 À partir du dépôt, sur un poste avec Git (après avoir amené la branche voulue, par exemple `main`) :
 
 ```
-git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.1.0.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
+git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.2.0.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
 ```
 
 Le zip contient `rsn-veille.php`, `uninstall.php`, `includes/` et `assets/` (et les documents de racine), sans tests, sans documents de conception et sans `vendor/`. Dans wp-admin : **Extensions › Ajouter › Téléverser une extension**, choisir le zip, installer, puis activer.
@@ -79,15 +79,31 @@ Après l'activation, le menu **Veille** apparaît dans wp-admin (sous « Comment
 7. **Page Veille** : après avoir créé la page (section 4), la choisir dans Réglages › Collecte et page publique › **Page Veille**. Ainsi, à chaque changement de fiche, l'extension purge le cache LiteSpeed de cette page et son cache de rendu Elementor.
 8. **File d'approbation** : ouvrir Veille › File d'approbation, onglet « À approuver », et publier ou écarter les fiches que les règles de confiance n'ont pas publiées d'office.
 
-## 4. Créer la page Veille (en brouillon)
+## 4. Créer la page Veille (en brouillon ou privée)
 
 1. Pages › Ajouter. Titre : « Veille de l'écosystème » (ou le titre voulu).
-2. Avec l'éditeur de blocs : un bloc **Code court** contenant `[rsn_veille]`. Avec Elementor : le widget **Code court** (Shortcode) contenant `[rsn_veille]`.
-3. Enregistrer en **brouillon**. Ne pas ajouter la page au menu.
-4. Prévisualiser. Le raccourci accepte `section="agenda"` (l'agenda seul) ou `section="appels"` (les appels seuls) ; sans attribut, il affiche tout (onglets Agenda et Appels, filtres, calendrier, « Proposer un événement », « Sources lues »).
-5. Choisir cette page dans Veille › Réglages › Page Veille.
+2. Avec l'éditeur de blocs : un bloc **Code court** contenant `[rsn_veille]`. Avec Elementor : le widget **Code court** (Shortcode) contenant `[rsn_veille]`, **dans une section pleine largeur** (voir « Bande « À la une du RSN » : pleine largeur » plus bas).
+3. Enregistrer en **brouillon**, ou en **privée** (visibilité « Privée » : seules les personnes connectées avec les droits voient la page, ce qui permet d'essayer la page sans la rendre publique). Ne pas ajouter la page au menu.
+4. Prévisualiser. Le raccourci rend, sans attribut (`section="tout"`) : la barre d'actions (« S'abonner au calendrier », « Proposer un événement »), la bande « À la une du RSN », la bande « Dates limites », puis les filtres (recherche, Afficher, Qui organise, Mois, Format, Lieu, Thèmes, Organisateur) à côté de la liste unifiée des événements et des appels (ou du calendrier), et « Sources lues ». Attributs :
+   - `section="agenda"` : les événements seuls (filtre Afficher verrouillé sur Événements, sans bande des dates limites) ;
+   - `section="appels"` : la bande des dates limites puis les appels seuls, triés par date limite, sans colonne de filtres ;
+   - `une="0"` : retire la bande « À la une du RSN » de la page complète (à employer quand le thème ou la page met déjà le RSN en avant ; la bande n'existe de toute façon que dans `section="tout"`). Exemple : `[rsn_veille une="0"]`.
+5. Choisir cette page dans Veille › Réglages › Page Veille. La liste propose les pages publiées, en brouillon **et privées**.
 
-L'onglet Appels ne montre que les appels en cours : date limite à venir (cherchée dans l'extrait, le contenu complet du flux et le titre), sinon date de fin à venir ; un appel sans aucune de ces dates est montré 90 jours après sa publication à la source, puis retiré (même règle pour le bloc Appels de l'infolettre et le courriel). Un appel encore ouvert après ce délai peut recevoir une date limite avec WP-CLI (`wp post meta update <ID> rsn_veille_echeance AAAA-MM-JJ`) ; il revient sur la page au plus tard une heure après (cache du JSON).
+**Bande « À la une du RSN » : pleine largeur.** Le fond marine de la bande déborde du conteneur sur toute la largeur de la fenêtre (`margin-inline:calc(50% - 50vw)`), alors que son contenu reste centré (1140 px au plus). Cela suppose que le raccourci soit dans une section Elementor **pleine largeur** (« Largeur du contenu : pleine largeur », ou section sans limite de largeur) : à vérifier à l'écran, à chaque nouvelle mise en page. Avec une barre de défilement verticale (Windows, ou « toujours afficher les barres » sur Mac), `100vw` compte la barre et, selon le thème, un léger défilement horizontal de la page est possible. Dans ce cas, deux solutions : mettre `une="0"` (pas de bande, donc pas de débordement), ou ajouter `overflow-x:clip` au conteneur du thème qui entoure le contenu (par exemple dans le CSS additionnel du thème : `body{overflow-x:clip}` ou le sélecteur du conteneur de la page).
+
+**Ce que montre la page.**
+- *À la une du RSN* : les trois prochains éléments **organisés par le RSN**, événements (à venir ou en cours) et appels en cours **qui ont une date limite**, triés par date. Un appel sans date limite n'y figure pas (il n'a pas de date à montrer). Un événement du RSN qui a commencé et n'est pas fini y reste. Étiquettes : « Événement du RSN » ; « Nouveau » pour un appel publié depuis 7 jours ou moins ; « Ferme dans N jours » (21 jours ou moins avant la date limite) ; sinon « Date limite : … ». Sans élément du RSN, la bande disparaît.
+- *Dates limites* : une puce par appel en cours qui a une date limite, triées par date. Sans appel à date limite, la bande disparaît.
+- *Liste unifiée* : événements et appels groupés par mois (début d'un événement, date limite d'un appel). Un appel sans date limite se trouve dans la liste seulement, classé dans le mois courant. Les appels apparaissent aussi dans le calendrier, à leur date limite.
+
+Qui organise (RSN, Partenaires, Écosystème) vient de la catégorie de l'événement dans The Events Calendar, que l'extension reconnaît par son **slug** `rsn`, `partenaires` ou `ecosysteme` ou par son **nom** français ou anglais (par exemple « Événements RSN », « Événements partenaires », « RSN Events », « Partner Events »). Toute autre catégorie, dont `ecosysteme`, est classée Écosystème. Les fiches de la source du RSN (événements et appels) et celles dont l'organisateur est « RSN » sont classées RSN, quelle que soit leur catégorie.
+
+L'onglet des appels n'existe plus : les appels sont dans la liste, et ne montrent que les appels en cours : date limite à venir (cherchée dans l'extrait, le contenu complet du flux et le titre), sinon date de fin à venir ; un appel sans aucune de ces dates est montré 90 jours après sa publication à la source, puis retiré (même règle pour le bloc Appels de l'infolettre et le courriel). Un appel encore ouvert après ce délai peut recevoir une date limite avec WP-CLI (`wp post meta update <ID> rsn_veille_echeance AAAA-MM-JJ`) ; il revient sur la page au plus tard une heure après (cache du JSON).
+
+**File d'approbation.** Les onglets « À approuver » et « À vérifier » sont triés par arrivée (la plus récente en premier) ; une fiche arrivée aujourd'hui ou hier porte le repère « Nouveau ». « Publiées » et « Écartées » restent triées par date d'événement.
+
+**Image d'une fiche.** La collecte réécrit l'image de la source à chaque passage. Pour garder une autre image, choisir une **image mise en avant** dans l'éditeur de la fiche (colonne latérale) : elle prime sur la page et dans le JSON, et la collecte n'y touche jamais. La boîte « Image de la fiche » de l'éditeur montre l'image de la source et rappelle cette règle ; elle n'a pas de champ à remplir. Pour revenir à l'image de la source, retirer l'image mise en avant.
 
 Les ressources (`veille.css`, `veille.js`) ne se chargent que sur une page qui contient le raccourci (ou sur la page choisie dans les réglages). Les polices DM Serif Display et Plus Jakarta Sans sont déjà chargées par le site : l'extension ne les recharge pas (un autre thème peut les demander avec `add_filter('rsn_veille_charger_polices', '__return_true')`).
 
@@ -106,7 +122,7 @@ Installer l'extension, faire les réglages (section 3), lancer la collecte, impo
 1. **Garder une sortie de secours** : dupliquer la page `/calendrier-evenements/` (ou noter précisément son contenu actuel : le raccourci de l'extrait 61 et sa mise en page Elementor).
 2. Dans la page `/calendrier-evenements/` (adresse conservée), remplacer le raccourci de l'extrait 61 par `[rsn_veille]` (dans le même widget Code court d'Elementor), enregistrer.
 3. Choisir cette page dans Veille › Réglages › **Page Veille** (pour que les purges de cache visent la page publique, pas le brouillon).
-4. **Vérifier** la page publiée, hors connexion : l'agenda s'affiche, le filtre **Qui organise › RSN** retrouve l'usage de l'ancienne page, le calendrier, les appels, le formulaire. Vérifier les menus et les liens des pages d'accueil qui pointent vers `/calendrier-evenements/`.
+4. **Vérifier** la page publiée, hors connexion : l'agenda s'affiche, le filtre **Qui organise › RSN** retrouve l'usage de l'ancienne page, le calendrier, les appels, le formulaire, et la bande **« À la une du RSN » déborde bien sur toute la largeur de la fenêtre** (section Elementor pleine largeur) sans défilement horizontal de la page ; sinon, `une="0"` ou `overflow-x:clip` (section 4). Vérifier les menus et les liens des pages d'accueil qui pointent vers `/calendrier-evenements/`.
 5. **Seulement ensuite**, désactiver l'extrait Code Snippets **61** (désactiver avant ferait afficher le raccourci brut).
 6. Purger le cache LiteSpeed du site une fois.
 7. Mettre la page Veille en brouillon, créée au temps 1, à la corbeille (ou la garder en brouillon pour des essais).
@@ -117,7 +133,7 @@ Installer l'extension, faire les réglages (section 3), lancer la collecte, impo
 
 1. Dans WPML › Réglages › **Traduction des types de publication** et **Traduction des taxonomies**, régler « Fiches de veille » (`rsn_veille`) et « Thèmes » (`rsn_theme`) sur **Non traduisible** : les fiches restent communes aux deux langues et l'écran des fiches n'est pas filtré par langue.
 2. Traduire la page `/calendrier-evenements/` avec WPML (le raccourci `[rsn_veille]` se retrouve tel quel dans la version anglaise). L'extension garde ses caches (JSON et iCal) **par langue** (`rsn_veille_json_fr`, `rsn_veille_json_en`) et les vide tous ensemble ; elle purge aussi LiteSpeed et le cache Elementor de la page traduite (retrouvée par WPML à partir de la page choisie dans Réglages › Page Veille, qui reste la page française).
-3. Les textes de l'extension passent par la traduction de WordPress (domaine `rsn-veille`). La version 0.1.0 ne livre **aucun fichier de traduction** : la page anglaise affiche les textes français tant que les chaînes ne sont pas traduites. Les traduire avec WPML › String Translation (chaînes du domaine « rsn-veille »), ou avec une extension comme Loco Translate.
+3. Les textes de l'extension passent par la traduction de WordPress (domaine `rsn-veille`). La version 0.2.0 ne livre **aucun fichier de traduction** : la page anglaise affiche les textes français tant que les chaînes ne sont pas traduites. Cela vaut aussi pour les textes des bandes « À la une du RSN » et « Dates limites », écrits par le JavaScript de la page : ils sont dans la même liste de chaînes du domaine « rsn-veille ». Les traduire avec WPML › String Translation (chaînes du domaine « rsn-veille »), ou avec une extension comme Loco Translate.
 4. Vérifier la page anglaise : les mêmes fiches, les dates, le formulaire, `veille.ics` ; retirer une fiche dans la file et vérifier qu'elle disparaît aussi de la page anglaise (hors connexion).
 
 ## 6. Dépannage
@@ -136,7 +152,7 @@ Installer l'extension, faire les réglages (section 3), lancer la collecte, impo
 
 ## 7. Confidentialité et sécurité
 
-- **Courriel des proposants** : le formulaire « Proposer un événement » demande un courriel de contact. C'est une **donnée personnelle** : l'extension l'enregistre dans une méta privée de la fiche (`rsn_veille_courriel_proposant`), ne l'affiche jamais sur la page, dans le JSON ni dans le fichier iCal, et ne s'en sert pas pour écrire. **La version 0.1.0 ne prévoit aucune durée de conservation automatique** : l'adresse reste avec la fiche tant que la fiche existe. À supprimer à la main : `wp post meta delete <ID> rsn_veille_courriel_proposant` avec WP-CLI (le type de contenu n'affiche pas le métabox « Champs personnalisés »), ou en supprimant la fiche entière, selon la politique de confidentialité du RSN. Une suppression automatique (par exemple 90 jours après la décision) est prévue pour une version suivante.
+- **Courriel des proposants** : le formulaire « Proposer un événement » demande un courriel de contact. C'est une **donnée personnelle** : l'extension l'enregistre dans une méta privée de la fiche (`rsn_veille_courriel_proposant`), ne l'affiche jamais sur la page, dans le JSON ni dans le fichier iCal, et ne s'en sert pas pour écrire. **La version 0.2.0 ne prévoit aucune durée de conservation automatique** : l'adresse reste avec la fiche tant que la fiche existe. À supprimer à la main : `wp post meta delete <ID> rsn_veille_courriel_proposant` avec WP-CLI (le type de contenu n'affiche pas le métabox « Champs personnalisés »), ou en supprimant la fiche entière, selon la politique de confidentialité du RSN. Une suppression automatique (par exemple 90 jours après la décision) est prévue pour une version suivante.
 - **Formulaire public** : protégé par un champ piège invisible, un jeton, une limite de débit et la vérification de l'image (JPEG, PNG ou WebP, 3 Mo au plus) ; les fiches reçues sont toujours « à approuver ». Le lien proposé n'est jamais chargé par le serveur.
 - **Limite de débit et adresse IP** : elle repose sur `REMOTE_ADDR`, seule source d'adresse digne de confiance (`X-Forwarded-For` se falsifie). **Si le site est derrière un mandataire inverse ou un réseau de diffusion de contenu, vérifier que le serveur transmet l'adresse réelle du visiteur dans `REMOTE_ADDR`** (module de restauration d'adresse). Sinon, tous les visiteurs partagent la même adresse et la limite de 5 envois par heure frappe tout le monde à la fois. L'adresse n'est jamais stockée en clair : le compteur est un transient dont le nom dérive de l'adresse hachée.
 - **Jeton GitHub** : voir la voie 2 (section 2). Aucun secret n'est stocké par l'extension elle-même.
@@ -158,6 +174,6 @@ Installer l'extension, faire les réglages (section 3), lancer la collecte, impo
   ```
   Faire ce nettoyage **avant** de supprimer l'extension ; après coup, il faudrait la réinstaller le temps du nettoyage.
 
-## 9. Limites connues de la version 0.1.0
+## 9. Limites connues de la version 0.2.0
 
 Voir la section « Limites connues » du `LISEZMOI.md`.

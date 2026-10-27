@@ -43,6 +43,16 @@ lancent par `npx wp-env run cli wp …`.
 - [ ] Onglet « Publiées » : **Retirer** retire la ligne ; statut `draft`.
 - [ ] Onglet « Écartées » : **Publier** remet la fiche en `publish` ; les écartées sont triées de la
       plus récente à la plus ancienne.
+- [ ] **Tri par arrivée** : dans « À approuver » et « À vérifier », les fiches vont de la dernière arrivée
+      (jour `rsn_veille_cree_le`, puis identifiant) à la plus ancienne, quelle que soit la date de
+      l'événement ; une fiche sans `rsn_veille_cree_le` est en dernier. « Publiées » et « Écartées » restent
+      triées par date d'événement.
+- [ ] **Repère « Nouveau »** (jaune, après le titre) : seulement sur les fiches arrivées aujourd'hui ou hier,
+      et seulement dans « À approuver » et « À vérifier ».
+- [ ] **Image de la fiche** (éditeur d'une fiche, colonne latérale) : la boîte montre l'image de la source
+      (ou « Aucune image de la source ») et le texte « Pour la remplacer, choisissez une image mise en avant : elle
+      prime et la collecte ne l'écrase jamais. » ; aucun champ à remplir. Une image mise en avant choisie
+      remplace l'image de la source sur la page publique et dans le JSON, et une collecte ne la change pas.
 - [ ] Filtres : « Appels » ne montre que les appels ; la liste des sources contient « Vérification » et
       la filtre ; les onglets gardent les filtres choisis.
 - [ ] **À vérifier** : marquer une fiche publiée absente
@@ -60,7 +70,7 @@ lancent par `npx wp-env run cli wp …`.
       par source (les sources jamais collectées : « jamais collectée »), erreurs repliées sous
       « N erreurs », et le déroulé de chaque source replié en bas de page.
 - [ ] Les fichiers `admin.css` et `admin.js` ne sont chargés que sur les pages du menu Veille (onglet
-      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.1.0`.
+      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.2.0`.
 - [ ] Aucune erreur PHP dans `wp-content/debug.log` ni dans la console du navigateur.
 
 ## Réglages (tâche 12)
@@ -99,7 +109,7 @@ lancent par `npx wp-env run cli wp …`.
       Décocher Éditeur : l'éditeur perd l'accès, l'administrateur le garde. Remettre Éditeur.
 - [ ] **Heure** : passer à 04:30, enregistrer : `wp cron event list --hook=rsn_veille_nuit` montre une
       seule tâche, au prochain 04:30 de Montréal. Remettre 03:00.
-- [ ] **Page Veille** : la liste montre les pages publiées et en brouillon ; en choisir une, enregistrer ;
+- [ ] **Page Veille** : la liste montre les pages publiées, en brouillon et privées ; en choisir une, enregistrer ;
       changer le statut d'une fiche dans la file : `wp post meta get <page> _elementor_element_cache` est vide.
 - [ ] **Import** : importer `docs/maquette/evenements-infolettres-2025-2026.json` après une collecte du RSN →
       « Import terminé : 24 lus, N créés, M fusionnés, … » avec N + M = 24 (M > 0 seulement si un événement
