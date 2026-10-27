@@ -239,7 +239,7 @@ final class RaccourciTest extends TestCase {
 
     public function test_textes_contiennent_les_nouvelles_cles(): void {
         $textes = Raccourci::textes();
-        foreach (['a_la_une', 'tout_le_rsn', 'evenement_rsn', 'nouveau', 'ferme_dans', 'ferme_demain', 'ferme_aujourdhui', 'date_limite_le', 'dates_limites', 'afficher', 'evenements', 'appels', 'evenement', 'partenaire', 'nb_evenements_et_appels', 'nb_elements', 'date_limite_puce', 'legende_date_limite', 's_abonner', 'aucun_element_filtres', 'tous'] as $cle) {
+        foreach (['a_la_une', 'tout_le_rsn', 'evenement_rsn', 'nouveau', 'ferme_dans', 'ferme_demain', 'ferme_aujourdhui', 'date_limite_le', 'dates_limites', 'afficher', 'evenements', 'appels', 'evenement', 'partenaire', 'nb_evenements_et_appels', 'nb_elements', 'date_limite_puce', 'legende_date_limite', 's_abonner', 'aucun_element_filtres', 'tous', 'en_cours', 'en_cours_tuile', 'date_limite_a_venir', 'limites_precedentes', 'limites_suivantes'] as $cle) {
             $this->assertArrayHasKey($cle, $textes, $cle);
         }
         foreach (['ferme_dans', 'nb_elements'] as $pluriel) {
@@ -254,6 +254,11 @@ final class RaccourciTest extends TestCase {
         $this->assertStringContainsString('%2$s', $textes['nb_evenements_et_appels']);
         $this->assertSame('À la une du RSN', $textes['a_la_une']);
         $this->assertSame('Dates limites', $textes['dates_limites']);
+        $this->assertSame('Date limite à venir', $textes['date_limite_a_venir']);
+        $this->assertSame('En cours', $textes['en_cours']);
+        $this->assertSame('en cours', $textes['en_cours_tuile']);
+        $this->assertSame('Dates limites précédentes', $textes['limites_precedentes']);
+        $this->assertSame('Dates limites suivantes', $textes['limites_suivantes']);
     }
 
     public function test_deux_raccourcis_dans_la_page_ont_des_noeuds_de_donnees_distincts(): void {
@@ -322,6 +327,39 @@ final class RaccourciTest extends TestCase {
         $GLOBALS['rsn_veille_wp']['objet_demande'] = $this->page(19, '');
         do_action('wp_enqueue_scripts');
         $this->assertArrayHasKey('rsn-veille', $GLOBALS['rsn_veille_wp']['scripts']);
+    }
+
+    public function test_classe_body_sur_la_page_du_raccourci(): void {
+        $GLOBALS['rsn_veille_wp']['objet_demande'] = $this->page(5, '<p>Intro</p>[rsn_veille section="agenda"]');
+        $this->assertContains('rsn-veille-page', apply_filters('body_class', ['page']));
+    }
+
+    public function test_classe_body_sur_la_page_veille_des_reglages(): void {
+        update_option('rsn_veille_reglages', ['page_veille_id' => 9]);
+        // Page Elementor : le raccourci n'est pas dans post_content.
+        $GLOBALS['rsn_veille_wp']['objet_demande'] = $this->page(9, '');
+        $this->assertContains('rsn-veille-page', apply_filters('body_class', ['page']));
+    }
+
+    public function test_classe_body_sur_la_traduction_wpml_de_la_page_veille(): void {
+        update_option('rsn_veille_reglages', ['page_veille_id' => 9]);
+        add_filter('wpml_active_languages', static fn() => ['fr' => ['code' => 'fr'], 'en' => ['code' => 'en']]);
+        add_filter('wpml_object_id', static fn($id, $type = '', $original = false, $langue = null) => $langue === 'en' ? 19 : $id);
+        $GLOBALS['rsn_veille_wp']['objet_demande'] = $this->page(19, '');
+        $this->assertContains('rsn-veille-page', apply_filters('body_class', ['page']));
+    }
+
+    public function test_classe_body_une_seule_fois(): void {
+        $GLOBALS['rsn_veille_wp']['objet_demande'] = $this->page(5, '[rsn_veille]');
+        $classes = apply_filters('body_class', ['page', 'rsn-veille-page']);
+        $this->assertSame(['page', 'rsn-veille-page'], $classes);
+    }
+
+    public function test_classe_body_absente_ailleurs(): void {
+        $this->assertSame(['page'], apply_filters('body_class', ['page']), 'aucun objet demandé');
+
+        $GLOBALS['rsn_veille_wp']['objet_demande'] = $this->page(5, '<p>Événements du RSN [rsn_evenements]</p>');
+        $this->assertSame(['page'], apply_filters('body_class', ['page']));
     }
 
     public function test_json_en_cache_une_heure_et_vide_par_la_purge_et_la_collecte(): void {
