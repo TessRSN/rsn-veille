@@ -133,6 +133,15 @@ final class LecteursHtmlTest extends TestCase {
         $this->assertSame(['cible' => 'https://event.fourwaves.com/aihealthsymposium'], LecteurIvado::redirection($this->fixture('ivado_redirection.html')));
     }
 
+    public function test_ivado_propriete_location_dun_objet_nest_pas_une_redirection(): void {
+        $page = static fn(string $script): string => '<html><head><title>IA en santé 2026 | IVADO</title></head><body><h1>IA en santé 2026</h1><script>' . $script . '</script></body></html>';
+        $this->assertNull(LecteurIvado::redirection($page('var widget = {}; widget.location = "Montréal";')));
+        $this->assertNull(LecteurIvado::redirection($page('e.location = "";')));
+        $this->assertNull(LecteurIvado::redirection($page('var o = {}; o.window.location = "https://exemple.test/x";')));
+        $this->assertSame(['cible' => 'https://exemple.test/x'], LecteurIvado::redirection($page("window.location = 'https://exemple.test/x'")));
+        $this->assertSame(['cible' => 'https://exemple.test/y'], LecteurIvado::redirection($page('location.href = "https://exemple.test/y"')));
+    }
+
     public function test_ivado_redirection_garde_titre_et_resume_de_la_liste(): void {
         $f = new Fiche();
         $f->titre = 'IA en santé 2026';

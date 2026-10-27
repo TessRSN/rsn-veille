@@ -100,7 +100,7 @@ final class LecteurIvado extends LecteurHtml {
         }
         // Toutes les pages d'IVADO portent un suivi qui fait « window.location = lien » seulement si la variable
         // `lien` existe : une affectation compte donc seulement si sa valeur est un littéral ou une variable définie.
-        $motif = '/(?:\b(?:window|document|self|top)\s*\.\s*)?\blocation(?:\s*\.\s*href)?\s*=(?!=)\s*([^;\n]+)/';
+        $motif = '/(?:(?<![\w$.])(?:window|document|self|top)\s*\.\s*location|(?<![\w$.])location)(?:\s*\.\s*href)?\s*=(?!=)\s*([^;\n]+)/';
         if (preg_match_all($motif, $scripts, $affectations) > 0) {
             foreach ($affectations[1] as $valeur) {
                 $valeur = trim($valeur);
