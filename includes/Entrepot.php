@@ -26,7 +26,10 @@ interface Entrepot {
      */
     public function trouver_par_url(string $url): ?Fiche;
 
-    /** Enregistre une nouvelle fiche et renvoie son identifiant. */
+    /**
+     * Enregistre une nouvelle fiche et renvoie son identifiant. Sans `cree_le`, la fiche reçoit la date
+     * du jour (`rsn_veille_aujourdhui()`) : le courriel hebdomadaire s'en sert pour repérer les nouveautés.
+     */
     public function creer(Fiche $f): int;
 
     /**

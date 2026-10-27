@@ -56,6 +56,7 @@ final class TypeContenu {
         'absent_depuis' => 'string',
         'absences' => 'integer',
         'manuel' => 'boolean',
+        'cree_le' => 'string',
         'courriel_proposant' => 'string',
     ];
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace RSN\Veille\Admin;
 
 use RSN\Veille\Collecte;
+use RSN\Veille\Courriel;
 use RSN\Veille\Depot;
 use RSN\Veille\EntrepotWordPress;
 use RSN\Veille\Pertinence;
@@ -26,6 +27,7 @@ final class PageReglages {
     public const NONCE_ACTIONS = 'rsn_veille_actions';
     public const ACTION_COLLECTER = 'rsn_veille_collecter';
     public const ACTION_IMPORTER = 'rsn_veille_importer';
+    public const ACTION_ESSAI_COURRIEL = 'rsn_veille_courriel_essai';
 
     /** Taille maximale du fichier importé (2 Mo). */
     public const TAILLE_MAX = 2 * 1024 * 1024;
@@ -44,6 +46,7 @@ final class PageReglages {
         add_action('update_option_' . Collecte::OPTION_REGLAGES, [self::class, 'apres_mise_a_jour'], 10, 2);
         add_action('admin_post_' . self::ACTION_COLLECTER, [self::class, 'traiter_collecte']);
         add_action('admin_post_' . self::ACTION_IMPORTER, [self::class, 'traiter_import']);
+        add_action('admin_post_' . self::ACTION_ESSAI_COURRIEL, [self::class, 'traiter_essai_courriel']);
     }
 
     public static function enregistrer_reglage(): void {
@@ -63,12 +66,18 @@ final class PageReglages {
         self::apres_mise_a_jour([], $valeur);
     }
 
-    /** Après enregistrement : rôles, collecte quotidienne si l'heure change, caches de la page Veille. */
+    /** Après enregistrement : rôles, collecte quotidienne si l'heure change, courriel si son état ou son jour changent, caches de la page Veille. */
     public static function apres_mise_a_jour(mixed $ancienne = null, mixed $nouvelle = null): void {
         Menu::synchroniser_roles();
         $heure_avant = NettoyageReglages::heure(is_array($ancienne) ? ($ancienne['heure_collecte'] ?? '') : '');
         if ($heure_avant !== NettoyageReglages::heure(is_array($nouvelle) ? ($nouvelle['heure_collecte'] ?? '') : '')) {
             Collecte::replanifier_nuit();
+        }
+        // Courriel hebdomadaire : planifié, déplacé ou retiré selon « actif » et « jour » (les destinataires se relisent à l'envoi).
+        $avant = Courriel::reglage_de($ancienne);
+        $apres = Courriel::reglage_de($nouvelle);
+        if ($avant['actif'] !== $apres['actif'] || $avant['jour'] !== $apres['jour']) {
+            Courriel::replanifier();
         }
         Collecte::purger_caches();
     }
@@ -136,7 +145,42 @@ final class PageReglages {
         self::rediriger();
     }
 
+    /** admin-post.php : « Envoyer un essai maintenant » (courriel hebdomadaire, avec les réglages enregistrés). */
+    public static function traiter_essai_courriel(): void {
+        self::verifier_requete();
+        $resultat = self::lancer_essai_courriel();
+        self::noter_message($resultat['niveau'], $resultat['texte']);
+        self::rediriger();
+    }
+
     // --- Logique ---
+
+    /**
+     * Envoie le courriel hebdomadaire maintenant (`Courriel::tenter`) et décrit le résultat pour l'équipe.
+     *
+     * @return array{niveau: string, texte: string} `niveau` : success, warning ou error.
+     */
+    public static function lancer_essai_courriel(): array {
+        $r = Courriel::tenter();
+        $n = count($r['destinataires']);
+        switch ($r['statut']) {
+            case 'envoye':
+                /* translators: 1 : nombre de nouveautés ; 2 : nombre de destinataires. */
+                return ['niveau' => 'success', 'texte' => sprintf(
+                    __('Courriel d’essai envoyé (%1$s) à %2$s.', 'rsn-veille'),
+                    sprintf(_n('%d nouveauté', '%d nouveautés', $r['nb'], 'rsn-veille'), $r['nb']),
+                    sprintf(_n('%d destinataire', '%d destinataires', $n, 'rsn-veille'), $n)
+                )];
+            case 'echec':
+                return ['niveau' => 'error', 'texte' => __('L’envoi a échoué : WordPress n’a pas pu remettre le courriel au serveur d’envoi. Vérifiez la configuration des courriels du site.', 'rsn-veille')];
+            case 'rien':
+                return ['niveau' => 'warning', 'texte' => __('Aucune nouveauté cette semaine : le courriel n’est pas envoyé.', 'rsn-veille')];
+            case 'sans_destinataire':
+                return ['niveau' => 'warning', 'texte' => __('Aucun destinataire : ajoutez au moins une adresse et enregistrez les réglages avant l’essai.', 'rsn-veille')];
+            default:
+                return ['niveau' => 'warning', 'texte' => __('L’envoi est désactivé : cochez l’option et enregistrez les réglages avant l’essai.', 'rsn-veille')];
+        }
+    }
 
     /**
      * Met en file les sources actives (`Collecte::mettre_en_file`), avance la première source à
@@ -243,6 +287,8 @@ final class PageReglages {
             'pages' => $pages,
             'derniere' => is_numeric($derniere) ? (int) $derniere : 0,
             'prochaine' => wp_next_scheduled(Collecte::CROCHET_NUIT),
+            'dernier_courriel' => Courriel::dernier_envoi(),
+            'prochain_courriel' => wp_next_scheduled(Courriel::CROCHET),
             'cron_desactive' => self::cron_desactive(),
             'champs_caches' => (string) ob_get_clean(),
             'notices' => '',

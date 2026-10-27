@@ -22,6 +22,10 @@
  * (`cron_lances`). La vérification de référence des réglages est la section Réglages de
  * `tests/manuel/verifier-admin.md`.
  *
+ * Courriel : `wp_mail` capture les messages en mémoire (`courriels`, résultat `wp_mail_reussit`) et
+ * déclenche `phpmailer_init` avec un objet vide (texte alternatif noté). La vérification de référence est
+ * la section Courriel hebdomadaire de `tests/manuel/verifier-admin.md`.
+ *
  * Public : `add_shortcode` / `do_shortcode` (raccourcis notés dans `raccourcis`), `shortcode_atts`,
  * `has_shortcode`, la page demandée (`objet_demande`, singulière si c'est un WP_Post), les routes REST
  * (`routes`, `WP_REST_Response` avec ses en-têtes), les règles de réécriture (`regles`, chaque
@@ -71,6 +75,8 @@ function rsn_veille_bouchons_reinitialiser(): void {
         // Public : raccourcis, routes REST, règles de réécriture, variables de requête, page demandée.
         'raccourcis' => [], 'routes' => [], 'regles' => [], 'variables_requete' => [], 'objet_demande' => null,
         'regles_regenerees' => 0,
+        // Courriel : messages remis à wp_mail (sujet, message, en-têtes, texte alternatif) et résultat à renvoyer.
+        'courriels' => [], 'wp_mail_reussit' => true,
     ];
     $GLOBALS['rsn_veille_wp']['roles'] = [
         'administrator' => new WP_Role('administrator', ['manage_options' => true, 'edit_posts' => true]),
@@ -824,6 +830,20 @@ function check_admin_referer(string|int $action = -1, string $champ = '_wpnonce'
         wp_die('Le lien a expiré.', '', 403);
     }
     return $resultat;
+}
+
+/**
+ * Imitation de wp_mail : le message est capturé en mémoire (`courriels`), jamais envoyé. Comme WordPress,
+ * `phpmailer_init` reçoit l'objet PHPMailer : le texte alternatif posé par un rappel (`AltBody`) est noté.
+ * `wp_mail_reussit` (vrai par défaut) est le résultat rendu.
+ */
+function wp_mail(string|array $a, string $sujet, string $message, string|array $entetes = '', string|array $pieces_jointes = []): bool {
+    $phpmailer = new stdClass();
+    do_action('phpmailer_init', $phpmailer);
+    $GLOBALS['rsn_veille_wp']['courriels'][] = [
+        'a' => $a, 'sujet' => $sujet, 'message' => $message, 'entetes' => $entetes, 'texte' => $phpmailer->AltBody ?? null,
+    ];
+    return (bool) $GLOBALS['rsn_veille_wp']['wp_mail_reussit'];
 }
 
 /** Compte les lancements (outil de test : `cron_lances`). */

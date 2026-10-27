@@ -34,6 +34,7 @@ final class EntrepotMemoire implements Entrepot {
     public function creer(Fiche $f): int {
         $copie = clone $f;
         $copie->id = $this->prochain_id++;
+        $copie->cree_le ??= \rsn_veille_aujourdhui();
         $this->fiches[$copie->id] = $copie;
         return $copie->id;
     }

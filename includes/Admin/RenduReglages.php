@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace RSN\Veille\Admin;
 
 use RSN\Veille\Collecte;
+use RSN\Veille\Courriel;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -17,6 +18,9 @@ if (!defined('ABSPATH')) {
 final class RenduReglages {
     /** Préfixe du nom des champs : `rsn_veille_reglages[…]`. */
     private const NOM = Collecte::OPTION_REGLAGES;
+
+    /** Identifiant du formulaire de l'essai du courriel, auquel son bouton est rattaché. */
+    private const FORMULAIRE_ESSAI = 'rsn-veille-formulaire-essai-courriel';
 
     /** État de la collecte et bouton « Lancer la collecte maintenant ». */
     public static function collecte_html(array $c): string {
@@ -58,9 +62,13 @@ final class RenduReglages {
             . self::sources_html($c['sources'])
             . self::pertinence_html($c)
             . self::acces_html($c['roles'], $c['reglages']['roles'])
-            . self::courriel_html($c['reglages']['courriel'])
+            . self::courriel_html($c['reglages']['courriel'], $c)
             . self::divers_html($c['reglages'], $c['pages'])
             . '<p class="submit"><button type="submit" class="button button-primary">' . esc_html__('Enregistrer les réglages', 'rsn-veille') . '</button></p>'
+            . '</form>'
+            // Hors du formulaire des réglages (pas de formulaire imbriqué) : le bouton d'essai y est rattaché par `form`.
+            . '<form id="' . self::FORMULAIRE_ESSAI . '" method="post" action="' . esc_url((string) $c['url_actions']) . '">'
+            . self::champs_action(PageReglages::ACTION_ESSAI_COURRIEL)
             . '</form>';
     }
 
@@ -130,8 +138,11 @@ final class RenduReglages {
             . '</tr></table>';
     }
 
-    /** @param array{actif: bool, destinataires: string[], jour: int} $courriel */
-    private static function courriel_html(array $courriel): string {
+    /**
+     * @param array{actif: bool, destinataires: string[], jour: int} $courriel
+     * @param array<string,mixed> $c Contexte de la page (dernier envoi, prochain envoi).
+     */
+    private static function courriel_html(array $courriel, array $c = []): string {
         $jours = [__('dimanche', 'rsn-veille'), __('lundi', 'rsn-veille'), __('mardi', 'rsn-veille'), __('mercredi', 'rsn-veille'), __('jeudi', 'rsn-veille'), __('vendredi', 'rsn-veille'), __('samedi', 'rsn-veille')];
         $choix = '';
         foreach ($jours as $numero => $jour) {
@@ -142,8 +153,33 @@ final class RenduReglages {
             . ($courriel['actif'] ? ' checked' : '') . '> ' . esc_html__('Envoyer le courriel hebdomadaire de la veille', 'rsn-veille') . '</label></td></tr>'
             . self::ligne_zone('courriel][destinataires', __('Destinataires', 'rsn-veille'), implode("\n", $courriel['destinataires']), 4, __('Une adresse par ligne.', 'rsn-veille'))
             . '<tr><th scope="row"><label for="rsn-veille-jour">' . esc_html__('Jour d’envoi', 'rsn-veille') . '</label></th>'
-            . '<td><select id="rsn-veille-jour" name="' . esc_attr(self::NOM . '[courriel][jour]') . '">' . $choix . '</select></td></tr>'
+            . '<td><select id="rsn-veille-jour" name="' . esc_attr(self::NOM . '[courriel][jour]') . '">' . $choix . '</select>'
+            . '<p class="description">' . esc_html__('Le courriel part ce jour-là à 8 h (heure du site, Montréal).', 'rsn-veille') . '</p></td></tr>'
+            . '<tr><th scope="row">' . esc_html__('État', 'rsn-veille') . '</th><td><ul class="rsn-veille-etat">'
+            . '<li>' . esc_html__('Dernier envoi :', 'rsn-veille') . ' <strong>' . esc_html(self::dernier_envoi_texte($c['dernier_courriel'] ?? null)) . '</strong></li>'
+            . '<li>' . esc_html__('Prochain envoi planifié :', 'rsn-veille') . ' <strong>' . esc_html(self::prochain_envoi_texte($c['prochain_courriel'] ?? false)) . '</strong></li></ul></td></tr>'
+            . '<tr><th scope="row">' . esc_html__('Essai', 'rsn-veille') . '</th><td>'
+            . '<button type="submit" form="' . self::FORMULAIRE_ESSAI . '" class="button">' . esc_html__('Envoyer un essai maintenant', 'rsn-veille') . '</button>'
+            . '<p class="description">' . esc_html__('Envoie tout de suite le courriel de la semaine aux destinataires enregistrés (cochez l’option et enregistrez d’abord). Rien n’est envoyé s’il n’y a aucune nouveauté.', 'rsn-veille') . '</p></td></tr>'
             . '</table>';
+    }
+
+    /** « 26 octobre 2026, 8 h 00 : 3 nouveautés, 2 destinataires » ; « aucun pour l'instant » sans envoi. */
+    private static function dernier_envoi_texte(mixed $dernier): string {
+        if (!is_array($dernier) || !is_string($dernier['date'] ?? null) || Dates::date_heure($dernier['date']) === '') {
+            return __('aucun pour l’instant', 'rsn-veille');
+        }
+        $nb = (int) ($dernier['nb'] ?? 0);
+        $destinataires = is_array($dernier['destinataires'] ?? null) ? count($dernier['destinataires']) : 0;
+        $texte = Dates::date_heure($dernier['date']) . ' : '
+            . sprintf(_n('%d nouveauté', '%d nouveautés', $nb, 'rsn-veille'), $nb) . ', '
+            . sprintf(_n('%d destinataire', '%d destinataires', $destinataires, 'rsn-veille'), $destinataires);
+        return empty($dernier['ok']) ? $texte . ' ' . __('(échec de l’envoi)', 'rsn-veille') : $texte;
+    }
+
+    private static function prochain_envoi_texte(mixed $horodatage): string {
+        $date = is_int($horodatage) ? Dates::date_heure(wp_date('Y-m-d H:i', $horodatage)) : '';
+        return $date !== '' ? $date : __('aucun', 'rsn-veille');
     }
 
     /** @param array<int,string> $pages id => titre */

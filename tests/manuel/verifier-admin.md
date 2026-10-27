@@ -1,4 +1,4 @@
-# Vérification manuelle de l'administration (tâches 11, 12, 15 et 16)
+# Vérification manuelle de l'administration (tâches 11, 12, 15, 16 et 17)
 
 À faire dans un WordPress réel (`npx @wordpress/env start`, extension active), les tests PHPUnit
 n'utilisant qu'une imitation de WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se
@@ -213,9 +213,57 @@ avoir des articles de la catégorie 149 avec l'extrait 45 du site actif.
       lien de l'aperçu ouvre un nouvel onglet, la page ne change pas.
 - [ ] Largeur mobile (375 px) : pas de défilement horizontal de la page.
 
+## Courriel hebdomadaire (tâche 17)
+
+Courriel optionnel (Veille › Réglages › Courriel hebdomadaire) : fiches publiées par la collecte depuis sept
+jours, fiches à approuver, nouvelles repérées du Radar (lues dans le cache, aucune requête réseau). Tâche
+`rsn_veille_hebdo`, récurrence hebdomadaire, le jour choisi à 8 h (heure de Montréal). Pour voir les courriels
+sans les envoyer : MailHog (conteneur `mailhog/mailhog`, SMTP 1025, interface 8025) avec une extension SMTP
+ou un `mu-plugin` qui règle PHPMailer sur `host.docker.internal:1025` ; à défaut, `wp eval` ci-dessous affiche
+le résultat de `wp_mail`. Préparation : les trois fiches de la section Préparation (`cree_le` est posé à la
+création), ouvrir le Radar une fois (cache), et créer une fiche ancienne :
+`wp post meta update <id> rsn_veille_cree_le 2026-01-01` sur l'une des fiches publiées.
+
+- [ ] Réglages › Courriel hebdomadaire : **Dernier envoi** affiche « aucun pour l'instant », **Prochain envoi
+      planifié** « aucun ». Cocher l'option, deux adresses (une par ligne), jour **mercredi**, enregistrer :
+      `wp cron event list --hook=rsn_veille_hebdo` montre un événement `1 week`, un mercredi à 08:00 heure de
+      Montréal (l'heure UTC affichée par WP-CLI est 12:00 ou 13:00 selon la saison), et la page affiche le même
+      moment. Changer le jour pour vendredi, enregistrer : un seul événement, le vendredi. Modifier seulement
+      une adresse : l'événement ne bouge pas. Décocher l'option, enregistrer : `wp cron event list` n'a plus
+      d'événement `rsn_veille_hebdo`.
+- [ ] Désactiver puis réactiver l'extension avec l'option cochée : l'événement est retiré puis replanifié ;
+      option décochée : aucun événement après réactivation.
+- [ ] **Envoyer un essai maintenant** (option cochée, enregistrée) : message « Courriel d'essai envoyé (N
+      nouveautés) à M destinataires. » ; MailHog reçoit un courriel au sujet « Veille de l'écosystème : N
+      nouveautés cette semaine » (N = fiches publiées créées depuis 7 jours + toutes les fiches à approuver),
+      en HTML avec une version texte (onglet « Plain text »), expédié aux adresses saisies. **Dernier envoi**
+      affiche la date et « N nouveautés, M destinataires ». `wp option get rsn_veille_dernier_courriel --format=json`
+      → `date`, `destinataires`, `nb`, `ok: true`.
+- [ ] Contenu : sections « Publiées automatiquement », « À approuver » (avec le bouton jaune « Ouvrir la file
+      d'approbation » qui mène à Veille › File), « Nouvelles repérées » (seulement si le Radar a un cache et
+      des nouvelles de moins de 7 jours ni gardées ni ignorées) ; la fiche ancienne (`cree_le` 2026-01-01) et
+      les fiches écartées sont absentes ; pied « Envoyé par l'extension RSN : veille de l'écosystème … ». Le
+      titre `<script>alert(1)</script>` de la préparation s'affiche en texte, sans alerte. Aucune requête
+      réseau pendant l'envoi (sources du Radar non relancées : vider le cache avec
+      `wp transient delete rsn_veille_radar rsn_veille_radar_dernier` ; la section disparaît, l'envoi réussit).
+- [ ] Sans nouveauté (passer toutes les fiches à `ecarte`, ou `cree_le` ancienne, et vider la file) : l'essai
+      répond « Aucune nouveauté cette semaine : le courriel n'est pas envoyé. » et MailHog ne reçoit rien.
+      Option décochée : « L'envoi est désactivé … » ; liste de destinataires vide : « Aucun destinataire … ».
+- [ ] Même chose sans MailHog : `wp eval 'var_dump(RSN\Veille\Courriel::envoyer());'` affiche `bool(true)` si
+      `wp_mail` a remis le courriel (`bool(false)` sinon, `wp_mail_failed` donne la raison).
+- [ ] Tâche planifiée : `wp cron event run rsn_veille_hebdo` envoie le même courriel ; l'événement suivant
+      reste planifié, au même jour à 08:00 (après le changement d'heure, `recaler` le ramène à 8 h).
+- [ ] Jeton et droits : changer `_wpnonce` du formulaire d'essai dans les outils du navigateur, envoyer → « Le
+      lien que vous avez suivi a expiré », rien n'est envoyé. Compte `lecteur` : un POST direct vers
+      `admin-post.php` (`action=rsn_veille_courriel_essai`) répond 403.
+- [ ] Largeur mobile (375 px) : le bouton « Envoyer un essai maintenant » reste lisible, pas de défilement
+      horizontal ; le courriel s'affiche sans défilement horizontal dans MailHog (aperçu mobile).
+
 ## Nettoyage
 
 `wp post delete $(wp post list --post_type=rsn_veille --meta_key=rsn_veille_source --meta_value=Vérification --format=ids --post_status=any) --force`
 puis `wp user delete redaction lecteur --yes`. Radar et Infolettre : `wp option delete rsn_veille_nouvelles_gardees rsn_veille_nouvelles_ignorees`
 et `wp transient delete rsn_veille_radar rsn_veille_radar_dernier rsn_veille_radar_lecture`. Fiches importées :
 `wp post delete $(wp post list --post_type=rsn_veille --meta_key=rsn_veille_source --meta_value=infolettre --format=ids --post_status=any) --force`.
+
+Courriel hebdomadaire : `wp option delete rsn_veille_dernier_courriel`, puis décocher l'option dans les réglages (ou `wp cron event delete rsn_veille_hebdo`).

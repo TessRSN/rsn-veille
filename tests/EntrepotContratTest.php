@@ -63,6 +63,23 @@ final class EntrepotContratTest extends TestCase {
     }
 
     /** @dataProvider entrepots */
+    public function test_creer_pose_le_jour_de_creation_sans_l_ecraser(string $nom): void {
+        $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-10-26';
+        $e = self::entrepot($nom);
+        $e->creer(self::fiche());
+        $e->creer(self::fiche(['cle_source' => 'ex:2', 'cles_source' => ['ex:2'], 'titre' => 'Autre atelier', 'cree_le' => '2026-01-02']));
+        [$nouvelle, $ancienne] = $e->lister('');
+        $this->assertSame('2026-10-26', $nouvelle->cree_le);
+        $this->assertSame('2026-01-02', $ancienne->cree_le);
+
+        // Une mise à jour des champs factuels ne change pas le jour de création.
+        $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-11-02';
+        $e->mettre_a_jour((int) $nouvelle->id, ['debut' => '2026-11-21']);
+        $this->assertSame('2026-10-26', $e->lister('')[0]->cree_le);
+        $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-10-25';
+    }
+
+    /** @dataProvider entrepots */
     public function test_trouver_par_dedoublonnage_et_par_url(string $nom): void {
         $e = self::entrepot($nom);
         $f = self::fiche();

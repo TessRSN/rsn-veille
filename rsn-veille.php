@@ -33,6 +33,8 @@ if (function_exists('add_action')) {
     add_action('init', [\RSN\Veille\TypeContenu::class, 'enregistrer']);
     // Collecte nocturne (rsn_veille_nuit, rsn_veille_source) et purge de la page Veille à chaque écriture de fiche.
     \RSN\Veille\Collecte::accrocher();
+    // Courriel hebdomadaire optionnel (rsn_veille_hebdo) : envoi, texte alternatif et planification selon les réglages.
+    \RSN\Veille\Courriel::accrocher();
     // Menu Veille de wp-admin, capacité rsn_veille_gerer, ressources et action AJAX de la file d'approbation.
     \RSN\Veille\Admin\Menu::accrocher();
     // Page publique : raccourci [rsn_veille], ressources seulement si la page le contient, cache du JSON.
@@ -50,7 +52,10 @@ if (function_exists('register_activation_hook')) {
     register_activation_hook(__FILE__, [\RSN\Veille\Admin\Menu::class, 'synchroniser_roles']);
     // Activation : règle de réécriture de /veille.ics ajoutée puis règles régénérées ; désactivation : retirée.
     register_activation_hook(__FILE__, [\RSN\Veille\Public\Rest::class, 'activer']);
+    // Activation : courriel hebdomadaire planifié s'il est actif dans les réglages ; désactivation : retiré.
+    register_activation_hook(__FILE__, [\RSN\Veille\Courriel::class, 'planifier']);
     register_deactivation_hook(__FILE__, [\RSN\Veille\Collecte::class, 'deplanifier']);
+    register_deactivation_hook(__FILE__, [\RSN\Veille\Courriel::class, 'deplanifier']);
     register_deactivation_hook(__FILE__, [\RSN\Veille\Public\Rest::class, 'desactiver']);
 }
 

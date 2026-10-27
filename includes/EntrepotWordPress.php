@@ -76,7 +76,8 @@ final class EntrepotWordPress implements Entrepot {
 
         foreach (array_keys(TypeContenu::METAS) as $nom) {
             if (property_exists($f, $nom)) {
-                $this->ecrire_meta($id, $nom, $f->$nom);
+                // Jour de création : celui de la fiche reçue, sinon aujourd'hui.
+                $this->ecrire_meta($id, $nom, $nom === 'cree_le' ? ($f->cree_le ?? \rsn_veille_aujourdhui()) : $f->$nom);
             }
         }
         $this->ecrire_cles($id, $f->cles_source);

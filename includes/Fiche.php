@@ -83,6 +83,8 @@ final class Fiche {
     public ?string $absent_depuis = null;
     public int $absences = 0;
     public bool $manuel = false;
+    /** Jour de création de la fiche dans l'extension (Y-m-d), posé par l'entrepôt ; sert au courriel hebdomadaire. */
+    public ?string $cree_le = null;
 
     /**
      * Texte brut : sections CDATA dépliées, entités décodées, balises retirées, espaces réduits.
