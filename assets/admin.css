@@ -40,6 +40,21 @@
 	color: #a7aaad;
 }
 
+.rsn-veille-nouveau {
+	display: inline-block;
+	margin-left: 6px;
+	padding: 1px 6px;
+	border-radius: 3px;
+	background: #FFCC4E;
+	color: #003469;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.6;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	vertical-align: middle;
+}
+
 .rsn-veille-absent {
 	margin: 4px 0 0;
 	color: #8a4b00;
