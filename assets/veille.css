@@ -47,7 +47,7 @@
 
 /* À la une : même dessin que la bande « Appels de financement ouverts » de l'accueil.
    La bande sort de la colonne du contenu pour occuper toute la largeur de la fenêtre ; son .wrap la recentre. */
-.rsn-veille .alaune{background:#07285A;color:#fff;padding-block:22px 26px;margin-inline:calc(50% - 50vw)}
+.rsn-veille .alaune{background:#07285A;color:#fff;padding-block:22px 26px;margin-inline:calc(50% - 50vw);margin-bottom:36px}
 .rsn-veille .alaune .wrap{max-width:1140px;margin:0 auto;padding-inline:max(16px,env(safe-area-inset-left,0px))}
 .rsn-veille .alaune .tete{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
 .rsn-veille .alaune .titre{display:inline-flex;align-items:center;gap:10px;font-family:var(--serif);font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--yellow)}
@@ -62,7 +62,7 @@
 .rsn-veille .une .date span{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
 .rsn-veille .une .etat{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 8px;margin-bottom:5px;background:var(--yellow-tint);color:var(--navy)}
 .rsn-veille .une .etat.nouveau{background:#D9342B;color:#fff}
-.rsn-veille .une .etat.ev{background:rgba(255,255,255,.16);color:#fff}
+.rsn-veille .une .etat.evenement{background:rgba(255,255,255,.16);color:#fff}
 .rsn-veille .une h3{font-family:var(--sans);font-size:15px;font-weight:600;line-height:1.3;color:#fff;margin:0 0 3px}
 .rsn-veille .une .m{font-size:12.5px;color:rgba(255,255,255,.72);line-height:1.4}
 .rsn-veille .une .fl{color:rgba(255,255,255,.6);font-size:18px;line-height:1;align-self:center}
@@ -70,6 +70,7 @@
 
 /* Dates limites : bande claire */
 .rsn-veille .limites{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:var(--yellow-tint);margin:0 0 30px}
+.rsn-veille[data-section="appels"] .limites{margin-top:36px}
 .rsn-veille .limites .lab{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--navy);white-space:nowrap}
 .rsn-veille .limites .lab svg{width:16px;height:16px;color:var(--yellow-ink)}
 .rsn-veille .limites .defile{display:flex;gap:8px;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}
@@ -92,9 +93,6 @@
 .rsn-veille .ev.appel-ev .tuile{width:62px;padding:8px 0 7px}
 .rsn-veille .ev.appel-ev .tuile b{font-size:24px}
 .rsn-veille .ev .quand{font-size:12.5px;color:var(--muted);margin-top:6px}
-.rsn-veille .passes-btn{display:flex;justify-content:center;margin:10px 0 0}
-.rsn-veille .cote .rub.petit{font-size:14px}
-.rsn-veille .cote .fhead.small{font-size:17px}
 
 /* Deux colonnes : filtres + contenu */
 .rsn-veille .deux{display:grid;grid-template-columns:230px minmax(0,1fr);gap:56px;align-items:start}
@@ -150,15 +148,15 @@
 .rsn-veille .fmt b{color:var(--ink);font-weight:500}
 
 /* Appels : tuile de date (page Événements) */
-.rsn-veille .appel{display:grid;grid-template-columns:72px minmax(0,1fr);gap:20px;padding:20px 0;border-bottom:1px solid var(--rule)}
-.rsn-veille .appel:first-child{border-top:1px solid var(--rule)}
+.rsn-veille div.appel{display:grid;grid-template-columns:72px minmax(0,1fr);gap:20px;padding:20px 0;border-bottom:1px solid var(--rule)}
+.rsn-veille div.appel:first-child{border-top:1px solid var(--rule)}
 .rsn-veille .tuile{width:72px;border-radius:12px;background:var(--yellow);color:var(--navy);text-align:center;padding:9px 0 8px;align-self:start}
 .rsn-veille .tuile.gris{background:var(--tint);color:var(--ink)}
 .rsn-veille .tuile b{display:block;font-family:var(--serif);font-weight:400;font-size:28px;line-height:1}
 .rsn-veille .tuile span{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
 .rsn-veille .tuile i{display:block;font-style:normal;font-size:10.5px;font-weight:500;margin-top:1px;opacity:.8}
-.rsn-veille .appel h3{font-family:var(--sans);font-size:17px;line-height:1.35;font-weight:500;color:var(--ink);margin:0 0 4px}
-.rsn-veille .appel h3 a:hover{color:var(--navy);text-decoration:underline;text-decoration-color:var(--yellow);text-decoration-thickness:1.5px;text-underline-offset:4px}
+.rsn-veille div.appel h3{font-family:var(--sans);font-size:17px;line-height:1.35;font-weight:500;color:var(--ink);margin:0 0 4px}
+.rsn-veille div.appel h3 a:hover{color:var(--navy);text-decoration:underline;text-decoration-color:var(--yellow);text-decoration-thickness:1.5px;text-underline-offset:4px}
 
 /* Encadrés : formulaire, vide */
 .rsn-veille .encadre{padding:24px 28px;border-radius:14px;background:var(--tint);color:var(--ink);margin:0 0 36px}
@@ -235,24 +233,22 @@
 .rsn-veille .cal .num{font-family:var(--serif);font-size:15px;color:var(--navy);line-height:1}
 .rsn-veille.rsn-veille .cal .c.auj .num{display:inline-block;background:var(--yellow);border-radius:6px;padding:3px 5px;margin:-3px 0 0 -5px}
 .rsn-veille .cal .puce{font-size:11px;line-height:1.25;color:var(--ink);background:var(--tint);border-radius:4px;padding:2px 5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border-left:2px solid var(--trait)}
-.rsn-veille .cal .puce.rsn{border-left-color:var(--yellow-ink);background:var(--yellow-tint)}
-.rsn-veille .cal .puce.appel{border-left-color:var(--yellow-ink);background:var(--yellow-tint)}
+.rsn-veille .cal .puce.rsn,.rsn-veille .cal .puce.appel{border-left-color:var(--yellow-ink);background:var(--yellow-tint)}
 .rsn-veille.rsn-veille .cal .plus{font-size:11px;color:var(--muted);border:0;font-weight:500}
 .rsn-veille .cal-jour{margin-top:26px}
 .rsn-veille .cal-legende{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px;color:var(--muted);margin-top:12px}
 .rsn-veille .cal-legende i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:var(--tint);border-left:2px solid var(--trait)}
-.rsn-veille .cal-legende i.rsn{background:var(--yellow-tint);border-left-color:var(--yellow-ink)}
-.rsn-veille .cal-legende i.appel{background:var(--yellow-tint);border-left-color:var(--yellow-ink)}
+.rsn-veille .cal-legende i.rsn,.rsn-veille .cal-legende i.appel{background:var(--yellow-tint);border-left-color:var(--yellow-ink)}
 @media (max-width:640px){
   .rsn-veille .cal-tete h2{font-size:22px}
   .rsn-veille.rsn-veille .cal .c{min-height:56px;padding:4px}
   .rsn-veille .cal .puce{display:none}
   .rsn-veille .cal .pts{display:flex;gap:3px;flex-wrap:wrap}
   .rsn-veille .cal .pt{width:6px;height:6px;border-radius:50%;background:var(--trait)}
-  .rsn-veille .cal .pt.rsn{background:var(--yellow-ink)}
+  .rsn-veille .cal .pt.rsn,.rsn-veille .cal .pt.appel{background:var(--yellow-ink)}
   .rsn-veille.rsn-veille .cal .plus{display:none}
   .rsn-veille .ev.avec-image{grid-template-columns:52px minmax(0,1fr)}
-  .rsn-veille .appel.avec-image{grid-template-columns:64px minmax(0,1fr)}
+  .rsn-veille div.appel.avec-image{grid-template-columns:64px minmax(0,1fr)}
 }
 @media (min-width:641px){.rsn-veille .cal .pts{display:none}}
 
@@ -264,7 +260,7 @@
   .rsn-veille .actions{margin-top:36px}
   .rsn-veille .ev{grid-template-columns:52px minmax(0,1fr);gap:14px;padding-left:22px}
   .rsn-veille .jour{font-size:22px}
-  .rsn-veille .appel{grid-template-columns:64px minmax(0,1fr);gap:14px}
+  .rsn-veille div.appel{grid-template-columns:64px minmax(0,1fr);gap:14px}
   .rsn-veille .tuile{width:64px}
   .rsn-veille .shead h2{font-size:24px}
   .rsn-veille .unes{grid-template-columns:1fr}
@@ -283,7 +279,7 @@
   .rsn-veille .actions{margin-top:36px}
   .rsn-veille .ev{grid-template-columns:52px minmax(0,1fr);gap:14px;padding-left:22px}
   .rsn-veille .jour{font-size:22px}
-  .rsn-veille .appel{grid-template-columns:64px minmax(0,1fr);gap:14px}
+  .rsn-veille div.appel{grid-template-columns:64px minmax(0,1fr);gap:14px}
   .rsn-veille .tuile{width:64px}
   .rsn-veille .shead h2{font-size:24px}
   .rsn-veille .unes{grid-template-columns:1fr}
