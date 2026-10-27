@@ -156,6 +156,17 @@ final class LecteursHtmlTest extends TestCase {
         $this->assertSame(['Fiche', 'https://ivado.ca/evenements/x/'], [$g->titre, $g->url]);
     }
 
+    public function test_ivado_redirection_sans_titre_prend_la_balise_title(): void {
+        $f = new Fiche();
+        $resumes = ['https://ivado.ca/evenements/ia-en-sante-2026' => 'Un résumé qui ne doit pas être appliqué.'];
+        LecteurIvado::completer($f, $this->fixture('ivado_redirection.html'), 'https://ivado.ca/evenements/ia-en-sante-2026/', $resumes);
+        $this->assertSame(['IA en santé 2026', '', 'https://event.fourwaves.com/aihealthsymposium'], [$f->titre, $f->resume, $f->url]);
+        // Jamais le h1 : sans balise title lisible, la fiche reste sans titre (elle sera ignorée).
+        $g = new Fiche();
+        LecteurIvado::completer($g, '<html><head></head><body><h1>Redirecting...</h1></body></html>', 'https://ivado.ca/evenements/x/');
+        $this->assertSame(['', 'https://ivado.ca/evenements/x/'], [$g->titre, $g->url]);
+    }
+
     public function test_ivado_page_normale_toujours_completee(): void {
         $this->assertNull(LecteurIvado::redirection($this->fixture('ivado.html')));
         $this->assertNull(LecteurIvado::redirection('<html><head><title>IA en santé 2026 | IVADO</title></head><body><h1>IA en santé 2026</h1></body></html>'));
