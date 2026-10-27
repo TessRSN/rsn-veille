@@ -712,6 +712,12 @@ function admin_url(string $chemin = ''): string {
     return 'https://exemple.test/wp-admin/' . ltrim($chemin, '/');
 }
 
+if (!function_exists('home_url')) {
+    function home_url(string $chemin = ''): string {
+        return 'https://exemple.test' . ($chemin === '' ? '' : '/' . ltrim($chemin, '/'));
+    }
+}
+
 /** Comme WordPress : le crochet d'une page de premier niveau est « toplevel_page_{slug} ». */
 function add_menu_page(string $titre_page, string $titre_menu, string $capacite, string $slug, ?callable $rappel = null, string $icone = '', int|float|null $position = null): string {
     $GLOBALS['rsn_veille_wp']['menus'][$slug] = compact('titre_page', 'titre_menu', 'capacite', 'slug', 'rappel', 'icone', 'position');

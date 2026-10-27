@@ -44,7 +44,7 @@ final class RaccourciTest extends TestCase {
         $this->publier();
         $html = do_shortcode('[rsn_veille]');
 
-        $this->assertStringStartsWith('<div class="rsn-veille" role="region" aria-label="Veille de l&#039;écosystème" data-section="tout">', trim($html));
+        $this->assertStringStartsWith('<div class="rsn-veille" role="region" aria-label="Veille de l&#039;écosystème" data-section="tout" data-une="1">', trim($html));
         $this->assertStringNotContainsString('<main', $html, 'le gabarit du site a déjà son <main>');
         $donnees = $this->donnees_incorporees($html);
         $this->assertSame(['genere_le', 'sources', 'items'], array_keys($donnees));
@@ -60,7 +60,7 @@ final class RaccourciTest extends TestCase {
         $this->assertStringContainsString('id="btn-proposer"', $html);
         $this->assertStringContainsString('<section class="encadre" id="dialogue" hidden>', $html);
         $this->assertStringContainsString('id="vue-agenda"', $html);
-        $this->assertStringContainsString('id="vue-appels" hidden', $html);
+        $this->assertStringNotContainsString('id="vue-appels"', $html, 'la liste des appels est dans la page agenda, pas dans un onglet');
         $this->assertStringContainsString('id="tbl-sources"', $html);
         $textes = [];
         $this->assertSame(1, preg_match('#<script type="application/json" id="rsn-veille-textes" data-rsn-veille-textes>(.*?)</script>#s', $html, $textes));
@@ -105,13 +105,21 @@ final class RaccourciTest extends TestCase {
 
     public function test_filtre_qui_organise_au_dessus_de_format(): void {
         $html = Raccourci::rendre([]);
+        $type = strpos($html, 'id="f-type"');
         $qui = strpos($html, 'id="f-qui"');
+        $mois = strpos($html, 'id="f-mois"');
         $format = strpos($html, 'id="f-format"');
+        $this->assertNotFalse($type);
         $this->assertNotFalse($qui);
         $this->assertNotFalse($format);
-        $this->assertLessThan($format, $qui);
-        $this->assertGreaterThan(strpos($html, 'id="f-mois"'), $qui);
+        $this->assertLessThan($qui, $type);
+        $this->assertLessThan($mois, $qui);
+        $this->assertLessThan($format, $mois);
+        $this->assertStringContainsString('<div class="rubs" id="f-qui"></div>', $html, 'rubriques, plus des étiquettes');
+        $this->assertStringContainsString('<div class="rubs" id="f-type"></div>', $html);
+        $this->assertStringNotContainsString('class="tags" id="f-qui"', $html);
         $this->assertStringContainsString('Qui organise', $html);
+        $this->assertStringContainsString('Afficher', $html);
     }
 
     public function test_json_incorpore_echappe(): void {
@@ -144,11 +152,108 @@ final class RaccourciTest extends TestCase {
         Raccourci::reinitialiser();
         $appels = Raccourci::rendre(['section' => 'appels']);
         $this->assertStringContainsString('<div id="vue-appels">', $appels);
+        $this->assertStringContainsString('data-section="appels"', $appels);
         $this->assertStringNotContainsString('id="vue-agenda"', $appels);
         $this->assertStringNotContainsString('id="btn-proposer"', $appels);
 
         Raccourci::reinitialiser();
         $this->assertStringContainsString('data-section="tout"', Raccourci::rendre(['section' => '<b>inconnue</b>']));
+    }
+
+    public function test_tout_contient_actions_alaune_limites_et_pas_d_onglets(): void {
+        $html = Raccourci::rendre([]);
+
+        $this->assertStringNotContainsString('class="onglets"', $html);
+        $this->assertStringNotContainsString('data-onglet', $html);
+        $this->assertStringContainsString('data-section="tout" data-une="1"', $html);
+        $this->assertStringNotContainsString('id="vue-appels"', $html);
+
+        $this->assertStringContainsString('<a class="btn sobre" href="https://exemple.test/veille.ics">', $html);
+        $this->assertStringContainsString("S&#039;abonner au calendrier", $html);
+        $this->assertStringContainsString('<button class="btn" id="btn-proposer" type="button">', $html);
+
+        $this->assertStringContainsString('<section class="alaune" hidden', $html);
+        $this->assertStringContainsString('À la une du RSN', $html);
+        $this->assertStringContainsString('<a class="tout" href="#" id="lien-rsn">', $html);
+        $this->assertStringContainsString('Tout ce que le RSN organise et finance →', $html);
+        $this->assertStringContainsString('<div class="unes" id="unes"></div>', $html);
+        $this->assertStringContainsString('<div class="limites" hidden>', $html);
+        $this->assertStringContainsString('<div class="defile" id="limites"></div>', $html);
+        $this->assertStringContainsString('<i class="appel"></i>', $html);
+        $this->assertStringContainsString('id="tbl-sources"', $html);
+
+        // Ordre : actions, formulaire, à la une, dates limites, agenda, sources.
+        $ordre = ['class="actions"', 'id="dialogue"', 'class="alaune"', 'class="limites"', 'id="vue-agenda"', 'id="liste-agenda"', 'id="calendrier"', 'class="sources"'];
+        $positions = array_map(static fn (string $marque): int|false => strpos($html, $marque), $ordre);
+        foreach ($positions as $i => $position) {
+            $this->assertNotFalse($position, $ordre[$i]);
+            if ($i > 0) {
+                $this->assertGreaterThan($positions[$i - 1], $position, $ordre[$i] . ' après ' . $ordre[$i - 1]);
+            }
+        }
+    }
+
+    public function test_une_0_retire_la_bande_a_la_une(): void {
+        $html = Raccourci::rendre(['une' => '0']);
+
+        $this->assertStringNotContainsString('class="alaune"', $html);
+        $this->assertStringNotContainsString('id="unes"', $html);
+        $this->assertStringNotContainsString('id="lien-rsn"', $html);
+        $this->assertStringContainsString('data-une="0"', $html);
+        $this->assertStringContainsString('class="limites"', $html);
+        $this->assertStringContainsString('id="vue-agenda"', $html);
+
+        Raccourci::reinitialiser();
+        $this->assertStringContainsString('class="alaune"', Raccourci::rendre(['une' => '1']));
+        Raccourci::reinitialiser();
+        $this->assertStringContainsString('class="alaune"', Raccourci::rendre(['une' => 'peut-être']), 'seul « 0 » retire la bande');
+    }
+
+    public function test_section_agenda_sans_f_type_ni_limites_ni_alaune(): void {
+        $html = Raccourci::rendre(['section' => 'agenda']);
+
+        $this->assertStringContainsString('id="vue-agenda"', $html);
+        $this->assertStringContainsString('id="f-qui"', $html);
+        $this->assertStringContainsString('id="btn-proposer"', $html);
+        $this->assertStringNotContainsString('id="f-type"', $html);
+        $this->assertStringNotContainsString('class="limites"', $html);
+        $this->assertStringNotContainsString('id="limites"', $html);
+        $this->assertStringNotContainsString('class="alaune"', $html);
+        $this->assertStringNotContainsString('id="unes"', $html);
+        $this->assertStringNotContainsString('id="vue-appels"', $html);
+        $this->assertStringNotContainsString('class="sources"', $html);
+        $this->assertStringContainsString('data-une="1"', $html, "l'attribut est exposé même quand la bande n'est pas rendue");
+    }
+
+    public function test_section_appels_avec_limites_et_liste_appels_sans_filtres(): void {
+        $html = Raccourci::rendre(['section' => 'appels']);
+
+        $this->assertStringContainsString('<div class="limites" hidden>', $html);
+        $this->assertStringContainsString('id="limites"', $html);
+        $this->assertStringContainsString('<div id="vue-appels">', $html);
+        $this->assertStringContainsString('<div id="liste-appels"></div>', $html);
+        foreach (['id="f-type"', 'id="f-qui"', 'id="f-mois"', 'id="f-recherche"', 'id="vue-agenda"', 'id="liste-agenda"', 'id="calendrier"', 'class="alaune"', 'id="btn-proposer"', 'class="actions"', 'id="dialogue"', 'class="sources"', 'veille.ics'] as $absent) {
+            $this->assertStringNotContainsString($absent, $html, $absent);
+        }
+    }
+
+    public function test_textes_contiennent_les_nouvelles_cles(): void {
+        $textes = Raccourci::textes();
+        foreach (['a_la_une', 'tout_le_rsn', 'evenement_rsn', 'nouveau', 'ferme_dans', 'ferme_demain', 'ferme_aujourdhui', 'date_limite_le', 'dates_limites', 'afficher', 'evenements', 'appels', 'evenement', 'partenaire', 'nb_evenements_et_appels', 'nb_elements', 'date_limite_puce', 'legende_date_limite', 's_abonner', 'aucun_element_filtres', 'tous'] as $cle) {
+            $this->assertArrayHasKey($cle, $textes, $cle);
+        }
+        foreach (['ferme_dans', 'nb_elements'] as $pluriel) {
+            $this->assertIsArray($textes[$pluriel], $pluriel);
+            $this->assertCount(2, $textes[$pluriel]);
+            $this->assertStringContainsString('%d', $textes[$pluriel][0]);
+            $this->assertStringContainsString('%d', $textes[$pluriel][1]);
+        }
+        $this->assertStringContainsString('%s', $textes['date_limite_le']);
+        $this->assertStringContainsString('%s', $textes['partenaire']);
+        $this->assertStringContainsString('%1$s', $textes['nb_evenements_et_appels']);
+        $this->assertStringContainsString('%2$s', $textes['nb_evenements_et_appels']);
+        $this->assertSame('À la une du RSN', $textes['a_la_une']);
+        $this->assertSame('Dates limites', $textes['dates_limites']);
     }
 
     public function test_deux_raccourcis_dans_la_page_ont_des_noeuds_de_donnees_distincts(): void {

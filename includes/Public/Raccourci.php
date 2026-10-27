@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Raccourci `[rsn_veille section="tout|agenda|appels"]` : la page publique de la veille, dans le style
+ * Raccourci `[rsn_veille section="tout|agenda|appels" une="1|0"]` : la page publique de la veille, dans le style
  * de la maquette validée (`docs/maquette/gabarit-v6.1.html`), données JSON incorporées dans la page.
  */
 final class Raccourci {
@@ -94,11 +94,13 @@ final class Raccourci {
     public static function rendre(mixed $attributs = []): string {
         self::$rendus++;
         $suffixe = self::$rendus > 1 ? '-' . self::$rendus : '';
-        $attributs = shortcode_atts(['section' => 'tout'], is_array($attributs) ? $attributs : [], self::NOM);
+        $attributs = shortcode_atts(['section' => 'tout', 'une' => '1'], is_array($attributs) ? $attributs : [], self::NOM);
         $section = strtolower(trim((string) $attributs['section']));
         if (!in_array($section, self::SECTIONS, true)) {
             $section = 'tout';
         }
+        // Bande « À la une » : présente sauf si l'attribut vaut « 0 » (et seulement dans la section « tout »).
+        $une = trim((string) $attributs['une']) === '0' ? '0' : '1';
         self::mettre_en_file();
 
         $json_donnees = self::json(Donnees::en_cache());
@@ -192,6 +194,30 @@ final class Raccourci {
             'erreur_envoi' => __("L'envoi a échoué. Réessayez plus tard.", 'rsn-veille'),
             'jeton_expire' => __('Jeton de sécurité expiré : rechargez la page.', 'rsn-veille'),
             'image_trop_lourde' => __('Image trop lourde (3 Mo au plus).', 'rsn-veille'),
+            // Bande « À la une », dates limites, filtre « Afficher ».
+            'a_la_une' => __('À la une du RSN', 'rsn-veille'),
+            'tout_le_rsn' => __('Tout ce que le RSN organise et finance →', 'rsn-veille'),
+            'evenement_rsn' => __('Événement du RSN', 'rsn-veille'),
+            'nouveau' => __('Nouveau', 'rsn-veille'),
+            'ferme_dans' => [__('Ferme dans %d jour', 'rsn-veille'), __('Ferme dans %d jours', 'rsn-veille')],
+            'ferme_demain' => __('Ferme demain', 'rsn-veille'),
+            'ferme_aujourdhui' => __("Ferme aujourd'hui", 'rsn-veille'),
+            /* translators: %s : date limite d'un appel. */
+            'date_limite_le' => __('Date limite : %s', 'rsn-veille'),
+            'dates_limites' => __('Dates limites', 'rsn-veille'),
+            'afficher' => __('Afficher', 'rsn-veille'),
+            'evenements' => __('Événements', 'rsn-veille'),
+            'appels' => __('Appels', 'rsn-veille'),
+            'evenement' => __('Événement', 'rsn-veille'),
+            /* translators: %s : nom de l'organisme partenaire. */
+            'partenaire' => __('Partenaire · %s', 'rsn-veille'),
+            /* translators: 1 : nombre d'événements (« 12 événements »), 2 : nombre d'appels (« 3 appels »). */
+            'nb_evenements_et_appels' => __('%1$s et %2$s à venir', 'rsn-veille'),
+            'nb_elements' => [__('%d élément', 'rsn-veille'), __('%d éléments', 'rsn-veille')],
+            'date_limite_puce' => __('Date limite · ', 'rsn-veille'),
+            'legende_date_limite' => __("Date limite d'un appel", 'rsn-veille'),
+            's_abonner' => __("S'abonner au calendrier", 'rsn-veille'),
+            'aucun_element_filtres' => __('Aucun événement ni appel ne correspond à ces filtres.', 'rsn-veille'),
         ];
     }
 }
