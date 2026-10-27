@@ -289,7 +289,8 @@ function animer(racine, noeudDonnees) {
   const montrerBande = (selecteur, nb) => { const b = $(selecteur); if (b) b.hidden = !nb; };
   function rendreUnes() {
     if (!$('#unes')) return;
-    const U = aVenir().filter(k => estRSN(k) && cleTri(k) >= AUJ && (k.type === 'evenement' || limite(k)))
+    // Un événement reste à la une tant qu'il dure (aVenir : fin ou début >= aujourd'hui) ; un appel, jusqu'à sa date limite.
+    const U = aVenir().filter(k => estRSN(k) && (k.type === 'evenement' || (limite(k) && limite(k) >= AUJ)))
       .sort((a, b) => cleTri(a).localeCompare(cleTri(b)) || a.debut.localeCompare(b.debut)).slice(0, 3);
     $('#unes').innerHTML = U.map(k => {
       const x = d(cleTri(k));
