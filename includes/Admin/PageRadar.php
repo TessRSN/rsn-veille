@@ -32,8 +32,21 @@ final class PageRadar {
     public const ACTION_RETIRER = 'rsn_veille_retirer_gardee';
     public const ACTION_RAFRAICHIR = 'rsn_veille_radar_rafraichir';
 
+    /** Cache d'une source (`rsn_veille_radar_{id}`), écrit dès qu'elle est lue : une visite interrompue le garde. */
+    public const PREFIXE_TRANSIENT_SOURCE = 'rsn_veille_radar_';
+    /** Verrou de lecture : un seul éditeur à la fois relance les flux. */
+    public const TRANSIENT_VERROU = 'rsn_veille_radar_lecture';
+    /** Copie longue durée du dernier résultat complet, pour Garder après l'expiration du cache. */
+    public const TRANSIENT_DERNIER = 'rsn_veille_radar_dernier';
+
     /** Durée du cache des flux, en secondes. */
     public const DUREE_CACHE = 3600;
+    /** Une source en erreur est relue plus tôt qu'une source lue. */
+    public const DUREE_CACHE_ERREUR = 600;
+    public const DUREE_DERNIER = 86400;
+    public const DUREE_VERROU = 120;
+    /** Délai d'attente réseau d'une source du radar, en secondes (15 s par défaut ailleurs). */
+    public const DELAI_RESEAU = 8;
     public const MAX_GARDEES = 200;
     public const MAX_IGNOREES = 500;
 
@@ -46,8 +59,8 @@ final class PageRadar {
     /** Longueur maximale d'une adresse acceptée. */
     private const LONGUEUR_URL = 2048;
 
-    /** Temps d'exécution demandé quand les flux sont relus (douze sources, 15 s au plus chacune). */
-    private const LIMITE_EXECUTION = 240;
+    /** Temps d'exécution demandé quand les flux sont relus (douze sources, 8 s au plus chacune). */
+    private const LIMITE_EXECUTION = 150;
 
     // --- WordPress : crochets, page, actions ---
 
@@ -85,38 +98,150 @@ final class PageRadar {
     }
 
     /**
-     * Nouvelles du radar : le cache s'il existe, sinon une lecture des flux (qui est mise en cache une
-     * heure, sauf si tout a échoué : la page réessaie alors au prochain affichage).
+     * Nouvelles du radar : le résultat complet en cache (une heure) s'il existe. Sinon, les sources dont
+     * le cache est valide sont reprises, et les autres sont lues une à une (délai de 8 s chacune), chaque
+     * source étant mise en cache dès qu'elle est lue. Un verrou de deux minutes empêche deux éditeurs de
+     * relancer les flux en même temps : le second voit ce qui est déjà en cache (`en_cours` vrai).
      *
-     * @return array{nouvelles: array<int,array<string,string>>, erreurs: string[], genere_le: string}
+     * @return array{nouvelles: array<int,array<string,string>>, erreurs: string[], genere_le: string, en_cours: bool}
      */
     public static function donnees(): array {
-        $cache = get_transient(self::TRANSIENT);
-        if (is_array($cache) && isset($cache['nouvelles']) && is_array($cache['nouvelles'])) {
-            return [
-                'nouvelles' => array_values(array_filter($cache['nouvelles'], 'is_array')),
-                'erreurs' => isset($cache['erreurs']) && is_array($cache['erreurs']) ? array_values(array_filter($cache['erreurs'], 'is_string')) : [],
-                'genere_le' => isset($cache['genere_le']) && is_string($cache['genere_le']) ? $cache['genere_le'] : '',
-            ];
+        $cache = self::resultat_valide(get_transient(self::TRANSIENT));
+        if ($cache !== null) {
+            return $cache + ['en_cours' => false];
         }
-        if (function_exists('set_time_limit')) {
-            @set_time_limit(self::LIMITE_EXECUTION);
+
+        $parties = [];
+        $manquantes = [];
+        foreach (self::sources_radar() as $id => $source) {
+            $partie = self::lire_cache_source($id);
+            if ($partie === null) {
+                $manquantes[$id] = $source;
+            } else {
+                $parties[$id] = $partie;
+            }
         }
-        $donnees = Nouvelles::lire(
-            Collecte::sources(),
-            static fn(string $url): array => Collecte::obtenir($url, ['accept' => 'xml']),
-            Collecte::pertinence(),
-            \rsn_veille_aujourdhui()
-        );
-        $donnees['genere_le'] = wp_date('Y-m-d H:i');
-        if ($donnees['nouvelles'] !== [] || $donnees['erreurs'] === []) {
-            set_transient(self::TRANSIENT, $donnees, self::DUREE_CACHE);
+
+        $en_cours = false;
+        if ($manquantes !== []) {
+            if (get_transient(self::TRANSIENT_VERROU) !== false) {
+                $en_cours = true;
+            } else {
+                set_transient(self::TRANSIENT_VERROU, 1, self::DUREE_VERROU);
+                try {
+                    if (function_exists('set_time_limit')) {
+                        @set_time_limit(self::LIMITE_EXECUTION);
+                    }
+                    $pertinence = Collecte::pertinence();
+                    $obtenir = static fn(string $url): array => Collecte::obtenir($url, ['accept' => 'xml', 'timeout' => self::DELAI_RESEAU]);
+                    foreach ($manquantes as $id => $source) {
+                        $partie = Nouvelles::lire_source($source, $obtenir, $pertinence, \rsn_veille_aujourdhui());
+                        $partie['lu_le'] = wp_date('Y-m-d H:i');
+                        set_transient(
+                            self::PREFIXE_TRANSIENT_SOURCE . $id,
+                            $partie,
+                            $partie['erreurs'] === [] ? self::DUREE_CACHE : self::DUREE_CACHE_ERREUR
+                        );
+                        $parties[$id] = $partie;
+                    }
+                } finally {
+                    delete_transient(self::TRANSIENT_VERROU);
+                }
+            }
         }
+
+        $donnees = self::assembler_parties($parties);
+        if (!$en_cours) {
+            // Tout a échoué : pas de copie complète, la page réessaiera quand les caches d'erreur expireront.
+            if ($donnees['nouvelles'] !== []) {
+                set_transient(self::TRANSIENT, $donnees, self::DUREE_CACHE);
+                set_transient(self::TRANSIENT_DERNIER, $donnees, self::DUREE_DERNIER);
+            } elseif ($donnees['erreurs'] === []) {
+                set_transient(self::TRANSIENT, $donnees, self::DUREE_CACHE);
+            }
+        }
+        return $donnees + ['en_cours' => $en_cours];
+    }
+
+    /** Vide le cache courant et celui de chaque source ; la copie de 24 h reste (Garder en dépend). */
+    public static function vider_cache(): void {
+        delete_transient(self::TRANSIENT);
+        delete_transient(self::TRANSIENT_VERROU);
+        foreach (array_keys(self::sources_radar()) as $id) {
+            delete_transient(self::PREFIXE_TRANSIENT_SOURCE . $id);
+        }
+    }
+
+    /** @return array<string,array<string,mixed>> Sources actives qui alimentent le radar. */
+    private static function sources_radar(): array {
+        return array_filter(Collecte::sources(), static fn($s): bool => is_array($s) && !empty($s['categorie_nouvelles']));
+    }
+
+    /** @return ?array{nouvelles: array<int,array<string,string>>, erreurs: string[], lu_le: string} */
+    private static function lire_cache_source(string|int $id): ?array {
+        $partie = get_transient(self::PREFIXE_TRANSIENT_SOURCE . $id);
+        if (!is_array($partie) || !isset($partie['nouvelles'], $partie['erreurs']) || !is_array($partie['nouvelles']) || !is_array($partie['erreurs'])) {
+            return null;
+        }
+        return [
+            'nouvelles' => array_values(array_filter($partie['nouvelles'], 'is_array')),
+            'erreurs' => array_values(array_filter($partie['erreurs'], 'is_string')),
+            'lu_le' => isset($partie['lu_le']) && is_string($partie['lu_le']) ? $partie['lu_le'] : '',
+        ];
+    }
+
+    /**
+     * Assemble les lectures de sources ; `genere_le` est la plus ancienne lecture.
+     *
+     * @param array<int|string,array<string,mixed>> $parties
+     * @return array{nouvelles: array<int,array<string,string>>, erreurs: string[], genere_le: string}
+     */
+    private static function assembler_parties(array $parties): array {
+        $donnees = Nouvelles::assembler($parties, \rsn_veille_aujourdhui());
+        $lectures = array_filter(array_column($parties, 'lu_le'), static fn($d): bool => is_string($d) && $d !== '');
+        $donnees['genere_le'] = $lectures !== [] ? min($lectures) : '';
         return $donnees;
     }
 
-    public static function vider_cache(): void {
-        delete_transient(self::TRANSIENT);
+    /** @return ?array{nouvelles: array<int,array<string,string>>, erreurs: string[], genere_le: string} */
+    private static function resultat_valide(mixed $cache): ?array {
+        if (!is_array($cache) || !isset($cache['nouvelles']) || !is_array($cache['nouvelles'])) {
+            return null;
+        }
+        return [
+            'nouvelles' => array_values(array_filter($cache['nouvelles'], 'is_array')),
+            'erreurs' => isset($cache['erreurs']) && is_array($cache['erreurs']) ? array_values(array_filter($cache['erreurs'], 'is_string')) : [],
+            'genere_le' => isset($cache['genere_le']) && is_string($cache['genere_le']) ? $cache['genere_le'] : '',
+        ];
+    }
+
+    /**
+     * Cherche une nouvelle par adresse sans jamais toucher au réseau : résultat complet courant, caches
+     * des sources lues, puis copie de 24 h du dernier résultat complet.
+     *
+     * @return ?array<string,string>
+     */
+    private static function chercher_en_cache(string $url): ?array {
+        $parties = [];
+        foreach (array_keys(self::sources_radar()) as $id) {
+            $partie = self::lire_cache_source($id);
+            if ($partie !== null) {
+                $parties[$id] = $partie;
+            }
+        }
+        $candidats = [
+            self::resultat_valide(get_transient(self::TRANSIENT)),
+            self::assembler_parties($parties),
+            self::resultat_valide(get_transient(self::TRANSIENT_DERNIER)),
+        ];
+        foreach ($candidats as $candidat) {
+            foreach ($candidat['nouvelles'] ?? [] as $nouvelle) {
+                if (($nouvelle['url'] ?? null) === $url) {
+                    return $nouvelle;
+                }
+            }
+        }
+        return null;
     }
 
     /** @return array<int,array<string,string>> Nouvelles gardées lisibles (option illisible : liste vide). */
@@ -139,19 +264,14 @@ final class PageRadar {
 
     // --- Actions AJAX ---
 
-    /** Garde une nouvelle du radar pour l'infolettre (titre, date et résumé pris dans le cache). */
+    /** Garde une nouvelle du radar pour l'infolettre (titre, date et résumé pris dans le cache, jamais de réseau). */
     public static function ajax_garder(): void {
         $url = self::url_de_la_requete();
         if ($url === null) {
             return;
         }
-        $trouvee = null;
-        foreach (self::donnees()['nouvelles'] as $nouvelle) {
-            if (($nouvelle['url'] ?? null) === $url) {
-                $trouvee = $nouvelle;
-                break;
-            }
-        }
+        // Jamais de réseau ici : le cache courant, puis la copie de 24 h.
+        $trouvee = self::chercher_en_cache($url);
         if ($trouvee === null) {
             wp_send_json_error(['ok' => false, 'message' => __("Cette nouvelle n'est plus dans le radar : rafraîchissez la page.", 'rsn-veille')], 404);
             return;
@@ -280,7 +400,7 @@ final class PageRadar {
     /**
      * Page complète : barre (Rafraîchir, compteur), zone de message, gardées, radar par source, erreurs.
      *
-     * @param array{nouvelles?: array<int,array<string,mixed>>, erreurs?: string[], genere_le?: string} $donnees
+     * @param array{nouvelles?: array<int,array<string,mixed>>, erreurs?: string[], genere_le?: string, en_cours?: bool} $donnees
      * @param array<int,mixed> $gardees
      * @param string[] $ignorees
      * @param array{url_action?: string, nonce?: string} $options Adresse d'admin-post.php et jeton du bouton Rafraîchir.
@@ -292,6 +412,7 @@ final class PageRadar {
             . '<h1>' . esc_html__('Radar', 'rsn-veille') . '</h1>'
             . '<p class="description">' . esc_html__("Les nouvelles des organisations de l'écosystème qui touchent la santé ou le numérique. Gardez celles qui iront dans l'infolettre, ignorez les autres.", 'rsn-veille') . '</p>'
             . self::barre_html((string) ($donnees['genere_le'] ?? ''), count($gardees), $options)
+            . (!empty($donnees['en_cours']) ? '<p class="rsn-veille-radar-en-cours">' . esc_html__("Rafraîchissement en cours par un autre utilisateur : certaines sources ne sont pas encore là. Rechargez la page dans une minute.", 'rsn-veille') . '</p>' : '')
             . '<div class="rsn-veille-message" role="status" aria-live="polite"></div>'
             . '<h2>' . esc_html__("Gardées pour l'infolettre", 'rsn-veille') . '</h2>'
             . self::gardees_html($gardees)

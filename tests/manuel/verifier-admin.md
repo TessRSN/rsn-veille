@@ -119,8 +119,10 @@ lancent par `npx wp-env run cli wp …`.
 ## Radar (tâche 15)
 
 Page Veille > Radar (`/wp-admin/admin.php?page=rsn-veille-radar`). Le premier affichage lit les 12
-flux de nouvelles (jusqu'à quelques dizaines de secondes si une source est lente), puis le résultat est
-gardé une heure (transient `rsn_veille_radar`).
+flux de nouvelles un à un (8 s au plus chacun), chaque source étant gardée une heure dès qu'elle est lue
+(transients `rsn_veille_radar_{id}`), puis le résultat complet l'est aussi (`rsn_veille_radar`) avec une
+copie de 24 h (`rsn_veille_radar_dernier`). Un verrou de 2 min (`rsn_veille_radar_lecture`) évite que deux
+éditeurs relancent les flux ensemble.
 
 - [ ] La page s'ouvre sans erreur PHP. En haut : bouton **Rafraîchir**, « 0 gardées », « Flux lus le … » ;
       section « Gardées pour l'infolettre » (message « Aucune nouvelle gardée pour l'instant. ») puis
@@ -142,9 +144,16 @@ gardé une heure (transient `rsn_veille_radar`).
       reparaît pas. `wp option get rsn_veille_nouvelles_ignorees --format=json` contient son adresse.
 - [ ] **Rafraîchir** : la page se recharge (lecture des flux de nouveau, un peu plus longue) et « Flux
       lus le … » indique la minute courante. `wp transient get rsn_veille_radar` existe ensuite.
+- [ ] **Verrou** : `wp transient set rsn_veille_radar_lecture 1 120` puis `wp transient delete rsn_veille_radar`
+      et supprimer les `rsn_veille_radar_{id}` : la page montre « Rafraîchissement en cours … » avec ce qui
+      est déjà en cache, sans relire les flux. `wp transient delete rsn_veille_radar_lecture` : le
+      rechargement relit les sources manquantes.
+- [ ] **Garder sans réseau** : `wp transient delete rsn_veille_radar` et les `rsn_veille_radar_{id}`, puis
+      Garder une nouvelle déjà affichée dans l'onglet resté ouvert : elle est gardée (copie de 24 h) sans
+      aucune requête sortante ; une adresse inconnue → 404 « rafraîchissez la page ».
 - [ ] Titre et résumé ne viennent jamais de la requête : dans la console du navigateur, envoyer
       `fetch(ajaxurl, {method:'POST', body:new URLSearchParams({action:'rsn_veille_garder', nonce:rsnVeilleAdmin.radar.nonce, url:'https://exemple.org/pirate', titre:'forgé'})})`
-      → réponse 404 « Cette nouvelle n'est plus dans le radar », rien d'enregistré. Avec l'adresse d'une
+      → réponse 404 « Cette nouvelle n'est plus dans le radar : rafraîchissez la page », rien d'enregistré. Avec l'adresse d'une
       nouvelle du radar et un `titre` forgé, la gardée porte le vrai titre du flux.
 - [ ] Jeton et droits : même requête sans `nonce` → 403 ; connecté comme abonné
       (`wp user create lecteur lecteur@exemple.test --role=subscriber`) → la page est refusée (403) et les
@@ -155,5 +164,5 @@ gardé une heure (transient `rsn_veille_radar`).
 
 `wp post delete $(wp post list --post_type=rsn_veille --meta_key=rsn_veille_source --meta_value=Vérification --format=ids --post_status=any) --force`
 puis `wp user delete redaction lecteur --yes`. Radar : `wp option delete rsn_veille_nouvelles_gardees rsn_veille_nouvelles_ignorees`
-et `wp transient delete rsn_veille_radar`. Fiches importées :
+et `wp transient delete rsn_veille_radar rsn_veille_radar_dernier rsn_veille_radar_lecture`. Fiches importées :
 `wp post delete $(wp post list --post_type=rsn_veille --meta_key=rsn_veille_source --meta_value=infolettre --format=ids --post_status=any) --force`.

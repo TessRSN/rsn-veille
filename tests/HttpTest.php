@@ -76,4 +76,14 @@ final class HttpTest extends \PHPUnit\Framework\TestCase {
         $this->assertFalse(Http::est_ical([]));
         $this->assertFalse(Http::est_flux(self::reponse('', '')));
     }
+
+    public function test_delai_borne_de_1_a_15_secondes(): void {
+        $this->assertSame(15, Http::delai([]));
+        $this->assertSame(8, Http::delai(['timeout' => 8]));
+        $this->assertSame(8, Http::delai(['timeout' => '8']));
+        $this->assertSame(15, Http::delai(['timeout' => 120]));
+        $this->assertSame(1, Http::delai(['timeout' => 0]));
+        $this->assertSame(15, Http::delai(['timeout' => 'long']));
+        $this->assertSame(1, Http::delai(['timeout' => -3]));
+    }
 }

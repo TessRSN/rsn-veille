@@ -204,15 +204,101 @@ final class PageRadarTest extends TestCase {
         $this->assertFalse(get_option('rsn_veille_nouvelles_gardees', false));
     }
 
-    public function test_garder_relit_les_flux_si_le_cache_est_perime(): void {
-        $flux = '<?xml version="1.0"?><rss version="2.0"><channel><title>T</title><item><title>Santé numérique</title><link>https://frq.test/a</link><pubDate>Tue, 20 Oct 2026 12:00:00 +0000</pubDate></item></channel></rss>';
-        Collecte::$obtenir_pour_tests = static fn(string $url, array $options = []): array
-            => ['corps' => $flux, 'type' => 'application/rss+xml', 'code' => 200, 'url_finale' => $url, 'erreur' => null];
-        [$reponse, $code] = self::ajax('ajax_garder', ['nonce' => self::jeton(), 'url' => 'https://frq.test/a']);
+    /** Remplace le réseau : compte les appels et renvoie le flux donné (ou une erreur 403 si `$flux` est vide). */
+    private static function reseau(int &$appels, string $flux = '', array &$options_vues = []): void {
+        Collecte::$obtenir_pour_tests = static function (string $url, array $options = []) use (&$appels, $flux, &$options_vues): array {
+            $appels++;
+            $options_vues[] = $options;
+            return $flux === ''
+                ? ['corps' => '', 'type' => '', 'code' => 403, 'url_finale' => $url, 'erreur' => 'Réponse HTTP 403']
+                : ['corps' => $flux, 'type' => 'application/rss+xml', 'code' => 200, 'url_finale' => $url, 'erreur' => null];
+        };
+    }
+
+    private const FLUX = '<?xml version="1.0"?><rss version="2.0"><channel><title>T</title><item><title>Santé numérique</title><link>https://frq.test/a</link><pubDate>Tue, 20 Oct 2026 12:00:00 +0000</pubDate></item></channel></rss>';
+
+    public function test_garder_ne_touche_jamais_au_reseau_et_cherche_dans_la_copie_de_24_h(): void {
+        $appels = 0;
+        self::reseau($appels, self::FLUX);
+        // Cache courant expiré, mais la copie de 24 h garde la nouvelle.
+        set_transient('rsn_veille_radar_dernier', ['nouvelles' => [self::nouvelle(1)], 'erreurs' => [], 'genere_le' => '2026-10-24 09:00'], 86400);
+        [$reponse, $code] = self::ajax('ajax_garder', ['nonce' => self::jeton(), 'url' => 'https://x.test/n1']);
         $this->assertSame(200, $code, json_encode($reponse));
-        $this->assertSame('Santé numérique', get_option('rsn_veille_nouvelles_gardees')[0]['titre']);
-        // Le résultat est remis en cache pour une heure.
+        $this->assertSame('Titre 1', get_option('rsn_veille_nouvelles_gardees')[0]['titre']);
+        // Introuvable partout : 404 sans réseau.
+        [$reponse, $code] = self::ajax('ajax_garder', ['nonce' => self::jeton(), 'url' => 'https://x.test/inconnue']);
+        $this->assertSame(404, $code);
+        $this->assertStringContainsString('rafraîchissez la page', $reponse['data']['message']);
+        $this->assertSame(0, $appels);
+        $this->assertFalse(get_transient('rsn_veille_radar'));
+    }
+
+    public function test_garder_trouve_une_nouvelle_dans_le_cache_d_une_source(): void {
+        $appels = 0;
+        self::reseau($appels);
+        set_transient('rsn_veille_radar_frq', ['nouvelles' => [self::nouvelle(7)], 'erreurs' => [], 'lu_le' => '2026-10-25 09:00'], 3600);
+        [, $code] = self::ajax('ajax_garder', ['nonce' => self::jeton(), 'url' => 'https://x.test/n7']);
+        $this->assertSame(200, $code);
+        $this->assertSame(0, $appels);
+    }
+
+    public function test_chaque_source_est_mise_en_cache_des_qu_elle_est_lue(): void {
+        $appels = 0;
+        // La troisième source fait « tomber » la requête (le serveur coupe) : les deux premières restent en cache.
+        Collecte::$obtenir_pour_tests = static function (string $url, array $options = []) use (&$appels): array {
+            if (++$appels === 3) {
+                throw new RuntimeException('Le serveur coupe');
+            }
+            return ['corps' => self::FLUX, 'type' => 'application/rss+xml', 'code' => 200, 'url_finale' => $url, 'erreur' => null];
+        };
+        try {
+            PageRadar::donnees();
+            $this->fail('La coupure aurait dû interrompre la lecture');
+        } catch (RuntimeException $e) {
+            $this->assertSame('Le serveur coupe', $e->getMessage());
+        }
+        $en_cache = array_filter(array_keys($GLOBALS['rsn_veille_wp']['transients']), static fn($n): bool => str_starts_with($n, 'rsn_veille_radar_') && !in_array($n, ['rsn_veille_radar_lecture', 'rsn_veille_radar_dernier'], true));
+        $this->assertCount(2, $en_cache);
+        // Le verrou est libéré, et la visite suivante ne relit que les sources manquantes.
+        $this->assertFalse(get_transient('rsn_veille_radar_lecture'));
+        $appels = 0;
+        Collecte::$obtenir_pour_tests = static function (string $url, array $options = []) use (&$appels): array {
+            $appels++;
+            return ['corps' => self::FLUX, 'type' => 'application/rss+xml', 'code' => 200, 'url_finale' => $url, 'erreur' => null];
+        };
+        $donnees = PageRadar::donnees();
+        $this->assertSame(10, $appels);
+        $this->assertFalse($donnees['en_cours']);
         $this->assertIsArray(get_transient('rsn_veille_radar'));
+        $this->assertIsArray(get_transient('rsn_veille_radar_dernier'));
+    }
+
+    public function test_les_flux_du_radar_sont_lus_avec_un_delai_de_8_secondes(): void {
+        $appels = 0;
+        $options_vues = [];
+        self::reseau($appels, self::FLUX, $options_vues);
+        PageRadar::donnees();
+        $this->assertSame(12, $appels);
+        foreach ($options_vues as $options) {
+            $this->assertSame(['accept' => 'xml', 'timeout' => 8], $options);
+        }
+    }
+
+    public function test_un_verrou_de_lecture_evite_une_seconde_lecture(): void {
+        $appels = 0;
+        self::reseau($appels, self::FLUX);
+        set_transient('rsn_veille_radar_lecture', 1, 120);
+        set_transient('rsn_veille_radar_frq', ['nouvelles' => [self::nouvelle(1)], 'erreurs' => [], 'lu_le' => '2026-10-25 09:00'], 3600);
+        $donnees = PageRadar::donnees();
+        $this->assertSame(0, $appels);
+        $this->assertTrue($donnees['en_cours']);
+        $this->assertSame(['https://x.test/n1'], array_column($donnees['nouvelles'], 'url'));
+        // Rien d'incomplet n'est mis en cache comme résultat complet, et le verrou de l'autre reste.
+        $this->assertFalse(get_transient('rsn_veille_radar'));
+        $this->assertNotFalse(get_transient('rsn_veille_radar_lecture'));
+        $html = PageRadar::page_html($donnees, [], [], self::options());
+        $this->assertStringContainsString('Rafraîchissement en cours', $html);
+        $this->assertStringNotContainsString('Rafraîchissement en cours', PageRadar::page_html(['en_cours' => false] + $donnees, [], [], self::options()));
     }
 
     public function test_ignorer(): void {
@@ -266,22 +352,31 @@ final class PageRadarTest extends TestCase {
 
     public function test_donnees_cache_une_heure_et_rafraichir_le_vide(): void {
         $appels = 0;
-        Collecte::$obtenir_pour_tests = static function (string $url, array $options = []) use (&$appels): array {
-            $appels++;
-            return ['corps' => '', 'type' => '', 'code' => 403, 'url_finale' => $url, 'erreur' => 'Réponse HTTP 403'];
-        };
+        self::reseau($appels);
         $a = PageRadar::donnees();
-        $this->assertNotEmpty($a['erreurs']);
+        $this->assertCount(12, $a['erreurs']);
         $this->assertSame([], $a['nouvelles']);
-        $premiers = $appels;
-        $this->assertGreaterThan(0, $premiers);
-        // Tout a échoué : rien n'est mis en cache, la page réessaie au prochain affichage.
+        $this->assertSame(12, $appels);
+        // Tout a échoué : pas de copie complète ; les erreurs sont gardées par source (10 min) sans relancer le réseau.
         $this->assertFalse(get_transient('rsn_veille_radar'));
+        $this->assertFalse(get_transient('rsn_veille_radar_dernier'));
+        PageRadar::donnees();
+        $this->assertSame(12, $appels);
+
+        PageRadar::vider_cache();
+        $this->assertFalse(get_transient('rsn_veille_radar_frq'));
         self::cache([self::nouvelle(1)]);
         $this->assertSame('Titre 1', PageRadar::donnees()['nouvelles'][0]['titre']);
-        $this->assertSame($premiers, $appels);
+        $this->assertSame(12, $appels);
         PageRadar::vider_cache();
         $this->assertFalse(get_transient('rsn_veille_radar'));
+    }
+
+    public function test_rafraichir_garde_la_copie_de_24_h(): void {
+        set_transient('rsn_veille_radar_dernier', ['nouvelles' => [self::nouvelle(1)], 'erreurs' => [], 'genere_le' => ''], 86400);
+        self::cache([self::nouvelle(1)]);
+        PageRadar::vider_cache();
+        $this->assertIsArray(get_transient('rsn_veille_radar_dernier'));
     }
 
     public function test_options_illisibles_toleree(): void {

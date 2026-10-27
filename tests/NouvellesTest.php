@@ -176,4 +176,36 @@ final class NouvellesTest extends TestCase {
         $r = Nouvelles::lire([], self::obtenir([]), new Pertinence(), self::AUJOURDHUI);
         $this->assertSame(['nouvelles' => [], 'erreurs' => [], 'genere_le' => self::AUJOURDHUI], $r);
     }
+
+    public function test_lire_source_et_assembler_donnent_le_meme_resultat_que_lire(): void {
+        $obtenir = self::obtenir(self::reponses_fixtures());
+        $parties = [];
+        foreach (self::sources() as $source) {
+            $parties[] = Nouvelles::lire_source($source, $obtenir, new Pertinence(), self::AUJOURDHUI);
+        }
+        $this->assertSame(Nouvelles::lire(self::sources(), $obtenir, new Pertinence(), self::AUJOURDHUI), Nouvelles::assembler($parties, self::AUJOURDHUI));
+        $this->assertSame(['nouvelles', 'erreurs'], array_keys($parties[0]));
+    }
+
+    public function test_lire_source_hors_radar_ne_fait_aucune_requete(): void {
+        $appels = 0;
+        $obtenir = static function (string $url) use (&$appels): array {
+            $appels++;
+            return [];
+        };
+        $r = Nouvelles::lire_source(Sources::par_defaut()['frq_appels'], $obtenir, new Pertinence(), self::AUJOURDHUI);
+        $this->assertSame(['nouvelles' => [], 'erreurs' => []], $r);
+        $this->assertSame(0, $appels);
+    }
+
+    public function test_assembler_fusionne_les_adresses_communes_et_trie(): void {
+        $n = static fn(string $url, string $date, string $source): array => ['url' => $url, 'titre' => 'T', 'date' => $date, 'source' => $source, 'organisateur' => '', 'resume' => '', 'statut_radar' => 'reperee'];
+        $r = Nouvelles::assembler([
+            ['nouvelles' => [$n('https://x.test/1', '2026-10-01', 'A'), $n('https://x.test/2', '', 'A')], 'erreurs' => ['A : lent']],
+            ['nouvelles' => [$n('https://x.test/1', '2026-10-01', 'B'), $n('https://x.test/3', '2026-10-10', 'B')], 'erreurs' => []],
+        ], self::AUJOURDHUI);
+        $this->assertSame(['https://x.test/3', 'https://x.test/1', 'https://x.test/2'], array_column($r['nouvelles'], 'url'));
+        $this->assertSame('A', $r['nouvelles'][1]['source']);
+        $this->assertSame(['A : lent'], $r['erreurs']);
+    }
 }

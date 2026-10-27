@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
  * renvoyée en code 200 à la place d'un flux n'est pas un flux.
  */
 final class Http {
-    /** Délai d'attente par requête, en secondes. */
+    /** Délai d'attente par requête, en secondes (maximum aussi : une option `timeout` ne le dépasse pas). */
     private const DELAI = 15;
 
     /** Valeurs de l'en-tête Accept selon le contenu attendu. */
@@ -32,16 +32,17 @@ final class Http {
 
     /**
      * Télécharge une adresse. `$options['accept']` : json, xml, html, ical ou any (par défaut).
+     * `$options['timeout']` : délai d'attente en secondes, de 1 à 15 (15 par défaut).
      * `erreur` est renseignée si la requête échoue ou si le code HTTP est 400 ou plus ; un 403 reste
      * une erreur (aucun contournement des protections anti-robots).
      *
-     * @param array{accept?: string} $options
+     * @param array{accept?: string, timeout?: int} $options
      * @return array{corps: string, type: string, code: int, url_finale: string, erreur: ?string}
      */
     public static function obtenir(string $url, array $options = []): array {
         $accept = self::ACCEPT[$options['accept'] ?? 'any'] ?? self::ACCEPT['any'];
         $reponse = wp_remote_get($url, [
-            'timeout' => self::DELAI,
+            'timeout' => self::delai($options),
             'redirection' => 5,
             'user-agent' => 'RSN-Veille/' . RSN_VEILLE_VERSION . ' (+https://rsn.quebec)',
             'headers' => ['Accept' => $accept],
@@ -80,6 +81,14 @@ final class Http {
             'url_finale' => $url_finale,
             'erreur' => $erreur,
         ];
+    }
+
+    /** Délai d'attente demandé par `$options['timeout']`, borné de 1 à 15 s ; 15 s si absent ou illisible. */
+    public static function delai(array $options): int {
+        $demande = $options['timeout'] ?? null;
+        return is_int($demande) || (is_string($demande) && ctype_digit($demande))
+            ? max(1, min(self::DELAI, (int) $demande))
+            : self::DELAI;
     }
 
     /** Flux RSS ou Atom : type xml, rss ou atom (hors XHTML), ou corps commençant par `<?xml`, `<rss`, `<feed`. */
