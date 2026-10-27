@@ -57,9 +57,15 @@ final class Donnees {
             foreach ($cles as $cle) {
                 $item[$cle] = $element[$cle] ?? null;
             }
-            $item['organise_par'] = in_array($element['organise_par'] ?? null, self::ORGANISE_PAR, true)
-                ? $element['organise_par']
-                : self::organise_par((string) ($element['categorie_rsn'] ?? ''));
+            $organise = $element['organise_par'] ?? null;
+            if (!in_array($organise, self::ORGANISE_PAR, true)) {
+                // Une fiche collectée depuis le site du RSN (source `rsn`) est organisée par le RSN, même sans catégorie TEC.
+                $organise = str_starts_with((string) ($element['cle_source'] ?? ''), 'rsn:')
+                    ? 'rsn'
+                    : self::organise_par((string) ($element['categorie_rsn'] ?? ''));
+            }
+            $item['organise_par'] = $organise;
+            $item['organisateur'] = self::organisateur_canonique((string) ($item['organisateur'] ?? ''));
             $items[] = $item;
         }
         $derniere = get_option(Collecte::OPTION_DERNIERE, 0);
@@ -181,6 +187,32 @@ final class Donnees {
             delete_transient(self::transient(self::TRANSIENT, $langue));
             delete_transient(self::transient(Ical::TRANSIENT, $langue));
         }
+    }
+
+    /** Graphies canoniques des organisateurs fréquents (clé : nom en minuscules sans accents ni ponctuation). */
+    private const ORGANISATEURS = [
+        'obvia' => 'Obvia',
+        'rsn' => 'RSN',
+        'reseau sante numerique' => 'RSN',
+        'ivado' => 'IVADO',
+        'mila' => 'Mila',
+        'frq' => 'Fonds de recherche du Québec',
+        'fonds de recherche du quebec' => 'Fonds de recherche du Québec',
+        'digital health canada' => 'Digital Health Canada',
+        'acfas' => 'Acfas',
+        'crm' => 'CRM',
+        'centre de recherches mathematiques' => 'CRM',
+    ];
+
+    /**
+     * Graphie unique d'un organisateur pour le filtre « Organisateur » de la page : « OBVIA » et « Obvia »,
+     * « RSN » et « Réseau santé numérique » ne font qu'un. Un nom inconnu est rendu tel quel.
+     */
+    public static function organisateur_canonique(string $nom): string {
+        $nom = trim($nom);
+        $cle = strtr(mb_strtolower($nom), ['é' => 'e', 'è' => 'e', 'ê' => 'e', 'à' => 'a', 'â' => 'a', 'ô' => 'o', 'î' => 'i', 'ç' => 'c', 'ù' => 'u']);
+        $cle = trim((string) preg_replace('/[^a-z0-9]+/', ' ', $cle));
+        return self::ORGANISATEURS[$cle] ?? $nom;
     }
 
     /**

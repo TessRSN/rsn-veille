@@ -20,7 +20,10 @@ autre WordPress). Les chemins de scripts sont relatifs à `wp-content/plugins/rs
 3. Optionnel mais recommandé pour la section « Page publique » : installer et activer The Events Calendar
    (`wp plugin install the-events-calendar --activate`), Elementor (`wp plugin install elementor --activate`) et
    LiteSpeed Cache. Pour le courriel : MailHog (conteneur `mailhog/mailhog`, SMTP 1025, interface 8025) et un
-   `mu-plugin` qui règle PHPMailer sur `host.docker.internal:1025`.
+   `mu-plugin` qui règle PHPMailer sur `host.docker.internal:1025`. Sous wp-env le site est servi sur `localhost` :
+   PHPMailer refuse alors l'expéditeur `wordpress@localhost` (domaine sans point) et `wp_mail` rend `false`. Le même
+   `mu-plugin` doit donc aussi filtrer `wp_mail_from` vers une adresse avec un vrai domaine (par exemple
+   `veille@exemple.test`). Sur rsn.quebec, l'expéditeur `wordpress@rsn.quebec` est valide sans rien faire.
 4. **Conserver `wp-content/debug.log` ouvert** pendant tout le parcours : toute erreur PHP est un écart.
 
 **Terminé quand** : le site local répond, l'extension est active, `debug.log` est vide.
@@ -178,4 +181,15 @@ l'infolettre, dernier courriel). Puis `npx @wordpress/env stop` (ou `destroy` po
 
 | Étape | Constat | Corrigé (commit) ou consigné |
 |---|---|---|
-| | | |
+| 0 | `wp_mail` rend `false` sous wp-env : expéditeur `wordpress@localhost` refusé par PHPMailer. Propre au site sur `localhost`. | consigné à l'étape 0 (filtre `wp_mail_from` dans le mu-plugin) |
+| 3 | Page Réglages : « à deux minutes d'intervalle » contredisait le guide (≈ 5 min par passage de cron). | corrigé (texte de `RenduReglages`) |
+| 4 | Première lecture de l'API TEC de rsn.quebec expirée après 15 s sans octet ; relance une minute plus tard : 16 lus en 1 s. Cache LiteSpeed froid côté rsn.quebec. | consigné : à surveiller dans le Journal |
+| 5 | Import : 24 créés, 0 fusionné. Aucun événement importé ne partage titre et date avec les 15 fiches collectées de rsn.quebec : l'hypothèse « M ≥ 1 » de `verifier-admin.md` était fausse, pas le code. | corrigé (liste manuelle) |
+| 7 | Filtre Organisateur : « Obvia » et « OBVIA », « RSN » et « Réseau santé numérique » en doublon. | corrigé (`Donnees::organisateur_canonique`) |
+| 7 | Fiches collectées depuis la source `rsn` classées « Écosystème » dans « Qui organise ». | corrigé (`Donnees::construire` : clé `rsn:` → RSN) |
+| 7 | Deux colonnes maintenues dans une colonne de contenu de ~650 px (le point de rupture ne regardait que la fenêtre) : fiches écrasées avec un thème étroit. | corrigé (requête de conteneur `@container rsn-veille`) |
+
+Parcours déroulé le 2026-10-26 sous wp-env (WordPress 7.1.3, PHP 8.0.30, The Events Calendar 6.18.2, Elementor 4.3.5,
+MailHog) : étapes 0 à 12 passées, `debug.log` resté absent du début à la fin, aucune erreur de l'extension dans la
+console du navigateur. Non couvert : LiteSpeed Cache, WPML, l'éditeur Elementor (widget Code court) et l'abonnement
+iCal dans un agenda, à vérifier sur la copie de préproduction de rsn.quebec.

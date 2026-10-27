@@ -44,5 +44,12 @@ Première version de l'extension.
 - Les propositions du public reçoivent les thèmes des réglages et ne purgent plus aucun cache.
 - Page Infolettre : l'état des programmes du RSN est lu par l'identifiant de l'article et d'après la clé `en-cours` du tableau rendu par la fonction `rsn_appel_etat` du site (sans quoi aucun programme n'était repris) ; une erreur de cette fonction ne casse plus la page.
 
+### Vérification dans un vrai WordPress (wp-env, PHP 8.0)
+- Parcours `tests/manuel/PARCOURS.md` déroulé de bout en bout (collecte réelle des 13 sources, file, page publique, formulaire, radar, infolettre, courriel, désinstallation) : aucune erreur PHP.
+- Filtre Organisateur de la page : graphies fusionnées (« OBVIA » et « Obvia », « RSN » et « Réseau santé numérique »).
+- « Qui organise » : une fiche collectée depuis le site du RSN est classée RSN, même sans catégorie TEC.
+- Mise en page : le passage en une colonne suit la largeur du bloc (requête de conteneur), plus seulement celle de la fenêtre.
+- Page Réglages : cadence réelle de la collecte (une source par passage de WP-Cron) au lieu de « deux minutes ».
+
 ### Limites connues
 Voir « Limites connues de la version 0.1.0 » dans `LISEZMOI.md`.

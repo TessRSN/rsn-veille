@@ -212,6 +212,30 @@ final class DonneesTest extends TestCase {
         $this->assertSame(['A' => 'rsn', 'B' => 'partenaires', 'C' => 'ecosysteme', 'D' => 'ecosysteme', 'E' => 'rsn'], $items);
     }
 
+    public function test_qui_organise_rsn_pour_une_fiche_collectee_depuis_le_site_du_rsn(): void {
+        // Source `rsn` (API TEC de rsn.quebec) : pas de catégorie TEC dans la fiche, mais c'est le RSN qui organise.
+        $this->entrepot->creer($this->fiche(['titre' => 'Journées scientifiques', 'categorie_rsn' => '', 'cle_source' => 'rsn:207', 'cles_source' => ['rsn:207'], 'source' => 'RSN : événements', 'organisateur' => 'RSN']));
+        $this->entrepot->creer($this->fiche(['titre' => 'Appel RSN', 'type' => 'appel', 'echeance' => '2026-12-01', 'categorie_rsn' => '', 'cle_source' => 'rsn_appels:9', 'cles_source' => ['rsn_appels:9']]));
+        $items = array_column(Donnees::construire('2026-10-25', $this->entrepot, [])['items'], 'organise_par', 'titre');
+        $this->assertSame('rsn', $items['Journées scientifiques']);
+        $this->assertSame('ecosysteme', $items['Appel RSN'], 'seule la clé `rsn:` compte, pas `rsn_appels:`');
+    }
+
+    public function test_organisateur_canonique_fusionne_les_graphies(): void {
+        $this->assertSame('Obvia', Donnees::organisateur_canonique('OBVIA'));
+        $this->assertSame('Obvia', Donnees::organisateur_canonique(' obvia '));
+        $this->assertSame('RSN', Donnees::organisateur_canonique('Réseau santé numérique'));
+        $this->assertSame('RSN', Donnees::organisateur_canonique('RSN'));
+        $this->assertSame('Fonds de recherche du Québec', Donnees::organisateur_canonique('FRQ'));
+        $this->assertSame('Université Laval', Donnees::organisateur_canonique('Université Laval'), 'nom inconnu rendu tel quel');
+        $this->assertSame('', Donnees::organisateur_canonique(''));
+
+        $this->entrepot->creer($this->fiche(['titre' => 'A', 'organisateur' => 'OBVIA', 'cle_source' => 'x:1']));
+        $this->entrepot->creer($this->fiche(['titre' => 'B', 'organisateur' => 'Réseau santé numérique', 'cle_source' => 'x:2']));
+        $items = array_column(Donnees::construire('2026-10-25', $this->entrepot, [])['items'], 'organisateur', 'titre');
+        $this->assertSame(['A' => 'Obvia', 'B' => 'RSN'], $items);
+    }
+
     public function test_qui_organise_fourni_par_evenements_rsn_garde(): void {
         // Catégorie reconnue par son slug dans TEC : le nom (traduit, renommé) ne compte plus.
         $items = Donnees::construire('2026-10-25', $this->entrepot, [$this->evenement_rsn(['categorie_rsn' => 'Partner events', 'organise_par' => 'partenaires'])])['items'];

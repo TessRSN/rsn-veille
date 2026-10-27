@@ -38,7 +38,7 @@ final class RenduReglages {
         }
         return $html . '<form method="post" action="' . esc_url((string) $c['url_actions']) . '">'
             . self::champs_action(PageReglages::ACTION_COLLECTER)
-            . '<p>' . esc_html__('Les sources actives sont collectées une à une, à deux minutes d’intervalle ; le Journal montre le résultat de chacune.', 'rsn-veille') . '</p>'
+            . '<p>' . esc_html__('Les sources actives sont collectées une à une, une source à chaque passage de WP-Cron (environ 5 minutes avec le cron du serveur, soit environ une heure en tout) ; le Journal montre le résultat de chacune.', 'rsn-veille') . '</p>'
             . '<p><button type="submit" class="button">' . esc_html__('Lancer la collecte maintenant', 'rsn-veille') . '</button></p>'
             . '</form>';
     }

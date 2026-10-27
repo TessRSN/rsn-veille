@@ -102,8 +102,9 @@ lancent par `npx wp-env run cli wp …`.
 - [ ] **Page Veille** : la liste montre les pages publiées et en brouillon ; en choisir une, enregistrer ;
       changer le statut d'une fiche dans la file : `wp post meta get <page> _elementor_element_cache` est vide.
 - [ ] **Import** : importer `docs/maquette/evenements-infolettres-2025-2026.json` après une collecte du RSN →
-      « Import terminé : 24 lus, N créés, M fusionnés, … » avec M ≥ 1 (le Hackathon en santé numérique 2025
-      et les autres événements du RSN déjà collectés) et N + M = 24 ; aucun doublon dans la file
+      « Import terminé : 24 lus, N créés, M fusionnés, … » avec N + M = 24 (M > 0 seulement si un événement
+      importé a exactement le même titre et la même date qu'une fiche déjà collectée ; avec l'API TEC de
+      rsn.quebec d'octobre 2026, M = 0 est normal) ; aucun doublon dans la file
       (onglet Publiées). Réimporter le même fichier → « 0 créé, 0 fusionné, 24 inchangés ».
 - [ ] Une fiche importée (onglet Publiées) : source `infolettre`, niveau M, organisateur réel, thèmes des
       étiquettes du fichier ; les événements d'un même numéro d'infolettre (même adresse) restent distincts.
