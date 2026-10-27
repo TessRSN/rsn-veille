@@ -1,7 +1,8 @@
 <?php
 /**
- * Gabarit de la page publique ([rsn_veille]) : ce qui suit le bandeau de docs/maquette/gabarit-v8.html
- * (le bandeau est fourni par le gabarit du site), sans le mode équipe, la file d'approbation, l'onglet
+ * Gabarit de la page publique ([rsn_veille]) d'après docs/maquette/gabarit-v9.html : bandeau (intro et
+ * boutons ; le titre est fourni par le gabarit du site), « À la une », puis le formulaire, les dates
+ * limites, l'agenda et les sources dans un même .wrap. Sans le mode équipe, la file d'approbation, l'onglet
  * Actualités ni la copie pour l'infolettre (tout cela vit dans wp-admin). Plus d'onglets : l'agenda et
  * les appels sont dans la même liste, filtrée par « Afficher ».
  *
@@ -33,15 +34,30 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
 ?>
 <div class="rsn-veille" role="region" aria-label="<?php echo esc_attr__("Veille de l'écosystème", 'rsn-veille'); ?>" data-section="<?php echo esc_attr($section); ?>" data-une="<?php echo esc_attr($une); ?>">
 <?php if ($avec_agenda) : ?>
-<div class="wrap">
-  <div class="actions">
-    <p><?php echo esc_html__("Les événements du RSN, ceux de nos partenaires et tout ce qui bouge en santé numérique au Québec : réseaux thématiques, IVADO, Obvia, Mila, FRQ, Digital Health Canada. Les appels de financement et de candidatures y figurent avec leur date limite.", 'rsn-veille'); ?></p>
-    <div class="act">
-      <a class="btn sobre" href="<?php echo esc_url(home_url('/veille.ics')); ?>"><?php echo $agenda_ics; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?><?php echo esc_html__("S'abonner au calendrier", 'rsn-veille'); ?></a>
-      <button class="btn" id="btn-proposer" type="button"><?php echo esc_html__('Proposer un événement', 'rsn-veille'); ?> <?php echo $fleche; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?></button>
+<div class="bandeau">
+  <div class="wrap">
+    <div class="tete">
+      <p><?php echo esc_html__("Les événements du RSN, ceux de nos partenaires et tout ce qui bouge en santé numérique au Québec : réseaux thématiques, IVADO, Obvia, Mila, FRQ, Digital Health Canada. Les appels de financement et de candidatures y figurent avec leur date limite.", 'rsn-veille'); ?></p>
+      <div class="act">
+        <a class="btn clair" href="<?php echo esc_url(home_url('/veille.ics')); ?>"><?php echo $agenda_ics; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?><?php echo esc_html__("S'abonner au calendrier", 'rsn-veille'); ?></a>
+        <button class="btn jaune" id="btn-proposer" type="button"><?php echo esc_html__('Proposer un événement', 'rsn-veille'); ?> <?php echo $fleche; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?></button>
+      </div>
     </div>
   </div>
+</div>
+<?php endif; ?>
 
+<?php if ($avec_une) : ?>
+  <section class="alaune" hidden aria-label="<?php echo esc_attr__('À la une du RSN', 'rsn-veille'); ?>">
+    <div class="wrap">
+      <div class="tete"><span class="titre"><i></i><?php echo esc_html__('À la une du RSN', 'rsn-veille'); ?></span><a class="tout" href="#" id="lien-rsn"><?php echo esc_html__('Tout ce que le RSN organise et finance →', 'rsn-veille'); ?></a></div>
+      <div class="unes" id="unes"></div>
+    </div>
+  </section>
+<?php endif; ?>
+
+<div class="wrap">
+<?php if ($avec_agenda) : ?>
   <section class="encadre" id="dialogue" hidden>
     <h2><?php echo esc_html__('Proposer un événement', 'rsn-veille'); ?></h2>
     <p><?php echo esc_html__("Votre proposition entre dans la file d'approbation de l'équipe du RSN. Elle sera publiée ici et, si elle s'y prête, reprise dans l'infolettre.", 'rsn-veille'); ?></p>
@@ -68,23 +84,16 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
     </form>
     <p class="merci" id="p-merci" role="status" tabindex="-1" hidden></p>
   </section>
-</div>
 <?php endif; ?>
 
-<?php if ($avec_une) : ?>
-  <section class="alaune" hidden aria-label="<?php echo esc_attr__('À la une du RSN', 'rsn-veille'); ?>">
-    <div class="wrap">
-      <div class="tete"><span class="titre"><i></i><?php echo esc_html__('À la une du RSN', 'rsn-veille'); ?></span><a class="tout" href="#" id="lien-rsn"><?php echo esc_html__('Tout ce que le RSN organise et finance →', 'rsn-veille'); ?></a></div>
-      <div class="unes" id="unes"></div>
-    </div>
-  </section>
-<?php endif; ?>
-
-<div class="wrap">
 <?php if ($avec_limites) : ?>
   <div class="limites" hidden>
     <span class="lab"><?php echo $horloge; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?><?php echo esc_html__('Dates limites', 'rsn-veille'); ?></span>
     <div class="defile" id="limites"></div>
+    <div class="fleches">
+      <button type="button" id="lim-prec" aria-label="<?php echo esc_attr__('Dates limites précédentes', 'rsn-veille'); ?>"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 3-5 5 5 5"/></svg></button>
+      <button type="button" id="lim-suiv" aria-label="<?php echo esc_attr__('Dates limites suivantes', 'rsn-veille'); ?>"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button>
+    </div>
   </div>
 <?php endif; ?>
 

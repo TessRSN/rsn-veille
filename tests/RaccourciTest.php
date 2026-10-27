@@ -54,7 +54,7 @@ final class RaccourciTest extends TestCase {
         $this->assertArrayNotHasKey('source', $donnees['items'][0]);
         $this->assertStringNotContainsString('obvia:42', $html);
 
-        foreach (['Mode équipe', 'mode-equipe', 'Prototype', 'prototype', "File d'approbation", 'id="file"', 'Actualités', 'infolettre"', 'btn-infolettre', 'Niveau', 'col-niv', 'bandeau'] as $absent) {
+        foreach (['Mode équipe', 'mode-equipe', 'Prototype', 'prototype', "File d'approbation", 'id="file"', 'Actualités', 'infolettre"', 'btn-infolettre', 'Niveau', 'col-niv'] as $absent) {
             $this->assertStringNotContainsString($absent, $html, $absent);
         }
         $this->assertStringContainsString('id="btn-proposer"', $html);
@@ -160,7 +160,7 @@ final class RaccourciTest extends TestCase {
         $this->assertStringContainsString('data-section="tout"', Raccourci::rendre(['section' => '<b>inconnue</b>']));
     }
 
-    public function test_tout_contient_actions_alaune_limites_et_pas_d_onglets(): void {
+    public function test_tout_contient_bandeau_alaune_limites_et_pas_d_onglets(): void {
         $html = Raccourci::rendre([]);
 
         $this->assertStringNotContainsString('class="onglets"', $html);
@@ -168,9 +168,15 @@ final class RaccourciTest extends TestCase {
         $this->assertStringContainsString('data-section="tout" data-une="1"', $html);
         $this->assertStringNotContainsString('id="vue-appels"', $html);
 
-        $this->assertStringContainsString('<a class="btn sobre" href="https://exemple.test/veille.ics">', $html);
+        $this->assertStringContainsString('<div class="bandeau">', $html);
+        $this->assertStringContainsString('<a class="btn clair" href="https://exemple.test/veille.ics">', $html);
         $this->assertStringContainsString("S&#039;abonner au calendrier", $html);
-        $this->assertStringContainsString('<button class="btn" id="btn-proposer" type="button">', $html);
+        $this->assertStringContainsString('<button class="btn jaune" id="btn-proposer" type="button">', $html);
+        $this->assertStringNotContainsString('class="actions"', $html);
+        $this->assertStringNotContainsString('class="btn sobre" href', $html);
+        $this->assertStringContainsString('<div class="fleches">', $html);
+        $this->assertStringContainsString('id="lim-prec" aria-label="Dates limites précédentes"', $html);
+        $this->assertStringContainsString('id="lim-suiv" aria-label="Dates limites suivantes"', $html);
 
         $this->assertStringContainsString('<section class="alaune" hidden', $html);
         $this->assertStringContainsString('À la une du RSN', $html);
@@ -182,8 +188,8 @@ final class RaccourciTest extends TestCase {
         $this->assertStringContainsString('<i class="appel"></i>', $html);
         $this->assertStringContainsString('id="tbl-sources"', $html);
 
-        // Ordre : actions, formulaire, à la une, dates limites, agenda, sources.
-        $ordre = ['class="actions"', 'id="dialogue"', 'class="alaune"', 'class="limites"', 'id="vue-agenda"', 'id="liste-agenda"', 'id="calendrier"', 'class="sources"'];
+        // Ordre : bandeau, à la une, formulaire, dates limites, agenda, sources.
+        $ordre = ['class="bandeau"', 'class="alaune"', 'id="dialogue"', 'class="limites"', 'id="vue-agenda"', 'id="liste-agenda"', 'id="calendrier"', 'class="sources"'];
         $positions = array_map(static fn (string $marque): int|false => strpos($html, $marque), $ordre);
         foreach ($positions as $i => $position) {
             $this->assertNotFalse($position, $ordre[$i]);
@@ -191,6 +197,17 @@ final class RaccourciTest extends TestCase {
                 $this->assertGreaterThan($positions[$i - 1], $position, $ordre[$i] . ' après ' . $ordre[$i - 1]);
             }
         }
+    }
+
+    public function test_rendu_a_des_div_equilibres_pour_chaque_section(): void {
+        foreach (['tout', 'agenda', 'appels'] as $section) {
+            Raccourci::reinitialiser();
+            $html = Raccourci::rendre(['section' => $section]);
+            $this->assertSame(substr_count($html, '<div'), substr_count($html, '</div>'), 'div équilibrés, section ' . $section);
+        }
+        Raccourci::reinitialiser();
+        $html = Raccourci::rendre(['une' => '0']);
+        $this->assertSame(substr_count($html, '<div'), substr_count($html, '</div>'), 'div équilibrés, une=0');
     }
 
     public function test_une_0_retire_la_bande_a_la_une(): void {
@@ -215,6 +232,8 @@ final class RaccourciTest extends TestCase {
         $this->assertStringContainsString('id="vue-agenda"', $html);
         $this->assertStringContainsString('id="f-qui"', $html);
         $this->assertStringContainsString('id="btn-proposer"', $html);
+        $this->assertStringContainsString('class="bandeau"', $html);
+        $this->assertStringNotContainsString('class="fleches"', $html);
         $this->assertStringNotContainsString('id="f-type"', $html);
         $this->assertStringNotContainsString('class="limites"', $html);
         $this->assertStringNotContainsString('id="limites"', $html);
@@ -230,6 +249,8 @@ final class RaccourciTest extends TestCase {
 
         $this->assertStringContainsString('<div class="limites" hidden>', $html);
         $this->assertStringContainsString('id="limites"', $html);
+        $this->assertStringContainsString('class="fleches"', $html);
+        $this->assertStringNotContainsString('class="bandeau"', $html);
         $this->assertStringContainsString('<div id="vue-appels">', $html);
         $this->assertStringContainsString('<div id="liste-appels"></div>', $html);
         foreach (['id="f-type"', 'id="f-qui"', 'id="f-mois"', 'id="f-recherche"', 'id="vue-agenda"', 'id="liste-agenda"', 'id="calendrier"', 'class="alaune"', 'id="btn-proposer"', 'class="actions"', 'id="dialogue"', 'class="sources"', 'veille.ics'] as $absent) {
