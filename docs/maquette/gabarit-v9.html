@@ -1,0 +1,618 @@
+<title>Événements et appels — maquette v9</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout : gabarit des pages rsn.quebec (bandeau marine, colonne de filtres à gauche comme Dernières nouvelles, frise à hexagones comme Événements). Thème clair seulement, comme le site. */
+:root{
+  --navy:#003469; --ink:#101828; --body:rgba(16,24,40,.72); --muted:#6E7A84; --rule:#DCE1E8; --trait:#3D6A99; --tint:#F5F7FA;
+  --yellow:#FFCC4E; --yellow-ink:#E3A800; --yellow-tint:#FFF4D1; --green:#00A759; --blue:#0061AF; --amber:#C99000; --bg:#ffffff;
+  --serif:"DM Serif Display",Georgia,"Times New Roman",serif;
+  --sans:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--body);font:400 15px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--navy)}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0;margin:0}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:400;margin:0;text-wrap:balance;letter-spacing:normal}
+.hex{width:13px;height:14px;flex:0 0 auto;overflow:visible}
+.gutter{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1140px;margin:0 auto}
+
+/* Bandeau de titre (comme le gabarit UiCore du site) */
+.bandeau{background:var(--navy);color:#fff;padding-block:40px 56px}
+.bandeau .ariane{font-size:15px;color:rgba(255,255,255,.72);margin-bottom:28px}
+.bandeau .ariane b{font-weight:400;color:#fff}
+.bandeau .ariane i{font-style:normal;margin:0 8px;opacity:.6}
+.bandeau h1{font-size:clamp(38px,6vw,58px);line-height:1.05;color:#fff}
+.proto{display:inline-flex;align-items:center;gap:8px;margin-top:22px;font-size:12.5px;color:rgba(255,255,255,.8)}
+.proto i{width:8px;height:8px;background:var(--yellow);transform:rotate(45deg)}
+
+/* Intro et actions */
+.intro{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:18px 30px;margin:52px 0 40px}
+.intro p{margin:0;max-width:56ch;font-size:16px}
+.intro .act{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px}
+.btn{display:inline-flex;align-items:center;gap:9px;padding:11px 20px;border-radius:10px;background:var(--yellow-tint);color:var(--ink);font-weight:600;font-size:14.5px;border:1px solid transparent;transition:background .2s,border-color .2s}
+.btn svg{width:15px;height:15px;color:var(--yellow-ink);transition:transform .2s}
+.btn:hover{border-color:var(--yellow-ink);background:#fff}
+.btn:hover svg{transform:translate(2px,-2px)}
+.btn.sobre{background:var(--tint)}
+.btn.sobre svg{color:var(--navy)}
+.btn.sobre:hover{border-color:var(--navy)}
+.btn.petit{padding:7px 12px;font-size:13px;border-radius:8px}
+.equipe{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);cursor:pointer;user-select:none}
+.equipe input{accent-color:var(--navy);width:16px;height:16px;margin:0}
+
+/* Onglets (filtres de la page Événements) */
+.onglets{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;border-bottom:1px solid var(--rule);padding-bottom:0;margin-bottom:40px}
+.onglet{display:inline-flex;align-items:center;gap:8px;padding:6px 0 10px;font-size:15px;font-weight:500;color:var(--body);border-bottom:1.5px solid transparent;margin-bottom:-1px}
+.onglet:hover{color:var(--navy)}
+.onglet[aria-selected="true"]{color:var(--navy);font-weight:600;border-bottom-color:var(--yellow-ink)}
+.onglet .n{font-size:12.5px;color:var(--muted);font-weight:500;font-variant-numeric:tabular-nums}
+.onglet .hex{color:var(--trait)}
+.onglet[aria-selected="true"] .hex{color:var(--yellow-ink)}
+
+/* Deux colonnes : filtres + contenu */
+.deux{display:grid;grid-template-columns:230px minmax(0,1fr);gap:56px;align-items:start}
+.cote{position:sticky;top:calc(16px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:22px}
+.annee{font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:9px 0 3px;border-bottom:1px solid var(--rule)}
+.plus-moins{font-size:13px;font-weight:600;color:var(--navy);padding:2px 0;border-bottom:1.5px solid var(--yellow-ink)}
+.recherche{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--trait);padding:6px 0}
+.recherche svg{width:17px;height:17px;color:var(--navy);flex:0 0 auto}
+.recherche input{border:0;outline:0;font:inherit;font-size:15px;color:var(--ink);width:100%;background:transparent;padding:4px 0;min-width:0}
+.recherche:focus-within{border-color:var(--yellow-ink)}
+.fhead{font-family:var(--serif);font-size:19px;line-height:1.2;color:var(--navy);margin:0 0 10px}
+.rubs{display:flex;flex-direction:column;border-top:1px solid var(--rule)}
+.rub{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border-bottom:1px solid var(--rule);padding:7px 0;font-weight:500;color:var(--ink);font-size:14.5px}
+.rub .n{margin-left:auto;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.rub .hex{visibility:hidden;color:var(--yellow-ink)}
+.rub:hover .t{text-decoration:underline;text-decoration-color:var(--yellow);text-decoration-thickness:1.5px;text-underline-offset:4px}
+.rub[aria-pressed="true"]{font-weight:600;color:var(--navy)}
+.rub[aria-pressed="true"] .hex{visibility:visible}
+.tags{display:flex;flex-wrap:wrap;gap:6px 14px}
+.tag{padding:2px 0;font-size:14px;color:var(--body);border-bottom:1px solid var(--rule)}
+.tag:hover{color:var(--navy);border-bottom-color:var(--navy)}
+.tag[aria-pressed="true"]{color:var(--navy);font-weight:600;border-bottom:1.5px solid var(--yellow-ink)}
+.reinit{font-size:13px;font-weight:600;color:var(--blue);text-align:left}
+.cote select{font:inherit;font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;width:100%}
+
+/* Têtes de section avec trait qui continue */
+.shead{display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin:0 0 18px}
+.shead::after{content:"";order:1;flex:1 1 40px;border-top:1px solid var(--trait)}
+.shead h2{display:flex;align-items:center;gap:10px;font-size:28px;line-height:1.2;color:var(--navy)}
+.shead h2 .hex{width:15px;height:16px;color:var(--yellow-ink)}
+.shead .aside{order:2;font-size:14px;color:var(--muted)}
+.bloc{margin-bottom:54px}
+.compte{font-size:14px;color:var(--muted);margin:-22px 0 22px}
+
+/* Frise d'événements (liste compacte de la page Événements) */
+.frise{border-left:1px solid var(--rule);padding:4px 0 6px;margin-left:7px}
+.ev{position:relative;display:grid;grid-template-columns:62px minmax(0,1fr);gap:18px;padding:14px 0 18px 26px}
+.ev > .hex{position:absolute;left:-7px;top:22px;background:#fff;color:var(--trait)}
+.ev.attente > .hex{color:var(--amber)}
+.ev + .ev{border-top:1px solid var(--rule)}
+.jour{font-family:var(--serif);font-size:26px;line-height:1;color:var(--navy);font-variant-numeric:tabular-nums}
+.jour small{display:block;font-family:var(--sans);font-size:11.5px;color:var(--muted);margin-top:5px;letter-spacing:.04em;text-transform:uppercase;font-weight:500}
+.jour small b{display:block;font-weight:400;text-transform:none;letter-spacing:0;margin-top:2px}
+.tx{min-width:0}
+.tx h3{font-family:var(--sans);font-size:17px;line-height:1.35;font-weight:500;color:var(--ink);margin:0 0 4px}
+.tx h3 a:hover{color:var(--navy);text-decoration:underline;text-decoration-color:var(--yellow);text-decoration-thickness:1.5px;text-underline-offset:4px}
+.meta{font-size:13.5px;color:var(--muted)}
+.meta b{font-weight:600;color:var(--navy)}
+.etiq{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0 0;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--trait)}
+.tx p{margin:7px 0 0;font-size:14.5px;max-width:66ch;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pied{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;margin-top:10px;font-size:14px}
+.plus{font-weight:600;color:var(--navy);border-bottom:1.5px solid var(--yellow-ink);padding-bottom:2px}
+.fmt{color:var(--muted)}
+.fmt b{color:var(--ink);font-weight:500}
+.src{font-size:12.5px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.niv{display:inline-block;min-width:17px;height:17px;line-height:15px;text-align:center;font-size:10.5px;font-weight:600;border:1px solid var(--trait);color:var(--trait);border-radius:4px;padding:0 3px}
+.outils{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-left:auto}
+.statut{font-size:12.5px;font-weight:600}
+.statut.publie{color:var(--green)} .statut.a_approuver{color:var(--amber)} .statut.ecarte{color:var(--muted)}
+.attente .tx{position:relative}
+.attente .tx::before{content:"";position:absolute;left:-10px;top:4px;bottom:4px;width:2px;background:var(--yellow)}
+
+/* Appels : tuile de date (page Événements) */
+.appel{display:grid;grid-template-columns:72px minmax(0,1fr);gap:20px;padding:20px 0;border-bottom:1px solid var(--rule)}
+.appel:first-child{border-top:1px solid var(--rule)}
+.tuile{width:72px;border-radius:12px;background:var(--yellow);color:var(--navy);text-align:center;padding:9px 0 8px;align-self:start}
+.tuile.gris{background:var(--tint);color:var(--ink)}
+.tuile b{display:block;font-family:var(--serif);font-weight:400;font-size:28px;line-height:1}
+.tuile span{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+.tuile i{display:block;font-style:normal;font-size:10.5px;font-weight:500;margin-top:1px;opacity:.8}
+.appel h3{font-family:var(--sans);font-size:17px;line-height:1.35;font-weight:500;color:var(--ink);margin:0 0 4px}
+.appel h3 a:hover{color:var(--navy);text-decoration:underline;text-decoration-color:var(--yellow);text-decoration-thickness:1.5px;text-underline-offset:4px}
+
+/* Actualités : lignes datées (Dernières nouvelles) */
+.actu{display:grid;grid-template-columns:64px minmax(0,1fr);gap:24px;align-items:start;padding:18px 0;border-bottom:1px solid var(--rule)}
+.actu:first-child{border-top:1px solid var(--rule)}
+.actu .d{display:flex;flex-direction:column;line-height:1}
+.actu .d b{font-family:var(--serif);font-weight:400;font-size:32px;color:var(--navy)}
+.actu .d span{font-size:12px;font-weight:500;color:var(--muted);margin-top:6px}
+.actu .cat{font-size:13px;color:var(--muted);margin-bottom:3px}
+.actu .cat strong{color:var(--navy);font-weight:600}
+.actu h3{font-family:var(--sans);font-size:17px;line-height:1.35;font-weight:500;color:var(--ink);margin:0 0 5px}
+.actu h3 a:hover{color:var(--navy);text-decoration:underline;text-decoration-color:var(--yellow);text-decoration-thickness:1.5px;text-underline-offset:4px}
+.actu p{margin:0;font-size:14.5px;max-width:70ch;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* Encadrés : file d'approbation, formulaire, vide */
+.encadre{padding:24px 28px;border-radius:14px;background:var(--tint);color:var(--ink);margin:0 0 36px}
+.encadre h2{font-size:24px;color:var(--navy);margin-bottom:6px}
+.encadre p{margin:0;max-width:72ch;font-size:14.5px;color:var(--body)}
+.chiffres{display:flex;flex-wrap:wrap;gap:12px 32px;margin-top:14px;font-size:14px;color:var(--muted)}
+.chiffres b{font-family:var(--serif);font-weight:400;font-size:30px;line-height:1;color:var(--navy);margin-right:7px;font-variant-numeric:tabular-nums}
+.champs{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:16px}
+.champs label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:var(--ink)}
+.champs input,.champs select,.champs textarea{font:inherit;font-size:14.5px;font-weight:400;padding:9px 11px;border:1px solid var(--rule);border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+.champs .large{grid-column:1/-1}
+.boutons{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;margin-top:16px}
+.boutons .note{font-size:13px;color:var(--muted)}
+.vide{padding:22px 26px;border-radius:14px;background:var(--tint);color:var(--ink)}
+
+/* Sources */
+.sources{margin:64px 0 60px}
+.tableau{overflow-x:auto}
+.sources table{width:100%;border-collapse:collapse;font-size:14px}
+.sources th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;padding:10px 12px 8px 0;border-bottom:1px solid var(--rule)}
+.sources td{padding:11px 12px 11px 0;border-bottom:1px solid var(--rule);vertical-align:top;color:var(--ink)}
+.sources td.n{text-align:right;font-variant-numeric:tabular-nums;padding-right:0;color:var(--muted)}
+.sources td a:hover{color:var(--navy);text-decoration:underline;text-decoration-color:var(--yellow);text-decoration-thickness:1.5px;text-underline-offset:4px}
+.legende{font-size:13.5px;color:var(--muted);margin:14px 0 0;max-width:78ch}
+.legende b{color:var(--ink);font-weight:600}
+
+/* Fiches d'événements à venir : lignes séparées par un trait fin, image à gauche à la hauteur du texte, bloc date sobre */
+.ev.avec-image{grid-template-columns:44px 230px minmax(0,1fr);column-gap:12px}
+.ev.avec-image .tx{padding-left:10px}
+.ev .im{display:block;align-self:stretch;min-height:150px;max-height:230px;border-radius:10px 0 0 10px;background:var(--tint) center/cover no-repeat;overflow:hidden}
+.ev .im img{width:100%;height:100%;object-fit:cover;display:block}
+.ev .infos{display:flex;flex-direction:column;gap:2px;font-size:14px;color:var(--ink);margin-top:3px}
+.ev .infos span{display:flex;gap:8px;align-items:flex-start}
+.ev .infos svg{width:15px;height:15px;flex:0 0 auto;margin-top:3px;color:var(--muted)}
+.niv-seulement-equipe .niv,.niv-seulement-equipe .col-niv,.niv-seulement-equipe .src,.niv-seulement-equipe .equipe-seulement{display:none}
+@media (max-width:820px){
+  .ev.avec-image{grid-template-columns:52px minmax(0,1fr)}
+  .ev.avec-image .im{grid-column:2;width:100%;max-width:none;aspect-ratio:16/9;max-height:none;min-height:0;align-self:start;border-radius:10px 10px 0 0}
+  .ev.avec-image .tx{grid-column:2;padding-left:0}
+}
+
+/* Affichage liste / calendrier */
+.barre{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 20px;margin:0 0 22px}
+.barre .compte{margin:0}
+.vues{display:flex;gap:16px}
+.vue{display:inline-flex;align-items:center;gap:7px;padding:2px 0;font-size:14px;font-weight:500;color:var(--body);border-bottom:1px solid var(--rule)}
+.vue svg{width:15px;height:15px;color:var(--muted)}
+.vue[aria-pressed="true"]{color:var(--navy);font-weight:600;border-bottom:1.5px solid var(--yellow-ink)}
+.vue[aria-pressed="true"] svg{color:var(--navy)}
+
+/* Calendrier mensuel */
+.cal-tete{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.cal-tete h2{font-size:28px;color:var(--navy);flex:1;min-width:0}
+.cal-tete h2 small{display:block;font-family:var(--sans);font-size:13px;color:var(--muted);margin-top:2px}
+.cal-nav{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;border:1px solid var(--rule);color:var(--navy);background:#fff}
+.cal-nav:hover{border-color:var(--navy)}
+.cal-nav svg{width:16px;height:16px}
+.cal-auj{font-size:13.5px;font-weight:600;color:var(--navy);border-bottom:1.5px solid var(--yellow-ink);padding-bottom:1px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--rule);border-left:1px solid var(--rule);touch-action:pan-y;user-select:none}
+.cal .jn{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 6px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);background:var(--tint)}
+.cal .c{min-height:92px;padding:6px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);text-align:left;display:flex;flex-direction:column;gap:3px;font:inherit;color:inherit;background:#fff;cursor:pointer}
+.cal .c.hors{background:#FAFBFC;color:var(--muted)}
+.cal .c.hors .num{color:var(--muted)}
+.cal .c:hover{background:var(--tint)}
+.cal .c[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--yellow-ink)}
+.cal .num{font-family:var(--serif);font-size:15px;color:var(--navy);line-height:1}
+.cal .c.auj .num{display:inline-block;background:var(--yellow);border-radius:6px;padding:3px 5px;margin:-3px 0 0 -5px}
+.cal .puce{font-size:11px;line-height:1.25;color:var(--ink);background:var(--tint);border-radius:4px;padding:2px 5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border-left:2px solid var(--trait)}
+.cal .puce.rsn{border-left-color:var(--yellow-ink);background:var(--yellow-tint)}
+.cal .puce.attente{border-left-color:var(--amber);border-style:dashed}
+.cal .plus{font-size:11px;color:var(--muted);border:0;font-weight:500}
+.cal-jour{margin-top:26px}
+.cal-legende{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px;color:var(--muted);margin-top:12px}
+.cal-legende i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:var(--tint);border-left:2px solid var(--trait)}
+.cal-legende i.rsn{background:var(--yellow-tint);border-left-color:var(--yellow-ink)}
+@media (max-width:640px){
+  .cal-tete h2{font-size:22px}
+  .cal .c{min-height:56px;padding:4px}
+  .cal .puce{display:none}
+  .cal .pts{display:flex;gap:3px;flex-wrap:wrap}
+  .cal .pt{width:6px;height:6px;border-radius:50%;background:var(--trait)}
+  .cal .pt.rsn{background:var(--yellow-ink)}
+  .cal .plus{display:none}
+  .ev.avec-image{grid-template-columns:52px minmax(0,1fr)}
+  .appel.avec-image{grid-template-columns:64px minmax(0,1fr)}
+}
+@media (min-width:641px){.cal .pts{display:none}}
+
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--navy);color:#fff;padding:11px 18px;border-radius:10px;font-size:14px;box-shadow:0 10px 30px rgba(0,52,105,.2);z-index:20;max-width:calc(100vw - 32px)}
+
+@media (prefers-reduced-motion:reduce){.btn,.btn svg{transition:none}}
+@media (max-width:820px){
+  .deux{grid-template-columns:minmax(0,1fr);gap:34px}
+  .cote{position:static}
+  .intro{margin-top:36px}
+  .ev{grid-template-columns:52px minmax(0,1fr);gap:14px;padding-left:22px}
+  .jour{font-size:22px}
+  .actu{grid-template-columns:52px minmax(0,1fr);gap:14px}
+  .actu .d b{font-size:26px}
+  .appel{grid-template-columns:64px minmax(0,1fr);gap:14px}
+  .tuile{width:64px}
+  .outils{margin-left:0}
+  .shead h2{font-size:24px}
+}
+</style>
+<style>
+/* v9 : bandeau compact et continu, À la une de la même couleur, flèches des dates limites, cadre jaune des fiches RSN.
+   v8 : ajouts à l'ancienne maquette. Bandeau avec intro et boutons, bande « À la une » calquée sur la bande Appels de l'accueil, bande des dates limites, pastilles. */
+.bandeau{padding-block:26px 30px}
+.bandeau .ariane{font-size:14px;margin-bottom:16px}
+.bandeau h1{font-size:clamp(32px,4.6vw,46px);line-height:1.08}
+.bandeau .tete{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:18px 40px}
+.bandeau .tete p{margin:10px 0 0;max-width:62ch;font-size:15.5px;line-height:1.5;color:rgba(255,255,255,.82)}
+.bandeau .act{display:flex;flex-wrap:wrap;gap:12px}
+.btn.clair{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+.btn.clair svg{color:#fff}
+.btn.clair:hover{background:rgba(255,255,255,.1);border-color:#fff}
+.btn.jaune{background:var(--yellow);color:var(--navy)}
+.btn.jaune svg{color:var(--navy)}
+.btn.jaune:hover{background:#fff;border-color:var(--yellow)}
+
+/* À la une : même dessin que la bande « Appels de financement ouverts » de l'accueil */
+.alaune{background:var(--navy);color:#fff;padding-block:20px 26px}
+.alaune .wrap{border-top:1px solid rgba(255,255,255,.18);padding-top:20px}
+.alaune .tete{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.alaune .titre{display:inline-flex;align-items:center;gap:10px;font-family:var(--serif);font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--yellow)}
+.alaune .titre i{width:7px;height:7px;border-radius:50%;background:var(--green)}
+.alaune .tout{font-size:14px;font-weight:500;color:#fff;border-bottom:1px solid rgba(255,255,255,.45);padding-bottom:1px}
+.alaune .tout:hover{border-bottom-color:var(--yellow)}
+.unes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.une{display:grid;grid-template-columns:52px minmax(0,1fr) 18px;gap:14px;align-items:start;padding:14px 16px;border:1px solid rgba(255,255,255,.22);border-radius:12px;background:rgba(255,255,255,.05);color:#fff;transition:border-color .2s,background .2s}
+.une:hover{border-color:var(--yellow);background:rgba(255,255,255,.09)}
+.une .date{width:52px;border-radius:9px;background:var(--yellow);color:var(--navy);text-align:center;padding:7px 0 6px;align-self:start}
+.une .date b{display:block;font-family:var(--serif);font-weight:400;font-size:22px;line-height:1}
+.une .date span{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.une .etat{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 8px;margin-bottom:5px;background:var(--yellow-tint);color:var(--navy)}
+.une .etat.nouveau{background:#D9342B;color:#fff}
+.une .etat.ev{background:rgba(255,255,255,.16);color:#fff}
+.une h3{font-family:var(--sans);font-size:15px;font-weight:600;line-height:1.3;color:#fff;margin:0 0 3px}
+.une .m{font-size:12.5px;color:rgba(255,255,255,.72);line-height:1.4}
+.une .fl{color:rgba(255,255,255,.6);font-size:18px;line-height:1;align-self:center}
+.une:hover .fl{color:var(--yellow)}
+
+/* Dates limites : bande claire */
+.limites{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:var(--yellow-tint);margin:0 0 30px}
+.limites .lab{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--navy);white-space:nowrap}
+.limites .lab svg{width:16px;height:16px;color:var(--yellow-ink)}
+.limites .defile{display:flex;gap:8px;overflow-x:auto;scroll-behavior:smooth;scrollbar-width:none;flex:1 1 auto;min-width:0;padding:2px 0}
+.limites .defile::-webkit-scrollbar{display:none}
+.limites .fleches{display:flex;gap:6px;flex:0 0 auto}
+.limites .fleches button{width:30px;height:30px;border-radius:50%;border:1px solid #F1DFA6;background:#fff;color:var(--navy);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .2s,border-color .2s}
+.limites .fleches button svg{width:14px;height:14px}
+.limites .fleches button:hover{border-color:var(--yellow-ink);background:var(--yellow)}
+.limites .fleches button:disabled{opacity:.35;cursor:default;background:#fff;border-color:#F1DFA6}
+.lim{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;background:#fff;border:1px solid #F1DFA6;border-radius:999px;padding:6px 12px;font-size:13px;color:var(--ink)}
+.lim b{color:var(--navy);font-weight:700}
+.lim .p{font-size:11px;font-weight:700;color:var(--navy);background:var(--yellow);border-radius:999px;padding:1px 7px}
+.lim:hover{border-color:var(--yellow-ink)}
+
+/* Pastilles sur les fiches */
+.pills{display:flex;flex-wrap:wrap;gap:5px 6px;margin:0 0 7px}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;line-height:1;border-radius:999px;padding:5px 9px;background:var(--tint);color:var(--ink)}
+.pill.type{background:var(--navy);color:#fff}
+.pill.type.appel{background:#fff;color:var(--navy);box-shadow:inset 0 0 0 1.5px var(--navy)}
+.pill.rsn{background:var(--yellow);color:var(--navy);font-weight:700}
+.pill.part{background:#E3ECF7;color:var(--navy)}
+.pill.orga{background:#E8EEF5;color:var(--navy)}
+.pill.theme{background:#fff;border:1px solid var(--rule);color:var(--body)}
+.ev.rsn > .hex{color:var(--yellow-ink)}
+/* Le corps de la fiche (image + texte) est un bloc à part, à droite de la date ; les fiches RSN le posent sur un fond gris très pâle avec un trait jaune à gauche. */
+.ev .corps{min-width:0}
+.ev.avec-image{grid-template-columns:44px minmax(0,1fr)}
+.ev.avec-image .corps{display:grid;grid-template-columns:230px minmax(0,1fr);column-gap:12px}
+.ev.rsn .corps{border-left:4px solid var(--yellow);border-radius:14px;overflow:hidden;background:#F6F8FA}
+.ev.rsn .tx{padding:14px 18px 16px}
+.ev.rsn.avec-image .tx{padding-left:12px}
+.ev.rsn .im{border-radius:0;align-self:stretch;max-height:none}
+.ev.rsn .im img{height:100%}
+.ev.appel-ev{grid-template-columns:62px minmax(0,1fr)}
+.ev.appel-ev .tuile{width:62px;padding:8px 0 7px}
+.ev.appel-ev .tuile b{font-size:24px}
+.ev .quand{font-size:12.5px;color:var(--muted);margin-top:6px}
+.passes-btn{display:flex;justify-content:center;margin:10px 0 0}
+.cote .rub.petit{font-size:14px}
+.cote .fhead.small{font-size:17px}
+@media (max-width:820px){.ev.avec-image{grid-template-columns:52px minmax(0,1fr)}.ev.avec-image .corps{grid-template-columns:minmax(0,1fr)}.ev.avec-image .im,.ev.avec-image .tx{grid-column:1}.ev.rsn.avec-image .tx{padding:14px 16px 16px}.unes{grid-template-columns:1fr}.limites{flex-wrap:wrap}.limites .defile{order:3;flex-basis:100%}.limites .fleches{margin-left:auto}}
+</style>
+
+<header class="bandeau gutter">
+  <div class="wrap">
+    <div class="ariane">Accueil<i>›</i><b>Événements et appels</b></div>
+    <div class="tete">
+      <div>
+        <h1>Événements et appels</h1>
+        <p>Les événements du RSN, ceux de nos partenaires et tout ce qui bouge en santé numérique au Québec : réseaux thématiques, IVADO, Obvia, Mila, FRQ, Digital Health Canada. Les appels de financement et de candidatures y figurent avec leur date limite.</p>
+      </div>
+      <div class="act">
+        <a class="btn clair" href="https://rsn.quebec/veille.ics"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 7h12M6 1.5v3M10 1.5v3"/></svg>S'abonner au calendrier</a>
+        <button class="btn jaune" id="btn-proposer" type="button">Proposer un événement <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12 12 4M6 4h6v6"/></svg></button>
+      </div>
+    </div>
+    <div class="proto"><i></i>Maquette v9 · données réelles collectées sur rsn.quebec le 27 octobre 2026, à la date du jour</div>
+  </div>
+</header>
+
+<section class="alaune gutter" aria-label="À la une du RSN">
+  <div class="wrap">
+    <div class="tete"><span class="titre"><i></i>À la une du RSN</span><a class="tout" href="#" id="lien-rsn">Tout ce que le RSN organise et finance →</a></div>
+    <div class="unes" id="unes"></div>
+  </div>
+</section>
+
+<main class="gutter"><div class="wrap">
+
+  <section class="encadre" id="dialogue" hidden style="margin-top:36px">
+    <h2>Proposer un événement</h2>
+    <p>Votre proposition entre dans la file d'approbation de l'équipe du RSN. Elle sera publiée ici et, si elle s'y prête, reprise dans l'infolettre.</p>
+    <form id="form-proposition">
+      <div class="champs">
+        <label class="large">Titre <input id="p-titre" required placeholder="Ex. : Colloque sur la souveraineté numérique en santé"></label>
+        <label>Date de début <input id="p-debut" type="date" required></label>
+        <label>Date de fin (si plusieurs jours) <input id="p-fin" type="date"></label>
+        <label>Organisateur <input id="p-orga" required placeholder="Ex. : Obvia"></label>
+        <label>Format <select id="p-format"><option>Présentiel</option><option>Virtuel</option><option>Hybride</option></select></label>
+        <label>Lieu et ville <input id="p-lieu" placeholder="Ex. : HEC Montréal, Montréal"></label>
+        <label>Lien d'information <input id="p-url" type="url" placeholder="https://"></label>
+        <label class="large">Courte description (2 à 3 phrases) <textarea id="p-resume" rows="3"></textarea></label>
+        <label>Votre courriel (pour vous répondre) <input id="p-courriel" type="email"></label>
+      </div>
+      <div class="boutons">
+        <button class="btn" type="submit">Envoyer à l'équipe</button>
+        <button class="btn sobre" type="button" id="btn-annuler">Annuler</button>
+      </div>
+    </form>
+  </section>
+
+  <div class="limites" style="margin-top:36px">
+    <span class="lab"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>Dates limites</span>
+    <div class="defile" id="limites"></div>
+    <div class="fleches"><button type="button" id="lim-prec" aria-label="Dates limites précédentes"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 3-5 5 5 5"/></svg></button><button type="button" id="lim-suiv" aria-label="Dates limites suivantes"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button></div>
+  </div>
+
+  <div class="deux" id="vue-agenda">
+    <aside class="cote">
+      <label class="recherche"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="m14 14 4 4"/></svg><input id="f-recherche" type="search" placeholder="Rechercher" aria-label="Rechercher un événement ou un appel"></label>
+      <div><div class="fhead">Afficher</div><div class="rubs" id="f-type"></div></div>
+      <div><div class="fhead">Qui organise</div><div class="rubs" id="f-qui"></div></div>
+      <div><div class="fhead">Mois</div><div class="rubs" id="f-mois"></div></div>
+      <div><div class="fhead">Format</div><div class="tags" id="f-format" data-cle="format"></div></div>
+      <div><div class="fhead">Lieu</div><div class="tags" id="f-region" data-cle="region"></div></div>
+      <div><div class="fhead">Thèmes</div><div class="tags" id="f-theme" data-cle="theme"></div></div>
+      <div><div class="fhead">Organisateur</div><select id="f-orga" aria-label="Organisateur"><option value="">Tous</option></select></div>
+      <button class="reinit" id="f-reinit" type="button">Réinitialiser les filtres</button>
+    </aside>
+    <div>
+      <div class="barre"><div class="compte" id="compte-agenda"></div></div>
+      <div id="liste-agenda"></div>
+    </div>
+  </div>
+
+  <section class="sources">
+    <div class="shead"><h2><svg class="hex" viewBox="0 0 24 26" aria-hidden="true" style="color:var(--navy)"><path d="M12 2 21.5 7.5v11L12 24 2.5 18.5v-11Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg>Sources lues</h2><span class="aside" id="maj"></span></div>
+    <div class="tableau"><table>
+      <thead><tr><th>Source</th><th>Ce qu'on lit</th><th style="text-align:right">Éléments</th></tr></thead>
+      <tbody id="tbl-sources"></tbody>
+    </table></div>
+    <p class="legende">Mise à jour chaque nuit. Un événement manque ? Proposez-le avec le bouton en haut de page : il sera relu par l'équipe avant publication.</p>
+  </section>
+</div></main>
+
+<script id="donnees" type="application/json">__DATA__</script>
+<script>
+(function(){
+  const D = JSON.parse(document.getElementById('donnees').textContent);
+  const items = D.items;
+  const AUJ = D.aujourdhui;
+  const MOIS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+  const MOIS_LONG = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const HEX = '<svg class="hex" viewBox="0 0 24 26" aria-hidden="true"><path d="M12 2 21.5 7.5v11L12 24 2.5 18.5v-11Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg>';
+  const ICO_DATE = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 7h12M6 1.5v3M10 1.5v3"/></svg>';
+  const ICO_LIEU = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 14.5s4.5-4.2 4.5-7.5a4.5 4.5 0 0 0-9 0c0 3.3 4.5 7.5 4.5 7.5Z"/><circle cx="8" cy="7" r="1.6"/></svg>';
+  const $ = s => document.querySelector(s);
+  const filtres = { type: '', qui: '', mois: '', format: '', region: '', theme: '', orga: '', q: '' };
+
+  const d = s => { const [a,m,j] = s.split('-').map(Number); return {a,m,j}; };
+  const cap = s => s[0].toUpperCase() + s.slice(1);
+  const dateLongue = s => { if(!s) return ''; const x = d(s); return `${x.j === 1 ? '1er' : x.j} ${MOIS_LONG[x.m-1]} ${x.a}`; };
+  const dateCourte = s => { if(!s) return ''; const x = d(s); return `${x.j} ${MOIS[x.m-1]}`; };
+  const esc = s => String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const lieuTexte = k => [k.lieu, k.ville].filter(Boolean).filter((v,i,t)=>t.indexOf(v)===i).join(' – ');
+  const jours = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
+  const decalerJours = (s, n) => { const x = new Date(s + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+  const enCours = k => k.type === 'evenement' && !!k.fin && k.debut < AUJ && k.fin >= AUJ;
+  const cle = k => k.type === 'appel' ? (k.echeance || (k.debut < AUJ ? AUJ : k.debut)) : (enCours(k) ? AUJ : k.debut);
+  const finAppel = k => k.echeance || decalerJours(k.debut, 30); // sans date limite : 30 jours après la publication
+  const passe = k => k.type === 'appel' ? finAppel(k) < AUJ : (k.fin || k.debut) < AUJ;
+  const estRSN = k => k.qui === 'rsn';
+
+  function blocJour(k){
+    const a = d(k.debut), b = d(k.fin || k.debut);
+    const meme = !k.fin || k.fin === k.debut;
+    if (enCours(k)) return `<div class="jour">→${b.j}<small>${MOIS[b.m-1]}<b>en cours</b></small></div>`;
+    if (meme) return `<div class="jour">${a.j}<small>${MOIS[a.m-1]}<b>${a.a}</b></small></div>`;
+    if (a.m === b.m) return `<div class="jour">${a.j}–${b.j}<small>${MOIS[a.m-1]}<b>${a.a}</b></small></div>`;
+    return `<div class="jour">${a.j}<small>${MOIS[a.m-1]}<b>${a.a}</b></small></div>`;
+  }
+  function periode(k){
+    const a = d(k.debut), b = d(k.fin || k.debut); const h = k.heure ? `, ${k.heure.replace(':',' h ')}` : '';
+    if (!k.fin || k.fin === k.debut) return `${dateLongue(k.debut)}${h}`;
+    if (a.m === b.m && a.a === b.a) return `Du ${a.j} au ${b.j} ${MOIS_LONG[a.m-1]} ${a.a}`;
+    return `Du ${a.j === 1 ? '1er' : a.j} ${MOIS_LONG[a.m-1]}${a.a !== b.a ? ' ' + a.a : ''} au ${dateLongue(k.fin)}`;
+  }
+  function pills(k){
+    const p = [];
+    p.push(`<span class="pill type ${k.type}">${k.type === 'appel' ? 'Appel' : 'Événement'}</span>`);
+    if (enCours(k)) p.push(`<span class="pill" style="background:var(--yellow-tint);color:var(--navy)">En cours</span>`);
+    if (k.qui === 'rsn') p.push(`<span class="pill rsn">RSN</span>`);
+    else if (k.qui === 'partenaires') p.push(`<span class="pill part">Partenaire · ${esc(k.organisateur)}</span>`);
+    else p.push(`<span class="pill orga">${esc(k.organisateur)}</span>`);
+    if (k.format) p.push(`<span class="pill">${esc(k.format)}</span>`);
+    if (k.langue === 'en') p.push(`<span class="pill">En anglais</span>`);
+    (k.etiquettes||[]).forEach(e => p.push(`<span class="pill theme">${esc(e)}</span>`));
+    return `<div class="pills">${p.join('')}</div>`;
+  }
+  // ligne compacte (passés)
+  function ligneEv(k){
+    return `<div class="ev ${estRSN(k)?'rsn':''}" data-id="${k.id}">${HEX}${blocJour(k)}<div class="corps"><div class="tx">
+      ${pills(k)}
+      <h3><a href="${esc(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
+      <div class="meta"><b>${esc(k.organisateur)}</b>${lieuTexte(k) ? ' · ' + esc(lieuTexte(k)) : ''}</div>
+      <div class="pied"><a class="plus" href="${esc(k.url)}" target="_blank" rel="noopener">Plus d'information</a></div>
+    </div></div></div>`;
+  }
+  // fiche à venir : l'ancienne fiche, image à gauche, avec les pastilles
+  function carteEv(k){
+    const fmt = [k.prix && esc(k.prix)].filter(Boolean).join(' · ');
+    const lieu = [lieuTexte(k), k.format].filter(Boolean).join(' · ');
+    return `<div class="ev ${estRSN(k)?'rsn':''} ${k.image?'avec-image':''}" data-id="${k.id}">${HEX}${blocJour(k)}<div class="corps">
+      ${k.image ? `<a class="im" href="${esc(k.url)}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"><img src="${esc(k.image)}" alt="" loading="lazy"></a>` : ''}
+      <div class="tx">
+        ${pills(k)}
+        <h3><a href="${esc(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
+        <div class="infos"><span>${ICO_DATE}${periode(k)}</span>${lieu ? `<span>${ICO_LIEU}${esc(lieu)}</span>` : ''}</div>
+        ${k.resume ? `<p>${esc(k.resume)}</p>` : ''}
+        <div class="pied"><a class="plus" href="${esc(k.url)}" target="_blank" rel="noopener">Plus d'information</a>${fmt ? `<span class="fmt">${fmt}</span>` : ''}</div>
+      </div></div></div>`;
+  }
+  // appel dans la même frise : tuile jaune de date limite à la place du bloc date
+  function carteAppel(k){
+    const x = d(k.echeance || k.debut);
+    const tuile = k.echeance ? `<div class="tuile"><b>${x.j}</b><span>${MOIS[x.m-1]}</span><i>date limite</i></div>`
+                             : `<div class="tuile gris"><b>${x.j}</b><span>${MOIS[x.m-1]}</span><i>publié</i></div>`;
+    const sansLimite = k.echeance ? '' : `<span class="pill" style="background:var(--yellow-tint);color:var(--navy)">Date limite à venir</span>`;
+    return `<div class="ev appel-ev ${estRSN(k)?'rsn':''}" data-id="${k.id}">${HEX}${tuile}<div class="corps"><div class="tx">
+      ${pills(k)}
+      <h3><a href="${esc(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
+      <div class="meta"><b>${esc(k.organisateur)}</b> · ${esc(k.categorie||'Appel')}${k.echeance ? ' · publié le ' + dateCourte(k.debut) : ''}${sansLimite ? ' ' + sansLimite : ''}</div>
+      ${k.resume ? `<p>${esc(k.resume)}</p>` : ''}
+      <div class="pied"><a class="plus" href="${esc(k.url)}" target="_blank" rel="noopener">Consulter l'appel</a></div>
+    </div></div></div>`;
+  }
+
+  function filtrer(L){
+    const q = filtres.q.trim().toLowerCase();
+    if (q) L = L.filter(k => (k.titre + ' ' + k.organisateur + ' ' + (k.resume||'') + ' ' + (k.etiquettes||[]).join(' ')).toLowerCase().includes(q));
+    if (filtres.type) L = L.filter(k => k.type === filtres.type);
+    if (filtres.qui) L = L.filter(k => k.qui === filtres.qui);
+    if (filtres.format) L = L.filter(k => k.format === filtres.format);
+    if (filtres.region) L = L.filter(k => k.region === filtres.region);
+    if (filtres.theme) L = L.filter(k => (k.etiquettes||[]).includes(filtres.theme));
+    if (filtres.orga) L = L.filter(k => k.organisateur === filtres.orga);
+    return L;
+  }
+  const aVenir = () => items.filter(k => !passe(k));
+  const passes = () => items.filter(k => passe(k));
+
+  function rendre(){
+    const anciens = filtres.mois === 'passes';
+    let L = filtrer(anciens ? passes() : aVenir());
+    if (filtres.mois === 'plus-tard') { const apres = decalerMois(moisSuivants()[NB_MOIS-1], 1); L = L.filter(k => cle(k).slice(0,7) >= apres); }
+    else if (filtres.mois && !anciens) L = L.filter(k => cle(k).slice(0,7) === filtres.mois || (k.type === 'evenement' && k.debut.slice(0,7) <= filtres.mois && (k.fin||k.debut).slice(0,7) >= filtres.mois));
+    L.sort((a,b) => anciens ? cle(b).localeCompare(cle(a)) : cle(a).localeCompare(cle(b)));
+    const groupes = new Map();
+    for (const k of L) { const c = (anciens || cle(k) >= AUJ ? cle(k) : AUJ).slice(0,7); if (!groupes.has(c)) groupes.set(c, []); groupes.get(c).push(k); }
+    let html = '';
+    for (const [c, G] of groupes) { const x = d(c + '-01');
+      const nE = G.filter(k=>k.type==='evenement').length, nA = G.length - nE;
+      const aside = [nE && `${nE} événement${nE>1?'s':''}`, nA && `${nA} appel${nA>1?'s':''}`].filter(Boolean).join(' · ');
+      html += `<section class="bloc"><div class="shead"><h2>${HEX}${cap(MOIS_LONG[x.m-1])} ${x.a}</h2><span class="aside">${aside}</span></div><div class="frise">${G.map(k => k.type === 'appel' ? carteAppel(k) : (anciens ? ligneEv(k) : carteEv(k))).join('')}</div></section>`; }
+    $('#liste-agenda').innerHTML = L.length ? html : '<div class="vide">Aucun élément ne correspond à ces filtres.</div>';
+    const nE = L.filter(k=>k.type==='evenement').length, nA = L.length - nE;
+    $('#compte-agenda').textContent = anciens ? `${L.length} élément${L.length>1?'s':''} passé${L.length>1?'s':''} depuis octobre 2025`
+      : `${nE} événement${nE>1?'s':''} et ${nA} appel${nA>1?'s':''} à venir`;
+    rendreRubs(); rendreMois();
+  }
+  const NB_MOIS = 4;
+  function decalerMois(m, n){ const x = d(m+'-01'); x.m += n; while (x.m > 12) { x.m -= 12; x.a++; } return `${x.a}-${String(x.m).padStart(2,'0')}`; }
+  function moisSuivants(){ const mois = []; let c = d(AUJ); for (let i = 0; i < NB_MOIS; i++) { mois.push(`${c.a}-${String(c.m).padStart(2,'0')}`); c.m++; if (c.m > 12) { c.m = 1; c.a++; } } return mois; }
+  function rub(cleF, val, label, n){ return `<button type="button" class="rub" data-cle="${cleF}" data-val="${val}" aria-pressed="${filtres[cleF]===val}">${HEX}<span class="t">${label}</span><span class="n">${n}</span></button>`; }
+  function rendreRubs(){
+    const base = filtres.mois === 'passes' ? passes() : aVenir();
+    const sans = (c) => { const f = Object.assign({}, filtres); f[c] = ''; return k => (!f.type || k.type===f.type) && (!f.qui || k.qui===f.qui); };
+    const T = base.filter(sans('type')), Q = base.filter(sans('qui'));
+    $('#f-type').innerHTML = rub('type','', 'Tout', T.length) + rub('type','evenement','Événements', T.filter(k=>k.type==='evenement').length) + rub('type','appel','Appels', T.filter(k=>k.type==='appel').length);
+    $('#f-qui').innerHTML = rub('qui','', 'Tous', Q.length) + rub('qui','rsn','RSN', Q.filter(k=>k.qui==='rsn').length) + rub('qui','partenaires','Partenaires', Q.filter(k=>k.qui==='partenaires').length) + rub('qui','ecosysteme','Écosystème', Q.filter(k=>k.qui==='ecosysteme').length);
+  }
+  function rendreMois(){
+    const E = filtrer(aVenir()); const mois = moisSuivants(); const apres = decalerMois(mois[mois.length-1], 1);
+    const n = m => E.filter(k => cle(k).slice(0,7) === m || (k.type==='evenement' && k.debut.slice(0,7) <= m && (k.fin||k.debut).slice(0,7) >= m)).length;
+    let html = rub('mois','', 'Tous les mois à venir', E.length);
+    let annee = d(AUJ).a;
+    for (const m of mois) { const x = d(m+'-01');
+      if (x.a !== annee) { annee = x.a; html += `<div class="annee">${x.a}</div>`; }
+      html += rub('mois', m, cap(MOIS_LONG[x.m-1]), n(m)); }
+    const nTard = E.filter(k => cle(k).slice(0,7) >= apres).length;
+    html += rub('mois','plus-tard','Plus tard', nTard);
+    html += rub('mois','passes','Événements passés', filtrer(passes()).length);
+    $('#f-mois').innerHTML = html;
+  }
+  function rendreTags(){
+    const E = aVenir();
+    const compte = (f) => { const c = new Map(); E.forEach(k => (f(k)||[]).forEach(v => v && c.set(v, (c.get(v)||0)+1))); return [...c.entries()].sort((a,b)=>b[1]-a[1]); };
+    const tags = (id, cleF, liste) => { $(id).innerHTML = liste.map(([v,n]) => `<button type="button" class="tag" data-cle="${cleF}" data-val="${esc(v)}" aria-pressed="${filtres[cleF]===v}">${esc(v)}</button>`).join(''); };
+    tags('#f-format','format', compte(k => [k.format]));
+    tags('#f-region','region', compte(k => [k.region]));
+    tags('#f-theme','theme', compte(k => k.etiquettes).slice(0, 10));
+    const orgas = compte(k => [k.organisateur]);
+    $('#f-orga').innerHTML = '<option value="">Tous</option>' + orgas.map(([v,n]) => `<option value="${esc(v)}" ${filtres.orga===v?'selected':''}>${esc(v)} (${n})</option>`).join('');
+  }
+
+  function rendreUnes(){
+    const U = aVenir().filter(estRSN).sort((a,b) => cle(a).localeCompare(cle(b))).slice(0, 3);
+    $('#unes').innerHTML = U.map(k => {
+      const x = d(cle(k));
+      let etat;
+      if (k.type === 'appel') { const r = jours(AUJ, k.echeance); etat = jours(k.debut, AUJ) <= 7 ? '<span class="etat nouveau">Nouveau</span>' : `<span class="etat">Ferme dans ${r} jour${r>1?'s':''}</span>`; }
+      else etat = '<span class="etat ev">Événement RSN</span>';
+      const m = k.type === 'appel' ? esc(k.resume||'').split(/[.:]/)[0].slice(0, 70) : [periode(k), k.format].filter(Boolean).join(' · ');
+      return `<a class="une" href="${esc(k.url)}" target="_blank" rel="noopener"><div class="date"><b>${x.j}</b><span>${MOIS[x.m-1]}</span></div><div>${etat}<h3>${esc(k.titre)}</h3><div class="m">${esc(m)}</div></div><span class="fl" aria-hidden="true">→</span></a>`;
+    }).join('');
+  }
+  function rendreLimites(){
+    const A = aVenir().filter(k => k.type === 'appel' && k.echeance).sort((a,b) => a.echeance.localeCompare(b.echeance));
+    $('#limites').innerHTML = A.map(k => `<a class="lim" href="${esc(k.url)}" target="_blank" rel="noopener"><b>${dateCourte(k.echeance)}</b>${esc(k.titre.split(' : ')[0].slice(0, 44))}<span class="p">${k.qui==='rsn' ? 'RSN' : esc(k.organisateur.replace('Fonds de recherche du Québec','FRQ'))}</span></a>`).join('');
+  }
+  function majFleches(){
+    const f = $('#limites'); if (!f) return;
+    $('#lim-prec').disabled = f.scrollLeft <= 2;
+    $('#lim-suiv').disabled = f.scrollLeft + f.clientWidth >= f.scrollWidth - 2;
+  }
+  $('#lim-prec').addEventListener('click', () => { const f = $('#limites'); f.scrollBy({left: -Math.round(f.clientWidth * .7), behavior: 'smooth'}); });
+  $('#lim-suiv').addEventListener('click', () => { const f = $('#limites'); f.scrollBy({left: Math.round(f.clientWidth * .7), behavior: 'smooth'}); });
+  $('#limites').addEventListener('scroll', majFleches, {passive: true});
+  window.addEventListener('resize', majFleches);
+  function rendreSources(){
+    $('#tbl-sources').innerHTML = D.sources.map(s => `<tr><td><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.nom)}</a></td><td>${esc(s.flux)}</td><td class="n">${s.nb}</td></tr>`).join('');
+    $('#maj').textContent = `Dernière collecte : ${dateLongue(D.genere_le)}`;
+  }
+
+  document.addEventListener('click', e => {
+    const b = e.target.closest('.rub, .tag'); if (!b) return;
+    const c = b.dataset.cle, v = b.dataset.val;
+    filtres[c] = (b.classList.contains('tag') && filtres[c] === v) ? '' : v;
+    rendre(); rendreTags();
+  });
+  $('#f-orga').addEventListener('change', e => { filtres.orga = e.target.value; rendre(); });
+  $('#f-recherche').addEventListener('input', e => { filtres.q = e.target.value; rendre(); });
+  $('#f-reinit').addEventListener('click', () => { Object.keys(filtres).forEach(k => filtres[k] = ''); $('#f-recherche').value = ''; rendre(); rendreTags(); });
+  $('#lien-rsn').addEventListener('click', e => { e.preventDefault(); filtres.qui = 'rsn'; filtres.type = ''; filtres.mois = ''; rendre(); $('#vue-agenda').scrollIntoView({behavior:'smooth'}); });
+  $('#btn-proposer').addEventListener('click', () => { $('#dialogue').hidden = false; $('#dialogue').scrollIntoView({behavior:'smooth'}); $('#p-titre').focus(); });
+  $('#btn-annuler').addEventListener('click', () => { $('#dialogue').hidden = true; });
+  $('#form-proposition').addEventListener('submit', e => { e.preventDefault(); $('#dialogue').hidden = true; const t = document.createElement('div'); t.className = 'toast'; t.textContent = 'Merci ! Votre proposition est dans la file de l’équipe.'; document.body.appendChild(t); setTimeout(() => t.remove(), 3500); });
+
+  rendreUnes(); rendreLimites(); rendreTags(); rendre(); rendreSources(); majFleches();
+})();
+</script>
