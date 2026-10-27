@@ -60,12 +60,18 @@ final class Donnees {
             $organise = $element['organise_par'] ?? null;
             $organisateur = self::organisateur_canonique((string) ($item['organisateur'] ?? ''));
             if (!in_array($organise, self::ORGANISE_PAR, true)) {
-                // Le RSN organise ses propres fiches : collectées depuis son site (`rsn:`), appels de son flux
-                // (`rsn_appels:`) ou organisateur reconnu comme « RSN », même sans catégorie TEC.
+                // La catégorie du site décide quand elle est connue. Sans catégorie, le RSN organise ses propres
+                // fiches : collectées depuis son site (`rsn:`), appels de son flux (`rsn_appels:`) ou organisateur
+                // reconnu comme « RSN ».
+                $categorie = trim((string) ($element['categorie_rsn'] ?? ''));
                 $cle_source = (string) ($element['cle_source'] ?? '');
-                $organise = str_starts_with($cle_source, 'rsn:') || str_starts_with($cle_source, 'rsn_appels:') || $organisateur === 'RSN'
-                    ? 'rsn'
-                    : self::organise_par((string) ($element['categorie_rsn'] ?? ''));
+                if ($categorie !== '') {
+                    $organise = self::organise_par($categorie);
+                } else {
+                    $organise = str_starts_with($cle_source, 'rsn:') || str_starts_with($cle_source, 'rsn_appels:') || $organisateur === 'RSN'
+                        ? 'rsn'
+                        : self::organise_par('');
+                }
             }
             $item['organise_par'] = $organise;
             $item['organisateur'] = $organisateur;
@@ -145,6 +151,10 @@ final class Donnees {
             } elseif ((string) $evenements[$position]['image_url'] === '') {
                 // Doublon : la fiche collectée gagne si elle a une image, sinon l'événement du RSN.
                 $evenements[$position] = $tableau;
+            } else {
+                // La fiche collectée garde son image, mais l'événement du RSN fait foi pour « Qui organise ».
+                $evenements[$position]['categorie_rsn'] = $tableau['categorie_rsn'];
+                $evenements[$position]['organise_par'] = $tableau['organise_par'] ?? null;
             }
         }
 

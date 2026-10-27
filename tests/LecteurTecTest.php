@@ -21,6 +21,18 @@ final class LecteurTecTest extends TestCase {
         $this->assertSame('Événements RSN', $r->fiches[0]->categorie_rsn);
     }
 
+    public function test_categorie_lue_pour_la_source_rsn_telle_qu_elle_s_appelle_vraiment(): void {
+        // La source s'appelle « RSN : événements » : seul l'identifiant `rsn` la désigne.
+        $json = '{"events":[{"id":5,"title":"Atelier partenaire","start_date":"2026-11-04 09:00:00","end_date":"2026-11-04 10:00:00","url":"https://x.test/5","categories":[{"name":"Événements partenaires","slug":"partenaires"}]}]}';
+        $source = ['id' => 'rsn', 'nom' => 'RSN : événements', 'niveau' => 'A', 'type_source' => 'sante_numerique'];
+        $this->assertSame('Événements partenaires', (new LecteurTec())->lire($json, $source)->fiches[0]->categorie_rsn);
+        // Une autre source TEC : la catégorie du site d'un tiers n'a pas de sens ici.
+        $autre = ['id' => 'dhc', 'nom' => 'Digital Health Canada', 'niveau' => 'A', 'type_source' => 'sante_numerique'];
+        $this->assertSame('', (new LecteurTec())->lire($json, $autre)->fiches[0]->categorie_rsn);
+        // Même un nom « RSN » ne suffit plus sans l'identifiant.
+        $this->assertSame('', (new LecteurTec())->lire($json, ['id' => 'x', 'nom' => 'RSN'] + $autre)->fiches[0]->categorie_rsn);
+    }
+
     public function test_toute_la_journee_sans_heure(): void {
         $json = '{"events":[{"id":7,"title":"Journée","all_day":true,"start_date":"2026-11-04 00:00:00","end_date":"2026-11-04 23:59:59","url":"https://x.test/7","description":"","venue":[],"categories":[],"cost":""}]}';
         $f = (new LecteurTec())->lire($json, ['id' => 'x', 'nom' => 'X', 'niveau' => 'A', 'type_source' => 'sante'])->fiches[0];

@@ -71,7 +71,8 @@ final class LecteurTec implements Lecteur {
 
         $fiche->image_url = $this->image($e['image'] ?? null);
 
-        if (($source['nom'] ?? null) === 'RSN') {
+        // Catégorie du site du RSN seulement (source `rsn`) : elle décide de « Qui organise ».
+        if (($source['id'] ?? '') === 'rsn') {
             $categorie = $this->premier_objet($e['categories'] ?? null);
             $fiche->categorie_rsn = $this->texte($categorie['name'] ?? null);
         }
