@@ -16,6 +16,13 @@ final class EntrepotWordPress implements Entrepot {
     /** Statuts WordPress des fiches : publiée, à approuver, écartée. */
     private const STATUTS_WP = ['publish', 'pending', 'draft'];
 
+    /**
+     * Statuts des recherches d'une fiche existante (clé de source, dédoublonnage, URL) : la corbeille en plus.
+     * Une fiche mise à la corbeille depuis l'éditeur compte comme écartée : la collecte ne la recrée pas et
+     * ne la republie pas. Elle n'est ni listée ni comptée.
+     */
+    private const STATUTS_RECHERCHE = ['publish', 'pending', 'draft', 'trash'];
+
     public function trouver_par_cle_source(string $cle): ?Fiche {
         return $cle === '' ? null : $this->premiere(TypeContenu::META_CLE, $cle);
     }
@@ -32,7 +39,7 @@ final class EntrepotWordPress implements Entrepot {
         }
         // Une seule fiche, la plus ancienne de cette URL qui n'est pas une proposition (source différente ou
         // absente) : le coût ne dépend pas du nombre de propositions qui partagent l'URL.
-        $arguments = self::requete(self::STATUTS_WP);
+        $arguments = self::requete(self::STATUTS_RECHERCHE);
         $arguments['posts_per_page'] = 1;
         $arguments['fields'] = 'ids';
         $arguments['meta_query'] = [
@@ -355,7 +362,7 @@ final class EntrepotWordPress implements Entrepot {
 
     /** Copie de la première fiche (plus petit identifiant) dont la méta vaut exactement $valeur. */
     private function premiere(string $cle_meta, string $valeur): ?Fiche {
-        $arguments = self::requete(self::STATUTS_WP);
+        $arguments = self::requete(self::STATUTS_RECHERCHE);
         $arguments['posts_per_page'] = 1;
         $arguments['fields'] = 'ids';
         // BINARY : comparaison exacte (la collation MySQL ignorerait la casse et les accents).

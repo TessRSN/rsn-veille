@@ -403,4 +403,26 @@ final class EntrepotContratTest extends TestCase {
         // Sur-ensemble : la règle exacte des appels est appliquée ensuite par Donnees.
         $this->assertSame($garde, self::ids($e->lister_pour_page('2025-10-25', '2026-10-25', '2026-07-27')));
     }
+    public function test_wordpress_fiche_a_la_corbeille_trouvee_par_sa_cle_et_jamais_recreee(): void {
+        $e = new EntrepotWordPress();
+        $id = $e->creer(self::fiche());
+        // « Déplacer dans la corbeille » depuis l'éditeur de WordPress.
+        wp_update_post(['ID' => $id, 'post_status' => 'trash']);
+
+        $trouvee = $e->trouver_par_cle_source('ex:1');
+        $this->assertSame($id, $trouvee->id);
+        $this->assertSame('ecarte', $trouvee->statut, 'une fiche à la corbeille compte comme écartée');
+        $this->assertSame($id, $e->trouver_par_dedoublonnage(self::fiche()->cle_dedoublonnage())->id);
+        $this->assertSame($id, $e->trouver_par_url('https://exemple.ca/atelier?id=1')->id);
+
+        // Collecte suivante : la fiche n'est ni recréée ni republiée.
+        $d = new Depot($e);
+        $this->assertTrue($d->existe(self::fiche()));
+        $this->assertContains($d->integrer(self::fiche(['debut' => '2026-11-21'])), ['mis_a_jour', 'inchange']);
+        $this->assertSame('trash', get_post_status($id));
+        $this->assertCount(1, $GLOBALS['rsn_veille_wp']['posts']);
+        // Ni listée ni comptée.
+        $this->assertSame([], $e->lister(''));
+        $this->assertSame(['a_approuver' => 0, 'publie' => 0, 'ecarte' => 0, 'a_verifier' => 0], $e->compter());
+    }
 }
