@@ -133,26 +133,39 @@ Sorties pour d'autres usages : `https://rsn.quebec/wp-json/rsn/v1/veille` (JSON 
 
 Chaque temps se fait seulement quand la personne qui porte le projet l'a demandé.
 
-### Temps 1 : page en brouillon, quelques jours
+### Temps 1 : page de test, quelques jours
 
-Installer l'extension, faire les réglages (section 3), lancer la collecte, importer les infolettres, créer la page Veille **en brouillon** (section 4) et la prévisualiser. Pendant quelques jours : vérifier le rendu (ordinateur et mobile), approuver des fiches, lire le Journal chaque matin (la collecte de 3 h s'est-elle faite ?), essayer le formulaire « Proposer un événement » et la page Infolettre. Les extraits Code Snippets existants (44, 45, 53, 61, 62) ne sont pas touchés.
+Installer l'extension, faire les réglages (section 3), lancer la collecte, importer les infolettres, puis créer la page Veille **en brouillon ou privée** (section 4) et la prévisualiser. Sur rsn.quebec, cette page existe déjà : c'est la **page de test**, une page ordinaire (bloc « Code court »), à renommer « Événements et appels » (voir « Après la mise à jour de la 0.2.0 vers la 0.3.0 »). Pendant quelques jours : vérifier le rendu (ordinateur et mobile), approuver des fiches, lire le Journal chaque matin (la collecte de 3 h s'est-elle faite ?), essayer le formulaire « Proposer un événement » et la page Infolettre. Les extraits Code Snippets existants (44, 45, 53, 61, 62) ne sont pas touchés.
 
 ### Temps 2 : la page Veille remplace `/calendrier-evenements/`
 
-1. **Garder une sortie de secours** : dupliquer la page `/calendrier-evenements/` (ou noter précisément son contenu actuel : le raccourci de l'extrait 61 et sa mise en page Elementor).
-2. Dans la page `/calendrier-evenements/` (adresse conservée), remplacer le raccourci de l'extrait 61 par `[rsn_veille]` (dans le même widget Code court d'Elementor), enregistrer. **Depuis la 0.3.0**, la page de référence est une page ordinaire (section 4) : sur cette page Elementor, le bandeau ne touchera pas l'en-tête du thème. Pour avoir le rendu voulu, garder plutôt la page de test, renommée « Événements et appels », et lui donner l'adresse `/calendrier-evenements/` à la place de l'ancienne page (mise en brouillon, ou son adresse changée).
-3. Choisir cette page dans Veille › Réglages › **Page Veille** (pour que les purges de cache visent la page publique, pas le brouillon).
-4. **Vérifier** la page publiée, hors connexion : l'agenda s'affiche, le filtre **Qui organise › RSN** retrouve l'usage de l'ancienne page, le calendrier, les appels, le formulaire, et la bande **« À la une du RSN » a son fond jusqu'aux bords de la fenêtre** sans défilement horizontal de la page (section 4). Vérifier les menus et les liens des pages d'accueil qui pointent vers `/calendrier-evenements/`.
-5. **Seulement ensuite**, désactiver l'extrait Code Snippets **61** (désactiver avant ferait afficher le raccourci brut).
-6. Purger le cache LiteSpeed du site une fois.
-7. Mettre la page Veille en brouillon, créée au temps 1, à la corbeille (ou la garder en brouillon pour des essais).
+Deux voies. La **voie A** est recommandée : depuis la 0.3.0, la page de référence est une page ordinaire (section 4), où le bandeau touche l'en-tête du thème. La voie B garde l'ancienne page Elementor, avec un rendu moins bon.
 
-**Retour en arrière** : réactiver l'extrait 61 et remettre l'ancien raccourci (ou restaurer la copie de la page), purger le cache. L'extension peut rester active : elle ne modifie pas l'ancienne page.
+**Voie A (recommandée) : la page de test devient la page publique.**
+1. **Libérer l'adresse** : dans l'ancienne page Elementor `/calendrier-evenements/`, changer d'abord son adresse (permalien) pour `/calendrier-evenements-ancien/`, enregistrer, puis la passer en **brouillon**. (Une page en brouillon garde son adresse : sans ce changement, la page de test recevrait `/calendrier-evenements-2/`.) Elle sert de sortie de secours : rien n'est mis à la corbeille à ce temps.
+2. **Donner l'adresse à la page de test** : la page de test, déjà renommée « Événements et appels », prend l'adresse `/calendrier-evenements/`. La publier (elle passe de brouillon ou privée à publiée).
+3. Choisir cette page dans Veille › Réglages › **Page Veille** (pour que les purges de cache visent la page publique).
+4. **Vérifier** la page publiée, hors connexion : l'agenda s'affiche, le filtre **Qui organise › RSN** retrouve l'usage de l'ancienne page, le calendrier, les appels, le formulaire, le bandeau qui touche l'en-tête du thème, et la bande **« À la une du RSN » a son fond jusqu'aux bords de la fenêtre** sans défilement horizontal de la page (section 4). Vérifier les menus et les liens des pages d'accueil qui pointent vers `/calendrier-evenements/` (l'adresse est la même ; un menu qui visait l'ancienne page par son identifiant, et non par son adresse, est à corriger).
+5. **Seulement ensuite**, désactiver l'extrait Code Snippets **61** (désactiver avant ferait afficher le raccourci brut sur l'ancienne page, encore accessible par son nouveau lien).
+6. Purger le cache LiteSpeed du site une fois.
+
+**Retour en arrière (voie A)** : l'inverse. Remettre la page de test en brouillon, lui redonner son ancienne adresse, rendre l'adresse `/calendrier-evenements/` à l'ancienne page Elementor et la republier, réactiver l'extrait 61 s'il a été désactivé, choisir de nouveau la page de test (ou l'ancienne) dans Réglages › Page Veille, purger le cache. L'extension peut rester active : elle ne modifie pas l'ancienne page.
+
+**Voie B : garder l'ancienne page Elementor.**
+1. **Garder une sortie de secours** : dupliquer la page `/calendrier-evenements/` (ou noter précisément son contenu actuel : le raccourci de l'extrait 61 et sa mise en page Elementor).
+2. Dans la page `/calendrier-evenements/` (adresse conservée), remplacer le raccourci de l'extrait 61 par `[rsn_veille]` (dans le même widget Code court d'Elementor), enregistrer. **Rendu moins bon** : les sections et les colonnes d'Elementor ajoutent leurs marges, donc le bandeau ne touche pas l'en-tête du thème et l'adaptation de la classe `rsn-veille-page` ne vaut pas (section 4).
+3. Choisir cette page dans Veille › Réglages › **Page Veille**.
+4. **Vérifier** comme à l'étape 4 de la voie A (le bandeau qui touche l'en-tête en moins).
+5. **Seulement ensuite**, désactiver l'extrait Code Snippets **61**.
+6. Purger le cache LiteSpeed du site une fois.
+7. Mettre à la corbeille la page de test (ou la garder en brouillon pour des essais).
+
+**Retour en arrière (voie B)** : réactiver l'extrait 61 et remettre l'ancien raccourci (ou restaurer la copie de la page), purger le cache. L'extension peut rester active : elle ne modifie pas l'ancienne page.
 
 ### Temps 3 : la version anglaise avec WPML
 
 1. Dans WPML › Réglages › **Traduction des types de publication** et **Traduction des taxonomies**, régler « Fiches de veille » (`rsn_veille`) et « Thèmes » (`rsn_theme`) sur **Non traduisible** : les fiches restent communes aux deux langues et l'écran des fiches n'est pas filtré par langue.
-2. Traduire la page `/calendrier-evenements/` avec WPML (le raccourci `[rsn_veille]` se retrouve tel quel dans la version anglaise). L'extension garde ses caches (JSON et iCal) **par langue** (`rsn_veille_json_fr`, `rsn_veille_json_en`) et les vide tous ensemble ; elle purge aussi LiteSpeed et le cache Elementor de la page traduite (retrouvée par WPML à partir de la page choisie dans Réglages › Page Veille, qui reste la page française).
+2. Traduire la page publique `/calendrier-evenements/` (la page de test devenue publique, voie A) avec WPML (le raccourci `[rsn_veille]` se retrouve tel quel dans la version anglaise). L'extension garde ses caches (JSON et iCal) **par langue** (`rsn_veille_json_fr`, `rsn_veille_json_en`) et les vide tous ensemble ; elle purge aussi LiteSpeed et le cache Elementor de la page traduite (retrouvée par WPML à partir de la page choisie dans Réglages › Page Veille, qui reste la page française).
 3. Les textes de l'extension passent par la traduction de WordPress (domaine `rsn-veille`). La version 0.3.0 ne livre **aucun fichier de traduction** : la page anglaise affiche les textes français tant que les chaînes ne sont pas traduites. Cela vaut aussi pour les textes des bandes « À la une du RSN » et « Dates limites », et pour « En cours » et « Date limite à venir », écrits par le JavaScript de la page : ils sont dans la même liste de chaînes du domaine « rsn-veille ». Les traduire avec WPML › String Translation (chaînes du domaine « rsn-veille »), ou avec une extension comme Loco Translate.
 4. Vérifier la page anglaise : les mêmes fiches, les dates, le formulaire, `veille.ics` ; retirer une fiche dans la file et vérifier qu'elle disparaît aussi de la page anglaise (hors connexion).
 

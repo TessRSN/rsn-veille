@@ -29,7 +29,7 @@ WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se lancent par `n
 - [ ] Aucune trace du mode équipe : ni case « Mode équipe », ni file d'approbation, ni onglet
       Actualités, ni bouton « Copier pour l'infolettre », ni niveau A/B/C/M, ni nom de source
       technique, ni le mot « Prototype ». Les fiches à approuver n'apparaissent pas.
-- [ ] Style conforme à la maquette v8 : titres de mois en DM Serif Display avec hexagone et trait
+- [ ] Style conforme à la maquette v9 : titres de mois en DM Serif Display avec hexagone et trait
       #3D6A99 qui continue, frise à hexagones, fiches sans contour, image à gauche étirée à la hauteur
       du texte, bloc date serif, thèmes en petites capitales, « Plus d'information » souligné de jaune.
 - [ ] Qui organise : RSN ne garde que la catégorie TEC de slug `rsn` (ou nommée « Événements RSN » /
@@ -114,7 +114,7 @@ débit : `wp transient list --search='rsn_veille_debit_*'` puis `wp transient de
 
 ## Ressources et cohabitation
 
-- [ ] Sur la page Veille, `veille.css` et `veille.js` sont chargés avec `?ver=0.2.0` (onglet Réseau) ;
+- [ ] Sur la page Veille, `veille.css` et `veille.js` sont chargés avec `?ver=0.3.0` (onglet Réseau) ;
       sur une autre page du site (accueil, Nouvelles), ni l'un ni l'autre.
 - [ ] Les polices Google ne sont pas chargées une seconde fois par l'extension (pas de feuille
       `rsn-veille-polices`) ; `add_filter('rsn_veille_charger_polices', '__return_true')` dans un
