@@ -124,7 +124,7 @@ final class LecteurIvado extends LecteurHtml {
     /**
      * Complète une fiche IVADO avec la page résolue : titre (sans le suffixe « | IVADO »), URL finale
      * et, si le flux en donne un pour cette URL, résumé. Format et région sont alors refaits avec le titre.
-     * Une page de redirection ne donne pas de résumé et ne refait ni format ni région : l'adresse devient la cible (sinon l'URL résolue) et le titre de la balise <title> n'est pris que si la fiche n'en a pas.
+     * Une page de redirection ne donne pas de résumé et ne refait ni format ni région : l'adresse devient la cible (sinon l'URL résolue) et le titre de la balise <title> n'est pris que si la fiche n'en a pas et qu'il ne contient pas « redirect ».
      *
      * @param array<string,string> $resumes_par_url Résultat de resumes_par_url().
      */
@@ -136,7 +136,8 @@ final class LecteurIvado extends LecteurHtml {
         $titre = trim(preg_replace('/\s*\|\s*IVADO\s*$/iu', '', $titre) ?? $titre);
         if ($redirection !== null) {
             // Le flux d'IVADO ne donne pas de titre : sans lui la fiche serait ignorée. Un titre déjà posé est gardé.
-            if ($fiche->titre === '' && $titre !== '') {
+            // Le <title> d'une page de passage (« Redirect », « Redirecting… ») n'est pas celui de l'événement.
+            if ($fiche->titre === '' && $titre !== '' && stripos($titre, 'redirect') === false) {
                 $fiche->titre = $titre;
             }
             $fiche->url = $redirection['cible'] !== '' ? $redirection['cible'] : $url_finale;

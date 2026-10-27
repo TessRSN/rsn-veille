@@ -167,6 +167,19 @@ final class LecteursHtmlTest extends TestCase {
         $this->assertSame(['', 'https://ivado.ca/evenements/x/'], [$g->titre, $g->url]);
     }
 
+    public function test_ivado_titre_redirect_jamais_repris_comme_titre(): void {
+        // « Redirect », « Redirecting… », « Redirection » : le titre d'une page de passage n'est pas celui de l'événement.
+        foreach (['Redirect', 'Redirecting... | IVADO', 'REDIRECTION | IVADO', 'Page Redirect | IVADO'] as $titre) {
+            $f = new Fiche();
+            LecteurIvado::completer($f, '<html><head><title>' . $titre . '</title><meta http-equiv="refresh" content="0; url=https://exemple.test/cible"></head><body></body></html>', 'https://ivado.ca/evenements/x/');
+            $this->assertSame(['', 'https://exemple.test/cible'], [$f->titre, $f->url], $titre);
+        }
+        // Un vrai titre est toujours repris.
+        $g = new Fiche();
+        LecteurIvado::completer($g, '<html><head><title>IA en santé 2026 | IVADO</title><meta http-equiv="refresh" content="0; url=https://exemple.test/cible"></head><body></body></html>', 'https://ivado.ca/evenements/x/');
+        $this->assertSame('IA en santé 2026', $g->titre);
+    }
+
     public function test_ivado_page_normale_toujours_completee(): void {
         $this->assertNull(LecteurIvado::redirection($this->fixture('ivado.html')));
         $this->assertNull(LecteurIvado::redirection('<html><head><title>IA en santé 2026 | IVADO</title></head><body><h1>IA en santé 2026</h1></body></html>'));

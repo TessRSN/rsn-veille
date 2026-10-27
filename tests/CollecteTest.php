@@ -631,6 +631,29 @@ final class CollecteTest extends TestCase {
 
     // --- Purge des caches ---
 
+    public function test_purge_au_changement_de_version(): void {
+        update_option(Collecte::OPTION_REGLAGES, ['page_veille_id' => 42]);
+        // Option absente (mise à jour depuis 0.1.0) : purge puis version enregistrée.
+        Collecte::purger_si_nouvelle_version();
+        $this->assertSame([[42]], rsn_veille_bouchons_declenchements('litespeed_purge_post'));
+        $this->assertCount(1, rsn_veille_bouchons_declenchements('rsn_veille_caches_purges'));
+        $this->assertSame(RSN_VEILLE_VERSION, get_option(Collecte::OPTION_VERSION));
+        // Même version : rien de plus.
+        Collecte::purger_si_nouvelle_version();
+        $this->assertCount(1, rsn_veille_bouchons_declenchements('litespeed_purge_post'));
+        $this->assertCount(1, rsn_veille_bouchons_declenchements('rsn_veille_caches_purges'));
+        // Autre version enregistrée : purge de nouveau.
+        update_option(Collecte::OPTION_VERSION, '0.1.0');
+        Collecte::purger_si_nouvelle_version();
+        $this->assertCount(2, rsn_veille_bouchons_declenchements('litespeed_purge_post'));
+        $this->assertSame(RSN_VEILLE_VERSION, get_option(Collecte::OPTION_VERSION));
+    }
+
+    public function test_la_purge_de_version_est_accrochee_a_admin_init(): void {
+        $rappels = array_column($GLOBALS['rsn_veille_wp']['actions']['admin_init'] ?? [], 'rappel');
+        $this->assertContains([Collecte::class, 'purger_si_nouvelle_version'], $rappels);
+    }
+
     public function test_purge_sans_page_veille_declenche_seulement_l_action_des_modules(): void {
         Collecte::purger_caches();
         $this->assertSame([], rsn_veille_bouchons_declenchements('litespeed_purge_post'));

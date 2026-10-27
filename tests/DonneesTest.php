@@ -119,6 +119,15 @@ final class DonneesTest extends TestCase {
         $this->assertSame('RSN', $items[0]['organisateur']);
     }
 
+    public function test_doublon_la_fiche_collectee_avec_image_mise_en_avant_gagne(): void {
+        // Pas d'image de la source, mais une image mise en avant choisie à la main : la fiche collectée l'emporte.
+        $this->entrepot->creer($this->fiche(['image_url' => '', 'image_manuelle' => 'https://rsn.quebec/wp-content/uploads/choisie.jpg']));
+        $items = Donnees::construire('2026-10-25', $this->entrepot, [$this->evenement_rsn(['image_url' => ''])])['items'];
+        $this->assertCount(1, $items);
+        $this->assertSame('https://www.obvia.ca/evenements/colloque', $items[0]['url']);
+        $this->assertSame('https://rsn.quebec/wp-content/uploads/choisie.jpg', $items[0]['image_url']);
+    }
+
     public function test_evenement_rsn_sans_doublon_ajoute(): void {
         $this->entrepot->creer($this->fiche([]));
         $items = Donnees::construire('2026-10-25', $this->entrepot, [$this->evenement_rsn(['titre' => 'Journées scientifiques', 'debut' => '2025-09-15'])])['items'];

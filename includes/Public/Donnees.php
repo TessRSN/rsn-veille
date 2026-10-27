@@ -148,8 +148,9 @@ final class Donnees {
             $position = $positions[$rsn->cle_dedoublonnage()] ?? null;
             if ($position === null) {
                 $evenements[] = $tableau;
-            } elseif ((string) $evenements[$position]['image_url'] === '') {
-                // Doublon : la fiche collectée gagne si elle a une image, sinon l'événement du RSN.
+            } elseif ((string) $evenements[$position]['image_url'] === '' && (string) ($evenements[$position]['image_manuelle'] ?? '') === '') {
+                // Doublon : la fiche collectée gagne si elle a une image (de la source ou mise en avant à la main),
+                // sinon l'événement du RSN.
                 $evenements[$position] = $tableau;
             } else {
                 // La fiche collectée garde son image, mais l'événement du RSN fait foi pour « Qui organise ».

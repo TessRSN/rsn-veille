@@ -30,6 +30,8 @@ final class Collecte {
     public const OPTION_REGLAGES = 'rsn_veille_reglages';
     public const OPTION_FILE = 'rsn_veille_file';
     public const OPTION_DERNIERE = 'rsn_veille_derniere_collecte';
+    /** Dernière version de l'extension dont les caches publics ont été purgés (voir `purger_si_nouvelle_version`). */
+    public const OPTION_VERSION = 'rsn_veille_version';
     public const CROCHET_NUIT = 'rsn_veille_nuit';
     public const CROCHET_SOURCE = 'rsn_veille_source';
     public const VERROU = 'rsn_veille_collecte_en_cours';
@@ -116,6 +118,8 @@ final class Collecte {
         add_action('deleted_post', [self::class, 'purger_apres_suppression'], 10, 2);
         // Extension mise à jour sans réactivation : la collecte quotidienne est planifiée quand même.
         add_action('admin_init', [self::class, 'planifier_nuit']);
+        // Idem pour les caches : une mise à jour change le JSON public et les textes de la page.
+        add_action('admin_init', [self::class, 'purger_si_nouvelle_version']);
     }
 
     // --- Planification ---
@@ -243,6 +247,19 @@ final class Collecte {
             delete_post_meta($id_page, self::META_ELEMENTOR);
         }
         do_action('rsn_veille_caches_purges');
+    }
+
+    /**
+     * Mise à jour de l'extension (sans réactivation) : au premier chargement de l'admin avec une autre version,
+     * purge les caches publics (JSON par langue, LiteSpeed, Elementor) puis retient la version. Sans effet
+     * quand la version est déjà celle de l'option.
+     */
+    public static function purger_si_nouvelle_version(): void {
+        if (get_option(self::OPTION_VERSION, '') === RSN_VEILLE_VERSION) {
+            return;
+        }
+        self::purger_caches();
+        update_option(self::OPTION_VERSION, RSN_VEILLE_VERSION, false);
     }
 
     /**
