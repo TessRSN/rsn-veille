@@ -110,15 +110,15 @@ public function test_image_manuelle_prime_sur_image_url(): void             // i
 - Test: `tests/PageFileTest.php`
 
 **Interfaces:**
-- Consumes: `Fiche::$cree_a` (tâche 1).
-- Produces: `PageFile::filtrer(array $fiches, string $statut, string $type, string $source, ?int $maintenant = null): array` — pour `a_approuver` et `a_verifier` : tri par `cree_a` décroissant (null en dernier), puis `id` décroissant ; sinon l'ordre de 0.1.0. `PageFile::est_nouvelle(Fiche $f, int $maintenant): bool` — `cree_a !== null && $maintenant - $f->cree_a < 86400`. Le rendu ajoute `<span class="rsn-veille-nouveau">Nouveau</span>` après le titre dans ces deux onglets quand `est_nouvelle` est vrai.
+- Consumes: `Fiche::$cree_le` (jour d'arrivée, `AAAA-MM-JJ`, déjà présent en 0.1.0 ; `post_date` ne convient pas, elle suit la date de l'événement).
+- Produces: `PageFile::filtrer(array $fiches, string $statut, string $type, string $source): array` — pour `a_approuver` et `a_verifier` : tri par `cree_le` décroissant (null en dernier), puis `id` décroissant ; sinon l'ordre de 0.1.0. `PageFile::est_nouvelle(Fiche $f, string $aujourdhui): bool` — `cree_le !== null && $f->cree_le >= <aujourd'hui − 1 jour>`. Le rendu ajoute `<span class="rsn-veille-nouveau">Nouveau</span>` après le titre dans ces deux onglets quand `est_nouvelle` est vrai (`$aujourdhui` = `rsn_veille_aujourdhui()`).
 
 - [ ] **Step 1 : tests qui échouent**
 
 ```php
-public function test_a_approuver_trie_par_arrivee_decroissante(): void   // cree_a 100, 300, 200 (et une null) → ordre 300, 200, 100, null
+public function test_a_approuver_trie_par_arrivee_decroissante(): void   // cree_le 2026-10-20 (id 1), 2026-10-27 (id 2), 2026-10-27 (id 3), null (id 4) → ordre 3, 2, 1, 4
 public function test_publiees_gardent_le_tri_par_date_d_evenement(): void
-public function test_repere_nouveau_sous_24_heures(): void             // maintenant 1000000 ; cree_a 1000000-3600 → nouvelle ; 1000000-90000 → pas nouvelle ; null → pas nouvelle
+public function test_repere_nouveau_aujourd_hui_ou_hier(): void       // aujourd'hui 2026-10-27 ; cree_le 2026-10-27 et 2026-10-26 → nouvelle ; 2026-10-25 → non ; null → non
 public function test_rendu_a_approuver_affiche_nouveau(): void          // la chaîne 'rsn-veille-nouveau' apparaît pour la fiche récente, pas pour l'ancienne
 ```
 
