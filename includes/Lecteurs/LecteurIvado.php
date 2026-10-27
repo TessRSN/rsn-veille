@@ -65,13 +65,76 @@ final class LecteurIvado extends LecteurHtml {
     }
 
     /**
+     * Reconnaît une page de redirection (IVADO en publie pour des événements hébergés ailleurs) : « redirect » dans le
+     * titre ou le premier titre h1, un `meta refresh`, ou une affectation de `window.location` / `location.href`
+     * dans un script. Null si la page n'en est pas une ; sinon l'adresse cible http(s), ou '' si elle est illisible.
+     * La cible d'une affectation est un littéral ou une variable affectée par un littéral dans un script ; une affectation
+     * d'une variable jamais définie (le suivi commun à toutes les pages d'IVADO) n'est pas une redirection.
+     *
+     * @return array{cible: string}|null
+     */
+    public static function redirection(string $html): ?array {
+        $lecteur = new self();
+        $document = $lecteur->document($html);
+        if ($document === null) {
+            return null;
+        }
+        $xpath = $lecteur->xpath($document);
+        $est = false;
+        foreach (['title', 'h1'] as $balise) {
+            $texte = $lecteur->texte($document->getElementsByTagName($balise)->item(0));
+            $est = $est || stripos($texte, 'redirect') !== false;
+        }
+
+        $cible = '';
+        foreach ($xpath->query('//meta[translate(@http-equiv, "REFSH", "refsh")="refresh"]') as $meta) {
+            $est = true;
+            if ($cible === '' && preg_match('/url\s*=\s*[\'"]?([^\'";\s]+)/i', $lecteur->attribut($meta, 'content'), $m) === 1) {
+                $cible = $m[1];
+            }
+        }
+
+        $scripts = '';
+        foreach ($document->getElementsByTagName('script') as $script) {
+            $scripts .= $script->textContent . "\n";
+        }
+        // Toutes les pages d'IVADO portent un suivi qui fait « window.location = lien » seulement si la variable
+        // `lien` existe : une affectation compte donc seulement si sa valeur est un littéral ou une variable définie.
+        $motif = '/(?:\b(?:window|document|self|top)\s*\.\s*)?\blocation(?:\s*\.\s*href)?\s*=(?!=)\s*([^;\n]+)/';
+        if (preg_match_all($motif, $scripts, $affectations) > 0) {
+            foreach ($affectations[1] as $valeur) {
+                $valeur = trim($valeur);
+                if (preg_match('/^([\'"])(.*?)\1/', $valeur, $l) === 1
+                    || (preg_match('/^([A-Za-z_$][\w$]*)\s*$/', $valeur, $v) === 1
+                        && preg_match('/\b' . preg_quote($v[1], '/') . '\s*=\s*([\'"])(.*?)\1/', $scripts, $l) === 1)) {
+                    $est = true;
+                    $cible = $cible !== '' ? $cible : $l[2];
+                    break;
+                }
+            }
+        }
+
+        if (!$est) {
+            return null;
+        }
+        $cible = trim(html_entity_decode($cible, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        return ['cible' => preg_match('~^https?://[^\s]+$~i', $cible) === 1 ? $cible : ''];
+    }
+
+    /**
      * Complète une fiche IVADO avec la page résolue : titre (sans le suffixe « | IVADO »), URL finale
      * et, si le flux en donne un pour cette URL, résumé. Format et région sont alors refaits avec le titre.
+     * Une page de redirection ne donne ni titre ni résumé : seule l'adresse change (la cible, sinon l'URL résolue).
      *
      * @param array<string,string> $resumes_par_url Résultat de resumes_par_url().
      */
     public static function completer(Fiche $fiche, string $html_page, string $url_finale, array $resumes_par_url = []): void {
         $lecteur = new self();
+        $redirection = self::redirection($html_page);
+        if ($redirection !== null) {
+            $fiche->url = $redirection['cible'] !== '' ? $redirection['cible'] : $url_finale;
+            return;
+        }
         $document = $lecteur->document($html_page);
         $titre = $document === null ? '' : $lecteur->texte($document->getElementsByTagName('title')->item(0));
         $titre = trim(preg_replace('/\s*\|\s*IVADO\s*$/iu', '', $titre) ?? $titre);
