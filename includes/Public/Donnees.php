@@ -58,14 +58,22 @@ final class Donnees {
                 $item[$cle] = $element[$cle] ?? null;
             }
             $organise = $element['organise_par'] ?? null;
+            $organisateur = self::organisateur_canonique((string) ($item['organisateur'] ?? ''));
             if (!in_array($organise, self::ORGANISE_PAR, true)) {
-                // Une fiche collectée depuis le site du RSN (source `rsn`) est organisée par le RSN, même sans catégorie TEC.
-                $organise = str_starts_with((string) ($element['cle_source'] ?? ''), 'rsn:')
+                // Le RSN organise ses propres fiches : collectées depuis son site (`rsn:`), appels de son flux
+                // (`rsn_appels:`) ou organisateur reconnu comme « RSN », même sans catégorie TEC.
+                $cle_source = (string) ($element['cle_source'] ?? '');
+                $organise = str_starts_with($cle_source, 'rsn:') || str_starts_with($cle_source, 'rsn_appels:') || $organisateur === 'RSN'
                     ? 'rsn'
                     : self::organise_par((string) ($element['categorie_rsn'] ?? ''));
             }
             $item['organise_par'] = $organise;
-            $item['organisateur'] = self::organisateur_canonique((string) ($item['organisateur'] ?? ''));
+            $item['organisateur'] = $organisateur;
+            // L'image mise en avant choisie à la main prime sur celle de la source.
+            $image_manuelle = (string) ($element['image_manuelle'] ?? '');
+            if ($image_manuelle !== '') {
+                $item['image_url'] = $image_manuelle;
+            }
             $items[] = $item;
         }
         $derniere = get_option(Collecte::OPTION_DERNIERE, 0);
@@ -221,12 +229,15 @@ final class Donnees {
     public static function organise_par(string $categorie): string {
         $slug = strtr(mb_strtolower(trim($categorie)), ['é' => 'e', 'è' => 'e', 'ê' => 'e', 'à' => 'a', 'â' => 'a', 'ô' => 'o', 'î' => 'i', 'ç' => 'c']);
         $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', $slug), '-');
-        if (str_starts_with($slug, 'evenements-rsn') || str_starts_with($slug, 'rsn-events')) {
+        // Slugs exacts des catégories de The Events Calendar (`rsn`, `partenaires`),
+        // puis préfixes des noms (« Événements RSN », « RSN Events », « Événements partenaires », « Partner events »).
+        if ($slug === 'rsn' || str_starts_with($slug, 'evenements-rsn') || str_starts_with($slug, 'rsn-events')) {
             return 'rsn';
         }
-        if (str_starts_with($slug, 'evenements-partenaires') || str_starts_with($slug, 'partner-events')) {
+        if ($slug === 'partenaires' || str_starts_with($slug, 'evenements-partenaires') || str_starts_with($slug, 'partner-events')) {
             return 'partenaires';
         }
+        // Tout le reste, dont `ecosysteme` et `digital-ecosystem`, relève de l'écosystème.
         return 'ecosysteme';
     }
 
