@@ -5,8 +5,9 @@
  * Les comportements imités sont des hypothèses sur WordPress 6.x : la bascule « publish » → « future »
  * d'une date à venir, l'encodage kses (`&` → `&amp;`) des titres et résumés, la remise à maintenant de
  * la date d'une fiche à approuver sans `edit_date`, le déslashage des données, la comparaison exacte
- * d'un `meta_query` de type BINARY (et le « contient » de LIKE, `!=`, EXISTS, NOT EXISTS, groupes
- * imbriqués reliés par AND ou OR). La vérification de référence reste
+ * d'un `meta_query` de type BINARY (et le « contient » de LIKE, `!=`, `>=`, `>`, `<=`, `<`, EXISTS, NOT EXISTS,
+ * groupes imbriqués reliés par AND ou OR), `post__in`, l'ordre par identifiant (DESC par défaut, comme
+ * WordPress) et `found_posts`. La vérification de référence reste
  * `tests/manuel/verifier-cpt.php`, exécuté dans un vrai WordPress (`wp eval-file`).
  *
  * Administration : menus et crochets de pages (`toplevel_page_…`, `{menu}_page_…`), capacités de
@@ -40,6 +41,9 @@
  * `wp_get_attachment_image_url`, `get_post_thumbnail_id` et `wp_delete_attachment` (noté dans
  * `pieces_supprimees`, métas `_thumbnail_id` retirées). La vérification de référence est la section Formulaire de
  * `tests/manuel/verifier-public.md`.
+ *
+ * HTTP : `wp_remote_get` note ses appels (`requetes_http`) et rend `reponse_http` (200 vide par défaut) ;
+ * `wp_remote_retrieve_response_code`, `_header` (nom insensible à la casse) et `_body`.
  *
  * Chargé seulement par les tests qui en ont besoin (`require_once` en tête du fichier de test),
  * jamais par `tests/bootstrap.php`. Les bouchons déjà définis par le bootstrap sont gardés.

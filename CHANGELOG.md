@@ -30,5 +30,19 @@ Première version de l'extension.
 - Guide d'installation et de bascule (`docs/installation-et-bascule.md`), parcours de vérification manuelle (`tests/manuel/PARCOURS.md`).
 - Exigences : PHP 8.0 ou plus (extensions `mbstring`, `dom`, `libxml`, `json`), WordPress 6.0 ou plus.
 
+### Corrections après la revue finale
+- Un appel sans date limite ni date de fin n'est plus « en cours » pour toujours : il est montré 90 jours après sa publication, puis retiré de la page, du JSON, de l'iCal, du bloc Appels de l'infolettre et du courriel ; les appels périmés ne sont plus envoyés au navigateur.
+- La date limite d'un appel est aussi cherchée dans le contenu complet des flux RSS, et une date sans année est lue par rapport au jour de publication.
+- La file d'approbation, la collecte, le courriel et la page publique ne chargent plus toute la base : compteurs sans charger les fiches, onglets « Publiées » et « Écartées » limités aux 200 fiches les plus récentes (avec une mention), seules les fiches de la source pour les absences.
+- Le JSON de la page publique omet les événements finis depuis plus de 12 mois.
+- Version anglaise (WPML) : la page Veille traduite est purgée elle aussi (LiteSpeed et Elementor), et ses ressources se chargent.
+- Guide : régler `rsn_veille` et `rsn_theme` sur « Non traduisible » dans WPML.
+- Courriel hebdomadaire : seules les fiches créées dans la semaine comptent ; les fiches plus anciennes de la file sont résumées en une ligne, et rien n'est envoyé si rien n'a été créé dans la semaine.
+- Une fiche mise à la corbeille depuis l'éditeur compte comme écartée : la collecte ne la recrée plus et ne la republie plus.
+- Une réponse de l'API des événements en plusieurs pages est signalée dans le Journal ; l'API du site RSN est demandée avec un paramètre anti-cache.
+- Les réponses des sources sont plafonnées à 5 Mo.
+- Les propositions du public reçoivent les thèmes des réglages et ne purgent plus aucun cache.
+- Page Infolettre : l'état des programmes du RSN est lu par l'identifiant de l'article, et une erreur de la fonction du site ne casse plus la page.
+
 ### Limites connues
 Voir « Limites connues de la version 0.1.0 » dans `LISEZMOI.md`.
