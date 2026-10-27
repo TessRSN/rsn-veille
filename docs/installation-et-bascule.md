@@ -88,7 +88,7 @@ Après l'activation, le menu **Veille** apparaît dans wp-admin (sous « Comment
 ## 4. Créer la page Veille (en brouillon ou privée)
 
 1. Pages › Ajouter. Titre : « Veille de l'écosystème » (ou le titre voulu).
-2. Avec l'éditeur de blocs : un bloc **Code court** contenant `[rsn_veille]`. Avec Elementor : le widget **Code court** (Shortcode) contenant `[rsn_veille]`, (voir « Bande « À la une du RSN » : fond jusqu'aux bords » plus bas).
+2. Avec l'éditeur de blocs : un bloc **Code court** contenant `[rsn_veille]`. Avec Elementor : le widget **Code court** (Shortcode) contenant `[rsn_veille]` (voir « Bande « À la une du RSN » : fond jusqu'aux bords » plus bas).
 3. Enregistrer en **brouillon**, ou en **privée** (visibilité « Privée » : seules les personnes connectées avec les droits voient la page, ce qui permet d'essayer la page sans la rendre publique). Ne pas ajouter la page au menu.
 4. Prévisualiser. Le raccourci rend, sans attribut (`section="tout"`) : la barre d'actions (« S'abonner au calendrier », « Proposer un événement »), la bande « À la une du RSN », la bande « Dates limites », puis les filtres (recherche, Afficher, Qui organise, Mois, Format, Lieu, Thèmes, Organisateur) à côté de la liste unifiée des événements et des appels (ou du calendrier), et « Sources lues ». Attributs :
    - `section="agenda"` : les événements seuls (filtre Afficher verrouillé sur Événements, sans bande des dates limites) ;
