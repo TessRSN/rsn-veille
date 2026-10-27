@@ -139,6 +139,7 @@ est vide pour la page Veille choisie.
    - un **appel d'un autre organisateur** (Obvia, par exemple) avec une date limite dans 20 jours ;
    - un **appel du RSN sans aucune date limite** (ni `rsn_veille_echeance` ni date de fin), publié il y a 5 jours ;
    - un **événement du RSN commencé hier et qui finit demain** ;
+   - un **événement du RSN daté d'aujourd'hui** (le point 19 vérifie la place de l'appel « après les événements d'aujourd'hui ») ;
    - une **série du RSN de plus de 7 jours, commencée hier** (webinaires, par exemple) ;
    - un événement du RSN dans 90 jours (au-delà des autres éléments de la bande), un événement de partenaire et un
      événement de l'écosystème ; un **événement de rsn.quebec classé « Événements partenaires »** dans The Events
@@ -195,14 +196,17 @@ est vide pour la page Veille choisie.
 15. **Purge à la mise à jour** : `wp option delete rsn_veille_version`, puis charger une page de wp-admin ; le transient
     `rsn_veille_json_fr` a disparu (`wp transient get rsn_veille_json_fr` ne rend rien) et
     `wp option get rsn_veille_version` rend `0.3.0`. Un second chargement ne purge plus.
-16. **Bandeau continu** (version 0.3.0 ; page ordinaire avec un bloc Code court, renommée « Événements et appels »,
-    ouverte sur le thème Vault, fenêtre large) :
+16. **Bandeau continu** (version 0.3.0 ; exige le thème Vault, absent de wp-env : à faire sur rsn.quebec, sur la page
+    ordinaire avec un bloc Code court, renommée « Événements et appels », fenêtre large) :
     - aucun écart blanc entre l'en-tête du thème (fil d'Ariane et titre) et l'intro du bandeau, ni entre l'intro, les
       boutons et « À la une » : le même bleu `#003469` de haut en bas, avec un filet fin entre l'intro et « À la une » ;
     - le `<body>` porte la classe `rsn-veille-page` (inspecter l'élément) ; elle n'est pas posée sur une autre page du
       site ;
-    - l'en-tête du thème est moins haut qu'avant (environ 44 px au-dessus du fil d'Ariane et 30 px sous le titre ; sous
-      820 px, 30 px et 22 px) et le titre prend toute la largeur : « Événements et appels » tient sur une ligne ;
+    - l'en-tête du thème est moins haut qu'avant (remplissage d'environ 44 px au-dessus du fil d'Ariane et 0 sous le titre ; sous
+      820 px, 30 px en haut et 0 en bas), l'intro suit le titre à environ 12 px, et le titre prend toute la largeur :
+      « Événements et appels » tient sur une ligne sur écran large ;
+    - le bord gauche de l'intro est aligné sur celui du titre ;
+    - aucun filet clair aux raccords en-tête/bandeau et bandeau/« À la une » (zoomer à 100 % et à 200 %) ;
     - aucun défilement horizontal : `document.documentElement.scrollWidth === document.documentElement.clientWidth` ;
     - quand « À la une » est absente (`une="0"`, ou aucun élément du RSN à venir), le bandeau finit le bleu tout seul ;
     - sur une page Elementor (widget Code court), ou sur un autre thème, le bandeau garde son bleu et se place sous
@@ -232,7 +236,7 @@ est vide pour la page Veille choisie.
     tuile « →jj mois » et la pastille « En cours » dans la liste, mais **reste à la une** avec son jour de début.
 21. **Pastille « Appel »** : contour bleu marine sur fond blanc (plus de fond jaune), à côté d'« Événement » en bleu plein ;
     la pastille « RSN » reste jaune et ne se confond plus avec elle.
-22. **375 px** (mobile ; fenêtre de 375 px, ou l'émulation des outils du navigateur) : le bandeau passe l'intro puis les
+22. **375 px** (mobile ; exige le thème Vault, absent de wp-env : à faire sur rsn.quebec, avec une fenêtre de 375 px ou l'émulation des outils du navigateur) : le bandeau passe l'intro puis les
     boutons sur des lignes séparées, sans défilement horizontal ; les flèches des dates limites sont à droite du libellé
     « Dates limites » et les puces dessous, sur toute la largeur ; dans une fiche RSN avec image, l'image est
     **au-dessus du texte, à l'intérieur du fond gris**, avec le trait jaune à gauche ; l'en-tête du thème est resserré.
