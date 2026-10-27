@@ -354,11 +354,7 @@ final class EntrepotWordPress implements Entrepot {
         if (!isset($donnees['cree_le']) && preg_match('/^\d{4}-\d{2}-\d{2}/', $post->post_date) === 1) {
             $donnees['cree_le'] = substr($post->post_date, 0, 10);
         }
-        // Lectures du post, jamais écrites : l'horodatage de post_date_gmt (vide ou nul : aucun) et l'image
-        // mise en avant à la main.
-        $gmt = (string) $post->post_date_gmt;
-        $instant = $gmt === '' || str_starts_with($gmt, '0000-00-00') ? false : strtotime($gmt . ' UTC');
-        $donnees['cree_a'] = $instant === false ? null : $instant;
+        // Lecture du post, jamais écrite : l'image mise en avant à la main.
         $piece = (int) get_post_thumbnail_id($post->ID);
         $image = $piece > 0 ? wp_get_attachment_image_url($piece, 'large') : false;
         $donnees['image_manuelle'] = is_string($image) ? $image : '';
