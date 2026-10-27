@@ -63,7 +63,7 @@ final class Infolettre {
     /**
      * Appels ouverts : externes et programmes du RSN ensemble (une même adresse une seule fois). Un appel
      * externe est retenu s'il est en cours (`Fiche::appel_en_cours` : date limite à venir, sinon publié il y
-     * a moins de 90 jours) ; un programme du RSN, déjà dit « ouvert » par le site (`rsn_appel_etat`), si sa
+     * a moins de 30 jours) ; un programme du RSN, déjà dit « ouvert » par le site (`rsn_appel_etat`), si sa
      * date limite n'est pas passée.
      * Triés par date limite (les plus proches d'abord), puis ceux sans date limite par date de publication.
      *

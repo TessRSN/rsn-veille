@@ -54,7 +54,7 @@ final class RaccourciTest extends TestCase {
         $this->assertArrayNotHasKey('source', $donnees['items'][0]);
         $this->assertStringNotContainsString('obvia:42', $html);
 
-        foreach (['Mode équipe', 'mode-equipe', 'Prototype', 'prototype', "File d'approbation", 'id="file"', 'Actualités', 'infolettre"', 'btn-infolettre', 'Niveau', 'col-niv', 'bandeau'] as $absent) {
+        foreach (['Mode équipe', 'mode-equipe', 'Prototype', 'prototype', "File d'approbation", 'id="file"', 'Actualités', 'infolettre"', 'btn-infolettre', 'Niveau', 'col-niv'] as $absent) {
             $this->assertStringNotContainsString($absent, $html, $absent);
         }
         $this->assertStringContainsString('id="btn-proposer"', $html);
@@ -160,7 +160,7 @@ final class RaccourciTest extends TestCase {
         $this->assertStringContainsString('data-section="tout"', Raccourci::rendre(['section' => '<b>inconnue</b>']));
     }
 
-    public function test_tout_contient_actions_alaune_limites_et_pas_d_onglets(): void {
+    public function test_tout_contient_bandeau_alaune_limites_et_pas_d_onglets(): void {
         $html = Raccourci::rendre([]);
 
         $this->assertStringNotContainsString('class="onglets"', $html);
@@ -168,9 +168,15 @@ final class RaccourciTest extends TestCase {
         $this->assertStringContainsString('data-section="tout" data-une="1"', $html);
         $this->assertStringNotContainsString('id="vue-appels"', $html);
 
-        $this->assertStringContainsString('<a class="btn sobre" href="https://exemple.test/veille.ics">', $html);
+        $this->assertStringContainsString('<div class="bandeau">', $html);
+        $this->assertStringContainsString('<a class="btn clair" href="https://exemple.test/veille.ics">', $html);
         $this->assertStringContainsString("S&#039;abonner au calendrier", $html);
-        $this->assertStringContainsString('<button class="btn" id="btn-proposer" type="button">', $html);
+        $this->assertStringContainsString('<button class="btn jaune" id="btn-proposer" type="button">', $html);
+        $this->assertStringNotContainsString('class="actions"', $html);
+        $this->assertStringNotContainsString('class="btn sobre" href', $html);
+        $this->assertStringContainsString('<div class="fleches">', $html);
+        $this->assertStringContainsString('id="lim-prec" aria-label="Dates limites précédentes"', $html);
+        $this->assertStringContainsString('id="lim-suiv" aria-label="Dates limites suivantes"', $html);
 
         $this->assertStringContainsString('<section class="alaune" hidden', $html);
         $this->assertStringContainsString('À la une du RSN', $html);
@@ -182,8 +188,8 @@ final class RaccourciTest extends TestCase {
         $this->assertStringContainsString('<i class="appel"></i>', $html);
         $this->assertStringContainsString('id="tbl-sources"', $html);
 
-        // Ordre : actions, formulaire, à la une, dates limites, agenda, sources.
-        $ordre = ['class="actions"', 'id="dialogue"', 'class="alaune"', 'class="limites"', 'id="vue-agenda"', 'id="liste-agenda"', 'id="calendrier"', 'class="sources"'];
+        // Ordre : bandeau, à la une, formulaire, dates limites, agenda, sources.
+        $ordre = ['class="bandeau"', 'class="alaune"', 'id="dialogue"', 'class="limites"', 'id="vue-agenda"', 'id="liste-agenda"', 'id="calendrier"', 'class="sources"'];
         $positions = array_map(static fn (string $marque): int|false => strpos($html, $marque), $ordre);
         foreach ($positions as $i => $position) {
             $this->assertNotFalse($position, $ordre[$i]);
@@ -191,6 +197,17 @@ final class RaccourciTest extends TestCase {
                 $this->assertGreaterThan($positions[$i - 1], $position, $ordre[$i] . ' après ' . $ordre[$i - 1]);
             }
         }
+    }
+
+    public function test_rendu_a_des_div_equilibres_pour_chaque_section(): void {
+        foreach (['tout', 'agenda', 'appels'] as $section) {
+            Raccourci::reinitialiser();
+            $html = Raccourci::rendre(['section' => $section]);
+            $this->assertSame(substr_count($html, '<div'), substr_count($html, '</div>'), 'div équilibrés, section ' . $section);
+        }
+        Raccourci::reinitialiser();
+        $html = Raccourci::rendre(['une' => '0']);
+        $this->assertSame(substr_count($html, '<div'), substr_count($html, '</div>'), 'div équilibrés, une=0');
     }
 
     public function test_une_0_retire_la_bande_a_la_une(): void {
@@ -215,6 +232,8 @@ final class RaccourciTest extends TestCase {
         $this->assertStringContainsString('id="vue-agenda"', $html);
         $this->assertStringContainsString('id="f-qui"', $html);
         $this->assertStringContainsString('id="btn-proposer"', $html);
+        $this->assertStringContainsString('class="bandeau"', $html);
+        $this->assertStringNotContainsString('class="fleches"', $html);
         $this->assertStringNotContainsString('id="f-type"', $html);
         $this->assertStringNotContainsString('class="limites"', $html);
         $this->assertStringNotContainsString('id="limites"', $html);
@@ -230,6 +249,8 @@ final class RaccourciTest extends TestCase {
 
         $this->assertStringContainsString('<div class="limites" hidden>', $html);
         $this->assertStringContainsString('id="limites"', $html);
+        $this->assertStringContainsString('class="fleches"', $html);
+        $this->assertStringNotContainsString('class="bandeau"', $html);
         $this->assertStringContainsString('<div id="vue-appels">', $html);
         $this->assertStringContainsString('<div id="liste-appels"></div>', $html);
         foreach (['id="f-type"', 'id="f-qui"', 'id="f-mois"', 'id="f-recherche"', 'id="vue-agenda"', 'id="liste-agenda"', 'id="calendrier"', 'class="alaune"', 'id="btn-proposer"', 'class="actions"', 'id="dialogue"', 'class="sources"', 'veille.ics'] as $absent) {
@@ -239,7 +260,7 @@ final class RaccourciTest extends TestCase {
 
     public function test_textes_contiennent_les_nouvelles_cles(): void {
         $textes = Raccourci::textes();
-        foreach (['a_la_une', 'tout_le_rsn', 'evenement_rsn', 'nouveau', 'ferme_dans', 'ferme_demain', 'ferme_aujourdhui', 'date_limite_le', 'dates_limites', 'afficher', 'evenements', 'appels', 'evenement', 'partenaire', 'nb_evenements_et_appels', 'nb_elements', 'date_limite_puce', 'legende_date_limite', 's_abonner', 'aucun_element_filtres', 'tous'] as $cle) {
+        foreach (['a_la_une', 'tout_le_rsn', 'evenement_rsn', 'nouveau', 'ferme_dans', 'ferme_demain', 'ferme_aujourdhui', 'date_limite_le', 'dates_limites', 'afficher', 'evenements', 'appels', 'evenement', 'partenaire', 'nb_evenements_et_appels', 'nb_elements', 'date_limite_puce', 'legende_date_limite', 's_abonner', 'aucun_element_filtres', 'tous', 'en_cours', 'en_cours_tuile', 'date_limite_a_venir', 'limites_precedentes', 'limites_suivantes'] as $cle) {
             $this->assertArrayHasKey($cle, $textes, $cle);
         }
         foreach (['ferme_dans', 'nb_elements'] as $pluriel) {
@@ -254,6 +275,11 @@ final class RaccourciTest extends TestCase {
         $this->assertStringContainsString('%2$s', $textes['nb_evenements_et_appels']);
         $this->assertSame('À la une du RSN', $textes['a_la_une']);
         $this->assertSame('Dates limites', $textes['dates_limites']);
+        $this->assertSame('Date limite à venir', $textes['date_limite_a_venir']);
+        $this->assertSame('En cours', $textes['en_cours']);
+        $this->assertSame('en cours', $textes['en_cours_tuile']);
+        $this->assertSame('Dates limites précédentes', $textes['limites_precedentes']);
+        $this->assertSame('Dates limites suivantes', $textes['limites_suivantes']);
     }
 
     public function test_deux_raccourcis_dans_la_page_ont_des_noeuds_de_donnees_distincts(): void {
@@ -322,6 +348,45 @@ final class RaccourciTest extends TestCase {
         $GLOBALS['rsn_veille_wp']['objet_demande'] = $this->page(19, '');
         do_action('wp_enqueue_scripts');
         $this->assertArrayHasKey('rsn-veille', $GLOBALS['rsn_veille_wp']['scripts']);
+    }
+
+    public function test_classe_body_sur_la_page_du_raccourci(): void {
+        $GLOBALS['rsn_veille_wp']['objet_demande'] = $this->page(5, '<p>Intro</p>[rsn_veille section="agenda"]');
+        $this->assertContains('rsn-veille-page', apply_filters('body_class', ['page']));
+    }
+
+    public function test_classe_body_sur_la_page_veille_des_reglages(): void {
+        update_option('rsn_veille_reglages', ['page_veille_id' => 9]);
+        // Page Elementor : le raccourci n'est pas dans post_content.
+        $GLOBALS['rsn_veille_wp']['objet_demande'] = $this->page(9, '');
+        $this->assertContains('rsn-veille-page', apply_filters('body_class', ['page']));
+    }
+
+    public function test_classe_body_sur_la_traduction_wpml_de_la_page_veille(): void {
+        update_option('rsn_veille_reglages', ['page_veille_id' => 9]);
+        add_filter('wpml_active_languages', static fn() => ['fr' => ['code' => 'fr'], 'en' => ['code' => 'en']]);
+        add_filter('wpml_object_id', static fn($id, $type = '', $original = false, $langue = null) => $langue === 'en' ? 19 : $id);
+        $GLOBALS['rsn_veille_wp']['objet_demande'] = $this->page(19, '');
+        $this->assertContains('rsn-veille-page', apply_filters('body_class', ['page']));
+    }
+
+    public function test_classe_body_une_seule_fois(): void {
+        $GLOBALS['rsn_veille_wp']['objet_demande'] = $this->page(5, '[rsn_veille]');
+        $classes = apply_filters('body_class', ['page', 'rsn-veille-page']);
+        $this->assertSame(['page', 'rsn-veille-page'], $classes);
+    }
+
+    public function test_classe_body_rend_telle_quelle_une_valeur_qui_n_est_pas_un_tableau(): void {
+        // Un filtre `body_class` en amont peut rendre autre chose qu'un tableau : on ne plante pas (pas de TypeError).
+        $GLOBALS['rsn_veille_wp']['objet_demande'] = $this->page(5, '[rsn_veille]');
+        $this->assertSame('page', apply_filters('body_class', 'page'));
+    }
+
+    public function test_classe_body_absente_ailleurs(): void {
+        $this->assertSame(['page'], apply_filters('body_class', ['page']), 'aucun objet demandé');
+
+        $GLOBALS['rsn_veille_wp']['objet_demande'] = $this->page(5, '<p>Événements du RSN [rsn_evenements]</p>');
+        $this->assertSame(['page'], apply_filters('body_class', ['page']));
     }
 
     public function test_json_en_cache_une_heure_et_vide_par_la_purge_et_la_collecte(): void {

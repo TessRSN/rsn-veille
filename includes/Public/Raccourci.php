@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
 
 /**
  * Raccourci `[rsn_veille section="tout|agenda|appels" une="1|0"]` : la page publique de la veille, dans le style
- * de la maquette validée (`docs/maquette/gabarit-v8.html`), données JSON incorporées dans la page.
+ * de la maquette validée (`docs/maquette/gabarit-v9.html`), données JSON incorporées dans la page.
  */
 final class Raccourci {
     public const NOM = 'rsn_veille';
@@ -41,6 +41,7 @@ final class Raccourci {
     public static function accrocher(): void {
         add_action('init', [self::class, 'enregistrer']);
         add_action('wp_enqueue_scripts', [self::class, 'charger_si_present']);
+        add_filter('body_class', [self::class, 'classe_body']);
         Donnees::accrocher();
     }
 
@@ -53,15 +54,39 @@ final class Raccourci {
      * page Veille des réglages et ses traductions pour une page Elementor). Sinon, `rendre` les met en file au rendu.
      */
     public static function charger_si_present(): void {
-        $article = get_queried_object();
-        $present = false;
-        if (is_singular() && $article instanceof \WP_Post) {
-            // Page Veille des réglages ou l'une de ses traductions WPML (page Elementor : raccourci hors du contenu).
-            $present = has_shortcode((string) $article->post_content, self::NOM) || in_array($article->ID, Collecte::pages_veille(), true);
-        }
-        if ((bool) apply_filters('rsn_veille_charger_ressources', $present)) {
+        if ((bool) apply_filters('rsn_veille_charger_ressources', self::page_affiche_raccourci())) {
             self::mettre_en_file();
         }
+    }
+
+    /**
+     * Vrai si la page affichée est un article contenant le raccourci, ou la page Veille des réglages ou l'une de
+     * ses traductions WPML (page Elementor : raccourci hors du contenu).
+     */
+    public static function page_affiche_raccourci(): bool {
+        $article = get_queried_object();
+        if (!is_singular() || !$article instanceof \WP_Post) {
+            return false;
+        }
+        return has_shortcode((string) $article->post_content, self::NOM) || in_array($article->ID, Collecte::pages_veille(), true);
+    }
+
+    /**
+     * Classe `rsn-veille-page` sur le body, dans les mêmes cas que le chargement des ressources (feuille d'adaptation
+     * au thème). Posée une seule fois.
+     *
+     * @param array<int|string,string> $classes
+     * @return array<int|string,string>
+     */
+    public static function classe_body($classes) {
+        // Un filtre `body_class` en amont a pu rendre autre chose qu'un tableau : on le laisse tel quel.
+        if (!is_array($classes)) {
+            return $classes;
+        }
+        if (self::page_affiche_raccourci() && !in_array('rsn-veille-page', $classes, true)) {
+            $classes[] = 'rsn-veille-page';
+        }
+        return $classes;
     }
 
     /** CSS et JS de la page publique, versionnés ; polices Google seulement si le filtre le demande. */
@@ -217,6 +242,12 @@ final class Raccourci {
             'legende_date_limite' => __("Date limite d'un appel", 'rsn-veille'),
             's_abonner' => __("S'abonner au calendrier", 'rsn-veille'),
             'aucun_element_filtres' => __('Aucun événement ni appel ne correspond à ces filtres.', 'rsn-veille'),
+            // État « en cours », dates limites (flèches de navigation).
+            'en_cours' => __('En cours', 'rsn-veille'),
+            'en_cours_tuile' => __('en cours', 'rsn-veille'),
+            'date_limite_a_venir' => __('Date limite à venir', 'rsn-veille'),
+            'limites_precedentes' => __('Dates limites précédentes', 'rsn-veille'),
+            'limites_suivantes' => __('Dates limites suivantes', 'rsn-veille'),
         ];
     }
 }
