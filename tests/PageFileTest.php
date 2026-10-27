@@ -16,10 +16,12 @@ final class PageFileTest extends TestCase {
     protected function setUp(): void {
         rsn_veille_bouchons_reinitialiser();
         $_POST = $_REQUEST = [];
+        $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-10-27';
     }
 
     protected function tearDown(): void {
         $_POST = $_REQUEST = [];
+        $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-10-25';
     }
 
     private static function fiche(array $champs = []): Fiche {
@@ -135,7 +137,6 @@ final class PageFileTest extends TestCase {
     }
 
     public function test_publiees_gardent_le_tri_par_date_d_evenement(): void {
-        // Sans début, la date limite sert de date ; sans aucune date, en dernier.
         $this->assertSame([5, 4], self::ids(PageFile::filtrer(self::lot(), 'publie', '', '')));
         // Même avec un jour d'arrivée, une fiche publiée suit sa date d'événement.
         $lot = [
@@ -143,6 +144,19 @@ final class PageFileTest extends TestCase {
             self::fiche(['id' => 2, 'debut' => '2026-11-05', 'statut' => 'publie', 'cree_le' => '2026-10-01']),
         ];
         $this->assertSame([2, 1], self::ids(PageFile::filtrer($lot, 'publie', '', '')));
+    }
+
+    public function test_publiees_et_ecartees_sans_debut_suivent_la_date_limite_puis_sans_date_en_dernier(): void {
+        foreach (['publie' => [3, 1, 2, 4], 'ecarte' => [2, 1, 3, 4]] as $statut => $attendu) {
+            $lot = [
+                self::fiche(['id' => 4, 'debut' => null, 'echeance' => null, 'statut' => $statut]),
+                self::fiche(['id' => 3, 'debut' => null, 'echeance' => '2026-11-10', 'statut' => $statut]),
+                self::fiche(['id' => 2, 'debut' => '2026-12-01', 'statut' => $statut]),
+                self::fiche(['id' => 1, 'debut' => '2026-11-20', 'statut' => $statut]),
+            ];
+            // Sans début, la date limite sert de date ; sans aucune date, en dernier (même pour les écartées).
+            $this->assertSame($attendu, self::ids(PageFile::filtrer($lot, $statut, '', '')), $statut);
+        }
     }
 
     public function test_a_approuver_trie_par_arrivee_decroissante(): void {
@@ -191,7 +205,6 @@ final class PageFileTest extends TestCase {
     }
 
     public function test_rendu_a_approuver_affiche_nouveau(): void {
-        $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-10-27';
         $lot = [
             self::fiche(['id' => 1, 'titre' => 'Récente', 'cree_le' => '2026-10-27']),
             self::fiche(['id' => 2, 'titre' => 'Ancienne', 'cree_le' => '2026-10-10']),
@@ -203,7 +216,6 @@ final class PageFileTest extends TestCase {
     }
 
     public function test_rendu_a_verifier_affiche_nouveau_mais_pas_les_autres_onglets(): void {
-        $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-10-27';
         $lot = [self::fiche(['id' => 1, 'statut' => 'publie', 'absent_depuis' => '2026-10-26', 'cree_le' => '2026-10-26'])];
         $url = 'https://exemple.test/wp-admin/admin.php?page=rsn-veille';
         $this->assertStringContainsString('rsn-veille-nouveau', PageFile::page_html($lot, 'a_verifier', '', '', $url, self::OPTIONS));
