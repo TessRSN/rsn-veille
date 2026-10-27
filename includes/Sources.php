@@ -25,7 +25,8 @@ final class Sources {
     public static function par_defaut(): array {
         $sources = [
             // Événements : flux structurés (niveau A).
-            self::entree('rsn', 'RSN : événements', self::url_rsn(), 'tec', 'A', 'sante_numerique', 'RSN', ['inclure_passes' => true]),
+            // anti_cache : LiteSpeed met en cache les réponses REST du site ; la collecte ajoute « t= » à chaque requête.
+            self::entree('rsn', 'RSN : événements', self::url_rsn(), 'tec', 'A', 'sante_numerique', 'RSN', ['inclure_passes' => true, 'anti_cache' => true]),
             self::entree('dhc', 'Digital Health Canada', 'https://digitalhealthcanada.com/wp-json/tribe/events/v1/events?per_page=50', 'tec', 'A', 'sante_numerique', 'Digital Health Canada', ['langue' => 'en']),
             self::entree('rqrv', 'RQRV : événements', 'https://www.rqrv.com/wp-json/tribe/events/v1/events?per_page=50', 'tec', 'A', 'sante', 'RQRV'),
             self::entree('sommeil', 'Réseau québécois de recherche sur le sommeil', 'https://reseausommeil.ca/events/feed/', 'rss', 'A', 'sante', 'Réseau québécois de recherche sur le sommeil', ['mode' => 'evenements']),

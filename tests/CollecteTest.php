@@ -615,6 +615,20 @@ final class CollecteTest extends TestCase {
         $this->assertFalse(get_option(Collecte::OPTION_DERNIERE));
     }
 
+    public function test_api_du_site_rsn_demandee_avec_un_parametre_anti_cache(): void {
+        $urls = [];
+        Collecte::$obtenir_pour_tests = static function (string $url, array $options = []) use (&$urls): array {
+            $urls[] = $url;
+            return self::reponse('application/json', self::fixture('rsn_ev.json'));
+        };
+        $sources = Sources::par_defaut();
+        Collecte::collecter_source($sources['rsn'], new Depot(new EntrepotMemoire()), new Pertinence());
+        Collecte::collecter_source($sources['dhc'], new Depot(new EntrepotMemoire()), new Pertinence());
+        $this->assertMatchesRegularExpression('~^https://rsn\.quebec/wp-json/tribe/events/v1/events\?per_page=50&start_date=2025-05-01&end_date=\d{4}-12-31&t=\d+$~', $urls[0]);
+        $this->assertSame($sources['dhc']['url'], $urls[1], 'seule la source du site reçoit le paramètre');
+        $this->assertStringNotContainsString('t=', $sources['rsn']['url'], "l'horodatage n'est pas figé dans le registre");
+    }
+
     // --- Purge des caches ---
 
     public function test_purge_sans_page_veille_declenche_seulement_l_action_des_modules(): void {

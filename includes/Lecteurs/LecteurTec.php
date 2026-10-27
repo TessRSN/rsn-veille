@@ -42,6 +42,11 @@ final class LecteurTec implements Lecteur {
             }
             $resultat->fiches[] = $fiche;
         }
+        // Pas de pagination en 0.1.0 : au-delà d'une page, des événements manquent (signalé, fiches gardées).
+        $pages = $donnees['total_pages'] ?? 1;
+        if (is_numeric($pages) && (int) $pages > 1) {
+            $resultat->erreurs[] = sprintf('Réponse en %d pages : seule la première est lue, des événements peuvent manquer', (int) $pages);
+        }
         return $resultat;
     }
 

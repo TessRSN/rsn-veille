@@ -43,4 +43,13 @@ final class LecteurTecTest extends TestCase {
         $this->assertSame(['HEC', 'Montréal', 'Org X', '', '09:30', 'fr', 'x:3'], [$f->lieu, $f->ville, $f->organisateur, $f->image_url, $f->heure, $f->langue, $f->cle_source]);
         $this->assertSame(['x:3'], $f->cles_source);
     }
+    public function test_plus_d_une_page_signalee_sans_perdre_les_fiches(): void {
+        $json = '{"events":[{"id":1,"title":"Atelier","start_date":"2026-11-04 09:00:00","end_date":"2026-11-04 10:00:00","url":"https://x.test/1"}],"total":73,"total_pages":2}';
+        $r = (new LecteurTec())->lire($json, ['id' => 'rsn', 'nom' => 'RSN', 'niveau' => 'A', 'type_source' => 'sante_numerique']);
+        $this->assertCount(1, $r->fiches);
+        $this->assertCount(1, $r->erreurs);
+        $this->assertStringContainsString('2 pages', $r->erreurs[0]);
+        // Une seule page (fixture réelle) : aucune erreur.
+        $this->assertSame([], (new LecteurTec())->lire(file_get_contents(FIXTURES . '/dhc.json'), ['id' => 'dhc', 'nom' => 'DHC', 'niveau' => 'A'])->erreurs);
+    }
 }

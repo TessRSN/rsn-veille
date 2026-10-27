@@ -301,7 +301,7 @@ final class Collecte {
         self::$purge_suspendue = true;
         try {
             [$accept, $reconnaitre] = self::CONTENUS[str_starts_with($type, 'html_') ? 'html' : $type] ?? ['any', null];
-            $reponse = self::obtenir((string) ($source['url'] ?? ''), ['accept' => $accept]);
+            $reponse = self::obtenir(self::url_de_requete($source), ['accept' => $accept]);
             if (($reponse['erreur'] ?? null) !== null) {
                 $ligne['erreurs'][] = (string) $reponse['erreur'];
             } elseif ($reconnaitre === null || !Http::$reconnaitre($reponse)) {
@@ -388,6 +388,19 @@ final class Collecte {
     /** @return array{crees: int, fusionnes: int, mis_a_jour: int, inchanges: int, ecartes: int, annules: int} */
     private static function compteurs_vides(): array {
         return ['crees' => 0, 'fusionnes' => 0, 'mis_a_jour' => 0, 'inchanges' => 0, 'ecartes' => 0, 'annules' => 0];
+    }
+
+    /**
+     * Adresse demandée pour une source : celle du registre, plus un paramètre « t= » (horodatage) pour une
+     * source `anti_cache` (API du site, dont LiteSpeed met les réponses en cache). L'horodatage est ajouté à
+     * chaque requête, jamais enregistré dans les réglages.
+     */
+    public static function url_de_requete(array $source): string {
+        $url = (string) ($source['url'] ?? '');
+        if ($url === '' || empty($source['anti_cache'])) {
+            return $url;
+        }
+        return $url . (str_contains($url, '?') ? '&' : '?') . 't=' . time();
     }
 
     /** Secondes (`microtime(true)`), ou l'horloge de test. */
