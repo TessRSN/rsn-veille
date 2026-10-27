@@ -45,7 +45,8 @@ lancent par `npx wp-env run cli wp …`.
       plus récente à la plus ancienne.
 - [ ] **Tri par arrivée** : dans « À approuver » et « À vérifier », les fiches vont de la dernière arrivée
       (jour `rsn_veille_cree_le`, puis identifiant) à la plus ancienne, quelle que soit la date de
-      l'événement ; une fiche sans `rsn_veille_cree_le` est en dernier. « Publiées » et « Écartées » restent
+      l'événement ; une fiche sans `rsn_veille_cree_le` prend le jour de son `post_date`
+      (la date de l'événement) et se range selon ce jour. « Publiées » et « Écartées » restent
       triées par date d'événement.
 - [ ] **Repère « Nouveau »** (jaune, après le titre) : seulement sur les fiches arrivées aujourd'hui ou hier,
       et seulement dans « À approuver » et « À vérifier ».

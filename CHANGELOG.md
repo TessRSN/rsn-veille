@@ -5,7 +5,7 @@
 La page publique devient la page « Événements et appels » (maquette `docs/maquette/gabarit-v8.html`) et six corrections d'exploitation, relevées à l'usage de la 0.1.0 sur rsn.quebec, sont faites. Les clés du JSON public `/wp-json/rsn/v1/veille` sont inchangées ; l'attribut `section`, le calendrier, le formulaire, l'iCal, les caches et WPML continuent de fonctionner comme en 0.1.0. Aucune migration : rien à refaire dans les réglages.
 
 ### Page publique
-- Les onglets Agenda et Appels disparaissent : une seule liste, groupée par mois, mêle événements et appels (clé de tri : début d'un événement, date limite d'un appel). L'en-tête de mois indique « N événements · M appels ».
+- Les onglets Agenda et Appels disparaissent : une seule liste, groupée par mois, mêle événements et appels (clé de tri : début d'un événement, date limite d'un appel). L'en-tête de mois indique ce que le mois contient, sans les compteurs à zéro (« 2 événements », « 1 appel » ou « 2 événements · 1 appel »).
 - Bande « À la une du RSN » : les trois prochains éléments organisés par le RSN, événements à venir ou en cours et appels en cours **avec une date limite**, triés par date. Étiquettes : « Événement du RSN », « Nouveau » (appel publié depuis 7 jours ou moins), « Ferme dans N jours » (21 jours ou moins avant la date limite, « Ferme demain », « Ferme aujourd'hui »), sinon « Date limite : … ». Le lien « Tout ce que le RSN organise et finance » applique le filtre Qui organise › RSN et mène à la liste. La bande déborde sur toute la largeur de la fenêtre (`margin-inline:calc(50% - 50vw)`) ; sans élément du RSN, elle ne s'affiche pas.
 - Bande « Dates limites » : une puce par appel en cours qui a une date limite, triées par date, avec l'organisateur.
 - Un appel **sans date limite** reste visible dans la liste seulement : classé dans le mois courant, jamais « passé », absent de « À la une » et de « Dates limites » (la règle des 90 jours de la 0.1.0 est inchangée).
@@ -24,12 +24,12 @@ La page publique devient la page « Événements et appels » (maquette `docs/ma
 3. **Liste « Page Veille »** des réglages : elle propose aussi les pages privées (une page privée convient pour l'essai).
 4. **Tri de la file** : « À approuver » et « À vérifier » sont triées par arrivée (jour `cree_le`, puis identifiant, du plus récent au plus ancien), avec un repère « Nouveau » pour une fiche arrivée aujourd'hui ou hier ; « Publiées » et « Écartées » restent triées par date d'événement.
 5. **Image d'une fiche** : l'**image mise en avant** de WordPress prime sur l'image de la source (que la collecte réécrit chaque nuit) dans la page et le JSON public. Nouvelle propriété de fiche `image_manuelle` (lue, jamais écrite) et métabox « Image de la fiche » : elle montre l'image de la source et renvoie vers l'image mise en avant (elle n'a aucun champ).
-6. **Pages IVADO de redirection** : quand la page d'un événement IVADO n'est qu'une redirection (titre ou `<h1>` « Redirect », `meta refresh`, ou affectation de `window.location` par une adresse), la fiche garde le titre et le résumé de la liste, et l'adresse cible (par exemple `event.fourwaves.com`) remplace l'adresse IVADO. La fiche déjà en base est corrigée à la collecte suivante.
+6. **Pages IVADO de redirection** : quand la page d'un événement IVADO n'est qu'une redirection (titre ou `<h1>` « Redirect », `meta refresh`, ou affectation de `window.location` par une adresse), la fiche prend le titre de la balise `<title>` (sans le suffixe « | IVADO »), reste sans résumé, et l'adresse cible (par exemple `event.fourwaves.com`) remplace l'adresse IVADO. Seules les fiches créées à partir de cette version en profitent : les fiches déjà en base ne sont pas relues (la collecte reprend leur adresse enregistrée) et gardent l'adresse IVADO, qui redirige elle-même le visiteur.
 
 ### Livraison
 - Numéro de version 0.2.0 (`rsn-veille.php`, `RSN_VEILLE_VERSION`, donc `?ver=0.2.0` sur `veille.css` et `veille.js`).
 - Guide d'installation (section 4 : page privée, attribut `une`, bande pleine largeur ; catégories TEC par slug nu), `LISEZMOI.md` et parcours de vérification manuelle (`tests/manuel/PARCOURS.md`) mis à jour.
-- 526 tests PHPUnit. Le parcours manuel de la nouvelle page n'a pas encore été déroulé dans un WordPress réel : la bande pleine largeur (barre de défilement verticale) et l'éditeur Elementor restent à vérifier sur la copie de préproduction.
+- 527 tests PHPUnit. Le parcours manuel de la nouvelle page n'a pas encore été déroulé dans un WordPress réel : la bande pleine largeur (barre de défilement verticale) et l'éditeur Elementor restent à vérifier sur la copie de préproduction.
 
 ### Limites connues
 Voir « Limites connues de la version 0.2.0 » dans `LISEZMOI.md`.
