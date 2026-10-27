@@ -1,6 +1,6 @@
 /*
  * RSN : veille de l'écosystème, page publique ([rsn_veille]).
- * Repris de docs/maquette/gabarit-v6.1.html (maquette validée) : colonne de filtres à gauche comme
+ * Repris de docs/maquette/gabarit-v8.html (maquette validée) : colonne de filtres à gauche comme
  * Dernières nouvelles, frise à hexagones comme Événements. Thème clair seulement, comme le site.
  * Tous les sélecteurs sont préfixés par .rsn-veille pour cohabiter avec le thème et Elementor ;
  * le bandeau de titre est fourni par le gabarit du site.
@@ -40,15 +40,13 @@
 .rsn-veille.rsn-veille .btn.sobre svg{color:var(--navy)}
 .rsn-veille.rsn-veille .btn.sobre:hover{border-color:var(--navy)}
 
-/* v8 : bouton jaune, bande « À la une », dates limites, pastilles, appels dans la frise */
-.rsn-veille.rsn-veille .btn.jaune{background:var(--yellow);color:var(--navy)}
-.rsn-veille.rsn-veille .btn.jaune svg{color:var(--navy)}
-.rsn-veille.rsn-veille .btn.jaune:hover{background:#fff;border-color:var(--yellow)}
+/* v8 : bande « À la une », dates limites, pastilles, appels dans la frise */
 
 /* À la une : même dessin que la bande « Appels de financement ouverts » de l'accueil.
-   La bande sort de la colonne du contenu pour occuper toute la largeur de la fenêtre ; son .wrap la recentre. */
-.rsn-veille .alaune{background:#07285A;color:#fff;padding-block:22px 26px;margin-inline:calc(50% - 50vw);margin-bottom:36px}
-.rsn-veille .alaune .wrap{max-width:1140px;margin:0 auto;padding-inline:max(16px,env(safe-area-inset-left,0px))}
+   La bande garde la largeur de la colonne (aucune marge négative, donc aucun débordement horizontal) ; son fond
+   est peint jusqu'aux bords de la fenêtre par une ombre étalée, rognée verticalement par clip-path. Le contenu
+   reste aligné sur celui du reste de la page : le .wrap commun (1140 px, centré) suffit, sans gouttière de plus. */
+.rsn-veille .alaune{background:#07285A;color:#fff;padding-block:22px 26px;margin-bottom:36px;box-shadow:0 0 0 100vmax #07285A;clip-path:inset(0 -100vmax)}
 .rsn-veille .alaune .tete{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
 .rsn-veille .alaune .titre{display:inline-flex;align-items:center;gap:10px;font-family:var(--serif);font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--yellow)}
 .rsn-veille .alaune .titre i{width:7px;height:7px;border-radius:50%;background:var(--green)}
@@ -92,7 +90,6 @@
 .rsn-veille .ev.appel-ev{grid-template-columns:62px minmax(0,1fr)}
 .rsn-veille .ev.appel-ev .tuile{width:62px;padding:8px 0 7px}
 .rsn-veille .ev.appel-ev .tuile b{font-size:24px}
-.rsn-veille .ev .quand{font-size:12.5px;color:var(--muted);margin-top:6px}
 
 /* Deux colonnes : filtres + contenu */
 .rsn-veille .deux{display:grid;grid-template-columns:230px minmax(0,1fr);gap:56px;align-items:start}
@@ -148,15 +145,11 @@
 .rsn-veille .fmt b{color:var(--ink);font-weight:500}
 
 /* Appels : tuile de date (page Événements) */
-.rsn-veille div.appel{display:grid;grid-template-columns:72px minmax(0,1fr);gap:20px;padding:20px 0;border-bottom:1px solid var(--rule)}
-.rsn-veille div.appel:first-child{border-top:1px solid var(--rule)}
 .rsn-veille .tuile{width:72px;border-radius:12px;background:var(--yellow);color:var(--navy);text-align:center;padding:9px 0 8px;align-self:start}
 .rsn-veille .tuile.gris{background:var(--tint);color:var(--ink)}
 .rsn-veille .tuile b{display:block;font-family:var(--serif);font-weight:400;font-size:28px;line-height:1}
 .rsn-veille .tuile span{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
 .rsn-veille .tuile i{display:block;font-style:normal;font-size:10.5px;font-weight:500;margin-top:1px;opacity:.8}
-.rsn-veille div.appel h3{font-family:var(--sans);font-size:17px;line-height:1.35;font-weight:500;color:var(--ink);margin:0 0 4px}
-.rsn-veille div.appel h3 a:hover{color:var(--navy);text-decoration:underline;text-decoration-color:var(--yellow);text-decoration-thickness:1.5px;text-underline-offset:4px}
 
 /* Encadrés : formulaire, vide */
 .rsn-veille .encadre{padding:24px 28px;border-radius:14px;background:var(--tint);color:var(--ink);margin:0 0 36px}
@@ -248,7 +241,6 @@
   .rsn-veille .cal .pt.rsn,.rsn-veille .cal .pt.appel{background:var(--yellow-ink)}
   .rsn-veille.rsn-veille .cal .plus{display:none}
   .rsn-veille .ev.avec-image{grid-template-columns:52px minmax(0,1fr)}
-  .rsn-veille div.appel.avec-image{grid-template-columns:64px minmax(0,1fr)}
 }
 @media (min-width:641px){.rsn-veille .cal .pts{display:none}}
 
@@ -260,7 +252,6 @@
   .rsn-veille .actions{margin-top:36px}
   .rsn-veille .ev{grid-template-columns:52px minmax(0,1fr);gap:14px;padding-left:22px}
   .rsn-veille .jour{font-size:22px}
-  .rsn-veille div.appel{grid-template-columns:64px minmax(0,1fr);gap:14px}
   .rsn-veille .tuile{width:64px}
   .rsn-veille .shead h2{font-size:24px}
   .rsn-veille .unes{grid-template-columns:1fr}
@@ -279,7 +270,6 @@
   .rsn-veille .actions{margin-top:36px}
   .rsn-veille .ev{grid-template-columns:52px minmax(0,1fr);gap:14px;padding-left:22px}
   .rsn-veille .jour{font-size:22px}
-  .rsn-veille div.appel{grid-template-columns:64px minmax(0,1fr);gap:14px}
   .rsn-veille .tuile{width:64px}
   .rsn-veille .shead h2{font-size:24px}
   .rsn-veille .unes{grid-template-columns:1fr}

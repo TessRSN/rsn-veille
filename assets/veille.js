@@ -118,6 +118,9 @@ function animer(racine, noeudDonnees) {
       </div></div>`;
   }
   // Date limite d'un appel : l'échéance trouvée, sinon une fin distincte de la publication.
+  // Une série qui dure plus d'une semaine (webinaires, cours) n'apparaît dans le calendrier qu'à son premier jour,
+  // pour ne pas remplir le mois, et ne reste pas à la une une fois commencée.
+  const longue = k => (new Date(k.fin || k.debut) - new Date(k.debut)) / 864e5 > 7;
   const limite = k => k.echeance && ISO.test(k.echeance) ? k.echeance : (k.fin && k.fin !== k.debut ? k.fin : '');
   // Clé de tri et de regroupement par mois : la date limite d'un appel (sinon sa publication), le début d'un événement.
   const cleTri = k => k.type === 'appel' ? (limite(k) || k.debut) : k.debut;
@@ -233,10 +236,10 @@ function animer(racine, noeudDonnees) {
     const premierJour = (new Date(x.a, x.m - 1, 1).getDay() + 6) % 7; // lundi = 0
     const prec = d(decalerMois(calMois, -1) + '-01'); const nbPrec = new Date(prec.a, prec.m, 0).getDate();
     const nEv = E.filter(k => k.debut.slice(0, 7) <= calMois && (k.fin || k.debut).slice(0, 7) >= calMois).length;
-    $('#cal-titre').innerHTML = `${cap(MOIS_LONG[x.m - 1])} ${x.a}<small>${esc(n('nb_ce_mois', nEv))}</small>`;
+    // Éléments du mois affichés : événements qui le traversent et appels dont la date limite y tombe.
+    const nbMois = nEv + A.filter(k => limite(k).slice(0, 7) === calMois).length;
+    $('#cal-titre').innerHTML = `${cap(MOIS_LONG[x.m - 1])} ${x.a}<small>${esc(n('nb_elements', nbMois))}</small>`;
     let html = (T.jours_courts || ['L', 'M', 'M', 'J', 'V', 'S', 'D']).map(j => `<div class="jn">${esc(j)}</div>`).join('');
-    // une série qui dure plus d'une semaine (webinaires, cours) n'apparaît qu'à son premier jour, pour ne pas remplir le mois
-    const longue = k => (new Date(k.fin || k.debut) - new Date(k.debut)) / 864e5 > 7;
     const ceJour = (k, iso) => longue(k) ? k.debut === iso : (k.debut <= iso && (k.fin || k.debut) >= iso);
     // Éléments d'un jour : les événements (par début), puis les appels dont c'est la date limite.
     const duJour = iso => E.filter(k => ceJour(k, iso)).sort((a, b) => a.debut.localeCompare(b.debut)).concat(A.filter(k => limite(k) === iso));
@@ -289,8 +292,9 @@ function animer(racine, noeudDonnees) {
   const montrerBande = (selecteur, nb) => { const b = $(selecteur); if (b) b.hidden = !nb; };
   function rendreUnes() {
     if (!$('#unes')) return;
-    // Un événement reste à la une tant qu'il dure (aVenir : fin ou début >= aujourd'hui) ; un appel, jusqu'à sa date limite.
-    const U = aVenir().filter(k => estRSN(k) && (k.type === 'evenement' || (limite(k) && limite(k) >= AUJ)))
+    // Un événement court reste à la une tant qu'il dure (aVenir : fin ou début >= aujourd'hui) ; une série longue
+    // (plus de 7 jours, comme au calendrier) en sort dès qu'elle a commencé ; un appel reste jusqu'à sa date limite.
+    const U = aVenir().filter(k => estRSN(k) && (k.type === 'evenement' ? !(longue(k) && k.debut < AUJ) : (limite(k) && limite(k) >= AUJ)))
       .sort((a, b) => cleTri(a).localeCompare(cleTri(b)) || a.debut.localeCompare(b.debut)).slice(0, 3);
     $('#unes').innerHTML = U.map(k => {
       const x = d(cleTri(k));
@@ -299,7 +303,7 @@ function animer(racine, noeudDonnees) {
         const reste = jours(AUJ, limite(k));
         if (jours(k.debut, AUJ) <= 7) { etat = 'nouveau'; texte = t('nouveau'); }
         else { etat = ''; texte = reste === 0 ? t('ferme_aujourdhui') : reste === 1 ? t('ferme_demain') : reste <= 21 ? n('ferme_dans', reste) : t('date_limite_le', dateCourte(limite(k))); }
-        detail = esc(String(k.resume || '').split(/[.:]/)[0].trim().slice(0, 70));
+        detail = esc(String(k.resume || '').split(/[.!?…](?=\s|$)/)[0].trim().slice(0, 70));
       } else {
         texte = t('evenement_rsn');
         detail = [periode(k), k.format && esc(k.format)].filter(Boolean).join(' · ');
@@ -313,7 +317,7 @@ function animer(racine, noeudDonnees) {
     if (!$('#limites')) return;
     const A = appelsEnCours().filter(limite).sort((a, b) => limite(a).localeCompare(limite(b)) || a.debut.localeCompare(b.debut));
     $('#limites').innerHTML = A.map(k => {
-      const titre = k.titre.split(/\s*:\s/)[0].slice(0, 44);
+      const titre = String(k.titre || '').split(/\s*:\s/)[0].slice(0, 44);
       const orga = estRSN(k) ? libelle('qui', 'rsn') : String(k.organisateur || '').replace('Fonds de recherche du Québec', 'FRQ');
       return `<a class="lim" href="${lien(k.url)}" target="_blank" rel="noopener"><b>${esc(dateCourte(limite(k)))}</b>${esc(titre)}${orga ? `<span class="p">${esc(orga)}</span>` : ''}</a>`;
     }).join('');
@@ -381,6 +385,9 @@ function animer(racine, noeudDonnees) {
   // « Tout ce que le RSN organise et finance » : filtre Qui organise = RSN, sans autre restriction, puis défilement vers la liste.
   on('#lien-rsn', 'click', e => {
     e.preventDefault();
+    // Retour à la vue Liste (le lien peut être cliqué depuis le calendrier).
+    vue = 'liste';
+    racine.querySelectorAll('.vue').forEach(x => x.setAttribute('aria-pressed', x.dataset.vue === vue));
     filtres.qui = 'rsn'; filtres.type = ''; filtres.mois = ''; rendreTags(); rendreAgenda();
     const cible = $('#vue-agenda');
     if (cible) cible.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });

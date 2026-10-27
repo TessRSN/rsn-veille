@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
 
 /**
  * Raccourci `[rsn_veille section="tout|agenda|appels" une="1|0"]` : la page publique de la veille, dans le style
- * de la maquette validée (`docs/maquette/gabarit-v6.1.html`), données JSON incorporées dans la page.
+ * de la maquette validée (`docs/maquette/gabarit-v8.html`), données JSON incorporées dans la page.
  */
 final class Raccourci {
     public const NOM = 'rsn_veille';
@@ -156,7 +156,6 @@ final class Raccourci {
             'nb_passes' => [__('%d événement passé', 'rsn-veille'), __('%d événements passés', 'rsn-veille')],
             /* translators: %d : nombre, %s : mois et année du plus ancien. */
             'nb_passes_depuis' => [__('%d événement passé depuis %s', 'rsn-veille'), __('%d événements passés depuis %s', 'rsn-veille')],
-            'nb_ce_mois' => [__('%d événement ce mois-ci', 'rsn-veille'), __('%d événements ce mois-ci', 'rsn-veille')],
             'nb_appels' => [__('%d appel', 'rsn-veille'), __('%d appels', 'rsn-veille')],
             'aucun_evenement_filtres' => __('Aucun événement ne correspond à ces filtres.', 'rsn-veille'),
             'aucun_ce_jour' => __('Aucun événement ce jour-là.', 'rsn-veille'),
@@ -197,7 +196,7 @@ final class Raccourci {
             // Bande « À la une », dates limites, filtre « Afficher ».
             'a_la_une' => __('À la une du RSN', 'rsn-veille'),
             'tout_le_rsn' => __('Tout ce que le RSN organise et finance →', 'rsn-veille'),
-            'evenement_rsn' => __('Événement du RSN', 'rsn-veille'),
+            'evenement_rsn' => __('Événement RSN', 'rsn-veille'),
             'nouveau' => __('Nouveau', 'rsn-veille'),
             'ferme_dans' => [__('Ferme dans %d jour', 'rsn-veille'), __('Ferme dans %d jours', 'rsn-veille')],
             'ferme_demain' => __('Ferme demain', 'rsn-veille'),
