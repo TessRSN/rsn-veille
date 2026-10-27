@@ -567,20 +567,6 @@ function wp_get_object_terms(int|array $ids, string $taxonomie, array $arguments
     return $resultat;
 }
 
-/**
- * Comme wp_count_posts : un objet qui a une propriété par statut (0 pour un statut sans article), compté sur
- * tous les articles du type.
- */
-function wp_count_posts(string $type = 'post', string $perm = ''): stdClass {
-    $nombres = array_fill_keys(['publish', 'future', 'draft', 'pending', 'private', 'trash', 'auto-draft', 'inherit'], 0);
-    foreach ($GLOBALS['rsn_veille_wp']['posts'] as $post) {
-        if ($post->post_type === $type) {
-            $nombres[$post->post_status] = ($nombres[$post->post_status] ?? 0) + 1;
-        }
-    }
-    return (object) $nombres;
-}
-
 class WP_Query {
     /** @var array<int|WP_Post> */
     public array $posts = [];

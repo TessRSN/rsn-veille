@@ -167,19 +167,22 @@ final class EntrepotWordPress implements Entrepot {
     }
 
     public function compter(): array {
-        // Une requête groupée par statut (mise en cache par WordPress), sans charger de fiche.
-        $nombres = wp_count_posts(TypeContenu::TYPE);
+        // Une requête d'un seul identifiant par onglet : seul le total (found_posts) est lu, aucune fiche chargée.
+        // (Plutôt que wp_count_posts : mêmes requêtes que le reste de l'entrepôt, sans les filtres d'autres extensions comme WPML.)
         $compteurs = [];
         foreach (['a_approuver', 'publie', 'ecarte'] as $statut) {
-            $statut_wp = TypeContenu::statut_wp($statut);
-            $compteurs[$statut] = (int) ($nombres->$statut_wp ?? 0);
+            $compteurs[$statut] = self::total(self::requete([TypeContenu::statut_wp($statut)]));
         }
-        $arguments = self::requete_absentes();
+        $compteurs['a_verifier'] = self::total(self::requete_absentes());
+        return $compteurs;
+    }
+
+    /** Nombre de fiches d'une requête, sans les charger. */
+    private static function total(array $arguments): int {
         $arguments['fields'] = 'ids';
         $arguments['posts_per_page'] = 1;
         $arguments['no_found_rows'] = false;
-        $compteurs['a_verifier'] = (new \WP_Query($arguments))->found_posts;
-        return $compteurs;
+        return (int) (new \WP_Query($arguments))->found_posts;
     }
 
     public function lister_absentes(): array {
