@@ -66,6 +66,9 @@ Même page, même gabarit, mêmes bandes, même liste, même calendrier, même f
 - **Mila et IVADO** : titre, résumé et lien anglais quand l'appariement a réussi ; sinon le français, marqué.
 - **Tout le reste** (Obvia, FRQ, RQRV, Réseau sommeil, CRM, CARES, Prix Hippocrate, propositions du public) tel
   quel, en français, avec la pastille « In French » ; Digital Health Canada, en anglais, sans pastille.
+- Une **proposition** envoyée depuis le formulaire anglais est enregistrée avec `langue = en` (champ caché
+  `langue`, valeur `fr`|`en` posée par le gabarit d'après la langue de la page, validée par `Formulaire`) : elle
+  porte alors « En anglais » sur la page française et rien sur la page anglaise. Décision du concepteur.
 - Sur la page **française**, rien ne change à l'œil, sauf la disparition des doublons anglais des événements du RSN.
   La pastille « En anglais » reste pour Digital Health Canada et les quelques fiches anglaises.
 - Les **thèmes** (étiquettes `rsn_theme` : « Données », « Formation »…) restent en français sur la page anglaise
@@ -143,6 +146,11 @@ début + titre. En anglais, les titres diffèrent : il faut rapprocher par ident
   avec les mêmes règles de fusion qu'en 0.3.0 (la fiche collectée gagne si elle a une image, l'événement du RSN fait
   foi pour « Qui organise ») ; sinon le rapprochement par début + titre continue de s'appliquer (autres sources,
   propositions).
+- **La clé par début + titre se calcule toujours sur le titre français**, même sur la page anglaise : `EvenementsRsn`
+  rend aussi `titre_fr` (le titre de l'article français du groupe de traduction, sinon celui de l'article gardé) et
+  `elements()` s'en sert pour la clé ; pour les fiches collectées, la clé se calcule avant d'appliquer `titre_en`
+  (§ 4.6). Ainsi un événement partenaire inscrit au calendrier du RSN et collecté chez son organisateur reste
+  dédoublonné en anglais comme en français. Décision du concepteur.
 - Quand la fiche collectée gagne (image) sur la page anglaise, elle prend **le titre, le résumé, le lieu, l'URL et
   la langue** de l'événement anglais gardé par `EvenementsRsn` : la fiche collectée est française, l'événement
   anglais est la version à montrer. Seuls l'image (`image_url` / `image_manuelle`) et l'identifiant de la fiche
@@ -180,8 +188,14 @@ Les fiches `rsn_appels:` viennent du flux RSS français ; leur `url` est le perm
   dans le journal de la source (« N événements anglais sans équivalent français »). Les fiches anglaises ne sont
   jamais enregistrées comme fiches. Aucune nouvelle requête ne sort du budget HTTP existant de la source (le lecteur
   anglais ajoute ses propres requêtes, dans la même passe nocturne : une source par passe, comme aujourd'hui).
-- À l'écrasement par la collecte (fiche existante mise à jour) : `titre_en`, `resume_en`, `url_en` sont écrasés
-  comme `titre`, `resume`, `url` le sont (mêmes règles de « champs protégés » s'il y en a : à aligner sur `titre`).
+- Fiches déjà en base (les 3 de Mila et les 6 d'IVADO existent) : `titre_en`, `resume_en`, `url_en` sont des
+  **champs factuels** (`Depot::CHAMPS_FACTUELS`, comme `url`) : la collecte les écrit à chaque passage où la lecture
+  anglaise a donné une valeur, qu'une correction manuelle du français ait eu lieu ou non ; une valeur vide (lecture
+  anglaise en échec, rien d'apparié) n'efface jamais une valeur existante. À la fusion d'un doublon d'une autre source
+  (`trouver_doublon`), les trois champs passent à la fiche gardée si elle ne les a pas. Décision du concepteur.
+- IVADO, requêtes : la page anglaise d'un événement n'est lue que pour une fiche appariée **sans `titre_en`** (ou
+  dont `url_en` change), dans le même plafond `MAX`/`BUDGET` que les lectures françaises (les requêtes anglaises y
+  comptent) ; une fiche déjà complète ne coûte rien les nuits suivantes. Mila ne lit que la page de liste.
 - Administration : les trois champs ne sont ni édités ni affichés en 0.4.0 (non-but, documenté comme limite).
 
 ### 4.7 Pastille de langue
@@ -250,6 +264,7 @@ events », « Site events calendar »… Les pages d'administration restent fran
 ## 8. Laissé au constructeur
 
 - La forme exacte du test du `.po` et du lecteur minimal de `.mo`.
+- La façon de transmettre la langue de la page au formulaire (champ caché proposé) et son test.
 - L'organisation du code d'appariement (dans `Collecte` ou dans une petite classe `Appariement` à côté des
   lecteurs), pourvu qu'il soit testé seul.
 - Le découpage des tâches ; l'ordre naturel : textes (4.1, 4.7, 4.8) · langue des sorties (4.2) · événements du RSN
