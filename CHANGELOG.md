@@ -42,7 +42,7 @@ Première version de l'extension.
 - Une réponse de l'API des événements en plusieurs pages est signalée dans le Journal ; l'API du site RSN est demandée avec un paramètre anti-cache.
 - Les réponses des sources sont plafonnées à 5 Mo.
 - Les propositions du public reçoivent les thèmes des réglages et ne purgent plus aucun cache.
-- Page Infolettre : l'état des programmes du RSN est lu par l'identifiant de l'article, et une erreur de la fonction du site ne casse plus la page.
+- Page Infolettre : l'état des programmes du RSN est lu par l'identifiant de l'article et d'après la clé `en-cours` du tableau rendu par la fonction `rsn_appel_etat` du site (sans quoi aucun programme n'était repris) ; une erreur de cette fonction ne casse plus la page.
 
 ### Limites connues
 Voir « Limites connues de la version 0.1.0 » dans `LISEZMOI.md`.

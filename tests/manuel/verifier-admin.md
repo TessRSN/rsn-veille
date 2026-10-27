@@ -164,7 +164,7 @@ copie de 24 h (`rsn_veille_radar_dernier`). Un verrou de 2 min (`rsn_veille_rada
 Page Veille > Infolettre (`/wp-admin/admin.php?page=rsn-veille-infolettre`). Trois blocs HTML aux styles en
 ligne (tableaux), calqués sur l'infolettre de septembre 2026 : **Agenda** (événements à venir publiés et
 événements du RSN, comme la page publique), **Appels** (appels publiés non échus et programmes du RSN ouverts,
-articles de la catégorie 149 pour lesquels `rsn_appel_etat()` répond « ouvert »), **Nouvelles gardées**
+articles de la catégorie 149 pour lesquels `rsn_appel_etat()` répond « En cours » (clé `en-cours`)), **Nouvelles gardées**
 (option `rsn_veille_nouvelles_gardees`, la plus récente d'abord). Préparation : publier quelques fiches
 (événements et un appel avec date limite), garder deux nouvelles dans le Radar, et, pour les programmes,
 avoir des articles de la catégorie 149 avec l'extrait 45 du site actif.

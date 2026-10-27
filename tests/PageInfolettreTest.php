@@ -41,12 +41,16 @@ final class PageInfolettreTest extends TestCase {
         $article = new WP_Post();
         $article->ID = 1234;
         $recu = null;
-        $etat = static function (int $id) use (&$recu): string {
+        // Forme réelle de l'extrait 45 : un tableau ['cle' => …, 'libelle' => …].
+        $etat = static function (int $id) use (&$recu): array {
             $recu = $id;
-            return 'ouvert';
+            return ['cle' => 'en-cours', 'libelle' => 'En cours'];
         };
-        $this->assertSame('ouvert', PageInfolettre::etat_programme($etat, $article));
+        $this->assertSame(PageInfolettre::ETAT_OUVERT, PageInfolettre::etat_programme($etat, $article));
         $this->assertSame(1234, $recu, "l'identifiant de l'article, pas l'objet");
+        $this->assertSame('a-venir', PageInfolettre::etat_programme(static fn(int $id): array => ['cle' => 'a-venir', 'libelle' => 'À venir'], $article));
+        // Une chaîne nue reste acceptée.
+        $this->assertSame('en-cours', PageInfolettre::etat_programme(static fn(int $id): string => 'en-cours', $article));
 
         // Signature inattendue ou erreur dans l'extrait du site : état inconnu, la page continue.
         $this->assertSame(PageInfolettre::ETAT_INCONNU, PageInfolettre::etat_programme(static fn(\WP_Post $p): string => 'ouvert', $article));
@@ -54,6 +58,8 @@ final class PageInfolettreTest extends TestCase {
             throw new RuntimeException('base indisponible');
         }, $article));
         $this->assertSame(PageInfolettre::ETAT_INCONNU, PageInfolettre::etat_programme(static fn(int $id): array => [], $article));
+        $this->assertSame(PageInfolettre::ETAT_INCONNU, PageInfolettre::etat_programme(static fn(int $id): array => ['libelle' => 'En cours'], $article));
+        $this->assertSame(PageInfolettre::ETAT_INCONNU, PageInfolettre::etat_programme(static fn(int $id): string => '', $article));
     }
 
     public function test_nombre_demande_parmi_6_8_10_12(): void {
