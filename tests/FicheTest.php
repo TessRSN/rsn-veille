@@ -139,9 +139,9 @@ final class FicheTest extends TestCase {
         // Sans échéance : une fin distincte du début sert de date limite.
         $this->assertTrue($appel(['debut' => '2026-01-01', 'fin' => '2026-11-01'])->appel_en_cours($jour));
         $this->assertFalse($appel(['debut' => '2026-10-20', 'fin' => '2026-10-24'])->appel_en_cours($jour));
-        // Ni échéance ni fin distincte : moins de 90 jours depuis la publication (début), sinon depuis la création.
-        $this->assertTrue($appel(['debut' => '2026-07-28', 'fin' => '2026-07-28'])->appel_en_cours($jour), '89 jours');
-        $this->assertFalse($appel(['debut' => '2026-07-27', 'fin' => '2026-07-27'])->appel_en_cours($jour), '90 jours');
+        // Ni échéance ni fin distincte : moins de 30 jours depuis la publication (début), sinon depuis la création.
+        $this->assertTrue($appel(['debut' => '2026-09-26', 'fin' => '2026-09-26'])->appel_en_cours($jour), '29 jours');
+        $this->assertFalse($appel(['debut' => '2026-09-25', 'fin' => '2026-09-25'])->appel_en_cours($jour), '30 jours');
         $this->assertFalse($appel(['debut' => '2026-06-22', 'cree_le' => '2026-10-25'])->appel_en_cours($jour), 'publié en juin, collecté aujourd\'hui');
         $this->assertTrue($appel(['cree_le' => '2026-10-01'])->appel_en_cours($jour));
         $this->assertFalse($appel(['cree_le' => '2026-07-01'])->appel_en_cours($jour));

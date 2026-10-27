@@ -139,7 +139,7 @@ final class DonneesTest extends TestCase {
     public function test_tri_evenements_par_debut_puis_appels_par_echeance(): void {
         $this->entrepot->creer($this->fiche(['titre' => 'Décembre', 'debut' => '2026-12-03', 'cle_source' => 'a:1']));
         $this->entrepot->creer($this->fiche(['titre' => 'Novembre', 'debut' => '2026-11-02', 'cle_source' => 'a:2']));
-        $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Appel sans échéance', 'debut' => '2026-09-01', 'cle_source' => 'b:1']));
+        $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Appel sans échéance', 'debut' => '2026-10-05', 'cle_source' => 'b:1']));
         $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Appel tardif', 'debut' => '2026-08-01', 'echeance' => '2027-01-15', 'cle_source' => 'b:2']));
         $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Appel proche', 'debut' => '2026-10-01', 'echeance' => '2026-11-30', 'cle_source' => 'b:3']));
         $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Appel même échéance, publié avant', 'debut' => '2026-07-01', 'echeance' => '2026-11-30', 'cle_source' => 'b:4']));
