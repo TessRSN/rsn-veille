@@ -280,7 +280,7 @@ final class PageReglagesTest extends TestCase {
 
     public function test_la_liste_des_pages_inclut_les_privees(): void {
         foreach (['publish' => 'Veille publiée', 'draft' => 'Veille brouillon', 'private' => 'Veille privée', 'trash' => 'Veille corbeille'] as $statut => $titre) {
-            wp_insert_post(['post_type' => 'page', 'post_status' => $statut, 'post_title' => $titre, 'post_date' => '2026-01-05 10:00:00']);
+            wp_insert_post(['post_type' => 'page', 'post_status' => $statut, 'post_title' => $titre]);
         }
         $html = PageReglages::page_html(PageReglages::contexte(Collecte::reglages()));
         $this->assertSame(1, preg_match('/<select id="rsn-veille-page".*?<\/select>/s', $html, $m));

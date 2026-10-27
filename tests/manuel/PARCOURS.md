@@ -139,17 +139,21 @@ est vide pour la page Veille choisie.
    - un **appel d'un autre organisateur** (Obvia, par exemple) avec une date limite dans 20 jours ;
    - un **appel du RSN sans aucune date limite** (ni `rsn_veille_echeance` ni date de fin), publié il y a 5 jours ;
    - un **événement du RSN commencé hier et qui finit demain** ;
+   - une **série du RSN de plus de 7 jours, commencée hier** (webinaires, par exemple) ;
    - un événement du RSN dans 90 jours (au-delà des autres éléments de la bande), un événement de partenaire et un
-     événement de l'écosystème.
+     événement de l'écosystème ; un **événement de rsn.quebec classé « Événements partenaires »** dans The Events
+     Calendar (collecté par la source « RSN : événements » et présent aussi dans le calendrier du site).
    Purger le cache de la page (`wp transient delete rsn_veille_json_fr`) après chaque changement de fiche.
 4. **Bande « À la une du RSN »** : trois cartes au plus, que des éléments du RSN, triées par date (la tuile jaune
    donne le jour et le mois) ; l'appel « Nouveau » porte l'étiquette rouge « Nouveau » ; l'appel dont la date limite
    est dans 10 jours porte « Ferme dans 10 jours » (« Ferme demain » à 1 jour, « Ferme aujourd'hui » à 0, et
    « Date limite : … » au-delà de 21 jours : la bande ne garde que les trois éléments les plus proches ; pour voir
    cette dernière étiquette, repousser temporairement la date limite de l'appel de 10 jours à 40 jours) ; **l'événement du RSN commencé hier et qui finit demain est à la une**
-   (il compte parmi les trois cartes, avec son jour de début) ; l'appel d'un autre organisateur n'y est pas ;
+   (il compte parmi les trois cartes, avec son jour de début, étiquette « Événement RSN ») ; **la série de plus de
+   7 jours commencée hier n'y est pas** (elle reste dans la liste) ; l'événement classé « Événements partenaires »
+   n'y est pas non plus ; l'appel d'un autre organisateur n'y est pas ;
    **l'appel du RSN sans date limite n'y est pas**. Cliquer « Tout ce que le RSN organise et finance → » : la page
-   défile jusqu'à la liste avec « Qui organise › RSN » actif. Sans aucun élément du RSN à venir, la bande disparaît.
+   bascule en vue Liste (même depuis le calendrier) et défile jusqu'à la liste avec « Qui organise › RSN » actif. Sans aucun élément du RSN à venir, la bande disparaît.
 5. **Bande « Dates limites »** : une puce par appel en cours qui a une date limite (les quatre appels à date
    limite), triées par date, avec l'organisateur (« RSN » en jaune) ; **l'appel sans date limite n'y est pas** ; la
    rangée défile horizontalement si elle dépasse. Sans appel à date limite, la bande disparaît.
@@ -162,19 +166,20 @@ est vide pour la page Veille choisie.
 8. **Liste unifiée** : événements et appels mêlés par mois, en-tête qui n'affiche que les compteurs non nuls (« 2 événements », « 1 appel » ou « 2 événements · 1 appel ») ; pastilles de
    type, d'organisateur, de format, de langue et de thèmes ; hexagone doré pour un élément du RSN.
 9. **Calendrier** : l'appel apparaît le jour de sa date limite, en puce jaune « Date limite · … » ; cliquer le jour :
-   les événements du jour puis les appels de ce jour ; la légende contient « Date limite d'un appel ». Avec
+   les événements du jour puis les appels de ce jour ; le titre du mois compte événements **et** appels affichés
+   (« N éléments ») ; la série de plus de 7 jours ne figure qu'à son premier jour ; la légende contient « Date limite d'un appel ». Avec
    « Afficher › Appels », seuls les appels restent dans la grille.
 10. **Attributs** : `[rsn_veille une="0"]` : pas de bande « À la une », le reste intact ;
     `[rsn_veille section="appels"]` : bande « Dates limites » puis les appels seuls, triés par date limite (sans date
     limite en dernier), sans bande « À la une » ni colonne de filtres ; `[rsn_veille section="agenda"]` : événements
     seuls, filtre Afficher absent, ni « À la une » ni « Dates limites ».
-11. **Débordement de la bande dans le thème** (page Elementor, widget Code court dans une section **pleine
-    largeur**, puis dans une section à largeur limitée) : le fond marine de « À la une » va d'un bord à l'autre de
-    la fenêtre alors que les cartes restent centrées (1140 px au plus). Contrôler **avec une barre de défilement
+11. **Fond de la bande dans le thème** (page Elementor, widget Code court, dans une section pleine largeur puis dans une
+    section à largeur limitée) : le fond marine de « À la une » va d'un bord à l'autre de la fenêtre alors que les
+    cartes restent alignées sur le contenu de la page (1140 px au plus). Contrôler **avec une barre de défilement
     verticale visible** (Windows, ou macOS avec « Toujours afficher les barres de défilement ») :
-    `document.documentElement.scrollWidth === document.documentElement.clientWidth` dans la console du navigateur.
-    S'il y a un léger défilement horizontal : `une="0"`, ou `overflow-x:clip` sur le conteneur du thème (voir le
-    guide, section 4) ; consigner le constat dans le tableau des écarts. Vérifier aussi à 375 px (cartes empilées).
+    `document.documentElement.scrollWidth === document.documentElement.clientWidth` dans la console du navigateur
+    (la bande ne doit causer aucun défilement horizontal). Consigner tout écart dans le tableau des écarts.
+    Vérifier aussi à 375 px (cartes empilées).
 12. Section **Ressources et cohabitation** de `verifier-public.md` : ressources seulement sur la page Veille
     (chargées avec `?ver=0.2.0`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
     si installé (sur la page anglaise, les textes des bandes s'affichent en français tant qu'ils ne sont pas traduits :
@@ -183,10 +188,15 @@ est vide pour la page Veille choisie.
     validateur iCal, abonnement dans un agenda).
 14. **Qui organise des catégories TEC** : une catégorie TEC de slug `rsn` classe ses événements sous RSN, `partenaires`
     sous Partenaires, `ecosysteme` (ou toute autre) sous Écosystème ; renommer la catégorie sans changer le slug ne
-    change rien.
+    change rien. Un événement de rsn.quebec classé « Événements partenaires » ou « Écosystème numérique » sort sous
+    Partenaires ou Écosystème, y compris quand la fiche collectée et l'événement du calendrier du site sont fusionnés,
+    et il n'est pas à la une du RSN.
+15. **Purge à la mise à jour** : `wp option delete rsn_veille_version`, puis charger une page de wp-admin ; le transient
+    `rsn_veille_json_fr` a disparu (`wp transient get rsn_veille_json_fr` ne rend rien) et
+    `wp option get rsn_veille_version` rend `0.2.0`. Un second chargement ne purge plus.
 
 **Terminé quand** : toutes les cases de ces sections de `verifier-public.md` sont cochées, sauf celles du formulaire
-(étape 8), et chacun des points 4 à 14 ci-dessus donne le résultat attendu.
+(étape 8), et chacun des points 4 à 15 ci-dessus donne le résultat attendu.
 
 ## 8. Formulaire « Proposer un événement »
 

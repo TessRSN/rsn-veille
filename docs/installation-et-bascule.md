@@ -66,6 +66,12 @@ Le dépôt est **privé** (`TessRSN/rsn-veille`) et la branche de livraison est 
 
 Quelle que soit la voie, l'activation lance les mêmes opérations (voir section 8).
 
+### Après la mise à jour de la 0.1.0 vers la 0.2.0
+
+1. Remplacer l'extension (zip par-dessus l'ancienne, ou mise à jour WP Pusher / Git Updater). Aucune réactivation ni migration n'est nécessaire.
+2. **La purge des caches est automatique** : au premier chargement de wp-admin avec la nouvelle version, l'extension vide le cache du JSON public (toutes les langues), la page Veille de LiteSpeed et le cache Elementor de cette page, puis retient le numéro de version (option `rsn_veille_version`). Au besoin, LiteSpeed › Gestion › Purger tout.
+3. Une fiche **IVADO déjà en base** garde l'adresse `ivado.ca` (la collecte ne relit pas les fiches existantes). Pour la remplacer par la cible de la redirection : `wp post meta update <ID> rsn_veille_url <cible>` (par exemple `https://event.fourwaves.com/aihealthsymposium`).
+
 ## 3. Réglages du premier jour
 
 Après l'activation, le menu **Veille** apparaît dans wp-admin (sous « Commentaires »), avec cinq pages : File d'approbation, Radar, Infolettre, Journal et Réglages. Dans **Veille › Réglages** :
@@ -82,7 +88,7 @@ Après l'activation, le menu **Veille** apparaît dans wp-admin (sous « Comment
 ## 4. Créer la page Veille (en brouillon ou privée)
 
 1. Pages › Ajouter. Titre : « Veille de l'écosystème » (ou le titre voulu).
-2. Avec l'éditeur de blocs : un bloc **Code court** contenant `[rsn_veille]`. Avec Elementor : le widget **Code court** (Shortcode) contenant `[rsn_veille]`, **dans une section pleine largeur** (voir « Bande « À la une du RSN » : pleine largeur » plus bas).
+2. Avec l'éditeur de blocs : un bloc **Code court** contenant `[rsn_veille]`. Avec Elementor : le widget **Code court** (Shortcode) contenant `[rsn_veille]`, (voir « Bande « À la une du RSN » : fond jusqu'aux bords » plus bas).
 3. Enregistrer en **brouillon**, ou en **privée** (visibilité « Privée » : seules les personnes connectées avec les droits voient la page, ce qui permet d'essayer la page sans la rendre publique). Ne pas ajouter la page au menu.
 4. Prévisualiser. Le raccourci rend, sans attribut (`section="tout"`) : la barre d'actions (« S'abonner au calendrier », « Proposer un événement »), la bande « À la une du RSN », la bande « Dates limites », puis les filtres (recherche, Afficher, Qui organise, Mois, Format, Lieu, Thèmes, Organisateur) à côté de la liste unifiée des événements et des appels (ou du calendrier), et « Sources lues ». Attributs :
    - `section="agenda"` : les événements seuls (filtre Afficher verrouillé sur Événements, sans bande des dates limites) ;
@@ -90,10 +96,10 @@ Après l'activation, le menu **Veille** apparaît dans wp-admin (sous « Comment
    - `une="0"` : retire la bande « À la une du RSN » de la page complète (à employer quand le thème ou la page met déjà le RSN en avant ; la bande n'existe de toute façon que dans `section="tout"`). Exemple : `[rsn_veille une="0"]`.
 5. Choisir cette page dans Veille › Réglages › Page Veille. La liste propose les pages publiées, en brouillon **et privées**.
 
-**Bande « À la une du RSN » : pleine largeur.** Le fond marine de la bande déborde du conteneur sur toute la largeur de la fenêtre (`margin-inline:calc(50% - 50vw)`), alors que son contenu reste centré (1140 px au plus). Cela suppose que le raccourci soit dans une section Elementor **pleine largeur** (« Largeur du contenu : pleine largeur », ou section sans limite de largeur) : à vérifier à l'écran, à chaque nouvelle mise en page. Avec une barre de défilement verticale (Windows, ou « toujours afficher les barres » sur Mac), `100vw` compte la barre et, selon le thème, un léger défilement horizontal de la page est possible. Dans ce cas, deux solutions : mettre `une="0"` (pas de bande, donc pas de débordement), ou ajouter `overflow-x:clip` au conteneur du thème qui entoure le contenu (par exemple dans le CSS additionnel du thème : `body{overflow-x:clip}` ou le sélecteur du conteneur de la page).
+**Bande « À la une du RSN » : fond jusqu'aux bords.** La bande garde la largeur de la colonne où se trouve le raccourci, et son fond marine est peint jusqu'aux bords de la fenêtre sans élargir la page : aucune section pleine largeur n'est requise et aucun défilement horizontal n'apparaît, quelle que soit la barre de défilement. Le contenu reste aligné sur celui de la page (1140 px au plus). Pour ne pas avoir de bande, mettre `une="0"`.
 
 **Ce que montre la page.**
-- *À la une du RSN* : les trois prochains éléments **organisés par le RSN**, événements (à venir ou en cours) et appels en cours **qui ont une date limite**, triés par date. Un appel sans date limite n'y figure pas (il n'a pas de date à montrer). Un événement du RSN qui a commencé et n'est pas fini y reste. Étiquettes : « Événement du RSN » ; « Nouveau » pour un appel publié depuis 7 jours ou moins ; « Ferme dans N jours » (21 jours ou moins avant la date limite) ; sinon « Date limite : … ». Sans élément du RSN, la bande disparaît.
+- *À la une du RSN* : les trois prochains éléments **organisés par le RSN**, événements (à venir ou en cours) et appels en cours **qui ont une date limite**, triés par date. Un appel sans date limite n'y figure pas (il n'a pas de date à montrer). Un événement court du RSN qui a commencé et n'est pas fini y reste ; une série de plus de 7 jours en sort dès qu'elle a commencé. Étiquettes : « Événement RSN » ; « Nouveau » pour un appel publié depuis 7 jours ou moins ; « Ferme dans N jours » (21 jours ou moins avant la date limite) ; sinon « Date limite : … ». Sans élément du RSN, la bande disparaît.
 - *Dates limites* : une puce par appel en cours qui a une date limite, triées par date. Sans appel à date limite, la bande disparaît.
 - *Liste unifiée* : événements et appels groupés par mois (début d'un événement, date limite d'un appel). Un appel sans date limite se trouve dans la liste seulement, classé dans le mois courant. Les appels apparaissent aussi dans le calendrier, à leur date limite.
 
@@ -122,7 +128,7 @@ Installer l'extension, faire les réglages (section 3), lancer la collecte, impo
 1. **Garder une sortie de secours** : dupliquer la page `/calendrier-evenements/` (ou noter précisément son contenu actuel : le raccourci de l'extrait 61 et sa mise en page Elementor).
 2. Dans la page `/calendrier-evenements/` (adresse conservée), remplacer le raccourci de l'extrait 61 par `[rsn_veille]` (dans le même widget Code court d'Elementor), enregistrer.
 3. Choisir cette page dans Veille › Réglages › **Page Veille** (pour que les purges de cache visent la page publique, pas le brouillon).
-4. **Vérifier** la page publiée, hors connexion : l'agenda s'affiche, le filtre **Qui organise › RSN** retrouve l'usage de l'ancienne page, le calendrier, les appels, le formulaire, et la bande **« À la une du RSN » déborde bien sur toute la largeur de la fenêtre** (section Elementor pleine largeur) sans défilement horizontal de la page ; sinon, `une="0"` ou `overflow-x:clip` (section 4). Vérifier les menus et les liens des pages d'accueil qui pointent vers `/calendrier-evenements/`.
+4. **Vérifier** la page publiée, hors connexion : l'agenda s'affiche, le filtre **Qui organise › RSN** retrouve l'usage de l'ancienne page, le calendrier, les appels, le formulaire, et la bande **« À la une du RSN » a son fond jusqu'aux bords de la fenêtre** sans défilement horizontal de la page (section 4). Vérifier les menus et les liens des pages d'accueil qui pointent vers `/calendrier-evenements/`.
 5. **Seulement ensuite**, désactiver l'extrait Code Snippets **61** (désactiver avant ferait afficher le raccourci brut).
 6. Purger le cache LiteSpeed du site une fois.
 7. Mettre la page Veille en brouillon, créée au temps 1, à la corbeille (ou la garder en brouillon pour des essais).

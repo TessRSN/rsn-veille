@@ -71,11 +71,11 @@ function rsn_veille_bouchons_reinitialiser(): void {
         'posts' => [], 'meta' => [], 'termes' => [], 'filtres' => [], 'actions' => [],
         'prochain_id' => 1, 'types' => [], 'taxonomies' => [], 'metas_enregistrees' => [], 'requetes' => [],
         'options' => [], 'cache_options' => [], 'transients' => [], 'cron' => [], 'declenchees' => [],
-        // Administration : menus, capacités de l'utilisateur courant, rôles, scripts et styles en file.
+        // Administration : menus, capacités de l'utilisateur courant, rôles, scripts et styles en file, métaboxes.
         'menus' => [], 'sous_menus' => [], 'crochets_menus' => [], 'capacites' => [], 'ecritures_roles' => 0,
-        'scripts' => [], 'styles' => [], 'localisations' => [],
+        'scripts' => [], 'styles' => [], 'localisations' => [], 'metaboxes' => [],
         // Réglages : options enregistrées, messages d'erreur des champs, lancements de WP-Cron.
-        'metaboxes' => [], 'reglages' => [], 'erreurs_reglages' => [], 'cron_lances' => 0,
+        'reglages' => [], 'erreurs_reglages' => [], 'cron_lances' => 0,
         // Public : raccourcis, routes REST, règles de réécriture, variables de requête, page demandée.
         'raccourcis' => [], 'routes' => [], 'regles' => [], 'variables_requete' => [], 'objet_demande' => null,
         'regles_regenerees' => 0,
@@ -453,7 +453,11 @@ function wp_insert_post(array $article, bool $erreur = false, bool $mise_a_jour 
         return new WP_Error('empty_content', 'Contenu, titre et extrait vides.');
     }
     $statut = $article['post_status'] ?? 'draft';
-    $date = ($article['post_date'] ?? '') !== '' ? $article['post_date'] : date('Y-m-d H:i:s');
+    // Date par défaut : l'heure de Montréal, la même base que get_gmt_from_date() (sinon une page `publish`
+    // créée sans date passerait en `future` quand le fuseau de PHP n'est pas celui du site).
+    $date = ($article['post_date'] ?? '') !== ''
+        ? $article['post_date']
+        : (new DateTimeImmutable('now', new DateTimeZone('America/Toronto')))->format('Y-m-d H:i:s');
     $gmt = $article['post_date_gmt'] ?? '';
     if ($gmt === '' || $gmt === '0000-00-00 00:00:00') {
         $gmt = in_array($statut, ['draft', 'pending'], true) ? '0000-00-00 00:00:00' : get_gmt_from_date($date);
