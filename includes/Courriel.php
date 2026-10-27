@@ -13,8 +13,8 @@ if (!defined('ABSPATH')) {
 
 /**
  * Courriel hebdomadaire optionnel de la veille (réglage `courriel` de `rsn_veille_reglages`) : les
- * fiches créées depuis sept jours, celles qui attendent une approbation et les nouvelles repérées par
- * le radar. Planifié par WP-Cron (`rsn_veille_hebdo`, récurrence « weekly »), le jour choisi à 08:00
+ * fiches créées depuis sept jours (publiées ou à approuver), le nombre de fiches plus anciennes qui
+ * attendent encore dans la file, et les nouvelles repérées par le radar. Planifié par WP-Cron (`rsn_veille_hebdo`, récurrence « weekly »), le jour choisi à 08:00
  * à Montréal.
  *
  * `composer` est pure (aucune lecture de WordPress, seulement l'échappement et les dates en français) ;
@@ -48,17 +48,19 @@ final class Courriel {
     // --- Composition (pure) ---
 
     /**
-     * Courriel de la semaine, ou null s'il n'y a aucune nouveauté (fiches publiées + fiches à approuver) :
-     * dans ce cas rien n'est envoyé, même si le radar a repéré des nouvelles.
+     * Courriel de la semaine, ou null s'il n'y a aucune nouveauté (fiches publiées + fiches à approuver
+     * créées dans la semaine) : dans ce cas rien n'est envoyé, même si le radar a repéré des nouvelles ou
+     * si des fiches plus anciennes attendent dans la file.
      *
      * @param array<int,array<string,mixed>> $nouvelles_fiches Fiches publiées créées depuis sept jours (format `Fiche::vers_tableau()`).
-     * @param array<int,array<string,mixed>> $en_attente Fiches à approuver.
+     * @param array<int,array<string,mixed>> $en_attente Fiches à approuver créées depuis sept jours.
      * @param array<int,array<string,mixed>> $nouvelles_radar Nouvelles du radar (titre, source, date, url).
      * @param string $url_file Adresse de la file d'approbation.
      * @param string $aujourdhui Date du jour, Y-m-d.
+     * @param int $attente_anterieure Fiches à approuver plus anciennes, résumées en une ligne (hors décompte).
      * @return array{sujet: string, html: string, texte: string}|null
      */
-    public static function composer(array $nouvelles_fiches, array $en_attente, array $nouvelles_radar, string $url_file, string $aujourdhui): ?array {
+    public static function composer(array $nouvelles_fiches, array $en_attente, array $nouvelles_radar, string $url_file, string $aujourdhui, int $attente_anterieure = 0): ?array {
         $publiees = self::fiches_lisibles($nouvelles_fiches);
         $attente = self::fiches_lisibles($en_attente);
         $radar = self::fiches_lisibles($nouvelles_radar);
@@ -70,6 +72,12 @@ final class Courriel {
         /* translators: %d : nombre de nouveautés de la semaine. */
         $sujet = sprintf(_n("Veille de l'écosystème : %d nouveauté cette semaine", "Veille de l'écosystème : %d nouveautés cette semaine", $total, 'rsn-veille'), $total);
         $intro = self::intro(count($publiees), count($attente));
+        $anterieure = $attente_anterieure > 0
+            /* translators: %d : nombre de fiches à approuver créées avant la semaine. */
+            ? sprintf(_n('%d fiche attend toujours dans la file.', '%d fiches attendent toujours dans la file.', $attente_anterieure, 'rsn-veille'), $attente_anterieure)
+            : '';
+        // Sans section « À approuver », le bouton de la file suit la ligne de l'attente plus ancienne.
+        $bouton_seul = $anterieure !== '' && $attente === [] && self::adresse($url_file) !== '';
         $pied = __("Envoyé par l'extension RSN : veille de l'écosystème. Pour ne plus recevoir ce courriel, décochez l'option dans Veille › Réglages.", 'rsn-veille');
         $date = Dates::date_longue($aujourdhui);
 
@@ -90,7 +98,9 @@ final class Courriel {
             . '<table role="presentation" style="max-width:600px;width:100%;margin:0 auto;border-collapse:collapse"><tr><td>'
             . '<h1 style="margin:0 0 4px;font-size:22px;line-height:1.25;color:' . self::MARINE . '">' . self::texte(__("Veille de l'écosystème", 'rsn-veille')) . '</h1>'
             . ($date !== '' ? '<p style="margin:0 0 16px;color:' . self::GRIS . '">' . self::texte($date) . '</p>' : '')
-            . '<p style="margin:0 0 8px">' . self::texte($intro) . '</p>';
+            . '<p style="margin:0 0 8px">' . self::texte($intro) . '</p>'
+            . ($anterieure !== '' ? '<p style="margin:0 0 8px">' . self::texte($anterieure) . '</p>' : '')
+            . ($bouton_seul ? self::bouton_file($url_file) : '');
         foreach ($sections as [$cle, $titre, $elements, $genre]) {
             $html .= '<h2 style="margin:28px 0 4px;padding-top:12px;border-top:1px solid ' . self::FILET . ';font-size:16px;color:' . self::MARINE . '">'
                 . self::texte($titre . ' (' . count($elements) . ')') . '</h2>';
@@ -101,8 +111,7 @@ final class Courriel {
                 $html .= '<p style="margin:12px 0 0;color:' . self::GRIS . '">' . self::texte(self::autres(count($elements) - self::MAX_PAR_SECTION)) . '</p>';
             }
             if ($cle === 'attente' && self::adresse($url_file) !== '') {
-                $html .= '<p style="margin:20px 0 0"><a href="' . esc_url($url_file) . '" style="display:inline-block;background:' . self::JAUNE . ';color:' . self::ENCRE
-                    . ';font-weight:bold;text-decoration:none;padding:10px 18px">' . self::texte(__("Ouvrir la file d'approbation", 'rsn-veille')) . '</a></p>';
+                $html .= self::bouton_file($url_file);
             }
         }
         $html .= '<p style="margin:32px 0 0;padding-top:12px;border-top:1px solid ' . self::FILET . ';font-size:12px;color:' . self::GRIS . '">' . self::texte($pied) . '</p>'
@@ -110,6 +119,12 @@ final class Courriel {
 
         // Texte.
         $lignes = [__("Veille de l'écosystème", 'rsn-veille') . ($date !== '' ? ' : ' . $date : ''), '', $intro];
+        if ($anterieure !== '') {
+            $lignes[] = $anterieure;
+        }
+        if ($bouton_seul) {
+            $lignes[] = __("Ouvrir la file d'approbation", 'rsn-veille') . ' : ' . self::adresse($url_file);
+        }
         foreach ($sections as [$cle, $titre, $elements, $genre]) {
             $lignes[] = '';
             $lignes[] = mb_strtoupper($titre) . ' (' . count($elements) . ')';
@@ -260,13 +275,16 @@ final class Courriel {
             // Un appel périmé (Fiche::appel_en_cours) n'est pas sur la page publique : il n'est pas annoncé comme publié.
             static fn(Fiche $f): bool => $f->type !== 'appel' || $f->appel_en_cours($aujourdhui)
         ));
-        $en_attente = $entrepot->lister('a_approuver');
+        // Seules les fiches à approuver de la semaine comptent ; les plus anciennes sont résumées en une ligne.
+        $en_attente = $entrepot->lister_crees_depuis($limite, 'a_approuver');
+        $anterieure = max(0, $entrepot->compter()['a_approuver'] - count($en_attente));
         $courriel = self::composer(
             array_map(static fn(Fiche $f): array => $f->vers_tableau(), $publiees),
             array_map(static fn(Fiche $f): array => $f->vers_tableau(), $en_attente),
             self::nouvelles_du_radar($limite),
             admin_url('admin.php?page=' . Menu::SLUG),
-            $aujourdhui
+            $aujourdhui,
+            $anterieure
         );
         if ($courriel === null) {
             return ['statut' => 'rien', 'nb' => 0, 'destinataires' => $destinataires];
@@ -354,6 +372,12 @@ final class Courriel {
         }
         /* translators: %s : décompte des fiches de la semaine. */
         return sprintf(__('Cette semaine : %s.', 'rsn-veille'), implode(__(' et ', 'rsn-veille'), $parties));
+    }
+
+    /** Bouton jaune « Ouvrir la file d'approbation ». */
+    private static function bouton_file(string $url_file): string {
+        return '<p style="margin:20px 0 0"><a href="' . esc_url($url_file) . '" style="display:inline-block;background:' . self::JAUNE . ';color:' . self::ENCRE
+            . ';font-weight:bold;text-decoration:none;padding:10px 18px">' . self::texte(__("Ouvrir la file d'approbation", 'rsn-veille')) . '</a></p>';
     }
 
     private static function autres(int $n): string {

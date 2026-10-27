@@ -271,7 +271,10 @@ final class CourrielTest extends TestCase {
 
     // --- Envoi ---
 
-    /** Fiches de la semaine : 2 publiées récentes, 1 ancienne, 1 sans date de création, 1 à approuver, 1 écartée. */
+    /**
+     * Fiches de test : 2 publiées récentes, 1 ancienne, 1 sans date de création, 1 à approuver de la semaine,
+     * 1 à approuver plus ancienne, 1 écartée.
+     */
     private static function fiches_de_test(): void {
         $e = new EntrepotWordPress();
         $base = ['type' => 'evenement', 'debut' => '2026-11-20', 'organisateur' => 'Obvia', 'source' => 'obvia', 'niveau' => 'A'];
@@ -286,7 +289,8 @@ final class CourrielTest extends TestCase {
         $cree('Vieille fiche', 'publie', '2026-10-18', 'o:3');
         $sans = $cree('Fiche sans date de création', 'publie', null, 'o:4');
         delete_post_meta($sans, 'rsn_veille_cree_le');
-        $cree('Colloque santé', 'a_approuver', '2026-09-01', 'o:5');
+        $cree('Colloque santé', 'a_approuver', '2026-10-21', 'o:5');
+        $cree('Atelier oublié dans la file', 'a_approuver', '2026-09-01', 'o:7');
         $cree('Fiche écartée', 'ecarte', '2026-10-26', 'o:6');
     }
 
@@ -309,9 +313,12 @@ final class CourrielTest extends TestCase {
         $this->assertStringContainsString('Webinaire IA', $c['message']);
         $this->assertStringContainsString('Colloque santé', $c['message']);
         $this->assertStringContainsString('href="https://exemple.test/wp-admin/admin.php?page=rsn-veille"', $c['message']);
-        foreach (['Vieille fiche', 'Fiche sans date de création', 'Fiche écartée'] as $absente) {
+        foreach (['Vieille fiche', 'Fiche sans date de création', 'Fiche écartée', 'Atelier oublié dans la file'] as $absente) {
             $this->assertStringNotContainsString($absente, $c['message']);
         }
+        // La file plus ancienne est résumée en une ligne, hors du décompte de la semaine.
+        $this->assertStringContainsString('1 fiche attend toujours dans la file.', $c['message']);
+        $this->assertStringContainsString('1 fiche attend toujours dans la file.', (string) $c['texte']);
         // Version texte jointe (partie text/plain) par phpmailer_init.
         $this->assertStringContainsString('- Atelier données', (string) $c['texte']);
 
@@ -320,6 +327,24 @@ final class CourrielTest extends TestCase {
             get_option(Courriel::OPTION_DERNIER)
         );
         $this->assertSame(get_option(Courriel::OPTION_DERNIER), Courriel::dernier_envoi());
+    }
+
+    public function test_pas_de_courriel_si_rien_n_a_ete_cree_cette_semaine_meme_avec_une_file(): void {
+        self::regler();
+        $e = new EntrepotWordPress();
+        $e->creer(Fiche::depuis_tableau(['type' => 'evenement', 'titre' => 'En attente depuis septembre', 'debut' => '2026-11-20', 'statut' => 'a_approuver', 'cle_source' => 'o:9', 'cles_source' => ['o:9'], 'cree_le' => '2026-09-01']));
+        $this->assertSame(['statut' => 'rien', 'nb' => 0, 'destinataires' => ['equipe@exemple.test', 'tess@exemple.test']], Courriel::tenter());
+        $this->assertSame([], self::courriels());
+    }
+
+    public function test_composer_resume_la_file_ancienne_sans_la_compter(): void {
+        $c = Courriel::composer([self::fiche('Atelier données')], [], [], self::URL_FILE, self::AUJOURDHUI, 4);
+        $this->assertSame("Veille de l'écosystème : 1 nouveauté cette semaine", $c['sujet']);
+        $this->assertStringContainsString('4 fiches attendent toujours dans la file.', $c['html']);
+        $this->assertStringContainsString("Ouvrir la file d'approbation", $c['html']);
+        $this->assertStringContainsString('4 fiches attendent toujours dans la file.', $c['texte']);
+        $this->assertNull(Courriel::composer([], [], [], self::URL_FILE, self::AUJOURDHUI, 4));
+        $this->assertStringNotContainsString('attend', Courriel::composer([self::fiche('Atelier')], [], [], self::URL_FILE, self::AUJOURDHUI)['html']);
     }
 
     public function test_un_appel_perime_publie_cette_semaine_n_est_pas_annonce(): void {

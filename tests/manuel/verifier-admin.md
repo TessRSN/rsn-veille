@@ -235,7 +235,8 @@ création), ouvrir le Radar une fois (cache), et créer une fiche ancienne :
       option décochée : aucun événement après réactivation.
 - [ ] **Envoyer un essai maintenant** (option cochée, enregistrée) : message « Courriel d'essai envoyé (N
       nouveautés) à M destinataires. » ; MailHog reçoit un courriel au sujet « Veille de l'écosystème : N
-      nouveautés cette semaine » (N = fiches publiées créées depuis 7 jours + toutes les fiches à approuver),
+      nouveautés cette semaine » (N = fiches publiées et fiches à approuver créées depuis 7 jours ; les fiches à approuver plus anciennes sont
+      résumées par la ligne « K fiches attendent toujours dans la file. », hors du décompte),
       en HTML avec une version texte (onglet « Plain text »), expédié aux adresses saisies. **Dernier envoi**
       affiche la date et « N nouveautés, M destinataires ». `wp option get rsn_veille_dernier_courriel --format=json`
       → `date`, `destinataires`, `nb`, `ok: true`.
@@ -246,7 +247,8 @@ création), ouvrir le Radar une fois (cache), et créer une fiche ancienne :
       titre `<script>alert(1)</script>` de la préparation s'affiche en texte, sans alerte. Aucune requête
       réseau pendant l'envoi (sources du Radar non relancées : vider le cache avec
       `wp transient delete rsn_veille_radar rsn_veille_radar_dernier` ; la section disparaît, l'envoi réussit).
-- [ ] Sans nouveauté (passer toutes les fiches à `ecarte`, ou `cree_le` ancienne, et vider la file) : l'essai
+- [ ] Sans nouveauté (passer toutes les fiches à `ecarte`, ou leur `cree_le` à une date ancienne ; une file non
+      vide mais ancienne ne suffit pas à envoyer) : l'essai
       répond « Aucune nouveauté cette semaine : le courriel n'est pas envoyé. » et MailHog ne reçoit rien.
       Option décochée : « L'envoi est désactivé … » ; liste de destinataires vide : « Aucun destinataire … ».
 - [ ] Même chose sans MailHog : `wp eval 'var_dump(RSN\Veille\Courriel::envoyer());'` affiche `bool(true)` si
