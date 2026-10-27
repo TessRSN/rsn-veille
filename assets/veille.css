@@ -274,7 +274,7 @@
 @media (min-width:641px){.rsn-veille .cal .pts{display:none}}
 
 
-@media (prefers-reduced-motion:reduce){.rsn-veille.rsn-veille .btn,.rsn-veille.rsn-veille .btn svg{transition:none}}
+@media (prefers-reduced-motion:reduce){.rsn-veille.rsn-veille .btn,.rsn-veille.rsn-veille .btn svg{transition:none}.rsn-veille .limites .defile{scroll-behavior:auto}}
 @media (max-width:820px){
   .rsn-veille .deux{grid-template-columns:minmax(0,1fr);gap:34px}
   .rsn-veille .cote{position:static}
