@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/bouchons-wordpress.php';
+
 use RSN\Veille\Http;
 
 final class HttpTest extends \PHPUnit\Framework\TestCase {
@@ -85,5 +87,14 @@ final class HttpTest extends \PHPUnit\Framework\TestCase {
         $this->assertSame(1, Http::delai(['timeout' => 0]));
         $this->assertSame(15, Http::delai(['timeout' => 'long']));
         $this->assertSame(1, Http::delai(['timeout' => -3]));
+    }
+    public function test_obtenir_plafonne_la_taille_de_la_reponse_a_cinq_mo(): void {
+        rsn_veille_bouchons_reinitialiser();
+        $GLOBALS['rsn_veille_wp']['reponse_http'] = ['headers' => ['Content-Type' => 'application/rss+xml'], 'body' => '<rss></rss>', 'response' => ['code' => 200, 'message' => 'OK']];
+        $r = Http::obtenir('https://exemple.ca/feed/', ['accept' => 'xml']);
+        $this->assertSame(['<rss></rss>', 'application/rss+xml', 200, null], [$r['corps'], $r['type'], $r['code'], $r['erreur']]);
+        $arguments = $GLOBALS['rsn_veille_wp']['requetes_http'][0]['arguments'];
+        $this->assertSame(5 * 1024 * 1024, $arguments['limit_response_size']);
+        $this->assertSame(15, $arguments['timeout']);
     }
 }

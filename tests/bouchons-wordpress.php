@@ -77,6 +77,8 @@ function rsn_veille_bouchons_reinitialiser(): void {
         'regles_regenerees' => 0,
         // Courriel : messages remis à wp_mail (sujet, message, en-têtes, texte alternatif) et résultat à renvoyer.
         'courriels' => [], 'wp_mail_reussit' => true,
+        // HTTP : appels à wp_remote_get (adresse et arguments) et réponse à rendre (null : 200 vide).
+        'requetes_http' => [], 'reponse_http' => null,
     ];
     $GLOBALS['rsn_veille_wp']['roles'] = [
         'administrator' => new WP_Role('administrator', ['manage_options' => true, 'edit_posts' => true]),
@@ -85,6 +87,34 @@ function rsn_veille_bouchons_reinitialiser(): void {
         'subscriber' => new WP_Role('subscriber', ['read' => true]),
     ];
     \RSN\Veille\TypeContenu::enregistrer();
+}
+
+// --- HTTP (imitation de wp-includes/http.php) ---
+
+/** Note l'appel (`requetes_http`) et rend `reponse_http` : un tableau au format de WordPress, ou un WP_Error. */
+function wp_remote_get(string $url, array $arguments = []): array|WP_Error {
+    $GLOBALS['rsn_veille_wp']['requetes_http'][] = ['url' => $url, 'arguments' => $arguments];
+    return $GLOBALS['rsn_veille_wp']['reponse_http']
+        ?? ['headers' => [], 'body' => '', 'response' => ['code' => 200, 'message' => 'OK'], 'cookies' => [], 'http_response' => null];
+}
+
+/** Code de la réponse, '' pour une erreur ou une réponse incomplète (comme WordPress). */
+function wp_remote_retrieve_response_code(array|WP_Error $reponse): int|string {
+    return is_array($reponse) && isset($reponse['response']['code']) ? (int) $reponse['response']['code'] : '';
+}
+
+/** En-tête de la réponse (nom insensible à la casse), '' s'il manque. */
+function wp_remote_retrieve_header(array|WP_Error $reponse, string $nom): array|string {
+    if (!is_array($reponse) || !is_array($reponse['headers'] ?? null)) {
+        return '';
+    }
+    $entetes = array_change_key_case($reponse['headers'], CASE_LOWER);
+    return $entetes[strtolower($nom)] ?? '';
+}
+
+/** Corps de la réponse, '' pour une erreur. */
+function wp_remote_retrieve_body(array|WP_Error $reponse): string {
+    return is_array($reponse) ? (string) ($reponse['body'] ?? '') : '';
 }
 
 class WP_Error {

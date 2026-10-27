@@ -27,6 +27,9 @@ final class Http {
         'any' => '*/*',
     ];
 
+    /** Taille maximale d'une réponse lue, en octets : au-delà, le corps est tronqué (pas de chargement sans fin en mémoire). */
+    private const TAILLE_MAX = 5 * 1024 * 1024;
+
     /** Nombre de caractères du début du corps examinés pour reconnaître le contenu. */
     private const DEBUT = 1024;
 
@@ -44,6 +47,7 @@ final class Http {
         $reponse = wp_remote_get($url, [
             'timeout' => self::delai($options),
             'redirection' => 5,
+            'limit_response_size' => self::TAILLE_MAX,
             'user-agent' => 'RSN-Veille/' . RSN_VEILLE_VERSION . ' (+https://rsn.quebec)',
             'headers' => ['Accept' => $accept],
         ]);
