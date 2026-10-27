@@ -1,0 +1,5 @@
+vendor/
+.env*
+node_modules/
+.phpunit.result.cache
+rsn-veille-*.zip

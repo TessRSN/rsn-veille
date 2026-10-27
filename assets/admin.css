@@ -1,0 +1,265 @@
+/* RSN Veille : pages de l'administration. Police et boutons de wp-admin, couleurs discrètes. */
+
+.rsn-veille-admin .nav-tab-wrapper {
+	margin-bottom: 12px;
+}
+
+.rsn-veille-admin .nav-tab .count {
+	font-weight: 400;
+	color: #50575e;
+}
+
+.rsn-veille-filtres {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin: 0 0 12px;
+}
+
+.rsn-veille-message:empty {
+	display: none;
+}
+
+.rsn-veille-file td,
+.rsn-veille-file th {
+	vertical-align: top;
+}
+
+.rsn-veille-file .rsn-veille-titre {
+	width: 26%;
+}
+
+.rsn-veille-file .rsn-veille-extrait {
+	width: 24%;
+	color: #50575e;
+}
+
+.rsn-veille-liens {
+	margin-top: 4px;
+	color: #a7aaad;
+}
+
+.rsn-veille-absent {
+	margin: 4px 0 0;
+	color: #8a4b00;
+	font-style: italic;
+}
+
+.rsn-veille-niveau {
+	color: #50575e;
+	white-space: nowrap;
+}
+
+.rsn-veille-niveau abbr {
+	font-weight: 600;
+	text-decoration: none;
+	cursor: help;
+}
+
+.rsn-veille-actions {
+	white-space: nowrap;
+}
+
+.rsn-veille-actions .button {
+	margin: 0 4px 4px 0;
+}
+
+.rsn-veille-file tr[aria-busy="true"] {
+	opacity: 0.6;
+}
+
+.rsn-veille-erreur {
+	margin: 4px 0 0;
+	color: #b32d2e;
+	white-space: normal;
+}
+
+.rsn-veille-journal td.num {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.rsn-veille-journal details ul {
+	margin: 4px 0 0 16px;
+	list-style: disc;
+}
+
+.rsn-veille-deroule {
+	margin: 8px 0;
+}
+
+.rsn-veille-deroule summary {
+	cursor: pointer;
+	font-weight: 600;
+}
+
+.rsn-veille-deroule table {
+	margin-top: 6px;
+}
+
+@media screen and (max-width: 782px) {
+	.rsn-veille-file .rsn-veille-titre,
+	.rsn-veille-file .rsn-veille-extrait {
+		width: auto;
+	}
+
+	.rsn-veille-actions {
+		white-space: normal;
+	}
+}
+
+/* Réglages */
+
+.rsn-veille-reglages h2 {
+	margin-top: 28px;
+}
+
+.rsn-veille-etat {
+	margin: 0 0 8px;
+}
+
+.rsn-veille-details {
+	margin: 0 0 8px 18px;
+	list-style: disc;
+}
+
+.rsn-veille-sources th[scope="row"] {
+	font-weight: 600;
+}
+
+.rsn-veille-url {
+	margin-top: 2px;
+	color: #50575e;
+	font-weight: 400;
+	font-size: 12px;
+	overflow-wrap: anywhere;
+}
+
+/* Les espaces de bordure des mots-clés comptent : police à chasse fixe, lignes jamais repliées. */
+.rsn-veille-reglages textarea.code {
+	white-space: pre;
+	overflow-x: auto;
+	tab-size: 4;
+}
+
+@media (max-width: 782px) {
+	.rsn-veille-sources td,
+	.rsn-veille-sources th {
+		padding: 8px 6px;
+	}
+}
+
+/* Radar */
+
+.rsn-veille-message-erreur {
+	color: #b32d2e;
+}
+
+.rsn-veille-radar h2 {
+	margin-top: 28px;
+}
+
+.rsn-veille-radar-barre {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 16px;
+	align-items: center;
+	margin: 12px 0;
+}
+
+.rsn-veille-radar-barre form {
+	margin: 0;
+}
+
+.rsn-veille-compteur {
+	font-weight: 600;
+}
+
+.rsn-veille-radar-liste {
+	margin: 0 0 12px;
+	max-width: 960px;
+}
+
+.rsn-veille-nouvelle {
+	margin: 0;
+	padding: 10px 0;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.rsn-veille-nouvelle[aria-busy="true"] {
+	opacity: 0.6;
+}
+
+.rsn-veille-nouvelle-date,
+.rsn-veille-nouvelle-meta {
+	color: #50575e;
+}
+
+.rsn-veille-nouvelle .rsn-veille-extrait {
+	margin: 4px 0 6px;
+}
+
+.rsn-veille-nouvelle .rsn-veille-actions {
+	white-space: normal;
+}
+
+.rsn-veille-radar-statut[data-statut="reperee"] {
+	font-weight: 600;
+}
+
+.rsn-veille-radar-erreurs {
+	margin-top: 24px;
+	color: #50575e;
+}
+
+.rsn-veille-radar-erreurs ul {
+	margin: 4px 0 0 16px;
+	list-style: disc;
+}
+
+.rsn-veille-radar .rsn-veille-vide[hidden] {
+	display: none;
+}
+
+/* Infolettre */
+
+.rsn-veille-infolettre .rsn-veille-bloc {
+	max-width: 960px;
+	margin: 0 0 32px;
+}
+
+.rsn-veille-infolettre .rsn-veille-bloc h2 {
+	margin-top: 28px;
+}
+
+.rsn-veille-infolettre .rsn-veille-compteur {
+	margin-left: 8px;
+	font-size: 13px;
+	font-weight: 400;
+	color: #50575e;
+}
+
+.rsn-veille-reglages-bloc,
+.rsn-veille-infolettre .rsn-veille-vider {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 12px;
+	align-items: center;
+	margin: 0 0 12px;
+}
+
+.rsn-veille-bloc-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin: 0 0 12px;
+}
+
+.rsn-veille-apercu {
+	display: block;
+	width: 100%;
+	min-height: 120px;
+	border: 1px solid #dcdcde;
+	background: #fff;
+}
