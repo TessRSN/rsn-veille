@@ -16,10 +16,12 @@ final class PageFileTest extends TestCase {
     protected function setUp(): void {
         rsn_veille_bouchons_reinitialiser();
         $_POST = $_REQUEST = [];
+        $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-10-27';
     }
 
     protected function tearDown(): void {
         $_POST = $_REQUEST = [];
+        $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-10-25';
     }
 
     private static function fiche(array $champs = []): Fiche {
@@ -134,10 +136,45 @@ final class PageFileTest extends TestCase {
         return array_map(static fn(Fiche $f): int => $f->id, $fiches);
     }
 
-    public function test_filtrer_par_statut_et_trier_par_debut_croissant(): void {
-        // Sans début, la date limite sert de date ; sans aucune date, en dernier.
-        $this->assertSame([2, 8, 3, 1, 9], self::ids(PageFile::filtrer(self::lot(), 'a_approuver', '', '')));
+    public function test_publiees_gardent_le_tri_par_date_d_evenement(): void {
         $this->assertSame([5, 4], self::ids(PageFile::filtrer(self::lot(), 'publie', '', '')));
+        // Même avec un jour d'arrivée, une fiche publiée suit sa date d'événement.
+        $lot = [
+            self::fiche(['id' => 1, 'debut' => '2026-12-01', 'statut' => 'publie', 'cree_le' => '2026-10-27']),
+            self::fiche(['id' => 2, 'debut' => '2026-11-05', 'statut' => 'publie', 'cree_le' => '2026-10-01']),
+        ];
+        $this->assertSame([2, 1], self::ids(PageFile::filtrer($lot, 'publie', '', '')));
+    }
+
+    public function test_publiees_et_ecartees_sans_debut_suivent_la_date_limite_puis_sans_date_en_dernier(): void {
+        foreach (['publie' => [3, 1, 2, 4], 'ecarte' => [2, 1, 3, 4]] as $statut => $attendu) {
+            $lot = [
+                self::fiche(['id' => 4, 'debut' => null, 'echeance' => null, 'statut' => $statut]),
+                self::fiche(['id' => 3, 'debut' => null, 'echeance' => '2026-11-10', 'statut' => $statut]),
+                self::fiche(['id' => 2, 'debut' => '2026-12-01', 'statut' => $statut]),
+                self::fiche(['id' => 1, 'debut' => '2026-11-20', 'statut' => $statut]),
+            ];
+            // Sans début, la date limite sert de date ; sans aucune date, en dernier (même pour les écartées).
+            $this->assertSame($attendu, self::ids(PageFile::filtrer($lot, $statut, '', '')), $statut);
+        }
+    }
+
+    public function test_a_approuver_trie_par_arrivee_decroissante(): void {
+        $lot = [
+            self::fiche(['id' => 1, 'debut' => '2026-11-01', 'statut' => 'a_approuver', 'cree_le' => '2026-10-20']),
+            self::fiche(['id' => 2, 'debut' => '2026-11-02', 'statut' => 'a_approuver', 'cree_le' => '2026-10-27']),
+            self::fiche(['id' => 3, 'debut' => '2026-12-30', 'statut' => 'a_approuver', 'cree_le' => '2026-10-27']),
+            self::fiche(['id' => 4, 'debut' => '2026-10-30', 'statut' => 'a_approuver', 'cree_le' => null]),
+        ];
+        $this->assertSame([3, 2, 1, 4], self::ids(PageFile::filtrer($lot, 'a_approuver', '', '')));
+    }
+
+    public function test_a_verifier_trie_par_arrivee_decroissante(): void {
+        $lot = [
+            self::fiche(['id' => 1, 'debut' => '2026-11-01', 'statut' => 'publie', 'absent_depuis' => '2026-10-26', 'cree_le' => '2026-10-20']),
+            self::fiche(['id' => 2, 'debut' => '2026-12-01', 'statut' => 'publie', 'absent_depuis' => '2026-10-26', 'cree_le' => '2026-10-24']),
+        ];
+        $this->assertSame([2, 1], self::ids(PageFile::filtrer($lot, 'a_verifier', '', '')));
     }
 
     public function test_ecartees_triees_par_debut_decroissant(): void {
@@ -154,6 +191,37 @@ final class PageFileTest extends TestCase {
         $this->assertSame([8, 3], self::ids(PageFile::filtrer(self::lot(), 'a_approuver', 'appel', '')));
         $this->assertSame([2], self::ids(PageFile::filtrer(self::lot(), 'a_approuver', 'evenement', 'Obvia : événements')));
         $this->assertSame([], self::ids(PageFile::filtrer(self::lot(), 'a_approuver', 'appel', 'Obvia : événements')));
+    }
+
+    // --- repère « Nouveau » ---
+
+    public function test_repere_nouveau_aujourd_hui_ou_hier(): void {
+        $this->assertTrue(PageFile::est_nouvelle(self::fiche(['cree_le' => '2026-10-27']), '2026-10-27'));
+        $this->assertTrue(PageFile::est_nouvelle(self::fiche(['cree_le' => '2026-10-26']), '2026-10-27'));
+        $this->assertFalse(PageFile::est_nouvelle(self::fiche(['cree_le' => '2026-10-25']), '2026-10-27'));
+        $this->assertFalse(PageFile::est_nouvelle(self::fiche(['cree_le' => null]), '2026-10-27'));
+        // Hier est calculé sur le calendrier : le 1er du mois a pour veille le dernier jour du mois précédent.
+        $this->assertTrue(PageFile::est_nouvelle(self::fiche(['cree_le' => '2026-10-31']), '2026-11-01'));
+    }
+
+    public function test_rendu_a_approuver_affiche_nouveau(): void {
+        $lot = [
+            self::fiche(['id' => 1, 'titre' => 'Récente', 'cree_le' => '2026-10-27']),
+            self::fiche(['id' => 2, 'titre' => 'Ancienne', 'cree_le' => '2026-10-10']),
+        ];
+        $html = PageFile::page_html($lot, 'a_approuver', '', '', 'https://exemple.test/wp-admin/admin.php?page=rsn-veille', self::OPTIONS);
+        $this->assertSame(1, substr_count($html, 'rsn-veille-nouveau'));
+        $this->assertMatchesRegularExpression('#<strong>Récente</strong> <span class="rsn-veille-nouveau">Nouveau</span>#u', $html);
+        $this->assertDoesNotMatchRegularExpression('#Ancienne</strong> <span class="rsn-veille-nouveau"#u', $html);
+    }
+
+    public function test_rendu_a_verifier_affiche_nouveau_mais_pas_les_autres_onglets(): void {
+        $lot = [self::fiche(['id' => 1, 'statut' => 'publie', 'absent_depuis' => '2026-10-26', 'cree_le' => '2026-10-26'])];
+        $url = 'https://exemple.test/wp-admin/admin.php?page=rsn-veille';
+        $this->assertStringContainsString('rsn-veille-nouveau', PageFile::page_html($lot, 'a_verifier', '', '', $url, self::OPTIONS));
+        $this->assertStringNotContainsString('rsn-veille-nouveau', PageFile::page_html($lot, 'publie', '', '', $url, self::OPTIONS));
+        $ecartee = [self::fiche(['id' => 2, 'statut' => 'ecarte', 'cree_le' => '2026-10-27'])];
+        $this->assertStringNotContainsString('rsn-veille-nouveau', PageFile::page_html($ecartee, 'ecarte', '', '', $url, self::OPTIONS));
     }
 
     public function test_compteurs_et_sources_distinctes(): void {

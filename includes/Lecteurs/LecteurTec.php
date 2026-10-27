@@ -42,7 +42,7 @@ final class LecteurTec implements Lecteur {
             }
             $resultat->fiches[] = $fiche;
         }
-        // Pas de pagination en 0.1.0 : au-delà d'une page, des événements manquent (signalé, fiches gardées).
+        // Pas de pagination (limite connue) : au-delà d'une page, des événements manquent (signalé, fiches gardées).
         $pages = $donnees['total_pages'] ?? 1;
         if (is_numeric($pages) && (int) $pages > 1) {
             $resultat->erreurs[] = sprintf('Réponse en %d pages : seule la première est lue, des événements peuvent manquer', (int) $pages);
@@ -71,7 +71,8 @@ final class LecteurTec implements Lecteur {
 
         $fiche->image_url = $this->image($e['image'] ?? null);
 
-        if (($source['nom'] ?? null) === 'RSN') {
+        // Catégorie du site du RSN seulement (source `rsn`) : elle décide de « Qui organise ».
+        if (($source['id'] ?? '') === 'rsn') {
             $categorie = $this->premier_objet($e['categories'] ?? null);
             $fiche->categorie_rsn = $this->texte($categorie['name'] ?? null);
         }

@@ -118,6 +118,76 @@ final class LecteursHtmlTest extends TestCase {
         $this->assertSame([], LecteurIvado::resumes_par_url([]));
     }
 
+    public function test_ivado_redirection_detectee_et_cible_lue(): void {
+        $refresh = '<html><head><title>IA en santé 2026 | IVADO</title><meta http-equiv="refresh" content="0; url=https://exemple.test/ia-sante-2026"></head><body><h1>Redirection/Redirecting...</h1></body></html>';
+        $this->assertSame(['cible' => 'https://exemple.test/ia-sante-2026'], LecteurIvado::redirection($refresh));
+        $litteral = '<html><head><title>IA en santé 2026 | IVADO</title></head><body><h1>Redirecting...</h1><script>window.location = "https://exemple.test/litteral"</script></body></html>';
+        $this->assertSame(['cible' => 'https://exemple.test/litteral'], LecteurIvado::redirection($litteral));
+        $href = '<html><head><title>X</title><script>location.href = \'https://exemple.test/href\';</script></head><body></body></html>';
+        $this->assertSame(['cible' => 'https://exemple.test/href'], LecteurIvado::redirection($href));
+        // Le titre seul suffit à reconnaître la redirection ; la cible est alors vide.
+        $this->assertSame(['cible' => ''], LecteurIvado::redirection('<html><head><title>Redirecting... | IVADO</title></head><body></body></html>'));
+        // Cible qui n'est pas http(s) : ignorée.
+        $this->assertSame(['cible' => ''], LecteurIvado::redirection('<html><head><title>X</title></head><body><script>window.location = "javascript:alert(1)"</script></body></html>'));
+        // La page réelle : l'adresse est dans une variable affectée à window.location.
+        $this->assertSame(['cible' => 'https://event.fourwaves.com/aihealthsymposium'], LecteurIvado::redirection($this->fixture('ivado_redirection.html')));
+    }
+
+    public function test_ivado_propriete_location_dun_objet_nest_pas_une_redirection(): void {
+        $page = static fn(string $script): string => '<html><head><title>IA en santé 2026 | IVADO</title></head><body><h1>IA en santé 2026</h1><script>' . $script . '</script></body></html>';
+        $this->assertNull(LecteurIvado::redirection($page('var widget = {}; widget.location = "Montréal";')));
+        $this->assertNull(LecteurIvado::redirection($page('e.location = "";')));
+        $this->assertNull(LecteurIvado::redirection($page('var o = {}; o.window.location = "https://exemple.test/x";')));
+        $this->assertSame(['cible' => 'https://exemple.test/x'], LecteurIvado::redirection($page("window.location = 'https://exemple.test/x'")));
+        $this->assertSame(['cible' => 'https://exemple.test/y'], LecteurIvado::redirection($page('location.href = "https://exemple.test/y"')));
+    }
+
+    public function test_ivado_redirection_garde_titre_et_resume_de_la_liste(): void {
+        $f = new Fiche();
+        $f->titre = 'IA en santé 2026';
+        $f->resume = '';
+        $resumes = ['https://ivado.ca/evenements/ia-en-sante-2026' => 'Un résumé qui ne doit pas être appliqué.'];
+        LecteurIvado::completer($f, $this->fixture('ivado_redirection.html'), 'https://ivado.ca/evenements/ia-en-sante-2026/', $resumes);
+        $this->assertSame(['IA en santé 2026', '', 'https://event.fourwaves.com/aihealthsymposium'], [$f->titre, $f->resume, $f->url]);
+        // Sans cible lisible, l'adresse IVADO résolue est conservée.
+        $g = new Fiche();
+        $g->titre = 'Fiche';
+        LecteurIvado::completer($g, '<html><head><title>Redirecting... | IVADO</title></head><body></body></html>', 'https://ivado.ca/evenements/x/');
+        $this->assertSame(['Fiche', 'https://ivado.ca/evenements/x/'], [$g->titre, $g->url]);
+    }
+
+    public function test_ivado_redirection_sans_titre_prend_la_balise_title(): void {
+        $f = new Fiche();
+        $resumes = ['https://ivado.ca/evenements/ia-en-sante-2026' => 'Un résumé qui ne doit pas être appliqué.'];
+        LecteurIvado::completer($f, $this->fixture('ivado_redirection.html'), 'https://ivado.ca/evenements/ia-en-sante-2026/', $resumes);
+        $this->assertSame(['IA en santé 2026', '', 'https://event.fourwaves.com/aihealthsymposium'], [$f->titre, $f->resume, $f->url]);
+        // Jamais le h1 : sans balise title lisible, la fiche reste sans titre (elle sera ignorée).
+        $g = new Fiche();
+        LecteurIvado::completer($g, '<html><head></head><body><h1>Redirecting...</h1></body></html>', 'https://ivado.ca/evenements/x/');
+        $this->assertSame(['', 'https://ivado.ca/evenements/x/'], [$g->titre, $g->url]);
+    }
+
+    public function test_ivado_titre_redirect_jamais_repris_comme_titre(): void {
+        // « Redirect », « Redirecting… », « Redirection » : le titre d'une page de passage n'est pas celui de l'événement.
+        foreach (['Redirect', 'Redirecting... | IVADO', 'REDIRECTION | IVADO', 'Page Redirect | IVADO'] as $titre) {
+            $f = new Fiche();
+            LecteurIvado::completer($f, '<html><head><title>' . $titre . '</title><meta http-equiv="refresh" content="0; url=https://exemple.test/cible"></head><body></body></html>', 'https://ivado.ca/evenements/x/');
+            $this->assertSame(['', 'https://exemple.test/cible'], [$f->titre, $f->url], $titre);
+        }
+        // Un vrai titre est toujours repris.
+        $g = new Fiche();
+        LecteurIvado::completer($g, '<html><head><title>IA en santé 2026 | IVADO</title><meta http-equiv="refresh" content="0; url=https://exemple.test/cible"></head><body></body></html>', 'https://ivado.ca/evenements/x/');
+        $this->assertSame('IA en santé 2026', $g->titre);
+    }
+
+    public function test_ivado_page_normale_toujours_completee(): void {
+        $this->assertNull(LecteurIvado::redirection($this->fixture('ivado.html')));
+        $this->assertNull(LecteurIvado::redirection('<html><head><title>IA en santé 2026 | IVADO</title></head><body><h1>IA en santé 2026</h1></body></html>'));
+        $f = new Fiche();
+        LecteurIvado::completer($f, '<html><head><title>IA en santé 2026 | IVADO</title></head><body><h1>IA en santé 2026</h1></body></html>', 'https://ivado.ca/evenements/ia-en-sante-2026/', ['https://ivado.ca/evenements/ia-en-sante-2026' => 'Résumé du flux.']);
+        $this->assertSame(['IA en santé 2026', 'Résumé du flux.', 'https://ivado.ca/evenements/ia-en-sante-2026/'], [$f->titre, $f->resume, $f->url]);
+    }
+
     public function test_html_sans_evenement(): void {
         foreach ([new LecteurObvia(), new LecteurMila(), new LecteurFrqEvenements(), new LecteurIvado()] as $lecteur) {
             $r = $lecteur->lire('<html></html>', self::IVADO + ['base' => 'https://x.test']);

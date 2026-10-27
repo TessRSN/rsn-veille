@@ -161,8 +161,10 @@ final class PageFile {
     }
 
     /**
-     * Fiches d'un onglet, d'un type et d'une source (vides : tous), triées par date de début croissante
-     * (décroissante pour les écartées). Sans début, la date limite sert de date ; sans date, en dernier.
+     * Fiches d'un onglet, d'un type et d'une source (vides : tous). « À approuver » et « À vérifier » :
+     * les dernières arrivées d'abord (jour `cree_le` décroissant, sans jour en dernier, puis `id`
+     * décroissant). Les autres onglets : par date de début croissante (décroissante pour les écartées) ;
+     * sans début, la date limite sert de date ; sans date, en dernier.
      *
      * @param Fiche[] $fiches
      * @return Fiche[]
@@ -171,6 +173,17 @@ final class PageFile {
         $retenues = array_values(array_filter($fiches, static fn(Fiche $f): bool => self::dans_onglet($f, $statut)
             && ($type === '' || $f->type === $type)
             && ($source === '' || $f->source === $source)));
+        if (self::est_onglet_d_arrivee($statut)) {
+            usort($retenues, static function (Fiche $a, Fiche $b): int {
+                $ja = $a->cree_le ?? '';
+                $jb = $b->cree_le ?? '';
+                if ($ja === '' || $jb === '') {
+                    return ($ja === '') <=> ($jb === '') ?: (int) $b->id <=> (int) $a->id;
+                }
+                return strcmp($jb, $ja) ?: (int) $b->id <=> (int) $a->id;
+            });
+            return $retenues;
+        }
         $sens = $statut === 'ecarte' ? -1 : 1;
         usort($retenues, static function (Fiche $a, Fiche $b) use ($sens): int {
             $da = $a->debut ?? $a->echeance ?? '';
@@ -181,6 +194,24 @@ final class PageFile {
             return $sens * strcmp($da, $db) ?: (int) $a->id <=> (int) $b->id;
         });
         return $retenues;
+    }
+
+    /**
+     * Fiche arrivée aujourd'hui ou hier (jour `cree_le`) : repère « Nouveau » de la file.
+     *
+     * @param string $aujourdhui Jour courant, `AAAA-MM-JJ`.
+     */
+    public static function est_nouvelle(Fiche $f, string $aujourdhui): bool {
+        if ($f->cree_le === null || $f->cree_le === '') {
+            return false;
+        }
+        $hier = (new \DateTimeImmutable($aujourdhui . ' 12:00:00', new \DateTimeZone('UTC')))->modify('-1 day')->format('Y-m-d');
+        return $f->cree_le >= $hier;
+    }
+
+    /** Onglets où les fiches attendent une décision : triés par arrivée, avec le repère « Nouveau ». */
+    private static function est_onglet_d_arrivee(string $onglet): bool {
+        return $onglet === 'a_approuver' || $onglet === 'a_verifier';
     }
 
     /**
@@ -246,12 +277,13 @@ final class PageFile {
      * Une ligne du tableau : titre (lien Modifier, lien d'information, drapeau d'absence), type, dates,
      * organisateur, source et niveau, extrait, boutons selon le statut.
      *
-     * @param array{url_admin?: string} $options `url_admin` : adresse de wp-admin, terminée par « / ».
+     * @param array{url_admin?: string, onglet?: string} $options `url_admin` : adresse de wp-admin, terminée par « / » ;
+     *        `onglet` : onglet affiché, le repère « Nouveau » n'apparaît que dans « À approuver » et « À vérifier ».
      */
     public static function ligne_html(Fiche $f, array $options): string {
         $id = (int) $f->id;
         return '<tr id="rsn-veille-fiche-' . $id . '" data-id="' . $id . '" data-statut="' . esc_attr($f->statut) . '">'
-            . '<td class="rsn-veille-titre">' . self::titre_html($f, (string) ($options['url_admin'] ?? '')) . '</td>'
+            . '<td class="rsn-veille-titre">' . self::titre_html($f, (string) ($options['url_admin'] ?? ''), self::est_onglet_d_arrivee((string) ($options['onglet'] ?? '')) && self::est_nouvelle($f, rsn_veille_aujourdhui())) . '</td>'
             . '<td>' . esc_html(self::libelle_type($f->type)) . '</td>'
             . '<td>' . self::dates_html($f) . '</td>'
             . '<td>' . esc_html($f->organisateur) . '</td>'
@@ -273,7 +305,7 @@ final class PageFile {
         }
         $lignes = '';
         foreach ($fiches as $fiche) {
-            $lignes .= self::ligne_html($fiche, $options);
+            $lignes .= self::ligne_html($fiche, $options + ['onglet' => $onglet]);
         }
         if ($lignes === '') {
             $lignes = '<tr class="rsn-veille-vide"><td colspan="' . count($colonnes) . '">' . esc_html__('Aucune fiche.', 'rsn-veille') . '</td></tr>';
@@ -329,7 +361,7 @@ final class PageFile {
         return $html . '</select>';
     }
 
-    private static function titre_html(Fiche $f, string $url_admin): string {
+    private static function titre_html(Fiche $f, string $url_admin, bool $nouvelle): string {
         $titre = $f->titre !== '' ? $f->titre : __('(sans titre)', 'rsn-veille');
         $liens = [];
         if ($url_admin !== '') {
@@ -340,6 +372,9 @@ final class PageFile {
             $liens[] = '<a href="' . $info . '" target="_blank" rel="noopener noreferrer">' . esc_html__("Page d'origine", 'rsn-veille') . '</a>';
         }
         $html = '<strong>' . esc_html($titre) . '</strong>';
+        if ($nouvelle) {
+            $html .= ' <span class="rsn-veille-nouveau">' . esc_html__('Nouveau', 'rsn-veille') . '</span>';
+        }
         if ($f->absent_depuis !== null && $f->absent_depuis !== '') {
             $depuis = Dates::date_longue($f->absent_depuis);
             /* translators: %s : date à laquelle la fiche n'a plus été trouvée à sa source. */

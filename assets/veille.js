@@ -1,7 +1,8 @@
 /*
  * RSN : veille de l'écosystème, page publique ([rsn_veille]).
- * Repris du JS de docs/maquette/gabarit-v6.1.html, réduit aux parties publiques : filtres, mois (avec
- * « Plus tard » et « Événements passés »), thèmes repliés, liste et calendrier, glissement, formulaire de proposition.
+ * Repris du JS de docs/maquette/gabarit-v8.html, réduit aux parties publiques : filtres (Afficher, Qui organise, mois
+ * avec « Plus tard » et « Événements passés », thèmes repliés), liste unifiée événements + appels groupée par mois,
+ * calendrier, glissement, formulaire de proposition.
  * Les actions de l'équipe (publier, écarter, infolettre) vivent dans wp-admin.
  * Données : <script type="application/json" id="rsn-veille-donnees" data-rsn-veille-donnees> (suffixé
  * « -2 », « -3 »… si le raccourci figure plusieurs fois) ; textes : [data-rsn-veille-textes] du même bloc.
@@ -37,8 +38,9 @@ function animer(racine, noeudDonnees) {
   const HEX = '<svg class="hex" viewBox="0 0 24 26" aria-hidden="true"><path d="M12 2 21.5 7.5v11L12 24 2.5 18.5v-11Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg>';
   const $ = s => racine.querySelector(s);
   const on = (s, type, rappel, options) => { const n = $(s); if (n) n.addEventListener(type, rappel, options); };
-  let onglet = racine.dataset.section === 'appels' ? 'appels' : 'agenda';
-  const filtres = { mois: '', qui: '', format: '', region: '', theme: '', orga: '', q: '' };
+  // Section « agenda » : événements seulement, le filtre « Afficher » n'existe pas et reste verrouillé.
+  const VERROU_TYPE = racine.dataset.section === 'agenda';
+  const filtres = { type: VERROU_TYPE ? 'evenement' : '', mois: '', qui: '', format: '', region: '', theme: '', orga: '', q: '' };
 
   // Textes : « %d » reçoit le nombre, « %1$s », « %2$s »… la valeur de ce rang (l'ordre peut changer à la
   // traduction), un « %s » simple la valeur suivante ; pluriel à la française (2 et plus).
@@ -52,6 +54,8 @@ function animer(racine, noeudDonnees) {
   const cap = s => s ? s[0].toUpperCase() + s.slice(1) : '';
   const premier = j => j === 1 ? t('premier_du_mois') : j;
   const dateLongue = s => { if (!s) return ''; const x = d(s); return `${premier(x.j)} ${MOIS_LONG[x.m - 1]} ${x.a}`; };
+  // Nombre de jours calendaires de a à b (AAAA-MM-JJ), calculé en UTC : aucune heure locale en jeu.
+  const jours = (a, b) => { const x = d(a), y = d(b); return Math.round((Date.UTC(y.a, y.m - 1, y.j) - Date.UTC(x.a, x.m - 1, x.j)) / 864e5); };
   const dateCourte = s => { if (!s) return ''; const x = d(s); return `${x.j} ${MOIS[x.m - 1]} ${x.a}`; };
   const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   // Liens et images : http(s) seulement.
@@ -77,44 +81,59 @@ function animer(racine, noeudDonnees) {
     if (a.m === b.m && a.a === b.a) return t('du_au_meme_mois', a.j, b.j, MOIS_LONG[a.m - 1], a.a);
     return t('du_au', `${premier(a.j)} ${MOIS_LONG[a.m - 1]}${a.a !== b.a ? ' ' + a.a : ''}`, dateLongue(k.fin));
   }
+  // Pastilles (spec 4.5) : type, qui organise, format, langue, thèmes.
+  function pastilles(k) {
+    const appel = k.type === 'appel';
+    const p = [`<span class="pill type${appel ? ' appel' : ''}">${esc(t(appel ? 'appel' : 'evenement'))}</span>`];
+    if (estRSN(k)) p.push(`<span class="pill rsn">${esc(libelle('qui', 'rsn'))}</span>`);
+    else if (k.organisateur) p.push(qui(k) === 'partenaires' ? `<span class="pill part">${esc(t('partenaire', k.organisateur))}</span>` : `<span class="pill orga">${esc(k.organisateur)}</span>`);
+    if (k.format) p.push(`<span class="pill">${esc(k.format)}</span>`);
+    if (k.langue === 'en') p.push(`<span class="pill">${esc(t('en_anglais'))}</span>`);
+    k.themes.forEach(e => p.push(`<span class="pill theme">${esc(e)}</span>`));
+    return `<div class="pills">${p.join('')}</div>`;
+  }
+  const classeRSN = k => estRSN(k) ? ' rsn' : '';
   // ligne compacte (événements passés, comme la section « Passés » de la page Événements)
   function ligneEv(k) {
-    const etiq = k.themes.map(e => `<span>${esc(e)}</span>`).join('');
-    const fmt = [k.format && `<b>${esc(k.format)}</b>`, k.langue === 'en' && esc(t('en_anglais'))].filter(Boolean).join(' · ');
-    const cat = k.categorie_rsn ? `${esc(k.categorie_rsn)} · ` : '';
-    return `<div class="ev">${HEX}${blocJour(k)}<div class="tx">
+    return `<div class="ev${classeRSN(k)}">${HEX}${blocJour(k)}<div class="tx">
+      ${pastilles(k)}
       <h3><a href="${lien(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
-      <div class="meta">${cat}<b>${esc(k.organisateur)}</b>${lieuTexte(k) ? ' · ' + esc(lieuTexte(k)) : ''}</div>
-      ${etiq ? `<div class="etiq">${etiq}</div>` : ''}
-      <div class="pied"><a class="plus" href="${lien(k.url)}" target="_blank" rel="noopener">${esc(t('plus_info'))}</a><span class="fmt">${fmt}</span></div>
+      <div class="meta"><b>${esc(k.organisateur)}</b>${lieuTexte(k) ? ' · ' + esc(lieuTexte(k)) : ''}</div>
+      <div class="pied"><a class="plus" href="${lien(k.url)}" target="_blank" rel="noopener">${esc(t('plus_info'))}</a></div>
     </div></div>`;
   }
   // fiche à venir : même ligne que les passés, avec l'image à gauche du texte et les lignes date / lieu
   function carteEv(k, compact) {
     if (compact === true) return ligneEv(k);
-    const etiq = k.themes.map(e => `<span>${esc(e)}</span>`).join('');
-    const fmt = [k.prix && esc(k.prix), k.langue === 'en' && esc(t('en_anglais'))].filter(Boolean).join(' · ');
     const lieu = [lieuTexte(k), k.format].filter(Boolean).join(' · ');
     const image = /^https?:\/\//i.test(k.image_url || '');
-    return `<div class="ev ${image ? 'avec-image' : ''}">${HEX}${blocJour(k)}
+    return `<div class="ev${classeRSN(k)}${image ? ' avec-image' : ''}">${HEX}${blocJour(k)}
       ${image ? `<a class="im" href="${lien(k.url)}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"><img src="${lien(k.image_url)}" alt="" loading="lazy" decoding="async"></a>` : ''}
       <div class="tx">
-        <div class="meta"><b>${esc(k.organisateur)}</b>${k.categorie_rsn ? ' · ' + esc(k.categorie_rsn) : ''}</div>
+        ${pastilles(k)}
         <h3><a href="${lien(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
         <div class="infos"><span>${ICO_DATE}${periode(k)}</span>${lieu ? `<span>${ICO_LIEU}${esc(lieu)}</span>` : ''}</div>
-        ${etiq ? `<div class="etiq">${etiq}</div>` : ''}
         ${k.resume ? `<p>${esc(k.resume)}</p>` : ''}
-        <div class="pied"><a class="plus" href="${lien(k.url)}" target="_blank" rel="noopener">${esc(t('plus_info'))}</a>${fmt ? `<span class="fmt">${fmt}</span>` : ''}</div>
+        <div class="pied"><a class="plus" href="${lien(k.url)}" target="_blank" rel="noopener">${esc(t('plus_info'))}</a>${k.prix ? `<span class="fmt">${esc(k.prix)}</span>` : ''}</div>
       </div></div>`;
   }
   // Date limite d'un appel : l'échéance trouvée, sinon une fin distincte de la publication.
+  // Une série qui dure plus d'une semaine (webinaires, cours) n'apparaît dans le calendrier qu'à son premier jour,
+  // pour ne pas remplir le mois, et ne reste pas à la une une fois commencée.
+  const longue = k => (new Date(k.fin || k.debut) - new Date(k.debut)) / 864e5 > 7;
   const limite = k => k.echeance && ISO.test(k.echeance) ? k.echeance : (k.fin && k.fin !== k.debut ? k.fin : '');
+  // Clé de tri et de regroupement par mois : la date limite d'un appel (sinon sa publication), le début d'un événement.
+  const cleTri = k => k.type === 'appel' ? (limite(k) || k.debut) : k.debut;
+  // Un appel est passé quand sa date limite l'est ; sans date limite, le serveur décide (publié il y a moins de 90 jours).
+  const estPasse = k => k.type === 'appel' ? (!!limite(k) && limite(k) < AUJ) : (k.fin || k.debut) < AUJ;
+  // appel dans la même frise que les événements : tuile de date limite (ou « publié ») à la place du bloc date
   function carteAppel(k) {
     const lim = limite(k);
     const x = d(lim || k.debut);
     const tuile = lim ? `<div class="tuile"><b>${x.j}</b><span>${MOIS[x.m - 1]}</span><i>${esc(t('date_limite'))}</i></div>`
       : `<div class="tuile gris"><b>${x.j}</b><span>${MOIS[x.m - 1]}</span><i>${esc(t('publie'))}</i></div>`;
-    return `<div class="appel">${tuile}<div class="tx">
+    return `<div class="ev appel-ev${classeRSN(k)}">${HEX}${tuile}<div class="tx">
+      ${pastilles(k)}
       <h3><a href="${lien(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
       <div class="meta"><b>${esc(k.organisateur)}</b> · ${esc(k.categorie || t('appel'))}${lim ? ' · ' + esc(t('publie_le', dateCourte(k.debut))) : ''}</div>
       ${k.resume ? `<p>${esc(k.resume)}</p>` : ''}
@@ -122,14 +141,21 @@ function animer(racine, noeudDonnees) {
     </div></div>`;
   }
   const visibles = type => items.filter(k => k.type === type);
-  const aVenir = () => visibles('evenement').filter(k => (k.fin || k.debut) >= AUJ);
-  const passes = () => visibles('evenement').filter(k => (k.fin || k.debut) < AUJ);
+  const deuxTypes = () => visibles('evenement').concat(visibles('appel'));
+  const aVenir = () => deuxTypes().filter(k => !estPasse(k));
+  const passes = () => deuxTypes().filter(k => estPasse(k));
+  // Mois où un élément à venir est classé : celui de sa clé de tri (le mois courant si elle est déjà passée).
+  const moisClasse = k => (cleTri(k) < AUJ ? AUJ : cleTri(k)).slice(0, 7);
+  // Un événement compte dans chaque mois qu'il traverse, un appel dans le mois de sa date limite.
+  const dansMois = (k, m) => k.type === 'appel' ? moisClasse(k) === m : k.debut.slice(0, 7) <= m && (k.fin || k.debut).slice(0, 7) >= m;
   let vue = 'liste', calMois = AUJ.slice(0, 7), calJour = '';
 
+  const parType = k => !filtres.type || k.type === filtres.type;
+  const parQui = k => !filtres.qui || qui(k) === filtres.qui;
   function filtrer(L) {
     const q = filtres.q.trim().toLowerCase();
-    if (q) L = L.filter(k => (k.titre + ' ' + k.organisateur + ' ' + (k.resume || '')).toLowerCase().includes(q));
-    if (filtres.qui) L = L.filter(k => qui(k) === filtres.qui);
+    if (q) L = L.filter(k => (k.titre + ' ' + k.organisateur + ' ' + (k.resume || '') + ' ' + k.themes.join(' ')).toLowerCase().includes(q));
+    L = L.filter(parType).filter(parQui);
     if (filtres.format) L = L.filter(k => k.format === filtres.format);
     if (filtres.region) L = L.filter(k => k.region === filtres.region);
     if (filtres.theme) L = L.filter(k => k.themes.includes(filtres.theme));
@@ -139,33 +165,40 @@ function animer(racine, noeudDonnees) {
   function rendreAgenda() {
     if (!$('#liste-agenda')) return;
     $('#liste-agenda').hidden = vue !== 'liste'; $('#calendrier').hidden = vue !== 'calendrier';
-    if (vue === 'calendrier') { rendreCalendrier(); rendreMois(); return; }
+    if (vue === 'calendrier') { rendreCalendrier(); rendreRubs(); rendreMois(); return; }
     const anciens = filtres.mois === 'passes';
     let L = filtrer(anciens ? passes() : aVenir());
-    if (filtres.mois === 'plus-tard') { const apres = decalerMois(moisSuivants()[NB_MOIS - 1], 1); L = L.filter(k => k.debut.slice(0, 7) >= apres); }
-    else if (filtres.mois && !anciens) L = L.filter(k => k.debut.slice(0, 7) <= filtres.mois && (k.fin || k.debut).slice(0, 7) >= filtres.mois);
-    L.sort((a, b) => anciens ? b.debut.localeCompare(a.debut) : a.debut.localeCompare(b.debut));
+    if (filtres.mois === 'plus-tard') { const apres = decalerMois(moisSuivants()[NB_MOIS - 1], 1); L = L.filter(k => cleTri(k).slice(0, 7) >= apres); }
+    else if (filtres.mois && !anciens) L = L.filter(k => dansMois(k, filtres.mois));
+    L.sort((a, b) => anciens ? cleTri(b).localeCompare(cleTri(a)) : cleTri(a).localeCompare(cleTri(b)));
     const groupes = new Map();
-    for (const k of L) { const cle = (anciens || k.debut >= AUJ ? k.debut : AUJ).slice(0, 7); if (!groupes.has(cle)) groupes.set(cle, []); groupes.get(cle).push(k); }
+    for (const k of L) { const cle = (anciens ? cleTri(k).slice(0, 7) : moisClasse(k)); if (!groupes.has(cle)) groupes.set(cle, []); groupes.get(cle).push(k); }
+    const nbEv = G => G.filter(k => k.type === 'evenement').length, nbAp = G => G.filter(k => k.type === 'appel').length;
     let html = '';
     for (const [cle, G] of groupes) {
       const x = d(cle + '-01');
-      html += `<section class="bloc"><div class="shead"><h2>${HEX}${cap(MOIS_LONG[x.m - 1])} ${x.a}</h2><span class="aside">${esc(n('nb_evenements', G.length))}</span></div><div class="frise">${G.map(k => carteEv(k, anciens)).join('')}</div></section>`;
+      const aside = [nbEv(G) && n('nb_evenements', nbEv(G)), nbAp(G) && n('nb_appels', nbAp(G))].filter(Boolean).map(esc).join(' · ');
+      html += `<section class="bloc"><div class="shead"><h2>${HEX}${cap(MOIS_LONG[x.m - 1])} ${x.a}</h2><span class="aside">${aside}</span></div><div class="frise">${G.map(k => k.type === 'appel' ? carteAppel(k) : carteEv(k, anciens)).join('')}</div></section>`;
     }
-    $('#liste-agenda').innerHTML = L.length ? html : `<div class="vide">${esc(t('aucun_evenement_filtres'))}</div>`;
+    $('#liste-agenda').innerHTML = L.length ? html : `<div class="vide">${esc(t('aucun_element_filtres'))}</div>`;
     if (anciens) {
-      const plusAncien = L.length ? d(L[L.length - 1].debut) : null;
+      const plusAncien = L.length ? d(cleTri(L[L.length - 1])) : null;
       $('#compte-agenda').textContent = plusAncien ? n('nb_passes_depuis', L.length, `${MOIS_LONG[plusAncien.m - 1]} ${plusAncien.a}`) : n('nb_passes', L.length);
+    } else if (filtres.type === 'evenement') {
+      $('#compte-agenda').textContent = n('nb_a_venir', nbEv(L));
+    } else if (filtres.type === 'appel') {
+      $('#compte-agenda').textContent = n('nb_appels', nbAp(L));
     } else {
-      $('#compte-agenda').textContent = n('nb_a_venir', L.length);
+      $('#compte-agenda').textContent = t('nb_evenements_et_appels', n('nb_evenements', nbEv(L)), n('nb_appels', nbAp(L)));
     }
+    rendreRubs();
     rendreMois();
   }
   const NB_MOIS = 4;
   function moisSuivants() { const mois = []; const c = d(AUJ); for (let i = 0; i < NB_MOIS; i++) { mois.push(`${c.a}-${pad(c.m)}`); c.m++; if (c.m > 12) { c.m = 1; c.a++; } } return mois; }
   function rendreMois() {
     const E = filtrer(aVenir()); const mois = moisSuivants(); const apres = decalerMois(mois[mois.length - 1], 1);
-    const nb = m => E.filter(k => k.debut.slice(0, 7) <= m && (k.fin || k.debut).slice(0, 7) >= m).length;
+    const nb = m => E.filter(k => dansMois(k, m)).length;
     const actif = vue === 'calendrier' ? calMois : filtres.mois;
     let html = `<button type="button" class="rub" data-mois="" aria-pressed="${actif === ''}">${HEX}<span class="t">${esc(t('tous_les_mois'))}</span><span class="n">${E.length}</span></button>`;
     let annee = d(AUJ).a;
@@ -174,45 +207,66 @@ function animer(racine, noeudDonnees) {
       if (x.a !== annee) { annee = x.a; html += `<div class="annee">${x.a}</div>`; }
       html += `<button type="button" class="rub" data-mois="${m}" aria-pressed="${actif === m}">${HEX}<span class="t">${cap(MOIS_LONG[x.m - 1])}</span><span class="n">${nb(m)}</span></button>`;
     }
-    const nTard = E.filter(k => k.debut.slice(0, 7) >= apres).length;
+    const nTard = E.filter(k => cleTri(k).slice(0, 7) >= apres).length;
     html += `<button type="button" class="rub" data-mois="plus-tard" aria-pressed="${actif === 'plus-tard'}">${HEX}<span class="t">${esc(t('plus_tard'))}</span><span class="n">${nTard}</span></button>`;
     html += `<button type="button" class="rub" data-mois="passes" aria-pressed="${actif === 'passes'}">${HEX}<span class="t">${esc(t('evenements_passes'))}</span><span class="n">${filtrer(passes()).length}</span></button>`;
     $('#f-mois').innerHTML = html;
   }
+  // Rubriques « Afficher » et « Qui organise » (spec 4.4) : les compteurs portent sur la vue courante (à venir ou
+  // passés), avec l'autre groupe appliqué mais ni la recherche ni les autres filtres.
+  const rub = (cle, val, texte, nb) => `<button type="button" class="rub" data-cle="${cle}" data-val="${esc(val)}" aria-pressed="${filtres[cle] === val}">${HEX}<span class="t">${esc(texte)}</span><span class="n">${nb}</span></button>`;
+  function rendreRubs() {
+    const base = filtres.mois === 'passes' ? passes() : aVenir();
+    if ($('#f-type')) {
+      const L = base.filter(parQui);
+      $('#f-type').innerHTML = rub('type', '', t('tous'), L.length) + rub('type', 'evenement', t('evenements'), L.filter(k => k.type === 'evenement').length) + rub('type', 'appel', t('appels'), L.filter(k => k.type === 'appel').length);
+    }
+    if ($('#f-qui')) {
+      const L = base.filter(parType);
+      $('#f-qui').innerHTML = rub('qui', '', t('tous'), L.length) + ['rsn', 'partenaires', 'ecosysteme'].map(v => rub('qui', v, libelle('qui', v), L.filter(k => qui(k) === v).length)).join('');
+    }
+  }
   function decalerMois(m, nb) { const x = d(m + '-01'); x.m += nb; while (x.m > 12) { x.m -= 12; x.a++; } while (x.m < 1) { x.m += 12; x.a--; } return `${x.a}-${pad(x.m)}`; }
   function rendreCalendrier() {
+    // Le filtre « Afficher » vaut aussi ici : un appel compte le jour de sa date limite, un événement ses jours.
     const E = filtrer(visibles('evenement'));
+    const A = filtrer(visibles('appel')).filter(limite);
     const x = d(calMois + '-01');
     const nbJours = new Date(x.a, x.m, 0).getDate();
     const premierJour = (new Date(x.a, x.m - 1, 1).getDay() + 6) % 7; // lundi = 0
     const prec = d(decalerMois(calMois, -1) + '-01'); const nbPrec = new Date(prec.a, prec.m, 0).getDate();
     const nEv = E.filter(k => k.debut.slice(0, 7) <= calMois && (k.fin || k.debut).slice(0, 7) >= calMois).length;
-    $('#cal-titre').innerHTML = `${cap(MOIS_LONG[x.m - 1])} ${x.a}<small>${esc(n('nb_ce_mois', nEv))}</small>`;
+    // Éléments du mois affichés : événements qui le traversent et appels dont la date limite y tombe.
+    const nbMois = nEv + A.filter(k => limite(k).slice(0, 7) === calMois).length;
+    $('#cal-titre').innerHTML = `${cap(MOIS_LONG[x.m - 1])} ${x.a}<small>${esc(n('nb_elements', nbMois))}</small>`;
     let html = (T.jours_courts || ['L', 'M', 'M', 'J', 'V', 'S', 'D']).map(j => `<div class="jn">${esc(j)}</div>`).join('');
-    // une série qui dure plus d'une semaine (webinaires, cours) n'apparaît qu'à son premier jour, pour ne pas remplir le mois
-    const longue = k => (new Date(k.fin || k.debut) - new Date(k.debut)) / 864e5 > 7;
     const ceJour = (k, iso) => longue(k) ? k.debut === iso : (k.debut <= iso && (k.fin || k.debut) >= iso);
+    // Éléments d'un jour : les événements (par début), puis les appels dont c'est la date limite.
+    const duJour = iso => E.filter(k => ceJour(k, iso)).sort((a, b) => a.debut.localeCompare(b.debut)).concat(A.filter(k => limite(k) === iso));
     const cellule = (iso, num, hors) => {
-      const J = E.filter(k => ceJour(k, iso)).sort((a, b) => a.debut.localeCompare(b.debut));
-      const puces = J.slice(0, 3).map(k => `<span class="puce ${estRSN(k) ? 'rsn' : ''}" title="${esc(k.titre)}">${esc(k.titre)}</span>`).join('') + (J.length > 3 ? `<span class="plus">+ ${J.length - 3}</span>` : '');
-      const pts = `<span class="pts">${J.slice(0, 4).map(k => `<i class="pt ${estRSN(k) ? 'rsn' : ''}"></i>`).join('')}</span>`;
-      return `<button type="button" class="c ${hors ? 'hors' : ''} ${iso === AUJ ? 'auj' : ''}" data-jour="${iso}" aria-pressed="${calJour === iso}" aria-label="${esc(dateLongue(iso) + ', ' + n('nb_evenements', J.length))}"><span class="num">${num}</span>${puces}${J.length ? pts : ''}</button>`;
+      const J = duJour(iso);
+      const puces = J.slice(0, 3).map(k => k.type === 'appel'
+        ? `<span class="puce appel" title="${esc(k.titre)}">${esc(t('date_limite_puce') + k.titre)}</span>`
+        : `<span class="puce ${estRSN(k) ? 'rsn' : ''}" title="${esc(k.titre)}">${esc(k.titre)}</span>`).join('') + (J.length > 3 ? `<span class="plus">+ ${J.length - 3}</span>` : '');
+      const pts = `<span class="pts">${J.slice(0, 4).map(k => `<i class="pt ${k.type === 'appel' ? 'appel' : (estRSN(k) ? 'rsn' : '')}"></i>`).join('')}</span>`;
+      return `<button type="button" class="c ${hors ? 'hors' : ''} ${iso === AUJ ? 'auj' : ''}" data-jour="${iso}" aria-pressed="${calJour === iso}" aria-label="${esc(dateLongue(iso) + ', ' + n('nb_elements', J.length))}"><span class="num">${num}</span>${puces}${J.length ? pts : ''}</button>`;
     };
     for (let i = premierJour - 1; i >= 0; i--) { const j = nbPrec - i; html += cellule(`${prec.a}-${pad(prec.m)}-${pad(j)}`, j, true); }
     for (let j = 1; j <= nbJours; j++) html += cellule(`${calMois}-${pad(j)}`, j, false);
     const suiv = d(decalerMois(calMois, 1) + '-01'); const reste = (7 - (premierJour + nbJours) % 7) % 7;
     for (let j = 1; j <= reste; j++) html += cellule(`${suiv.a}-${pad(suiv.m)}-${pad(j)}`, j, true);
     $('#cal-grille').innerHTML = html;
-    const J = calJour ? E.filter(k => ceJour(k, calJour)).sort((a, b) => a.debut.localeCompare(b.debut)) : [];
-    $('#cal-jour').innerHTML = calJour ? `<div class="shead"><h2>${HEX}${cap(dateLongue(calJour))}</h2><span class="aside">${esc(n('nb_evenements', J.length))}</span></div>` + (J.length ? `<div class="frise">${J.map(k => carteEv(k)).join('')}</div>` : `<div class="vide">${esc(t('aucun_ce_jour'))}</div>`) : '';
+    const J = calJour ? duJour(calJour) : [];
+    const nbE = J.filter(k => k.type === 'evenement').length, nbA = J.length - nbE;
+    const asideJour = [nbE && n('nb_evenements', nbE), nbA && n('nb_appels', nbA)].filter(Boolean).map(esc).join(' · ') || esc(n('nb_evenements', 0));
+    $('#cal-jour').innerHTML = calJour ? `<div class="shead"><h2>${HEX}${cap(dateLongue(calJour))}</h2><span class="aside">${asideJour}</span></div>` + (J.length ? `<div class="frise">${J.map(k => k.type === 'appel' ? carteAppel(k) : carteEv(k)).join('')}</div>` : `<div class="vide">${esc(t('aucun_ce_jour'))}</div>`) : '';
     $('#compte-agenda').textContent = t('cliquer_jour');
   }
   let themesOuverts = false; const NB_THEMES = 6;
   function rendreTags() {
     if (!$('#f-theme')) return;
-    const E = visibles('evenement');
+    const E = VERROU_TYPE ? visibles('evenement') : deuxTypes();
     const mk = (id, vals, groupe) => { const el = $(id); el.innerHTML = vals.map(v => `<button type="button" class="tag" data-val="${esc(v)}" aria-pressed="${filtres[el.dataset.cle] === v}">${esc(groupe ? libelle(groupe, v) : v)}</button>`).join(''); };
-    mk('#f-qui', ['rsn', 'partenaires', 'ecosysteme'], 'qui');
     mk('#f-format', ['Présentiel', 'Virtuel', 'Hybride'], 'formats');
     mk('#f-region', ['Québec', 'En ligne', 'Hors Québec'], 'regions');
     const compte = {}; E.forEach(k => k.themes.forEach(th => { compte[th] = (compte[th] || 0) + 1; }));
@@ -226,17 +280,48 @@ function animer(racine, noeudDonnees) {
   }
   // Appels en cours : le serveur n'envoie que ceux-là (règle Fiche::appel_en_cours : date limite à venir, sinon
   // publié il y a moins de 90 jours). On ne retire ici que ceux dont la date limite est passée depuis la génération.
-  const appelsEnCours = () => visibles('appel').filter(k => { const lim = limite(k); return !lim || lim >= AUJ; });
+  const appelsEnCours = () => visibles('appel').filter(k => !estPasse(k));
   function rendreAppels() {
     if (!$('#liste-appels')) return;
-    const cle = k => limite(k) || '9' + k.debut;
-    const L = appelsEnCours().sort((a, b) => cle(a).localeCompare(cle(b)));
-    $('#liste-appels').innerHTML = L.length ? L.map(carteAppel).join('') : `<div class="vide">${esc(t('aucun_appel'))}</div>`;
-    $('#aside-appels').textContent = n('nb_appels', L.length);
+    // Par date limite, puis par publication ; les appels sans date limite en dernier.
+    const L = appelsEnCours().sort((a, b) => (!limite(a) - !limite(b)) || limite(a).localeCompare(limite(b)) || a.debut.localeCompare(b.debut));
+    $('#liste-appels').innerHTML = L.length ? `<div class="frise">${L.map(carteAppel).join('')}</div>` : `<div class="vide">${esc(t('aucun_appel'))}</div>`;
+    if ($('#aside-appels')) $('#aside-appels').textContent = n('nb_appels', L.length);
   }
-  function rendreCompteurs() {
-    if ($('#n-agenda')) $('#n-agenda').textContent = aVenir().length;
-    if ($('#n-appels')) $('#n-appels').textContent = appelsEnCours().length;
+  // Bande « À la une du RSN » : les trois prochains éléments du RSN (événements à venir, appels avec date limite).
+  const montrerBande = (selecteur, nb) => { const b = $(selecteur); if (b) b.hidden = !nb; };
+  function rendreUnes() {
+    if (!$('#unes')) return;
+    // Un événement court reste à la une tant qu'il dure (aVenir : fin ou début >= aujourd'hui) ; une série longue
+    // (plus de 7 jours, comme au calendrier) en sort dès qu'elle a commencé ; un appel reste jusqu'à sa date limite.
+    const U = aVenir().filter(k => estRSN(k) && (k.type === 'evenement' ? !(longue(k) && k.debut < AUJ) : (limite(k) && limite(k) >= AUJ)))
+      .sort((a, b) => cleTri(a).localeCompare(cleTri(b)) || a.debut.localeCompare(b.debut)).slice(0, 3);
+    $('#unes').innerHTML = U.map(k => {
+      const x = d(cleTri(k));
+      let etat = 'evenement', texte, detail;
+      if (k.type === 'appel') {
+        const reste = jours(AUJ, limite(k));
+        if (jours(k.debut, AUJ) <= 7) { etat = 'nouveau'; texte = t('nouveau'); }
+        else { etat = ''; texte = reste === 0 ? t('ferme_aujourdhui') : reste === 1 ? t('ferme_demain') : reste <= 21 ? n('ferme_dans', reste) : t('date_limite_le', dateCourte(limite(k))); }
+        detail = esc(String(k.resume || '').split(/[.!?…](?=\s|$)/)[0].trim().slice(0, 70));
+      } else {
+        texte = t('evenement_rsn');
+        detail = [periode(k), k.format && esc(k.format)].filter(Boolean).join(' · ');
+      }
+      return `<a class="une" href="${lien(k.url)}" target="_blank" rel="noopener"><div class="date"><b>${x.j}</b><span>${esc(MOIS[x.m - 1])}</span></div><div><span class="etat${etat ? ' ' + etat : ''}">${esc(texte)}</span><h3>${esc(k.titre)}</h3>${detail ? `<div class="m">${detail}</div>` : ''}</div><span class="fl" aria-hidden="true">→</span></a>`;
+    }).join('');
+    montrerBande('.alaune', U.length);
+  }
+  // Bande « Dates limites » : une puce par appel en cours qui a une date limite.
+  function rendreLimites() {
+    if (!$('#limites')) return;
+    const A = appelsEnCours().filter(limite).sort((a, b) => limite(a).localeCompare(limite(b)) || a.debut.localeCompare(b.debut));
+    $('#limites').innerHTML = A.map(k => {
+      const titre = String(k.titre || '').split(/\s*:\s/)[0].slice(0, 44);
+      const orga = estRSN(k) ? libelle('qui', 'rsn') : String(k.organisateur || '').replace('Fonds de recherche du Québec', 'FRQ');
+      return `<a class="lim" href="${lien(k.url)}" target="_blank" rel="noopener"><b>${esc(dateCourte(limite(k)))}</b>${esc(titre)}${orga ? `<span class="p">${esc(orga)}</span>` : ''}</a>`;
+    }).join('');
+    montrerBande('.limites', A.length);
   }
   function rendreSources() {
     if (!$('#tbl-sources')) return;
@@ -248,14 +333,9 @@ function animer(racine, noeudDonnees) {
     const h = g.slice(11, 16);
     $('#maj').textContent = /^\d{2}:\d{2}$/.test(h) ? t('collecte_du_a', dateLongue(g.slice(0, 10)), `${Number(h.slice(0, 2))} h ${h.slice(3)}`) : t('collecte_du', dateLongue(g.slice(0, 10)));
   }
-  function tout() { rendreCompteurs(); rendreTags(); rendreAgenda(); rendreAppels(); }
+  function tout() { rendreUnes(); rendreLimites(); rendreTags(); rendreAgenda(); rendreAppels(); }
 
   // interactions
-  racine.querySelectorAll('.onglet').forEach(b => b.addEventListener('click', () => {
-    onglet = b.dataset.onglet;
-    racine.querySelectorAll('.onglet').forEach(x => x.setAttribute('aria-selected', x === b));
-    ['agenda', 'appels'].forEach(v => { const vueOnglet = $('#vue-' + v); if (vueOnglet) vueOnglet.hidden = v !== onglet; });
-  }));
   on('#f-recherche', 'input', e => { filtres.q = e.target.value; rendreAgenda(); });
   on('#f-mois', 'click', e => {
     const b = e.target.closest('[data-mois]'); if (!b) return; const m = b.dataset.mois;
@@ -288,12 +368,30 @@ function animer(racine, noeudDonnees) {
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { calMois = decalerMois(calMois, dx < 0 ? 1 : -1); calJour = ''; rendreAgenda(); }
   }, { passive: true });
   on('#f-theme', 'click', e => { if (e.target.closest('[data-plus-moins]')) { themesOuverts = !themesOuverts; rendreTags(); } });
-  ['#f-qui', '#f-format', '#f-region', '#f-theme'].forEach(id => on(id, 'click', e => {
+  // Rubriques « Afficher » et « Qui organise » : une seule valeur à la fois, « Tous » pour lever le filtre.
+  ['#f-type', '#f-qui'].forEach(id => on(id, 'click', e => {
+    const b = e.target.closest('.rub[data-cle]'); if (!b) return;
+    const cle = b.dataset.cle;
+    if (cle === 'type' && VERROU_TYPE) return;
+    if (cle !== 'type' && cle !== 'qui') return;
+    filtres[cle] = b.dataset.val; rendreTags(); rendreAgenda();
+  }));
+  ['#f-format', '#f-region', '#f-theme'].forEach(id => on(id, 'click', e => {
     const b = e.target.closest('[data-val]'); if (!b) return;
     const cle = $(id).dataset.cle; filtres[cle] = filtres[cle] === b.dataset.val ? '' : b.dataset.val; rendreTags(); rendreAgenda();
   }));
   on('#f-orga', 'change', e => { filtres.orga = e.target.value; rendreAgenda(); });
-  on('#f-reinit', 'click', () => { Object.keys(filtres).forEach(k => { filtres[k] = ''; }); $('#f-recherche').value = ''; rendreTags(); rendreAgenda(); });
+  on('#f-reinit', 'click', () => { Object.keys(filtres).forEach(k => { filtres[k] = ''; }); filtres.type = VERROU_TYPE ? 'evenement' : ''; if ($('#f-recherche')) $('#f-recherche').value = ''; rendreTags(); rendreAgenda(); });
+  // « Tout ce que le RSN organise et finance » : filtre Qui organise = RSN, sans autre restriction, puis défilement vers la liste.
+  on('#lien-rsn', 'click', e => {
+    e.preventDefault();
+    // Retour à la vue Liste (le lien peut être cliqué depuis le calendrier).
+    vue = 'liste';
+    racine.querySelectorAll('.vue').forEach(x => x.setAttribute('aria-pressed', x.dataset.vue === vue));
+    filtres.qui = 'rsn'; filtres.type = ''; filtres.mois = ''; rendreTags(); rendreAgenda();
+    const cible = $('#vue-agenda');
+    if (cible) cible.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  });
   // Formulaire « Proposer un événement » : envoi en fetch vers admin-ajax.php (action rsn_veille_proposer,
   // jeton de window.rsnVeillePublic), erreurs sous les champs et en tête, remerciement à la place du formulaire.
   const CONFIG = window.rsnVeillePublic || {};

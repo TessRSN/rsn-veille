@@ -71,9 +71,9 @@ function rsn_veille_bouchons_reinitialiser(): void {
         'posts' => [], 'meta' => [], 'termes' => [], 'filtres' => [], 'actions' => [],
         'prochain_id' => 1, 'types' => [], 'taxonomies' => [], 'metas_enregistrees' => [], 'requetes' => [],
         'options' => [], 'cache_options' => [], 'transients' => [], 'cron' => [], 'declenchees' => [],
-        // Administration : menus, capacités de l'utilisateur courant, rôles, scripts et styles en file.
+        // Administration : menus, capacités de l'utilisateur courant, rôles, scripts et styles en file, métaboxes.
         'menus' => [], 'sous_menus' => [], 'crochets_menus' => [], 'capacites' => [], 'ecritures_roles' => 0,
-        'scripts' => [], 'styles' => [], 'localisations' => [],
+        'scripts' => [], 'styles' => [], 'localisations' => [], 'metaboxes' => [],
         // Réglages : options enregistrées, messages d'erreur des champs, lancements de WP-Cron.
         'reglages' => [], 'erreurs_reglages' => [], 'cron_lances' => 0,
         // Public : raccourcis, routes REST, règles de réécriture, variables de requête, page demandée.
@@ -453,7 +453,11 @@ function wp_insert_post(array $article, bool $erreur = false, bool $mise_a_jour 
         return new WP_Error('empty_content', 'Contenu, titre et extrait vides.');
     }
     $statut = $article['post_status'] ?? 'draft';
-    $date = ($article['post_date'] ?? '') !== '' ? $article['post_date'] : date('Y-m-d H:i:s');
+    // Date par défaut : l'heure de Montréal, la même base que get_gmt_from_date() (sinon une page `publish`
+    // créée sans date passerait en `future` quand le fuseau de PHP n'est pas celui du site).
+    $date = ($article['post_date'] ?? '') !== ''
+        ? $article['post_date']
+        : (new DateTimeImmutable('now', new DateTimeZone('America/Toronto')))->format('Y-m-d H:i:s');
     $gmt = $article['post_date_gmt'] ?? '';
     if ($gmt === '' || $gmt === '0000-00-00 00:00:00') {
         $gmt = in_array($statut, ['draft', 'pending'], true) ? '0000-00-00 00:00:00' : get_gmt_from_date($date);
@@ -712,6 +716,12 @@ function admin_url(string $chemin = ''): string {
     return 'https://exemple.test/wp-admin/' . ltrim($chemin, '/');
 }
 
+if (!function_exists('home_url')) {
+    function home_url(string $chemin = ''): string {
+        return 'https://exemple.test' . ($chemin === '' ? '' : '/' . ltrim($chemin, '/'));
+    }
+}
+
 /** Comme WordPress : le crochet d'une page de premier niveau est « toplevel_page_{slug} ». */
 function add_menu_page(string $titre_page, string $titre_menu, string $capacite, string $slug, ?callable $rappel = null, string $icone = '', int|float|null $position = null): string {
     $GLOBALS['rsn_veille_wp']['menus'][$slug] = compact('titre_page', 'titre_menu', 'capacite', 'slug', 'rappel', 'icone', 'position');
@@ -732,6 +742,11 @@ function add_submenu_page(string $parent, string $titre_page, string $titre_menu
         return 'toplevel_page_' . $slug;
     }
     return ($GLOBALS['rsn_veille_wp']['crochets_menus'][$parent] ?? 'admin') . '_page_' . $slug;
+}
+
+/** Note la métabox (id, titre, rappel, écran, contexte, priorité) dans `metaboxes`, consultable par un test. */
+function add_meta_box(string $id, string $titre, callable $rappel, string|array|null $ecran = null, string $contexte = 'advanced', string $priorite = 'default', ?array $args = null): void {
+    $GLOBALS['rsn_veille_wp']['metaboxes'][$id] = compact('id', 'titre', 'rappel', 'ecran', 'contexte', 'priorite', 'args');
 }
 
 /** Capacités de l'utilisateur courant : liste posée par le test (`capacites`). */

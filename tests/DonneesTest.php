@@ -119,6 +119,15 @@ final class DonneesTest extends TestCase {
         $this->assertSame('RSN', $items[0]['organisateur']);
     }
 
+    public function test_doublon_la_fiche_collectee_avec_image_mise_en_avant_gagne(): void {
+        // Pas d'image de la source, mais une image mise en avant choisie à la main : la fiche collectée l'emporte.
+        $this->entrepot->creer($this->fiche(['image_url' => '', 'image_manuelle' => 'https://rsn.quebec/wp-content/uploads/choisie.jpg']));
+        $items = Donnees::construire('2026-10-25', $this->entrepot, [$this->evenement_rsn(['image_url' => ''])])['items'];
+        $this->assertCount(1, $items);
+        $this->assertSame('https://www.obvia.ca/evenements/colloque', $items[0]['url']);
+        $this->assertSame('https://rsn.quebec/wp-content/uploads/choisie.jpg', $items[0]['image_url']);
+    }
+
     public function test_evenement_rsn_sans_doublon_ajoute(): void {
         $this->entrepot->creer($this->fiche([]));
         $items = Donnees::construire('2026-10-25', $this->entrepot, [$this->evenement_rsn(['titre' => 'Journées scientifiques', 'debut' => '2025-09-15'])])['items'];
@@ -218,7 +227,67 @@ final class DonneesTest extends TestCase {
         $this->entrepot->creer($this->fiche(['titre' => 'Appel RSN', 'type' => 'appel', 'echeance' => '2026-12-01', 'categorie_rsn' => '', 'cle_source' => 'rsn_appels:9', 'cles_source' => ['rsn_appels:9']]));
         $items = array_column(Donnees::construire('2026-10-25', $this->entrepot, [])['items'], 'organise_par', 'titre');
         $this->assertSame('rsn', $items['Journées scientifiques']);
-        $this->assertSame('ecosysteme', $items['Appel RSN'], 'seule la clé `rsn:` compte, pas `rsn_appels:`');
+        $this->assertSame('rsn', $items['Appel RSN'], 'la clé `rsn_appels:` (flux d’appels du RSN) compte aussi');
+    }
+
+    public function test_la_categorie_du_site_decide_de_qui_organise_meme_pour_une_fiche_rsn(): void {
+        $rsn = ['source' => 'RSN : événements', 'organisateur' => 'RSN'];
+        $this->entrepot->creer($this->fiche($rsn + ['titre' => 'Partenaire', 'categorie_rsn' => 'Événements partenaires', 'cle_source' => 'rsn:1', 'cles_source' => ['rsn:1']]));
+        $this->entrepot->creer($this->fiche($rsn + ['titre' => 'Écosystème', 'categorie_rsn' => 'Écosystème numérique', 'cle_source' => 'rsn:2', 'cles_source' => ['rsn:2']]));
+        $this->entrepot->creer($this->fiche($rsn + ['titre' => 'Maison', 'categorie_rsn' => 'Événements RSN', 'cle_source' => 'rsn:3', 'cles_source' => ['rsn:3']]));
+        $this->entrepot->creer($this->fiche($rsn + ['titre' => 'Sans catégorie', 'categorie_rsn' => '', 'cle_source' => 'rsn:4', 'cles_source' => ['rsn:4']]));
+        $items = array_column(Donnees::construire('2026-10-25', $this->entrepot, [])['items'], 'organise_par', 'titre');
+        $this->assertSame('partenaires', $items['Partenaire']);
+        $this->assertSame('ecosysteme', $items['Écosystème']);
+        $this->assertSame('rsn', $items['Maison']);
+        $this->assertSame('rsn', $items['Sans catégorie'], 'sans catégorie, la clé `rsn:` suffit');
+    }
+
+    public function test_doublon_collecte_avec_image_garde_qui_organise_de_l_evenement_rsn(): void {
+        // La fiche collectée l'emporte pour son image, mais TEC fait foi pour « Qui organise ».
+        $this->entrepot->creer($this->fiche([
+            'image_url' => 'https://rsn.quebec/wp-content/uploads/collectee.jpg',
+            'source' => 'RSN : événements', 'organisateur' => 'RSN', 'categorie_rsn' => '',
+            'cle_source' => 'rsn:8', 'cles_source' => ['rsn:8'],
+        ]));
+        $partenaire = $this->evenement_rsn(['categorie_rsn' => 'Événements partenaires', 'organise_par' => 'partenaires']);
+        $items = Donnees::construire('2026-10-25', $this->entrepot, [$partenaire])['items'];
+        $this->assertCount(1, $items);
+        $this->assertSame('partenaires', $items[0]['organise_par']);
+        $this->assertSame('Événements partenaires', $items[0]['categorie_rsn']);
+        $this->assertSame('https://rsn.quebec/wp-content/uploads/collectee.jpg', $items[0]['image_url']);
+    }
+
+    public function test_organise_par_reconnait_les_slugs_nus(): void {
+        $this->assertSame('rsn', Donnees::organise_par('rsn'));
+        $this->assertSame('partenaires', Donnees::organise_par('partenaires'));
+        $this->assertSame('ecosysteme', Donnees::organise_par('ecosysteme'));
+        $this->assertSame('ecosysteme', Donnees::organise_par('digital-ecosystem'));
+        $this->assertSame('rsn', Donnees::organise_par('RSN Events'));
+        $this->assertSame('ecosysteme', Donnees::organise_par('rsn-quelque-chose'), 'seul le slug exact `rsn` compte');
+    }
+
+    public function test_appel_du_flux_rsn_est_organise_par_le_rsn(): void {
+        $this->entrepot->creer($this->fiche(['titre' => 'Appel du flux', 'type' => 'appel', 'echeance' => '2026-12-01', 'organisateur' => 'RSN', 'categorie_rsn' => '', 'cle_source' => 'rsn_appels:123', 'cles_source' => ['rsn_appels:123']]));
+        $this->entrepot->creer($this->fiche(['titre' => 'Appel d’Obvia', 'type' => 'appel', 'echeance' => '2026-12-01', 'categorie_rsn' => '', 'cle_source' => 'obvia:9', 'cles_source' => ['obvia:9']]));
+        $items = array_column(Donnees::construire('2026-10-25', $this->entrepot, [])['items'], 'organise_par', 'titre');
+        $this->assertSame('rsn', $items['Appel du flux']);
+        $this->assertSame('ecosysteme', $items['Appel d’Obvia']);
+    }
+
+    public function test_organisateur_rsn_canonique_donne_rsn(): void {
+        $this->entrepot->creer($this->fiche(['titre' => 'Proposition', 'organisateur' => 'Réseau santé numérique', 'categorie_rsn' => '', 'cle_source' => 'proposition:abc', 'cles_source' => ['proposition:abc']]));
+        $items = Donnees::construire('2026-10-25', $this->entrepot, [])['items'];
+        $this->assertSame('rsn', $items[0]['organise_par']);
+        $this->assertSame('RSN', $items[0]['organisateur']);
+    }
+
+    public function test_image_manuelle_prime_sur_image_url(): void {
+        $this->entrepot->creer($this->fiche(['titre' => 'A', 'image_url' => 'https://www.obvia.ca/source.jpg', 'image_manuelle' => 'https://rsn.quebec/wp-content/uploads/mise-en-avant.jpg', 'cle_source' => 'x:1', 'cles_source' => ['x:1']]));
+        $this->entrepot->creer($this->fiche(['titre' => 'B', 'image_url' => 'https://www.obvia.ca/source.jpg', 'image_manuelle' => '', 'cle_source' => 'x:2', 'cles_source' => ['x:2']]));
+        $items = array_column(Donnees::construire('2026-10-25', $this->entrepot, [])['items'], 'image_url', 'titre');
+        $this->assertSame('https://rsn.quebec/wp-content/uploads/mise-en-avant.jpg', $items['A']);
+        $this->assertSame('https://www.obvia.ca/source.jpg', $items['B']);
     }
 
     public function test_organisateur_canonique_fusionne_les_graphies(): void {

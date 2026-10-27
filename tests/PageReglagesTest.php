@@ -278,6 +278,18 @@ final class PageReglagesTest extends TestCase {
 
     // --- Page ---
 
+    public function test_la_liste_des_pages_inclut_les_privees(): void {
+        foreach (['publish' => 'Veille publiée', 'draft' => 'Veille brouillon', 'private' => 'Veille privée', 'trash' => 'Veille corbeille'] as $statut => $titre) {
+            wp_insert_post(['post_type' => 'page', 'post_status' => $statut, 'post_title' => $titre]);
+        }
+        $html = PageReglages::page_html(PageReglages::contexte(Collecte::reglages()));
+        $this->assertSame(1, preg_match('/<select id="rsn-veille-page".*?<\/select>/s', $html, $m));
+        $this->assertStringContainsString('Veille publiée', $m[0]);
+        $this->assertStringContainsString('Veille brouillon', $m[0]);
+        $this->assertStringContainsString('Veille privée', $m[0]);
+        $this->assertStringNotContainsString('Veille corbeille', $m[0]);
+    }
+
     public function test_page_echappe_et_montre_l_etat_de_la_collecte(): void {
         $contexte = PageReglages::contexte(['themes' => [['nom' => 'Données "ouvertes" <b>&</b> co', 'mots' => ['"x"']]]]);
         $contexte['derniere'] = strtotime('2026-10-26 03:05:00');

@@ -425,4 +425,27 @@ final class EntrepotContratTest extends TestCase {
         $this->assertSame([], $e->lister(''));
         $this->assertSame(['a_approuver' => 0, 'publie' => 0, 'ecarte' => 0, 'a_verifier' => 0], $e->compter());
     }
+
+    public function test_image_manuelle_depuis_l_image_mise_en_avant(): void {
+        $e = new EntrepotWordPress();
+        $id = $e->creer(self::fiche(['image_url' => 'https://exemple.ca/source.jpg']));
+        $this->assertSame('', $e->obtenir($id)->image_manuelle);
+
+        $piece = wp_insert_post(['post_type' => 'attachment', 'post_status' => 'inherit', 'post_parent' => $id, 'post_title' => 'affiche']);
+        set_post_thumbnail($id, $piece);
+        $fiche = $e->obtenir($id);
+        $this->assertSame(wp_get_attachment_image_url($piece, 'large'), $fiche->image_manuelle);
+        $this->assertStringContainsString('large', $fiche->image_manuelle);
+        $this->assertSame('https://exemple.ca/source.jpg', $fiche->image_url, 'l\'image de la source reste intacte');
+
+        delete_post_meta($id, '_thumbnail_id');
+        $this->assertSame('', $e->obtenir($id)->image_manuelle);
+    }
+
+    public function test_image_manuelle_n_est_jamais_ecrite_en_meta(): void {
+        $e = new EntrepotWordPress();
+        $id = $e->creer(self::fiche(['image_manuelle' => 'https://exemple.ca/a.jpg']));
+        $this->assertFalse(metadata_exists('post', $id, 'rsn_veille_image_manuelle'));
+        $this->assertSame('', $e->obtenir($id)->image_manuelle);
+    }
 }

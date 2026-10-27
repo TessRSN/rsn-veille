@@ -92,6 +92,11 @@ final class Fiche {
      * lecture le jour de son post (`EntrepotWordPress`).
      */
     public ?string $cree_le = null;
+    /**
+     * Adresse de l'image mise en avant du post (taille `large`), posée à la main dans l'éditeur de WordPress ;
+     * elle prime sur `image_url` (image de la source) à l'affichage. Vide sans image. Lecture seule, jamais écrite.
+     */
+    public string $image_manuelle = '';
 
     /**
      * Texte brut : sections CDATA dépliées, entités décodées, balises retirées, espaces réduits.

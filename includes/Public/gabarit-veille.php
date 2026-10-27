@@ -1,16 +1,18 @@
 <?php
 /**
- * Gabarit de la page publique ([rsn_veille]) : le <main> de docs/maquette/gabarit-v6.1.html, sans le
- * bandeau (fourni par le gabarit du site), sans le mode équipe, la file d'approbation, l'onglet
- * Actualités ni la copie pour l'infolettre (tout cela vit dans wp-admin).
+ * Gabarit de la page publique ([rsn_veille]) : ce qui suit le bandeau de docs/maquette/gabarit-v8.html
+ * (le bandeau est fourni par le gabarit du site), sans le mode équipe, la file d'approbation, l'onglet
+ * Actualités ni la copie pour l'infolettre (tout cela vit dans wp-admin). Plus d'onglets : l'agenda et
+ * les appels sont dans la même liste, filtrée par « Afficher ».
  *
- * Variables : $section (tout|agenda|appels), $json_donnees et $json_textes (JSON déjà échappé pour
+ * Variables : $section (tout|agenda|appels), $une ('1'|'0' : bande « À la une »), $json_donnees et $json_textes (JSON déjà échappé pour
  * un <script>, voir Raccourci::json), $hex (hexagone SVG), $suffixe (« » au premier rendu de la page,
  * « -2 » au deuxième… : identifiants des nœuds de données uniques).
  *
  * Conteneur <div role="region"> et non <main> : le gabarit du site a déjà le sien.
  *
  * @var string $section
+ * @var string $une
  * @var string $suffixe
  * @var string $json_donnees
  * @var string $json_textes
@@ -22,15 +24,20 @@ if (!defined('ABSPATH')) {
 }
 
 $avec_agenda = $section !== 'appels';
-$avec_appels = $section !== 'agenda';
-$avec_onglets = $section === 'tout';
+$avec_appels = $section === 'appels';
+$avec_limites = $section !== 'agenda';
+$avec_une = $section === 'tout' && $une !== '0';
+$horloge = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>';
+$agenda_ics = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 7h12M6 1.5v3M10 1.5v3"/></svg>';
 $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12 12 4M6 4h6v6"/></svg>';
 ?>
-<div class="rsn-veille" role="region" aria-label="<?php echo esc_attr__("Veille de l'écosystème", 'rsn-veille'); ?>" data-section="<?php echo esc_attr($section); ?>"><div class="wrap">
+<div class="rsn-veille" role="region" aria-label="<?php echo esc_attr__("Veille de l'écosystème", 'rsn-veille'); ?>" data-section="<?php echo esc_attr($section); ?>" data-une="<?php echo esc_attr($une); ?>">
 <?php if ($avec_agenda) : ?>
-  <div class="intro">
-    <p><?php echo esc_html__("Les événements et les appels en santé numérique au Québec, ceux du RSN comme ceux de ses partenaires et de l'écosystème : réseaux thématiques du FRQ, IVADO, Obvia, Mila, universités et organismes publics, rassemblés automatiquement à partir de leurs flux.", 'rsn-veille'); ?></p>
+<div class="wrap">
+  <div class="actions">
+    <p><?php echo esc_html__("Les événements du RSN, ceux de nos partenaires et tout ce qui bouge en santé numérique au Québec : réseaux thématiques, IVADO, Obvia, Mila, FRQ, Digital Health Canada. Les appels de financement et de candidatures y figurent avec leur date limite.", 'rsn-veille'); ?></p>
     <div class="act">
+      <a class="btn sobre" href="<?php echo esc_url(home_url('/veille.ics')); ?>"><?php echo $agenda_ics; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?><?php echo esc_html__("S'abonner au calendrier", 'rsn-veille'); ?></a>
       <button class="btn" id="btn-proposer" type="button"><?php echo esc_html__('Proposer un événement', 'rsn-veille'); ?> <?php echo $fleche; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?></button>
     </div>
   </div>
@@ -61,21 +68,35 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
     </form>
     <p class="merci" id="p-merci" role="status" tabindex="-1" hidden></p>
   </section>
+</div>
 <?php endif; ?>
 
-<?php if ($avec_onglets) : ?>
-  <nav class="onglets" role="tablist" aria-label="<?php echo esc_attr__('Sections', 'rsn-veille'); ?>">
-    <button class="onglet" type="button" role="tab" data-onglet="agenda" aria-selected="true" aria-controls="vue-agenda"><?php echo $hex; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?><?php echo esc_html__('Agenda', 'rsn-veille'); ?> <span class="n" id="n-agenda"></span></button>
-    <button class="onglet" type="button" role="tab" data-onglet="appels" aria-selected="false" aria-controls="vue-appels"><?php echo $hex; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?><?php echo esc_html__('Appels', 'rsn-veille'); ?> <span class="n" id="n-appels"></span></button>
-  </nav>
+<?php if ($avec_une) : ?>
+  <section class="alaune" hidden aria-label="<?php echo esc_attr__('À la une du RSN', 'rsn-veille'); ?>">
+    <div class="wrap">
+      <div class="tete"><span class="titre"><i></i><?php echo esc_html__('À la une du RSN', 'rsn-veille'); ?></span><a class="tout" href="#" id="lien-rsn"><?php echo esc_html__('Tout ce que le RSN organise et finance →', 'rsn-veille'); ?></a></div>
+      <div class="unes" id="unes"></div>
+    </div>
+  </section>
+<?php endif; ?>
+
+<div class="wrap">
+<?php if ($avec_limites) : ?>
+  <div class="limites" hidden>
+    <span class="lab"><?php echo $horloge; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?><?php echo esc_html__('Dates limites', 'rsn-veille'); ?></span>
+    <div class="defile" id="limites"></div>
+  </div>
 <?php endif; ?>
 
 <?php if ($avec_agenda) : ?>
   <div class="deux" id="vue-agenda">
     <aside class="cote">
-      <label class="recherche"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="m14 14 4 4"/></svg><input id="f-recherche" type="search" placeholder="<?php echo esc_attr__('Rechercher un événement', 'rsn-veille'); ?>" aria-label="<?php echo esc_attr__('Rechercher un événement', 'rsn-veille'); ?>"></label>
+      <label class="recherche"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="m14 14 4 4"/></svg><input id="f-recherche" type="search" placeholder="<?php echo esc_attr__('Rechercher', 'rsn-veille'); ?>" aria-label="<?php echo esc_attr__('Rechercher un événement ou un appel', 'rsn-veille'); ?>"></label>
+<?php if ($section === 'tout') : ?>
+      <div><div class="fhead"><?php echo esc_html__('Afficher', 'rsn-veille'); ?></div><div class="rubs" id="f-type"></div></div>
+<?php endif; ?>
+      <div><div class="fhead"><?php echo esc_html__('Qui organise', 'rsn-veille'); ?></div><div class="rubs" id="f-qui"></div></div>
       <div><div class="fhead"><?php echo esc_html__('Mois', 'rsn-veille'); ?></div><div class="rubs" id="f-mois"></div></div>
-      <div><div class="fhead"><?php echo esc_html__('Qui organise', 'rsn-veille'); ?></div><div class="tags" id="f-qui" data-cle="qui"></div></div>
       <div><div class="fhead"><?php echo esc_html__('Format', 'rsn-veille'); ?></div><div class="tags" id="f-format" data-cle="format"></div></div>
       <div><div class="fhead"><?php echo esc_html__('Lieu', 'rsn-veille'); ?></div><div class="tags" id="f-region" data-cle="region"></div></div>
       <div><div class="fhead"><?php echo esc_html__('Thèmes', 'rsn-veille'); ?></div><div class="tags" id="f-theme" data-cle="theme"></div></div>
@@ -99,7 +120,7 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
           <button type="button" class="cal-nav" id="cal-suiv" aria-label="<?php echo esc_attr__('Mois suivant', 'rsn-veille'); ?>"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button>
         </div>
         <div class="cal" id="cal-grille" tabindex="0" aria-label="<?php echo esc_attr__('Calendrier du mois, flèches gauche et droite pour changer de mois', 'rsn-veille'); ?>"></div>
-        <div class="cal-legende"><span><i class="rsn"></i><?php echo esc_html__('Événement du RSN', 'rsn-veille'); ?></span><span><i></i><?php echo esc_html__('Écosystème', 'rsn-veille'); ?></span><span><?php echo esc_html__('Glisser ou utiliser les flèches pour changer de mois', 'rsn-veille'); ?></span></div>
+        <div class="cal-legende"><span><i class="rsn"></i><?php echo esc_html__('Événement du RSN', 'rsn-veille'); ?></span><span><i></i><?php echo esc_html__('Écosystème', 'rsn-veille'); ?></span><span><i class="appel"></i><?php echo esc_html__("Date limite d'un appel", 'rsn-veille'); ?></span><span><?php echo esc_html__('Glisser ou utiliser les flèches pour changer de mois', 'rsn-veille'); ?></span></div>
         <div class="cal-jour" id="cal-jour"></div>
       </div>
     </div>
@@ -107,7 +128,7 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
 <?php endif; ?>
 
 <?php if ($avec_appels) : ?>
-  <div id="vue-appels"<?php echo $avec_onglets ? ' hidden' : ''; ?>>
+  <div id="vue-appels">
     <div class="shead"><h2><?php echo $hex; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?><?php echo esc_html__('Appels en cours', 'rsn-veille'); ?></h2><span class="aside" id="aside-appels"></span></div>
     <p class="legende" style="margin:0 0 22px"><?php echo esc_html__('Appels à projets, concours et appels de candidatures repérés dans les flux du FRQ, du CRM, du RSN, de CARES et des Prix Hippocrate. La date limite est extraite du texte quand elle y figure.', 'rsn-veille'); ?></p>
     <div id="liste-appels"></div>
