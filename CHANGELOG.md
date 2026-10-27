@@ -1,5 +1,28 @@
 # Journal des modifications
 
+## 0.3.0 (2026-10-27)
+
+Retouches demandées après le premier passage de la 0.2.0 sur la page de test de rsn.quebec (maquette `docs/maquette/gabarit-v9.html`). Le reste de la page ne change pas. Aucune migration : rien à refaire dans les réglages, et la purge automatique des caches se fait au premier chargement de wp-admin. La page WordPress est à renommer « Événements et appels » par l'équipe (le titre est celui de la page, l'extension n'y touche pas). Les clés du JSON public `/wp-json/rsn/v1/veille` sont inchangées.
+
+### Page publique
+- **Bandeau continu** : le bandeau bleu de l'extension (l'intro et les boutons « S'abonner au calendrier » et « Proposer un événement ») remplace la barre d'actions et se place en tête du raccourci, du même bleu `#003469` que l'en-tête du thème. Sur le thème Vault (UiCore) de rsn.quebec, l'en-tête, l'intro et « À la une » se lisent comme un seul bloc, sans écart blanc, un filet fin séparant l'intro de « À la une ». Quand « À la une » n'est pas affichée (`une="0"`, `section="agenda"`, aucun élément du RSN à venir), le bandeau finit le bleu tout seul. Le formulaire « Proposer un événement » passe après « À la une », pour ne pas couper le bleu quand il s'ouvre.
+- **Classe `rsn-veille-page`** : l'extension ajoute cette classe au `<body>` quand la page contient `[rsn_veille]`, est la page choisie dans les réglages ou l'une de ses traductions WPML. Sur le thème Vault, elle sert à rendre l'en-tête de page moins haut (marges de 44 px en haut et 30 px en bas, 30 px et 22 px sous 820 px) et à laisser le titre prendre toute la largeur (donc sur une ligne une fois la page renommée). Sans la classe, ou avec un autre thème, ces règles ne s'appliquent à rien. Elle vaut pour une page ordinaire (bloc « Code court ») ; sur une page Elementor, les marges des sections empêchent le bandeau de toucher l'en-tête.
+- **« À la une » en `#003469`** (au lieu de `#07285A`), du même bleu que le bandeau et l'en-tête du thème.
+- **Dates limites : des flèches** à la place de la barre de défilement (une flèche à gauche, une à droite, désactivées quand il n'y a plus rien à faire défiler ou quand tout tient ; défilement doux, sans animation si le visiteur demande moins de mouvement). Sous 820 px, les flèches se rangent à droite du libellé et les puces passent en dessous.
+- **Fiches du RSN** : le corps de la fiche (image et texte, sans le bloc de date) est sur un fond gris très pâle (`#F6F8FA`) aux coins arrondis, avec un trait jaune de 4 px à gauche. Les autres fiches gardent leur aspect. Sur mobile, l'image reste au-dessus du texte, dans le fond gris.
+- **Pastille « Appel »** : contour bleu marine sur fond blanc, plus de fond jaune (le jaune reste celui du RSN et des dates limites).
+- **Appel sans date limite** : il reste visible **30 jours** après sa publication (90 jours auparavant), puis disparaît. Tant qu'il est visible, il se place à la date du jour dans la liste (après les événements d'aujourd'hui, et non plus en tête du mois) et porte la mention « Date limite à venir ». Cette règle (`Fiche::JOURS_APPEL_SANS_LIMITE`) est unique : **le JSON public, le bloc Appels de l'infolettre et le courriel hebdomadaire suivent la même règle** (l'iCal ne contient que des événements : il n'est pas touché), donc un appel sans date limite publié il y a plus de 30 jours n'est plus proposé nulle part.
+- **Séries en cours** : un événement commencé et pas fini (par exemple la série de webinaires France-Québec du 4 septembre au 18 décembre) se place à la date du jour, sa tuile montre sa date de fin précédée d'une flèche (« →18 déc. », avec la mention « en cours ») et une pastille « En cours » suit la pastille de type. « À la une », le calendrier et la règle des séries de plus de 7 jours ne changent pas.
+- Nouveaux textes, tous traduisibles (domaine `rsn-veille`) : « En cours », « en cours », « Date limite à venir », « Dates limites précédentes », « Dates limites suivantes ».
+
+### Livraison
+- Numéro de version 0.3.0 (`rsn-veille.php`, `RSN_VEILLE_VERSION`, donc `?ver=0.3.0` sur `veille.css` et `veille.js`).
+- `LISEZMOI.md`, guide d'installation (marche à suivre après la mise à jour, section 4 : classe `rsn-veille-page`, structure de référence) et parcours de vérification manuelle (`tests/manuel/PARCOURS.md`) mis à jour.
+- 540 tests PHPUnit. Le rendu réel (bandeau continu, hauteur de l'en-tête, flèches, fiches du RSN) n'est vérifiable que sur rsn.quebec : le parcours manuel de la section 7 n'a pas encore été déroulé dans un WordPress réel.
+
+### Limites connues
+Voir « Limites connues de la version 0.3.0 » dans `LISEZMOI.md`.
+
 ## 0.2.0 (2026-10-27)
 
 La page publique devient la page « Événements et appels » (maquette `docs/maquette/gabarit-v8.html`) et six corrections d'exploitation, relevées à l'usage de la 0.1.0 sur rsn.quebec, sont faites. Les clés du JSON public `/wp-json/rsn/v1/veille` sont inchangées ; l'attribut `section`, le calendrier, le formulaire, l'iCal, les caches et WPML continuent de fonctionner comme en 0.1.0. Aucune migration : rien à refaire dans les réglages.

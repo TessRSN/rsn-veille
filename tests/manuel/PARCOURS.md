@@ -1,4 +1,4 @@
-# Parcours de vérification de bout en bout (version 0.2.0)
+# Parcours de vérification de bout en bout (version 0.3.0)
 
 Ce parcours enchaîne, dans l'ordre d'un vrai usage, toutes les listes de vérification manuelles :
 `verifier-admin.md` (administration), `verifier-public.md` (page publique, formulaire, REST et iCal) et
@@ -128,8 +128,8 @@ est vide pour la page Veille choisie.
    avec échéance ; événements TEC ; page « Veille » contenant `[rsn_veille]`, bloc Code court puis widget
    Code court d'Elementor, choisie dans Veille › Réglages). Pour essayer la page sans la publier, la mettre en
    visibilité « Privée » (étape 3) et la regarder connecté.
-2. Section **Page publique** de `verifier-public.md` : barre d'actions, bandes, liste unifiée, filtres, calendrier,
-   événements passés, style de la maquette v8, absence du mode équipe, titre piégé en texte, mobile,
+2. Section **Page publique** de `verifier-public.md` : bandeau, bandes, liste unifiée, filtres, calendrier,
+   événements passés, style de la maquette v9, absence du mode équipe, titre piégé en texte, mobile,
    `section="agenda"`, `section="appels"` et `une="0"`.
 3. Jeu de fiches pour les étapes suivantes (à créer dans la file, publiées, avec `wp post meta update` ou l'éditeur ; pour un
    appel, la date de publication est `rsn_veille_debut` et la date limite `rsn_veille_echeance` ; « du RSN » veut dire `rsn_veille_organisateur` = `RSN`) :
@@ -156,9 +156,9 @@ est vide pour la page Veille choisie.
    bascule en vue Liste (même depuis le calendrier) et défile jusqu'à la liste avec « Qui organise › RSN » actif. Sans aucun élément du RSN à venir, la bande disparaît.
 5. **Bande « Dates limites »** : une puce par appel en cours qui a une date limite (les quatre appels à date
    limite), triées par date, avec l'organisateur (« RSN » en jaune) ; **l'appel sans date limite n'y est pas** ; la
-   rangée défile horizontalement si elle dépasse. Sans appel à date limite, la bande disparaît.
+   rangée défile avec les flèches (point 17) si elle dépasse. Sans appel à date limite, la bande disparaît.
 6. **Appel sans date limite** : il est dans la liste, **seulement** (ni dans « À la une », ni dans « Dates limites »),
-   classé dans le **mois courant**, et jamais dans « Événements passés ».
+   placé dans le **mois courant**, à la date du jour (point 19), et jamais dans « Événements passés ».
 7. **Filtre Afficher** : Tout / Événements / Appels, avec les compteurs ; « Appels » ne montre que les appels (liste,
    compteur de la barre « N appels », calendrier) ; « Événements » que les événements. Le filtre **Qui organise**
    (rubrique, comme Mois) : l'appel du RSN est compté et listé sous RSN (et non sous Écosystème) ; les compteurs
@@ -174,14 +174,15 @@ est vide pour la page Veille choisie.
     limite en dernier), sans bande « À la une » ni colonne de filtres ; `[rsn_veille section="agenda"]` : événements
     seuls, filtre Afficher absent, ni « À la une » ni « Dates limites ».
 11. **Fond de la bande dans le thème** (page Elementor, widget Code court, dans une section pleine largeur puis dans une
-    section à largeur limitée) : le fond marine de « À la une » va d'un bord à l'autre de la fenêtre alors que les
+    section à largeur limitée ; sur une telle page le bandeau ne touche pas l'en-tête du thème, c'est attendu : voir
+    le point 16) : le fond marine de « À la une » va d'un bord à l'autre de la fenêtre alors que les
     cartes restent alignées sur le contenu de la page (1140 px au plus). Contrôler **avec une barre de défilement
     verticale visible** (Windows, ou macOS avec « Toujours afficher les barres de défilement ») :
     `document.documentElement.scrollWidth === document.documentElement.clientWidth` dans la console du navigateur
     (la bande ne doit causer aucun défilement horizontal). Consigner tout écart dans le tableau des écarts.
     Vérifier aussi à 375 px (cartes empilées).
 12. Section **Ressources et cohabitation** de `verifier-public.md` : ressources seulement sur la page Veille
-    (chargées avec `?ver=0.2.0`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
+    (chargées avec `?ver=0.3.0`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
     si installé (sur la page anglaise, les textes des bandes s'affichent en français tant qu'ils ne sont pas traduits :
     limite connue, pas un écart).
 13. Section **REST et iCal** : `/wp-json/rsn/v1/veille` (aucune clé retirée), `/veille.ics` (CRLF, en-têtes,
@@ -193,10 +194,53 @@ est vide pour la page Veille choisie.
     et il n'est pas à la une du RSN.
 15. **Purge à la mise à jour** : `wp option delete rsn_veille_version`, puis charger une page de wp-admin ; le transient
     `rsn_veille_json_fr` a disparu (`wp transient get rsn_veille_json_fr` ne rend rien) et
-    `wp option get rsn_veille_version` rend `0.2.0`. Un second chargement ne purge plus.
+    `wp option get rsn_veille_version` rend `0.3.0`. Un second chargement ne purge plus.
+16. **Bandeau continu** (version 0.3.0 ; page ordinaire avec un bloc Code court, renommée « Événements et appels »,
+    ouverte sur le thème Vault, fenêtre large) :
+    - aucun écart blanc entre l'en-tête du thème (fil d'Ariane et titre) et l'intro du bandeau, ni entre l'intro, les
+      boutons et « À la une » : le même bleu `#003469` de haut en bas, avec un filet fin entre l'intro et « À la une » ;
+    - le `<body>` porte la classe `rsn-veille-page` (inspecter l'élément) ; elle n'est pas posée sur une autre page du
+      site ;
+    - l'en-tête du thème est moins haut qu'avant (environ 44 px au-dessus du fil d'Ariane et 30 px sous le titre ; sous
+      820 px, 30 px et 22 px) et le titre prend toute la largeur : « Événements et appels » tient sur une ligne ;
+    - aucun défilement horizontal : `document.documentElement.scrollWidth === document.documentElement.clientWidth` ;
+    - quand « À la une » est absente (`une="0"`, ou aucun élément du RSN à venir), le bandeau finit le bleu tout seul ;
+    - sur une page Elementor (widget Code court), ou sur un autre thème, le bandeau garde son bleu et se place sous
+      l'en-tête ; l'écart avec l'en-tête y est attendu (limite connue).
+17. **Flèches des dates limites** : plus de barre de défilement sous les puces. Au chargement, la flèche de gauche est
+    désactivée (et la flèche de droite active si les puces dépassent) ; un clic sur la flèche de droite fait défiler
+    d'environ 70 % de la largeur visible ; à la dernière puce, la flèche de droite se désactive et celle de gauche
+    s'active. Quand toutes les puces tiennent (ajuster le nombre d'appels ou élargir la fenêtre), les deux flèches
+    sont désactivées. Au clavier : Tab atteint chaque flèche, Entrée ou Espace la déclenche, la flèche désactivée n'a pas
+    le focus ; chaque flèche a un nom accessible (« Dates limites précédentes », « Dates limites suivantes »). Avec
+    « Réduire les animations » activé dans le système, le défilement se fait sans animation. Redimensionner la fenêtre
+    met les états à jour.
+18. **Fiches du RSN** : le corps de la fiche (image et texte, pas le bloc de date) est sur un fond gris très pâle
+    (`#F6F8FA`) aux coins arrondis, avec un trait jaune de 4 px à gauche ; le bloc de date et l'hexagone restent hors du
+    fond. Contrôler une fiche RSN **avec image** (l'image est collée au bord gauche du fond, coins arrondis seulement à
+    l'extérieur) et une fiche RSN **sans image** (texte seul sur le fond) ; une fiche d'un partenaire n'a ni fond ni
+    trait. Les lignes compactes d'« Événements passés » ont le même fond pour une fiche du RSN.
+19. **Appel sans date limite** : l'appel du RSN publié il y a 5 jours (point 3) est placé **après les événements
+    d'aujourd'hui** dans le mois courant (et non en tête du mois), avec une tuile grise « publié » et la
+    pastille « Date limite à venir ». Il disparaît 30 jours après sa publication : en changer la date de publication
+    (`wp post meta update <ID> rsn_veille_debut AAAA-MM-JJ`, avec le jour d'il y a 29 puis 31 jours) et purger le cache
+    (`wp transient delete rsn_veille_json_fr`) ; à 31 jours, il n'est plus sur la page, ni dans `/wp-json/rsn/v1/veille`,
+    ni dans le bloc Appels de l'infolettre ni dans le courriel d'essai.
+20. **Série en cours** : la série du RSN commencée hier (point 3) est placée à la date du jour, sa tuile montre sa
+    date de fin précédée d'une flèche (« →jj mois ») avec la mention « en cours », et une pastille « En cours » suit la
+    pastille de type ; elle n'est pas à la une. L'événement du RSN commencé hier et qui finit demain porte aussi la
+    tuile « →jj mois » et la pastille « En cours » dans la liste, mais **reste à la une** avec son jour de début.
+21. **Pastille « Appel »** : contour bleu marine sur fond blanc (plus de fond jaune), à côté d'« Événement » en bleu plein ;
+    la pastille « RSN » reste jaune et ne se confond plus avec elle.
+22. **375 px** (mobile ; fenêtre de 375 px, ou l'émulation des outils du navigateur) : le bandeau passe l'intro puis les
+    boutons sur des lignes séparées, sans défilement horizontal ; les flèches des dates limites sont à droite du libellé
+    « Dates limites » et les puces dessous, sur toute la largeur ; dans une fiche RSN avec image, l'image est
+    **au-dessus du texte, à l'intérieur du fond gris**, avec le trait jaune à gauche ; l'en-tête du thème est resserré.
+23. **`section="agenda"`** : le bandeau est là, sans la bande des dates limites ; **`une="0"`** : le bandeau seul en tête
+    (pas de « À la une », pas de filet), le reste intact ; **`section="appels"`** : pas de bandeau.
 
 **Terminé quand** : toutes les cases de ces sections de `verifier-public.md` sont cochées, sauf celles du formulaire
-(étape 8), et chacun des points 4 à 15 ci-dessus donne le résultat attendu.
+(étape 8), et chacun des points 4 à 23 ci-dessus donne le résultat attendu.
 
 ## 8. Formulaire « Proposer un événement »
 

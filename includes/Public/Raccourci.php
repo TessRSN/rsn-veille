@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
 
 /**
  * Raccourci `[rsn_veille section="tout|agenda|appels" une="1|0"]` : la page publique de la veille, dans le style
- * de la maquette validée (`docs/maquette/gabarit-v8.html`), données JSON incorporées dans la page.
+ * de la maquette validée (`docs/maquette/gabarit-v9.html`), données JSON incorporées dans la page.
  */
 final class Raccourci {
     public const NOM = 'rsn_veille';
