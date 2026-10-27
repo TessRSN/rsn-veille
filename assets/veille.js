@@ -1,7 +1,8 @@
 /*
  * RSN : veille de l'écosystème, page publique ([rsn_veille]).
- * Repris du JS de docs/maquette/gabarit-v6.1.html, réduit aux parties publiques : filtres, mois (avec
- * « Plus tard » et « Événements passés »), thèmes repliés, liste et calendrier, glissement, formulaire de proposition.
+ * Repris du JS de docs/maquette/gabarit-v8.html, réduit aux parties publiques : filtres (Afficher, Qui organise, mois
+ * avec « Plus tard » et « Événements passés », thèmes repliés), liste unifiée événements + appels groupée par mois,
+ * calendrier, glissement, formulaire de proposition.
  * Les actions de l'équipe (publier, écarter, infolettre) vivent dans wp-admin.
  * Données : <script type="application/json" id="rsn-veille-donnees" data-rsn-veille-donnees> (suffixé
  * « -2 », « -3 »… si le raccourci figure plusieurs fois) ; textes : [data-rsn-veille-textes] du même bloc.
@@ -38,7 +39,9 @@ function animer(racine, noeudDonnees) {
   const $ = s => racine.querySelector(s);
   const on = (s, type, rappel, options) => { const n = $(s); if (n) n.addEventListener(type, rappel, options); };
   let onglet = racine.dataset.section === 'appels' ? 'appels' : 'agenda';
-  const filtres = { mois: '', qui: '', format: '', region: '', theme: '', orga: '', q: '' };
+  // Section « agenda » : événements seulement, le filtre « Afficher » n'existe pas et reste verrouillé.
+  const VERROU_TYPE = racine.dataset.section === 'agenda';
+  const filtres = { type: VERROU_TYPE ? 'evenement' : '', mois: '', qui: '', format: '', region: '', theme: '', orga: '', q: '' };
 
   // Textes : « %d » reçoit le nombre, « %1$s », « %2$s »… la valeur de ce rang (l'ordre peut changer à la
   // traduction), un « %s » simple la valeur suivante ; pluriel à la française (2 et plus).
@@ -77,44 +80,56 @@ function animer(racine, noeudDonnees) {
     if (a.m === b.m && a.a === b.a) return t('du_au_meme_mois', a.j, b.j, MOIS_LONG[a.m - 1], a.a);
     return t('du_au', `${premier(a.j)} ${MOIS_LONG[a.m - 1]}${a.a !== b.a ? ' ' + a.a : ''}`, dateLongue(k.fin));
   }
+  // Pastilles (spec 4.5) : type, qui organise, format, langue, thèmes.
+  function pastilles(k) {
+    const appel = k.type === 'appel';
+    const p = [`<span class="pill type${appel ? ' appel' : ''}">${esc(t(appel ? 'appel' : 'evenement'))}</span>`];
+    if (estRSN(k)) p.push(`<span class="pill rsn">${esc(libelle('qui', 'rsn'))}</span>`);
+    else if (k.organisateur) p.push(qui(k) === 'partenaires' ? `<span class="pill part">${esc(t('partenaire', k.organisateur))}</span>` : `<span class="pill orga">${esc(k.organisateur)}</span>`);
+    if (k.format) p.push(`<span class="pill">${esc(k.format)}</span>`);
+    if (k.langue === 'en') p.push(`<span class="pill">${esc(t('en_anglais'))}</span>`);
+    k.themes.forEach(e => p.push(`<span class="pill theme">${esc(e)}</span>`));
+    return `<div class="pills">${p.join('')}</div>`;
+  }
+  const classeRSN = k => estRSN(k) ? ' rsn' : '';
   // ligne compacte (événements passés, comme la section « Passés » de la page Événements)
   function ligneEv(k) {
-    const etiq = k.themes.map(e => `<span>${esc(e)}</span>`).join('');
-    const fmt = [k.format && `<b>${esc(k.format)}</b>`, k.langue === 'en' && esc(t('en_anglais'))].filter(Boolean).join(' · ');
-    const cat = k.categorie_rsn ? `${esc(k.categorie_rsn)} · ` : '';
-    return `<div class="ev">${HEX}${blocJour(k)}<div class="tx">
+    return `<div class="ev${classeRSN(k)}">${HEX}${blocJour(k)}<div class="tx">
+      ${pastilles(k)}
       <h3><a href="${lien(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
-      <div class="meta">${cat}<b>${esc(k.organisateur)}</b>${lieuTexte(k) ? ' · ' + esc(lieuTexte(k)) : ''}</div>
-      ${etiq ? `<div class="etiq">${etiq}</div>` : ''}
-      <div class="pied"><a class="plus" href="${lien(k.url)}" target="_blank" rel="noopener">${esc(t('plus_info'))}</a><span class="fmt">${fmt}</span></div>
+      <div class="meta"><b>${esc(k.organisateur)}</b>${lieuTexte(k) ? ' · ' + esc(lieuTexte(k)) : ''}</div>
+      <div class="pied"><a class="plus" href="${lien(k.url)}" target="_blank" rel="noopener">${esc(t('plus_info'))}</a></div>
     </div></div>`;
   }
   // fiche à venir : même ligne que les passés, avec l'image à gauche du texte et les lignes date / lieu
   function carteEv(k, compact) {
     if (compact === true) return ligneEv(k);
-    const etiq = k.themes.map(e => `<span>${esc(e)}</span>`).join('');
-    const fmt = [k.prix && esc(k.prix), k.langue === 'en' && esc(t('en_anglais'))].filter(Boolean).join(' · ');
     const lieu = [lieuTexte(k), k.format].filter(Boolean).join(' · ');
     const image = /^https?:\/\//i.test(k.image_url || '');
-    return `<div class="ev ${image ? 'avec-image' : ''}">${HEX}${blocJour(k)}
+    return `<div class="ev${classeRSN(k)}${image ? ' avec-image' : ''}">${HEX}${blocJour(k)}
       ${image ? `<a class="im" href="${lien(k.url)}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"><img src="${lien(k.image_url)}" alt="" loading="lazy" decoding="async"></a>` : ''}
       <div class="tx">
-        <div class="meta"><b>${esc(k.organisateur)}</b>${k.categorie_rsn ? ' · ' + esc(k.categorie_rsn) : ''}</div>
+        ${pastilles(k)}
         <h3><a href="${lien(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
         <div class="infos"><span>${ICO_DATE}${periode(k)}</span>${lieu ? `<span>${ICO_LIEU}${esc(lieu)}</span>` : ''}</div>
-        ${etiq ? `<div class="etiq">${etiq}</div>` : ''}
         ${k.resume ? `<p>${esc(k.resume)}</p>` : ''}
-        <div class="pied"><a class="plus" href="${lien(k.url)}" target="_blank" rel="noopener">${esc(t('plus_info'))}</a>${fmt ? `<span class="fmt">${fmt}</span>` : ''}</div>
+        <div class="pied"><a class="plus" href="${lien(k.url)}" target="_blank" rel="noopener">${esc(t('plus_info'))}</a>${k.prix ? `<span class="fmt">${esc(k.prix)}</span>` : ''}</div>
       </div></div>`;
   }
   // Date limite d'un appel : l'échéance trouvée, sinon une fin distincte de la publication.
   const limite = k => k.echeance && ISO.test(k.echeance) ? k.echeance : (k.fin && k.fin !== k.debut ? k.fin : '');
+  // Clé de tri et de regroupement par mois : la date limite d'un appel (sinon sa publication), le début d'un événement.
+  const cleTri = k => k.type === 'appel' ? (limite(k) || k.debut) : k.debut;
+  // Un appel est passé quand sa date limite l'est ; sans date limite, le serveur décide (publié il y a moins de 90 jours).
+  const estPasse = k => k.type === 'appel' ? (!!limite(k) && limite(k) < AUJ) : (k.fin || k.debut) < AUJ;
+  // appel dans la même frise que les événements : tuile de date limite (ou « publié ») à la place du bloc date
   function carteAppel(k) {
     const lim = limite(k);
     const x = d(lim || k.debut);
     const tuile = lim ? `<div class="tuile"><b>${x.j}</b><span>${MOIS[x.m - 1]}</span><i>${esc(t('date_limite'))}</i></div>`
       : `<div class="tuile gris"><b>${x.j}</b><span>${MOIS[x.m - 1]}</span><i>${esc(t('publie'))}</i></div>`;
-    return `<div class="appel">${tuile}<div class="tx">
+    return `<div class="ev appel-ev${classeRSN(k)}">${HEX}${tuile}<div class="tx">
+      ${pastilles(k)}
       <h3><a href="${lien(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
       <div class="meta"><b>${esc(k.organisateur)}</b> · ${esc(k.categorie || t('appel'))}${lim ? ' · ' + esc(t('publie_le', dateCourte(k.debut))) : ''}</div>
       ${k.resume ? `<p>${esc(k.resume)}</p>` : ''}
@@ -122,14 +137,21 @@ function animer(racine, noeudDonnees) {
     </div></div>`;
   }
   const visibles = type => items.filter(k => k.type === type);
-  const aVenir = () => visibles('evenement').filter(k => (k.fin || k.debut) >= AUJ);
-  const passes = () => visibles('evenement').filter(k => (k.fin || k.debut) < AUJ);
+  const deuxTypes = () => visibles('evenement').concat(visibles('appel'));
+  const aVenir = () => deuxTypes().filter(k => !estPasse(k));
+  const passes = () => deuxTypes().filter(k => estPasse(k));
+  // Mois où un élément à venir est classé : celui de sa clé de tri (le mois courant si elle est déjà passée).
+  const moisClasse = k => (cleTri(k) < AUJ ? AUJ : cleTri(k)).slice(0, 7);
+  // Un événement compte dans chaque mois qu'il traverse, un appel dans le mois de sa date limite.
+  const dansMois = (k, m) => k.type === 'appel' ? moisClasse(k) === m : k.debut.slice(0, 7) <= m && (k.fin || k.debut).slice(0, 7) >= m;
   let vue = 'liste', calMois = AUJ.slice(0, 7), calJour = '';
 
+  const parType = k => !filtres.type || k.type === filtres.type;
+  const parQui = k => !filtres.qui || qui(k) === filtres.qui;
   function filtrer(L) {
     const q = filtres.q.trim().toLowerCase();
-    if (q) L = L.filter(k => (k.titre + ' ' + k.organisateur + ' ' + (k.resume || '')).toLowerCase().includes(q));
-    if (filtres.qui) L = L.filter(k => qui(k) === filtres.qui);
+    if (q) L = L.filter(k => (k.titre + ' ' + k.organisateur + ' ' + (k.resume || '') + ' ' + k.themes.join(' ')).toLowerCase().includes(q));
+    L = L.filter(parType).filter(parQui);
     if (filtres.format) L = L.filter(k => k.format === filtres.format);
     if (filtres.region) L = L.filter(k => k.region === filtres.region);
     if (filtres.theme) L = L.filter(k => k.themes.includes(filtres.theme));
@@ -139,33 +161,40 @@ function animer(racine, noeudDonnees) {
   function rendreAgenda() {
     if (!$('#liste-agenda')) return;
     $('#liste-agenda').hidden = vue !== 'liste'; $('#calendrier').hidden = vue !== 'calendrier';
-    if (vue === 'calendrier') { rendreCalendrier(); rendreMois(); return; }
+    if (vue === 'calendrier') { rendreCalendrier(); rendreRubs(); rendreMois(); return; }
     const anciens = filtres.mois === 'passes';
     let L = filtrer(anciens ? passes() : aVenir());
-    if (filtres.mois === 'plus-tard') { const apres = decalerMois(moisSuivants()[NB_MOIS - 1], 1); L = L.filter(k => k.debut.slice(0, 7) >= apres); }
-    else if (filtres.mois && !anciens) L = L.filter(k => k.debut.slice(0, 7) <= filtres.mois && (k.fin || k.debut).slice(0, 7) >= filtres.mois);
-    L.sort((a, b) => anciens ? b.debut.localeCompare(a.debut) : a.debut.localeCompare(b.debut));
+    if (filtres.mois === 'plus-tard') { const apres = decalerMois(moisSuivants()[NB_MOIS - 1], 1); L = L.filter(k => cleTri(k).slice(0, 7) >= apres); }
+    else if (filtres.mois && !anciens) L = L.filter(k => dansMois(k, filtres.mois));
+    L.sort((a, b) => anciens ? cleTri(b).localeCompare(cleTri(a)) : cleTri(a).localeCompare(cleTri(b)));
     const groupes = new Map();
-    for (const k of L) { const cle = (anciens || k.debut >= AUJ ? k.debut : AUJ).slice(0, 7); if (!groupes.has(cle)) groupes.set(cle, []); groupes.get(cle).push(k); }
+    for (const k of L) { const cle = (anciens ? cleTri(k).slice(0, 7) : moisClasse(k)); if (!groupes.has(cle)) groupes.set(cle, []); groupes.get(cle).push(k); }
+    const nbEv = G => G.filter(k => k.type === 'evenement').length, nbAp = G => G.filter(k => k.type === 'appel').length;
     let html = '';
     for (const [cle, G] of groupes) {
       const x = d(cle + '-01');
-      html += `<section class="bloc"><div class="shead"><h2>${HEX}${cap(MOIS_LONG[x.m - 1])} ${x.a}</h2><span class="aside">${esc(n('nb_evenements', G.length))}</span></div><div class="frise">${G.map(k => carteEv(k, anciens)).join('')}</div></section>`;
+      const aside = [nbEv(G) && n('nb_evenements', nbEv(G)), nbAp(G) && n('nb_appels', nbAp(G))].filter(Boolean).map(esc).join(' · ');
+      html += `<section class="bloc"><div class="shead"><h2>${HEX}${cap(MOIS_LONG[x.m - 1])} ${x.a}</h2><span class="aside">${aside}</span></div><div class="frise">${G.map(k => k.type === 'appel' ? carteAppel(k) : carteEv(k, anciens)).join('')}</div></section>`;
     }
-    $('#liste-agenda').innerHTML = L.length ? html : `<div class="vide">${esc(t('aucun_evenement_filtres'))}</div>`;
+    $('#liste-agenda').innerHTML = L.length ? html : `<div class="vide">${esc(t('aucun_element_filtres'))}</div>`;
     if (anciens) {
-      const plusAncien = L.length ? d(L[L.length - 1].debut) : null;
+      const plusAncien = L.length ? d(cleTri(L[L.length - 1])) : null;
       $('#compte-agenda').textContent = plusAncien ? n('nb_passes_depuis', L.length, `${MOIS_LONG[plusAncien.m - 1]} ${plusAncien.a}`) : n('nb_passes', L.length);
+    } else if (filtres.type === 'evenement') {
+      $('#compte-agenda').textContent = n('nb_a_venir', nbEv(L));
+    } else if (filtres.type === 'appel') {
+      $('#compte-agenda').textContent = n('nb_appels', nbAp(L));
     } else {
-      $('#compte-agenda').textContent = n('nb_a_venir', L.length);
+      $('#compte-agenda').textContent = t('nb_evenements_et_appels', n('nb_evenements', nbEv(L)), n('nb_appels', nbAp(L)));
     }
+    rendreRubs();
     rendreMois();
   }
   const NB_MOIS = 4;
   function moisSuivants() { const mois = []; const c = d(AUJ); for (let i = 0; i < NB_MOIS; i++) { mois.push(`${c.a}-${pad(c.m)}`); c.m++; if (c.m > 12) { c.m = 1; c.a++; } } return mois; }
   function rendreMois() {
     const E = filtrer(aVenir()); const mois = moisSuivants(); const apres = decalerMois(mois[mois.length - 1], 1);
-    const nb = m => E.filter(k => k.debut.slice(0, 7) <= m && (k.fin || k.debut).slice(0, 7) >= m).length;
+    const nb = m => E.filter(k => dansMois(k, m)).length;
     const actif = vue === 'calendrier' ? calMois : filtres.mois;
     let html = `<button type="button" class="rub" data-mois="" aria-pressed="${actif === ''}">${HEX}<span class="t">${esc(t('tous_les_mois'))}</span><span class="n">${E.length}</span></button>`;
     let annee = d(AUJ).a;
@@ -174,10 +203,24 @@ function animer(racine, noeudDonnees) {
       if (x.a !== annee) { annee = x.a; html += `<div class="annee">${x.a}</div>`; }
       html += `<button type="button" class="rub" data-mois="${m}" aria-pressed="${actif === m}">${HEX}<span class="t">${cap(MOIS_LONG[x.m - 1])}</span><span class="n">${nb(m)}</span></button>`;
     }
-    const nTard = E.filter(k => k.debut.slice(0, 7) >= apres).length;
+    const nTard = E.filter(k => cleTri(k).slice(0, 7) >= apres).length;
     html += `<button type="button" class="rub" data-mois="plus-tard" aria-pressed="${actif === 'plus-tard'}">${HEX}<span class="t">${esc(t('plus_tard'))}</span><span class="n">${nTard}</span></button>`;
     html += `<button type="button" class="rub" data-mois="passes" aria-pressed="${actif === 'passes'}">${HEX}<span class="t">${esc(t('evenements_passes'))}</span><span class="n">${filtrer(passes()).length}</span></button>`;
     $('#f-mois').innerHTML = html;
+  }
+  // Rubriques « Afficher » et « Qui organise » (spec 4.4) : les compteurs portent sur la vue courante (à venir ou
+  // passés), avec l'autre groupe appliqué mais ni la recherche ni les autres filtres.
+  const rub = (cle, val, texte, nb) => `<button type="button" class="rub" data-cle="${cle}" data-val="${esc(val)}" aria-pressed="${filtres[cle] === val}">${HEX}<span class="t">${esc(texte)}</span><span class="n">${nb}</span></button>`;
+  function rendreRubs() {
+    const base = filtres.mois === 'passes' ? passes() : aVenir();
+    if ($('#f-type')) {
+      const L = base.filter(parQui);
+      $('#f-type').innerHTML = rub('type', '', t('tous'), L.length) + rub('type', 'evenement', t('evenements'), L.filter(k => k.type === 'evenement').length) + rub('type', 'appel', t('appels'), L.filter(k => k.type === 'appel').length);
+    }
+    if ($('#f-qui')) {
+      const L = base.filter(parType);
+      $('#f-qui').innerHTML = rub('qui', '', t('tous'), L.length) + ['rsn', 'partenaires', 'ecosysteme'].map(v => rub('qui', v, libelle('qui', v), L.filter(k => qui(k) === v).length)).join('');
+    }
   }
   function decalerMois(m, nb) { const x = d(m + '-01'); x.m += nb; while (x.m > 12) { x.m -= 12; x.a++; } while (x.m < 1) { x.m += 12; x.a--; } return `${x.a}-${pad(x.m)}`; }
   function rendreCalendrier() {
@@ -210,9 +253,8 @@ function animer(racine, noeudDonnees) {
   let themesOuverts = false; const NB_THEMES = 6;
   function rendreTags() {
     if (!$('#f-theme')) return;
-    const E = visibles('evenement');
+    const E = VERROU_TYPE ? visibles('evenement') : deuxTypes();
     const mk = (id, vals, groupe) => { const el = $(id); el.innerHTML = vals.map(v => `<button type="button" class="tag" data-val="${esc(v)}" aria-pressed="${filtres[el.dataset.cle] === v}">${esc(groupe ? libelle(groupe, v) : v)}</button>`).join(''); };
-    mk('#f-qui', ['rsn', 'partenaires', 'ecosysteme'], 'qui');
     mk('#f-format', ['Présentiel', 'Virtuel', 'Hybride'], 'formats');
     mk('#f-region', ['Québec', 'En ligne', 'Hors Québec'], 'regions');
     const compte = {}; E.forEach(k => k.themes.forEach(th => { compte[th] = (compte[th] || 0) + 1; }));
@@ -226,13 +268,13 @@ function animer(racine, noeudDonnees) {
   }
   // Appels en cours : le serveur n'envoie que ceux-là (règle Fiche::appel_en_cours : date limite à venir, sinon
   // publié il y a moins de 90 jours). On ne retire ici que ceux dont la date limite est passée depuis la génération.
-  const appelsEnCours = () => visibles('appel').filter(k => { const lim = limite(k); return !lim || lim >= AUJ; });
+  const appelsEnCours = () => visibles('appel').filter(k => !estPasse(k));
   function rendreAppels() {
     if (!$('#liste-appels')) return;
     const cle = k => limite(k) || '9' + k.debut;
     const L = appelsEnCours().sort((a, b) => cle(a).localeCompare(cle(b)));
-    $('#liste-appels').innerHTML = L.length ? L.map(carteAppel).join('') : `<div class="vide">${esc(t('aucun_appel'))}</div>`;
-    $('#aside-appels').textContent = n('nb_appels', L.length);
+    $('#liste-appels').innerHTML = L.length ? `<div class="frise">${L.map(carteAppel).join('')}</div>` : `<div class="vide">${esc(t('aucun_appel'))}</div>`;
+    if ($('#aside-appels')) $('#aside-appels').textContent = n('nb_appels', L.length);
   }
   function rendreCompteurs() {
     if ($('#n-agenda')) $('#n-agenda').textContent = aVenir().length;
@@ -288,12 +330,20 @@ function animer(racine, noeudDonnees) {
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { calMois = decalerMois(calMois, dx < 0 ? 1 : -1); calJour = ''; rendreAgenda(); }
   }, { passive: true });
   on('#f-theme', 'click', e => { if (e.target.closest('[data-plus-moins]')) { themesOuverts = !themesOuverts; rendreTags(); } });
-  ['#f-qui', '#f-format', '#f-region', '#f-theme'].forEach(id => on(id, 'click', e => {
+  // Rubriques « Afficher » et « Qui organise » : une seule valeur à la fois, « Tous » pour lever le filtre.
+  ['#f-type', '#f-qui'].forEach(id => on(id, 'click', e => {
+    const b = e.target.closest('.rub[data-cle]'); if (!b) return;
+    const cle = b.dataset.cle;
+    if (cle === 'type' && VERROU_TYPE) return;
+    if (cle !== 'type' && cle !== 'qui') return;
+    filtres[cle] = b.dataset.val; rendreTags(); rendreAgenda();
+  }));
+  ['#f-format', '#f-region', '#f-theme'].forEach(id => on(id, 'click', e => {
     const b = e.target.closest('[data-val]'); if (!b) return;
     const cle = $(id).dataset.cle; filtres[cle] = filtres[cle] === b.dataset.val ? '' : b.dataset.val; rendreTags(); rendreAgenda();
   }));
   on('#f-orga', 'change', e => { filtres.orga = e.target.value; rendreAgenda(); });
-  on('#f-reinit', 'click', () => { Object.keys(filtres).forEach(k => { filtres[k] = ''; }); $('#f-recherche').value = ''; rendreTags(); rendreAgenda(); });
+  on('#f-reinit', 'click', () => { Object.keys(filtres).forEach(k => { filtres[k] = ''; }); filtres.type = VERROU_TYPE ? 'evenement' : ''; $('#f-recherche').value = ''; rendreTags(); rendreAgenda(); });
   // Formulaire « Proposer un événement » : envoi en fetch vers admin-ajax.php (action rsn_veille_proposer,
   // jeton de window.rsnVeillePublic), erreurs sous les champs et en tête, remerciement à la place du formulaire.
   const CONFIG = window.rsnVeillePublic || {};
