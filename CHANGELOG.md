@@ -9,7 +9,7 @@ Première version de l'extension.
 - Registre de 25 sources : 8 sources d'événements (The Events Calendar, RSS, pages HTML d'Obvia, Mila, FRQ et IVADO), 5 sources d'appels (flux RSS filtrés) et 12 flux de nouvelles réservés au Radar.
 - Lecteurs TEC, RSS et Atom, iCal et HTML ; en-tête et début du corps vérifiés (une page HTML en code 200 n'est pas un flux), délai d'attente de 15 s, aucune protection anti-robot contournée.
 - Règles de confiance par type de source, priorité des niveaux A, C, M, B, dédoublonnage et fusion, mise à jour des seuls champs factuels, drapeau « absent de la source » après deux collectes réussies, jamais de dépublication automatique.
-- Collecte nocturne (3 h, heure de Montréal, modifiable) par tâches planifiées : une source à la fois, toutes les deux minutes, avec verrou et reprise ; journal par source.
+- Collecte nocturne (3 h, heure de Montréal, modifiable) par tâches planifiées : une source à la fois, à chaque passage de WP-Cron (environ 5 minutes avec le cron du serveur), avec verrou et reprise ; journal par source.
 
 ### Administration (menu Veille)
 - File d'approbation (à approuver, publiées, écartées, à vérifier), avec changement de statut sans rechargement.
