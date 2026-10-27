@@ -39,6 +39,9 @@ final class PageInfolettre {
     /** Nombre d'articles de programmes lus au plus. */
     private const MAX_PROGRAMMES = 50;
 
+    /** État rendu quand `rsn_appel_etat` échoue ou rend autre chose qu'une chaîne : le programme n'est pas repris. */
+    public const ETAT_INCONNU = 'inconnu';
+
     // --- WordPress ---
 
     /** Accroche le vidage des nouvelles gardées (admin-post.php, connectés seulement). */
@@ -107,7 +110,7 @@ final class PageInfolettre {
         $aujourdhui = \rsn_veille_aujourdhui();
         $programmes = [];
         foreach (is_array($articles) ? $articles : [] as $article) {
-            if (!$article instanceof \WP_Post || rsn_appel_etat($article) !== 'ouvert') {
+            if (!$article instanceof \WP_Post || self::etat_programme('rsn_appel_etat', $article) !== 'ouvert') {
                 continue;
             }
             $extrait = (string) get_the_excerpt($article);
@@ -125,6 +128,21 @@ final class PageInfolettre {
             );
         }
         return $programmes;
+    }
+
+    /**
+     * État d'un programme selon la fonction du site ($etat : `rsn_appel_etat` de l'extrait 45), appelée avec
+     * l'identifiant de l'article : la fonction fait `get_post_meta($id, …)`, qui attend un entier (un WP_Post
+     * y serait converti en 1, ou lèverait une TypeError avec un paramètre typé). Toute erreur, ou une valeur
+     * qui n'est pas une chaîne, donne `ETAT_INCONNU` sans casser la page Infolettre.
+     */
+    public static function etat_programme(callable $etat, \WP_Post $article): string {
+        try {
+            $resultat = $etat($article->ID);
+        } catch (\Throwable $erreur) {
+            return self::ETAT_INCONNU;
+        }
+        return is_string($resultat) ? $resultat : self::ETAT_INCONNU;
     }
 
     // --- Réglages demandés ---

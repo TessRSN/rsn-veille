@@ -37,6 +37,25 @@ final class PageInfolettreTest extends TestCase {
 
     // --- Réglages demandés ---
 
+    public function test_etat_d_un_programme_lu_par_l_identifiant_sans_casser_la_page(): void {
+        $article = new WP_Post();
+        $article->ID = 1234;
+        $recu = null;
+        $etat = static function (int $id) use (&$recu): string {
+            $recu = $id;
+            return 'ouvert';
+        };
+        $this->assertSame('ouvert', PageInfolettre::etat_programme($etat, $article));
+        $this->assertSame(1234, $recu, "l'identifiant de l'article, pas l'objet");
+
+        // Signature inattendue ou erreur dans l'extrait du site : état inconnu, la page continue.
+        $this->assertSame(PageInfolettre::ETAT_INCONNU, PageInfolettre::etat_programme(static fn(\WP_Post $p): string => 'ouvert', $article));
+        $this->assertSame(PageInfolettre::ETAT_INCONNU, PageInfolettre::etat_programme(static function (int $id): string {
+            throw new RuntimeException('base indisponible');
+        }, $article));
+        $this->assertSame(PageInfolettre::ETAT_INCONNU, PageInfolettre::etat_programme(static fn(int $id): array => [], $article));
+    }
+
     public function test_nombre_demande_parmi_6_8_10_12(): void {
         $this->assertSame(10, PageInfolettre::nombre_demande('10'));
         $this->assertSame(6, PageInfolettre::nombre_demande(6));
