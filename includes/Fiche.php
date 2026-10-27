@@ -45,6 +45,9 @@ final class Fiche {
     /** Source des fiches proposées par le public (formulaire de la page Veille). */
     public const SOURCE_PROPOSITION = 'proposition';
 
+    /** Âge maximal, en jours, d'un appel sans date limite connue (voir `appel_en_cours`). */
+    public const JOURS_APPEL_SANS_LIMITE = 90;
+
     /** @var string evenement|appel|nouvelle */
     public string $type = '';
     public string $titre = '';
@@ -177,6 +180,40 @@ final class Fiche {
      */
     public function est_proposition(): bool {
         return $this->source === self::SOURCE_PROPOSITION;
+    }
+
+    /**
+     * Date limite d'un appel (Y-m-d) : l'échéance, sinon une fin distincte du début (un lecteur qui ne
+     * trouve pas d'échéance met la fin au jour de publication), sinon null.
+     */
+    public function limite_appel(): ?string {
+        if (($this->echeance ?? '') !== '') {
+            return $this->echeance;
+        }
+        if (($this->fin ?? '') !== '' && $this->fin !== $this->debut) {
+            return $this->fin;
+        }
+        return null;
+    }
+
+    /**
+     * Appel encore en cours le jour $aujourdhui (Y-m-d), règle unique de la page publique, du JSON, de
+     * l'iCal, de l'infolettre et du courriel : sa date limite (`limite_appel`) n'est pas passée ; sans date
+     * limite, il a été publié il y a moins de 90 jours. La date de publication est le début (date de la
+     * source), sinon le jour de création dans la veille : une première collecte ne rajeunit pas un appel
+     * publié il y a des mois. Sans aucune date, l'appel n'est pas tenu pour en cours.
+     */
+    public function appel_en_cours(string $aujourdhui): bool {
+        $limite = $this->limite_appel();
+        if ($limite !== null) {
+            return $limite >= $aujourdhui;
+        }
+        $publication = ($this->debut ?? '') !== '' ? $this->debut : (string) ($this->cree_le ?? '');
+        $jour = \DateTimeImmutable::createFromFormat('!Y-m-d', $aujourdhui);
+        if ($publication === '' || $jour === false) {
+            return false;
+        }
+        return $publication > $jour->modify('-' . self::JOURS_APPEL_SANS_LIMITE . ' days')->format('Y-m-d');
     }
 
     /**

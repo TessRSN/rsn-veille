@@ -224,7 +224,8 @@ function animer(racine, noeudDonnees) {
     const orgas = [...new Set(E.map(k => k.organisateur).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
     $('#f-orga').innerHTML = `<option value="">${esc(t('tous'))}</option>` + orgas.map(o => `<option value="${esc(o)}"${filtres.orga === o ? ' selected' : ''}>${esc(o)}</option>`).join('');
   }
-  // Appels en cours : date limite à venir, ou inconnue.
+  // Appels en cours : le serveur n'envoie que ceux-là (règle Fiche::appel_en_cours : date limite à venir, sinon
+  // publié il y a moins de 90 jours). On ne retire ici que ceux dont la date limite est passée depuis la génération.
   const appelsEnCours = () => visibles('appel').filter(k => { const lim = limite(k); return !lim || lim >= AUJ; });
   function rendreAppels() {
     if (!$('#liste-appels')) return;

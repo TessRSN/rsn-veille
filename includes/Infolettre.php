@@ -61,8 +61,10 @@ final class Infolettre {
     }
 
     /**
-     * Appels ouverts : externes et programmes du RSN ensemble (une même adresse une seule fois), ceux dont
-     * la date limite n'est pas passée.
+     * Appels ouverts : externes et programmes du RSN ensemble (une même adresse une seule fois). Un appel
+     * externe est retenu s'il est en cours (`Fiche::appel_en_cours` : date limite à venir, sinon publié il y
+     * a moins de 90 jours) ; un programme du RSN, déjà dit « ouvert » par le site (`rsn_appel_etat`), si sa
+     * date limite n'est pas passée.
      * Triés par date limite (les plus proches d'abord), puis ceux sans date limite par date de publication.
      *
      * @param array<int,mixed> $appels_externes
@@ -74,7 +76,8 @@ final class Infolettre {
         $retenus = [];
         $adresses = [];
         // Programmes du RSN d'abord : un appel collecté qui pointe vers la même page leur cède la place.
-        foreach (array_merge($programmes_rsn, $appels_externes) as $appel) {
+        $nb_programmes = count($programmes_rsn);
+        foreach (array_merge(array_values($programmes_rsn), array_values($appels_externes)) as $position => $appel) {
             if (!is_array($appel) || !in_array($appel['type'] ?? 'appel', ['appel', '', null], true) || trim((string) ($appel['titre'] ?? '')) === '') {
                 continue;
             }
@@ -87,6 +90,13 @@ final class Infolettre {
             }
             $appel['echeance'] = self::date_ou_null($appel['echeance'] ?? null);
             if ($appel['echeance'] !== null && $appel['echeance'] < $aujourdhui) {
+                continue;
+            }
+            if ($position >= $nb_programmes && !Fiche::depuis_tableau(array_merge($appel, [
+                'debut' => self::date_ou_null($appel['debut'] ?? null),
+                'fin' => self::date_ou_null($appel['fin'] ?? null),
+                'cree_le' => self::date_ou_null($appel['cree_le'] ?? null),
+            ]))->appel_en_cours($aujourdhui)) {
                 continue;
             }
             $appel['debut'] = self::date_ou_null($appel['debut'] ?? null);

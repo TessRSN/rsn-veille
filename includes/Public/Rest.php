@@ -86,7 +86,7 @@ final class Rest {
         if (is_string($ics) && $ics !== '') {
             return $ics;
         }
-        $ics = Ical::generer(Donnees::elements(new EntrepotWordPress(), EvenementsRsn::lire()), \rsn_veille_aujourdhui());
+        $ics = Ical::generer(Donnees::elements(new EntrepotWordPress(), EvenementsRsn::lire(), \rsn_veille_aujourdhui()), \rsn_veille_aujourdhui());
         set_transient($cle, $ics, HOUR_IN_SECONDS);
         return $ics;
     }

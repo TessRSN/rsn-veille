@@ -140,6 +140,18 @@ final class DonneesTest extends TestCase {
         $this->assertSame(['Novembre', 'Décembre', 'Appel même échéance, publié avant', 'Appel proche', 'Appel tardif', 'Appel sans échéance'], $titres);
     }
 
+    public function test_appels_perimes_absents_du_json_et_des_elements(): void {
+        $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Récent sans limite', 'debut' => '2026-10-23', 'fin' => '2026-10-23', 'cle_source' => 'a:1']));
+        $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Vieux sans limite', 'debut' => '2026-06-22', 'fin' => '2026-06-22', 'cree_le' => '2026-10-25', 'cle_source' => 'a:2']));
+        $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Échéance passée', 'debut' => '2026-10-01', 'echeance' => '2026-10-24', 'cle_source' => 'a:3']));
+        $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Fin passée', 'debut' => '2026-10-01', 'fin' => '2026-10-20', 'cle_source' => 'a:4']));
+        $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Vieux avec échéance à venir', 'debut' => '2025-01-01', 'echeance' => '2026-12-01', 'cle_source' => 'a:5']));
+
+        $titres = array_column(Donnees::construire('2026-10-25', $this->entrepot, [])['items'], 'titre');
+        $this->assertSame(['Vieux avec échéance à venir', 'Récent sans limite'], $titres);
+        $this->assertSame($titres, array_column(Donnees::elements($this->entrepot, [], '2026-10-25'), 'titre'));
+    }
+
     public function test_sources_publiques_sans_niveau_avec_nombre_d_elements(): void {
         Journal::consigner('obvia', ['date' => '2026-10-25 03:05', 'lus' => 12]);
         $sources = Donnees::construire('2026-10-25', $this->entrepot, [])['sources'];

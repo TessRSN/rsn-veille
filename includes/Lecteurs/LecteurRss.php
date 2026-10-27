@@ -78,7 +78,12 @@ final class LecteurRss implements Lecteur {
                 }
                 $fiche->type = 'appel';
                 $fiche->categorie = $categorie;
-                $fiche->echeance = Echeance::trouver($description, $aujourdhui) ?? Echeance::trouver($titre, $aujourdhui);
+                // Date limite : dans l'extrait, puis dans le contenu complet (content:encoded), puis dans le titre.
+                // Une date sans année se lit par rapport au jour de publication, pas à aujourd'hui.
+                $reference = $fiche->debut ?? $aujourdhui;
+                $fiche->echeance = Echeance::trouver($description, $reference)
+                    ?? Echeance::trouver($this->texte($item, 'encoded', self::NS_CONTENU), $reference)
+                    ?? Echeance::trouver($titre, $reference);
                 $fiche->fin = $fiche->echeance ?? $fiche->debut;
             } else {
                 $fiche->type = 'nouvelle';

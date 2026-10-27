@@ -87,6 +87,8 @@ Après l'activation, le menu **Veille** apparaît dans wp-admin (sous « Comment
 4. Prévisualiser. Le raccourci accepte `section="agenda"` (l'agenda seul) ou `section="appels"` (les appels seuls) ; sans attribut, il affiche tout (onglets Agenda et Appels, filtres, calendrier, « Proposer un événement », « Sources lues »).
 5. Choisir cette page dans Veille › Réglages › Page Veille.
 
+L'onglet Appels ne montre que les appels en cours : date limite à venir (cherchée dans l'extrait, le contenu complet du flux et le titre), sinon date de fin à venir ; un appel sans aucune de ces dates est montré 90 jours après sa publication à la source, puis retiré (même règle pour le bloc Appels de l'infolettre et le courriel). Un appel encore ouvert après ce délai peut recevoir une date limite avec WP-CLI (`wp post meta update <ID> rsn_veille_echeance AAAA-MM-JJ`) ; il revient sur la page au plus tard une heure après (cache du JSON).
+
 Les ressources (`veille.css`, `veille.js`) ne se chargent que sur une page qui contient le raccourci (ou sur la page choisie dans les réglages). Les polices DM Serif Display et Plus Jakarta Sans sont déjà chargées par le site : l'extension ne les recharge pas (un autre thème peut les demander avec `add_filter('rsn_veille_charger_polices', '__return_true')`).
 
 Sorties pour d'autres usages : `https://rsn.quebec/wp-json/rsn/v1/veille` (JSON public, sans les fiches à approuver) et `https://rsn.quebec/veille.ics` (calendrier iCal des événements publiés).

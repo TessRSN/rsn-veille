@@ -121,4 +121,24 @@ final class FicheTest extends TestCase {
         $this->assertSame(42, Fiche::depuis_tableau(['id' => '42'])->id);
         $this->assertSame('2027-01-01', Fiche::depuis_tableau(['debut' => '2027-01-01'])->debut);
     }
+    public function test_appel_en_cours_par_echeance_puis_fin_puis_age(): void {
+        $appel = static fn(array $c): Fiche => Fiche::depuis_tableau($c + ['type' => 'appel', 'titre' => 'Appel']);
+        $jour = '2026-10-25';
+        // Échéance : elle décide seule, même si la fiche est récente ou la fin lointaine.
+        $this->assertTrue($appel(['echeance' => '2026-10-25', 'debut' => '2020-01-01'])->appel_en_cours($jour));
+        $this->assertFalse($appel(['echeance' => '2026-10-24', 'debut' => '2026-10-20', 'fin' => '2027-01-01'])->appel_en_cours($jour));
+        // Sans échéance : une fin distincte du début sert de date limite.
+        $this->assertTrue($appel(['debut' => '2026-01-01', 'fin' => '2026-11-01'])->appel_en_cours($jour));
+        $this->assertFalse($appel(['debut' => '2026-10-20', 'fin' => '2026-10-24'])->appel_en_cours($jour));
+        // Ni échéance ni fin distincte : moins de 90 jours depuis la publication (début), sinon depuis la création.
+        $this->assertTrue($appel(['debut' => '2026-07-28', 'fin' => '2026-07-28'])->appel_en_cours($jour), '89 jours');
+        $this->assertFalse($appel(['debut' => '2026-07-27', 'fin' => '2026-07-27'])->appel_en_cours($jour), '90 jours');
+        $this->assertFalse($appel(['debut' => '2026-06-22', 'cree_le' => '2026-10-25'])->appel_en_cours($jour), 'publié en juin, collecté aujourd\'hui');
+        $this->assertTrue($appel(['cree_le' => '2026-10-01'])->appel_en_cours($jour));
+        $this->assertFalse($appel(['cree_le' => '2026-07-01'])->appel_en_cours($jour));
+        // Aucune date du tout : rien ne permet de le dire en cours.
+        $this->assertFalse($appel([])->appel_en_cours($jour));
+        $this->assertSame('2026-11-01', $appel(['debut' => '2026-01-01', 'fin' => '2026-11-01'])->limite_appel());
+        $this->assertNull($appel(['debut' => '2026-01-01', 'fin' => '2026-01-01'])->limite_appel());
+    }
 }

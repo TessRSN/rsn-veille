@@ -178,6 +178,21 @@ final class InfolettreTest extends TestCase {
         $this->assertStringContainsString('Dernier jour', $html);
     }
 
+    public function test_appels_externes_sans_limite_retenus_moins_de_quatre_vingt_dix_jours(): void {
+        $html = Infolettre::bloc_appels([
+            self::appel(['titre' => 'Externe récent', 'echeance' => null, 'debut' => '2026-10-05', 'url' => 'https://a.test/1']),
+            self::appel(['titre' => 'Externe de juin', 'echeance' => null, 'debut' => '2026-06-22', 'fin' => '2026-06-22', 'url' => 'https://a.test/2']),
+            self::appel(['titre' => 'Externe fin passée', 'echeance' => null, 'debut' => '2026-10-01', 'fin' => '2026-10-20', 'url' => 'https://a.test/3']),
+        ], [
+            // Programme du RSN : son état « ouvert » vient du site (rsn_appel_etat), aucun âge maximal.
+            self::appel(['titre' => 'Programme ancien ouvert', 'echeance' => null, 'debut' => '2026-01-10', 'url' => 'https://rsn.test/p']),
+        ], self::AUJOURDHUI);
+        $this->assertStringContainsString('Externe récent', $html);
+        $this->assertStringContainsString('Programme ancien ouvert', $html);
+        $this->assertStringNotContainsString('Externe de juin', $html);
+        $this->assertStringNotContainsString('Externe fin passée', $html);
+    }
+
     public function test_appels_une_meme_adresse_une_seule_fois_le_programme_gagne(): void {
         $programme = self::appel(['titre' => 'Version du site', 'url' => 'https://rsn.quebec/programme/', 'organisateur' => 'RSN']);
         $collecte = self::appel(['titre' => 'Version collectée', 'url' => 'https://rsn.quebec/programme']);

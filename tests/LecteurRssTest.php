@@ -27,6 +27,25 @@ final class LecteurRssTest extends TestCase {
         $this->assertSame(['2026-10-15', 'Appel'], [$r->fiches[0]->debut, $r->fiches[0]->categorie]);
     }
 
+    public function test_rsn_echeance_cherchee_aussi_dans_le_contenu_complet(): void {
+        // Fixture réelle : la description (extrait) ne donne pas la date limite, le content:encoded oui.
+        $r = (new LecteurRss())->lire(file_get_contents(FIXTURES . '/rsn.xml'), ['id' => 'rsn_appels', 'nom' => 'RSN', 'mode' => 'appels', 'categories' => ['Appels de financement'], 'niveau' => 'B']);
+        $parTitre = [];
+        foreach ($r->fiches as $f) {
+            $parTitre[mb_substr($f->titre, 0, 30)] = [$f->debut, $f->echeance, $f->fin];
+        }
+        $this->assertSame(['2026-10-23', '2026-12-13', '2026-12-13'], $parTitre['Appel à projets de recherche 2']);
+        $this->assertSame(['2026-06-22', '2026-08-07', '2026-08-07'], $parTitre['Le RSN lance un programme de f']);
+    }
+
+    public function test_echeance_sans_annee_lue_par_rapport_a_la_publication(): void {
+        // Publié en mars, « date limite : 15 mai » : mai 2026 (déjà passé), pas mai 2027.
+        $xml = $this->rss('<item><title>Appel ancien</title><link>https://x.test/1</link><pubDate>Mon, 09 Mar 2026 10:00:00 -0400</pubDate><category>Appel</category>'
+            . '<description>Un concours.</description><content:encoded><![CDATA[<p>Date limite : 15 mai.</p>]]></content:encoded></item>');
+        $r = (new LecteurRss())->lire($xml, ['id' => 'x', 'nom' => 'X', 'mode' => 'appels', 'categories' => ['Appel']]);
+        $this->assertSame('2026-05-15', $r->fiches[0]->echeance);
+    }
+
     public function test_crm_echeance_extraite(): void {
         $r = (new LecteurRss())->lire(file_get_contents(FIXTURES . '/crm.xml'), ['id' => 'crm', 'nom' => 'CRM', 'mode' => 'appels', 'categories' => ['Appel', 'Concours ouvert'], 'niveau' => 'B', 'type_source' => 'generaliste', 'organisateur' => 'CRM']);
         $stages = array_values(array_filter($r->fiches, fn($f) => str_starts_with($f->titre, 'Stages postdoctoraux')));

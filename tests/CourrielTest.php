@@ -322,6 +322,20 @@ final class CourrielTest extends TestCase {
         $this->assertSame(get_option(Courriel::OPTION_DERNIER), Courriel::dernier_envoi());
     }
 
+    public function test_un_appel_perime_publie_cette_semaine_n_est_pas_annonce(): void {
+        self::regler();
+        $e = new EntrepotWordPress();
+        $appel = ['type' => 'appel', 'statut' => 'publie', 'cree_le' => '2026-10-26', 'organisateur' => 'RSN'];
+        $e->creer(Fiche::depuis_tableau($appel + ['titre' => 'Programme de juin', 'debut' => '2026-06-22', 'fin' => '2026-06-22', 'cle_source' => 'r:1', 'cles_source' => ['r:1']]));
+        $e->creer(Fiche::depuis_tableau($appel + ['titre' => 'Programme d’octobre', 'debut' => '2026-10-23', 'fin' => '2026-10-23', 'cle_source' => 'r:2', 'cles_source' => ['r:2']]));
+
+        $this->assertTrue(Courriel::envoyer());
+        $c = self::courriels()[0];
+        $this->assertSame("Veille de l'écosystème : 1 nouveauté cette semaine", $c['sujet']);
+        $this->assertStringContainsString('Programme d’octobre', $c['message']);
+        $this->assertStringNotContainsString('Programme de juin', $c['message']);
+    }
+
     public function test_le_texte_alternatif_n_est_joint_qu_au_courriel_de_la_veille(): void {
         Courriel::accrocher();
         $autre = new stdClass();

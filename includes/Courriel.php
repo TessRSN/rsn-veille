@@ -256,7 +256,9 @@ final class Courriel {
         $limite = self::limite($aujourdhui);
         $publiees = array_values(array_filter(
             $entrepot->lister('publie'),
+            // Un appel périmé (Fiche::appel_en_cours) n'est pas sur la page publique : il n'est pas annoncé comme publié.
             static fn(Fiche $f): bool => $f->cree_le !== null && $f->cree_le >= $limite
+                && ($f->type !== 'appel' || $f->appel_en_cours($aujourdhui))
         ));
         $en_attente = $entrepot->lister('a_approuver');
         $courriel = self::composer(

@@ -27,7 +27,8 @@ final class Echeance {
 
     /**
      * Première date limite trouvée dans le texte, au format Y-m-d, ou null.
-     * Sans année, on prend l'année courante si le mois n'est pas déjà passé, sinon la suivante.
+     * Sans année, on prend l'année de $aujourdhui (jour de référence : aujourd'hui, ou la publication du
+     * texte) si le mois n'est pas déjà passé, sinon la suivante.
      */
     public static function trouver(string $texte, string $aujourdhui): ?string {
         $texte = mb_strtolower(Fiche::nettoyer_texte($texte));

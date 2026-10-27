@@ -49,7 +49,7 @@ final class Donnees {
     public static function construire(string $aujourdhui, Entrepot $e, array $evenements_rsn, bool $equipe = false): array {
         $cles = $equipe ? array_merge(self::CLES_PUBLIQUES, self::CLES_EQUIPE) : self::CLES_PUBLIQUES;
         $items = [];
-        foreach (self::elements($e, $evenements_rsn) as $element) {
+        foreach (self::elements($e, $evenements_rsn, $aujourdhui) as $element) {
             $item = [];
             foreach ($cles as $cle) {
                 $item[$cle] = $element[$cle] ?? null;
@@ -68,20 +68,25 @@ final class Donnees {
     }
 
     /**
-     * Fiches publiées (événements et appels) et événements du RSN, dédoublonnés et triés, complets
+     * Fiches publiées (événements et appels en cours) et événements du RSN, dédoublonnés et triés, complets
      * (clés de source comprises : `Ical` s'en sert pour ses UID). À expurger avant toute sortie publique.
+     * Un appel n'y figure que s'il est en cours (`Fiche::appel_en_cours`) : les appels périmés ne sont
+     * jamais envoyés au navigateur.
      *
      * @param array<int,array<string,mixed>> $evenements_rsn
      * @return array<int,array<string,mixed>>
      */
-    public static function elements(Entrepot $e, array $evenements_rsn): array {
+    public static function elements(Entrepot $e, array $evenements_rsn, ?string $aujourdhui = null): array {
+        $aujourdhui ??= \rsn_veille_aujourdhui();
         $evenements = [];
         $appels = [];
         /** @var array<string,int> $positions Clé de dédoublonnage => position de la première fiche qui l'a. */
         $positions = [];
         foreach ($e->lister('publie') as $fiche) {
             if ($fiche->type === 'appel') {
-                $appels[] = $fiche->vers_tableau();
+                if ($fiche->appel_en_cours($aujourdhui)) {
+                    $appels[] = $fiche->vers_tableau();
+                }
             } elseif ($fiche->type === 'evenement') {
                 $cle = $fiche->cle_dedoublonnage();
                 $position = $positions[$cle] ?? null;
