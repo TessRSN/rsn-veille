@@ -94,14 +94,15 @@ function animer(racine, noeudDonnees) {
     const debutCourt = t('date_longue', premier(a.j), MOIS_LONG[a.m - 1], a.a !== b.a ? a.a : '').replace(/[,\s]+$/, '');
     return t('du_au', debutCourt, dateLongue(k.fin));
   }
-  // Pastilles (spec 4.5) : type, qui organise, format, langue, thèmes.
+  // Pastilles (spec 4.5) : type, qui organise, format (événements seulement : un appel n'en a pas, même s'il en garde
+  // un d'avant son passage en appel), langue, thèmes.
   function pastilles(k) {
     const appel = k.type === 'appel';
     const p = [`<span class="pill type${appel ? ' appel' : ''}">${esc(t(appel ? 'appel' : 'evenement'))}</span>`];
     if (enCours(k)) p.push(`<span class="pill etat">${esc(t('en_cours'))}</span>`);
     if (estRSN(k)) p.push(`<span class="pill rsn">${esc(libelle('qui', 'rsn'))}</span>`);
     else if (k.organisateur) p.push(qui(k) === 'partenaires' ? `<span class="pill part">${esc(t('partenaire', k.organisateur))}</span>` : `<span class="pill orga">${esc(k.organisateur)}</span>`);
-    if (k.format) p.push(`<span class="pill">${esc(libelle('formats', k.format))}</span>`);
+    if (k.format && !appel) p.push(`<span class="pill">${esc(libelle('formats', k.format))}</span>`);
     // Pastille de langue : seulement quand la fiche n'est pas dans la langue de la page.
     if ((k.langue === 'fr' || k.langue === 'en') && k.langue !== LANGUE) p.push(`<span class="pill">${esc(t(k.langue === 'en' ? 'en_anglais' : 'en_francais'))}</span>`);
     k.themes.forEach(e => p.push(`<span class="pill theme">${esc(e)}</span>`));
@@ -179,7 +180,8 @@ function animer(racine, noeudDonnees) {
     const q = filtres.q.trim().toLowerCase();
     if (q) L = L.filter(k => (k.titre + ' ' + k.organisateur + ' ' + (k.resume || '') + ' ' + k.themes.join(' ')).toLowerCase().includes(q));
     L = L.filter(parType).filter(parQui);
-    if (filtres.format) L = L.filter(k => k.format === filtres.format);
+    // Le format ne vaut que pour les événements : un appel n'est jamais retenu par ce filtre.
+    if (filtres.format) L = L.filter(k => k.type !== 'appel' && k.format === filtres.format);
     if (filtres.region) L = L.filter(k => k.region === filtres.region);
     if (filtres.theme) L = L.filter(k => k.themes.includes(filtres.theme));
     if (filtres.orga) L = L.filter(k => k.organisateur === filtres.orga);

@@ -261,6 +261,31 @@ final class MetaboxDetailsTest extends TestCase {
         $this->assertSame([], $r['erreurs']);
     }
 
+    public function test_appel_existant_publie_le_vide_garde_son_debut(): void {
+        // I1 (vague finale) : rien n'est effacé ni protégé.
+        $f = self::fiche(['type' => 'appel', 'debut' => '2026-10-15', 'fin' => '2026-10-15', 'echeance' => '2026-11-30']);
+        $r = MetaboxDetails::nettoyer(['publie' => ''] + self::envoi_identique($f), $f);
+        $this->assertSame([], $r['champs']);
+        $this->assertSame([], $r['erreurs']);
+    }
+
+    public function test_appel_sans_debut_publie_le_vide_prend_le_jour_d_arrivee_sans_protection(): void {
+        $f = self::fiche(['type' => 'appel', 'debut' => null, 'fin' => null, 'echeance' => '2026-11-30', 'cree_le' => '2026-10-01']);
+        $r = MetaboxDetails::nettoyer(['publie' => ''] + self::envoi_identique($f), $f);
+        $this->assertSame('2026-10-01', $r['champs']['debut']);
+        $this->assertSame('2026-10-01', $r['champs']['fin']);
+        // Valeur déduite, pas une correction à la main : la collecte peut encore la donner.
+        $this->assertArrayNotHasKey('champs_manuels', $r['champs']);
+    }
+
+    public function test_evenement_collecte_sans_debut_enregistre_sans_y_toucher_pas_d_avis(): void {
+        // m5 : l'avis ne vient que d'un début envoyé différent de celui enregistré.
+        $f = self::fiche(['debut' => null, 'fin' => null]);
+        $r = MetaboxDetails::nettoyer(self::envoi_identique($f), $f);
+        $this->assertSame([], $r['champs']);
+        $this->assertSame([], $r['erreurs']);
+    }
+
     public function test_format_et_langue_hors_liste_ignores(): void {
         $f = self::fiche();
         $r = MetaboxDetails::nettoyer(['format' => 'Autre', 'langue' => 'de', 'type' => 'nouvelle'] + self::envoi_identique($f), $f);
@@ -550,7 +575,7 @@ final class MetaboxDetailsTest extends TestCase {
         $GLOBALS['rsn_veille_wp']['capacites'] = ['edit_post'];
         MetaboxDetails::accrocher();
         self::poster(['type' => 'evenement', 'organisateur' => '', 'echeance' => '', 'categorie' => '', 'publie' => '', 'debut' => '', 'fin' => '', 'heure' => '', 'format' => '', 'lieu' => '', 'ville' => '', 'langue' => 'fr', 'url' => '']);
-        $id = wp_insert_post(['post_type' => TypeContenu::TYPE, 'post_title' => 'Atelier de la relève', 'post_status' => 'draft']);
+        $id = wp_insert_post(['post_type' => TypeContenu::TYPE, 'post_title' => 'Atelier de la relève', 'post_status' => 'draft', 'post_date' => '2026-10-28 09:00:00']);
 
         $f = (new EntrepotWordPress())->obtenir($id);
         $this->assertSame('manuel', $f->source);
@@ -573,14 +598,30 @@ final class MetaboxDetailsTest extends TestCase {
         $this->assertCount(1, $rappels);
     }
 
+    public function test_ancienne_fiche_de_l_editeur_garde_son_jour_d_arrivee(): void {
+        // m4 : fiche créée dans l'éditeur avant la 0.6.0 (sans clé de source), enregistrée pour la première fois avec
+        // l'encadré : son jour d'arrivée reste celui de son post, pas aujourd'hui.
+        $id = wp_insert_post(['post_type' => TypeContenu::TYPE, 'post_title' => 'Vieille fiche', 'post_status' => 'publish', 'post_date' => '2025-03-10 14:00:00']);
+        $GLOBALS['rsn_veille_wp']['capacites'] = ['edit_post'];
+        self::poster(['type' => 'evenement', 'debut' => '2025-03-12']);
+        MetaboxDetails::enregistrer_envoi($id);
+        $f = (new EntrepotWordPress())->obtenir($id);
+        $this->assertSame('manuel:' . $id, $f->cle_source);
+        $this->assertSame('2025-03-10', $f->cree_le);
+        $this->assertSame('2025-03-10', self::meta($id, 'cree_le'));
+    }
+
     public function test_deuxieme_enregistrement_garde_manuel(): void {
         $GLOBALS['rsn_veille_wp']['capacites'] = ['edit_post'];
         MetaboxDetails::accrocher();
         self::poster(['type' => 'appel', 'publie' => '', 'echeance' => '2026-12-01', 'organisateur' => 'RSN']);
-        $id = wp_insert_post(['post_type' => TypeContenu::TYPE, 'post_title' => 'Appel à projets', 'post_status' => 'draft']);
+        $id = wp_insert_post(['post_type' => TypeContenu::TYPE, 'post_title' => 'Appel à projets', 'post_status' => 'draft', 'post_date' => '2026-10-28 09:00:00']);
         $premier = (new EntrepotWordPress())->obtenir($id);
         $this->assertSame('appel', $premier->type);
         $this->assertSame('2026-12-01', $premier->echeance);
+        // I1 (vague finale) : appel neuf sans « Publié le » : publié le jour même, sinon la page l'écarterait.
+        $this->assertSame('2026-10-28', $premier->debut);
+        $this->assertSame('2026-10-28', $premier->fin);
 
         // Deuxième enregistrement, un autre jour : rien de ce que la création a posé ne change.
         $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-10-30';

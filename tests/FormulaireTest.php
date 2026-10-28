@@ -558,6 +558,19 @@ final class FormulaireTest extends TestCase {
         $this->assertSame($avant, serialize($GLOBALS['rsn_veille_wp']['meta'][$id]), 'la fiche publiée ne change pas');
     }
 
+    public function test_doublon_d_un_appel_publie_dit_appel(): void {
+        // Appel publié du jour (un appel proposé a pour début le jour de l'envoi), même titre.
+        (new EntrepotWordPress())->creer(Fiche::depuis_tableau([
+            'type' => 'appel', 'titre' => 'Appel à projets en santé numérique 2027', 'debut' => self::AUJOURDHUI, 'fin' => self::AUJOURDHUI,
+            'echeance' => '2026-12-15', 'organisateur' => 'Fonds de recherche du Québec', 'source' => 'FRQ : appels', 'niveau' => 'B',
+            'statut' => 'publie', 'cle_source' => 'frq_appels:9', 'cles_source' => ['frq_appels:9'],
+        ]));
+        [$reponse, $statut] = $this->envoyer(self::appel());
+        $this->assertSame(200, $statut);
+        $this->assertSame('Merci, cet appel est déjà dans la veille.', $reponse['data']['message']);
+        $this->assertCount(1, self::fiches());
+    }
+
     public function test_meme_url_mais_autre_evenement_cree_une_fiche(): void {
         (new EntrepotWordPress())->creer(Fiche::depuis_tableau([
             'type' => 'evenement', 'titre' => 'Autre atelier', 'debut' => '2026-11-02', 'organisateur' => 'Obvia',

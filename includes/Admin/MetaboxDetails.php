@@ -285,14 +285,22 @@ final class MetaboxDetails {
         }
 
         // Début : « Publié le » pour un appel (facultatif), « Date de début » pour un événement (obligatoire).
+        // « Publié le » vide : l'ancien début est gardé, sinon le jour d'arrivée (une fiche sans début n'est pas
+        // affichée sur la page) ; ce début déduit n'est pas une correction à la main, il n'est pas protégé.
         $debut = $actuelle->debut;
+        $debut_deduit = false;
         $saisi = $lire($appel ? 'publie' : 'debut');
         if ($saisi !== null) {
             if (self::date_valide($saisi)) {
                 $debut = $saisi;
             } elseif ($appel && $saisi === '') {
-                $debut = null;
-            } elseif (!$appel) {
+                if ($debut === null && self::date_valide((string) $actuelle->cree_le)) {
+                    $debut = $actuelle->cree_le;
+                    $debut_deduit = true;
+                }
+            } elseif (!$appel && $saisi !== (string) $actuelle->debut) {
+                // Avis seulement pour un début envoyé différent de celui enregistré (pas à chaque enregistrement
+                // d'un événement collecté sans début).
                 $erreurs[] = __("Un événement doit avoir une date de début valide : l'ancienne date de début est gardée.", 'rsn-veille');
             }
         }
@@ -341,6 +349,9 @@ final class MetaboxDetails {
 
         $existants = array_values(array_intersect($actuelle->champs_manuels, Depot::CHAMPS_PROTEGEABLES));
         $changes = array_values(array_intersect(Depot::CHAMPS_PROTEGEABLES, array_keys($champs)));
+        if ($debut_deduit) {
+            $changes = array_values(array_diff($changes, ['debut', 'fin']));
+        }
         $proteges = array_values(array_unique(array_merge($existants, $changes)));
         // Réécrite seulement si un champ s'ajoute (un ancien nom inconnu, ignoré à la lecture, ne force rien).
         if ($proteges !== $existants) {
@@ -400,14 +411,17 @@ final class MetaboxDetails {
                 'cle_source' => $cle,
                 'cles_source' => [$cle],
                 'manuel' => true,
-                'cree_le' => \rsn_veille_aujourdhui(),
+                // Jour d'arrivée : celui du post (une fiche créée dans l'éditeur avant la 0.6.0 n'est pas rajeunie).
+                'cree_le' => $actuelle->cree_le ?? \rsn_veille_aujourdhui(),
             ];
             if (!in_array($envoi['type'] ?? null, self::TYPES, true)) {
                 $envoi['type'] = 'evenement';
             }
-            // Événement créé sans date : le jour même (point de vigilance 4).
-            if ($envoi['type'] === 'evenement' && trim((string) (is_scalar($envoi['debut'] ?? null) ? $envoi['debut'] : '')) === '') {
-                $envoi['debut'] = \rsn_veille_aujourdhui();
+            // Événement créé sans date ou appel sans « Publié le » : le jour même (point de vigilance 4 ; comme le
+            // formulaire public pour un appel).
+            $champ_debut = $envoi['type'] === 'appel' ? 'publie' : 'debut';
+            if (trim((string) (is_scalar($envoi[$champ_debut] ?? null) ? $envoi[$champ_debut] : '')) === '') {
+                $envoi[$champ_debut] = \rsn_veille_aujourdhui();
             }
         }
         $resultat = self::nettoyer($envoi, $actuelle);

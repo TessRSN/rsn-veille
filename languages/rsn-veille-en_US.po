@@ -56,6 +56,9 @@ msgstr "Sending failed. Try again later."
 msgid "Merci, cet événement est déjà dans la veille."
 msgstr "Thank you, this event is already listed."
 
+msgid "Merci, cet appel est déjà dans la veille."
+msgstr "Thank you, this call is already listed."
+
 msgid "Image trop lourde (3 Mo au plus)."
 msgstr "Image too large (3 MB at most)."
 

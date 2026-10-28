@@ -279,7 +279,9 @@ final class Formulaire {
             return;
         }
         if ($deja) {
-            wp_send_json_success(['ok' => true, 'message' => __('Merci, cet événement est déjà dans la veille.', 'rsn-veille')]);
+            wp_send_json_success(['ok' => true, 'message' => $fiche->type === 'appel'
+                ? __('Merci, cet appel est déjà dans la veille.', 'rsn-veille')
+                : __('Merci, cet événement est déjà dans la veille.', 'rsn-veille')]);
             return;
         }
         self::repondre_merci();
