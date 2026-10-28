@@ -44,10 +44,10 @@ final class RaccourciTest extends TestCase {
         $this->publier();
         $html = do_shortcode('[rsn_veille]');
 
-        $this->assertStringStartsWith('<div class="rsn-veille" role="region" aria-label="Veille de l&#039;écosystème" data-section="tout" data-une="1">', trim($html));
+        $this->assertStringStartsWith('<div class="rsn-veille" lang="fr" role="region" aria-label="Veille de l&#039;écosystème" data-section="tout" data-une="1">', trim($html));
         $this->assertStringNotContainsString('<main', $html, 'le gabarit du site a déjà son <main>');
         $donnees = $this->donnees_incorporees($html);
-        $this->assertSame(['genere_le', 'sources', 'items'], array_keys($donnees));
+        $this->assertSame(['genere_le', 'langue', 'sources', 'items'], array_keys($donnees));
         $this->assertCount(1, $donnees['items']);
         $this->assertSame('Colloque santé numérique', $donnees['items'][0]['titre']);
         $this->assertArrayNotHasKey('niveau', $donnees['items'][0]);
@@ -95,6 +95,17 @@ final class RaccourciTest extends TestCase {
         // Un second rendu ne repasse pas la configuration.
         Raccourci::rendre([]);
         $this->assertCount(1, rsn_veille_bouchons_declenchements('litespeed_nonce'));
+    }
+
+    public function test_conteneur_et_champ_cache_portent_la_langue(): void {
+        $html = Raccourci::rendre([]);
+        $this->assertStringContainsString('<div class="rsn-veille" lang="fr" role="region"', $html);
+        $this->assertStringContainsString('<input type="hidden" name="langue" value="fr">', $html);
+
+        add_filter('wpml_current_language', static fn() => 'en');
+        $html = Raccourci::rendre([]);
+        $this->assertStringContainsString('<div class="rsn-veille" lang="en" role="region"', $html);
+        $this->assertStringContainsString('<input type="hidden" name="langue" value="en">', $html);
     }
 
     public function test_section_appels_sans_formulaire(): void {

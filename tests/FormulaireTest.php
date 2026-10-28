@@ -78,6 +78,14 @@ final class FormulaireTest extends TestCase {
         $this->assertStringNotContainsString('personne@exemple.org', serialize($fiche->vers_tableau()));
     }
 
+    public function test_langue_recue_en_ou_fr_sinon_fr(): void {
+        $this->assertSame('en', Formulaire::valider(self::champs(['langue' => 'en']), self::AUJOURDHUI)['fiche']->langue);
+        $this->assertSame('fr', Formulaire::valider(self::champs(['langue' => 'fr']), self::AUJOURDHUI)['fiche']->langue);
+        $this->assertSame('fr', Formulaire::valider(self::champs(), self::AUJOURDHUI)['fiche']->langue);
+        $this->assertSame('fr', Formulaire::valider(self::champs(['langue' => 'xx']), self::AUJOURDHUI)['fiche']->langue);
+        $this->assertSame('fr', Formulaire::valider(self::champs(['langue' => ['en']]), self::AUJOURDHUI)['fiche']->langue);
+    }
+
     public function test_themes_des_reglages_et_non_ceux_par_defaut(): void {
         update_option(Collecte::OPTION_REGLAGES, ['themes' => [['nom' => 'Souveraineté', 'mots' => ['souveraineté']]]]);
         $fiche = Formulaire::valider(self::champs(), self::AUJOURDHUI)['fiche'];

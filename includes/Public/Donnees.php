@@ -47,12 +47,14 @@ final class Donnees {
 
     /**
      * @param array<int,array<string,mixed>> $evenements_rsn Événements de The Events Calendar du site, au format fiche.
-     * @return array{genere_le: string, sources: array<int,array<string,mixed>>, items: array<int,array<string,mixed>>}
+     * @param ?string $langue `fr` ou `en` (toute autre valeur vaut `fr`) ; par défaut la langue courante (WPML).
+     * @return array{genere_le: string, langue: string, sources: array<int,array<string,mixed>>, items: array<int,array<string,mixed>>}
      */
-    public static function construire(string $aujourdhui, Entrepot $e, array $evenements_rsn, bool $equipe = false): array {
+    public static function construire(string $aujourdhui, Entrepot $e, array $evenements_rsn, bool $equipe = false, ?string $langue = null): array {
+        $langue = self::langue_ou_fr($langue ?? self::langue_courante());
         $cles = $equipe ? array_merge(self::CLES_PUBLIQUES, self::CLES_EQUIPE) : self::CLES_PUBLIQUES;
         $items = [];
-        foreach (self::elements($e, $evenements_rsn, $aujourdhui) as $element) {
+        foreach (self::elements($e, $evenements_rsn, $aujourdhui, $langue) as $element) {
             $item = [];
             foreach ($cles as $cle) {
                 $item[$cle] = $element[$cle] ?? null;
@@ -85,6 +87,7 @@ final class Donnees {
         $derniere = get_option(Collecte::OPTION_DERNIERE, 0);
         return [
             'genere_le' => is_numeric($derniere) && (int) $derniere > 0 ? wp_date('c', (int) $derniere) : $aujourdhui,
+            'langue' => $langue,
             'sources' => self::sources($equipe),
             'items' => $items,
         ];
@@ -98,9 +101,12 @@ final class Donnees {
      * avec ces bornes (`Entrepot::lister_pour_page`) : jamais toute la base.
      *
      * @param array<int,array<string,mixed>> $evenements_rsn
+     * @param ?string $langue `fr` ou `en` ; par défaut la langue courante. Réservée aux étapes qui choisissent
+     *                        le texte d'une fiche selon la langue : pour l'instant, elle ne change rien.
      * @return array<int,array<string,mixed>>
      */
-    public static function elements(Entrepot $e, array $evenements_rsn, ?string $aujourdhui = null): array {
+    public static function elements(Entrepot $e, array $evenements_rsn, ?string $aujourdhui = null, ?string $langue = null): array {
+        $langue = self::langue_ou_fr($langue ?? self::langue_courante());
         $aujourdhui ??= \rsn_veille_aujourdhui();
         $jour = \DateTimeImmutable::createFromFormat('!Y-m-d', $aujourdhui) ?: new \DateTimeImmutable('today');
         $limite_evenements = $jour->modify('-' . self::MOIS_EVENEMENTS_PASSES . ' months')->format('Y-m-d');
@@ -169,7 +175,7 @@ final class Donnees {
     /**
      * Données publiques, depuis le transient d'une heure ou reconstruites.
      *
-     * @return array{genere_le: string, sources: array<int,array<string,mixed>>, items: array<int,array<string,mixed>>}
+     * @return array{genere_le: string, langue: string, sources: array<int,array<string,mixed>>, items: array<int,array<string,mixed>>}
      */
     public static function en_cache(): array {
         $cle = self::transient(self::TRANSIENT);
@@ -180,6 +186,17 @@ final class Donnees {
         $donnees = self::construire(\rsn_veille_aujourdhui(), new EntrepotWordPress(), EvenementsRsn::lire());
         set_transient($cle, $donnees, HOUR_IN_SECONDS);
         return $donnees;
+    }
+
+    /** Langue courante de la page : `en` si WPML la donne, sinon `fr` (deux langues seulement). */
+    public static function langue_courante(): string {
+        $langue = apply_filters('wpml_current_language', null);
+        return self::langue_ou_fr(is_string($langue) ? $langue : null);
+    }
+
+    /** `fr` ou `en` ; toute autre valeur vaut `fr`. */
+    private static function langue_ou_fr(?string $langue): string {
+        return $langue === 'en' ? 'en' : 'fr';
     }
 
     /** Nom du transient pour la langue courante (WPML), « {base}_fr » sans WPML. */

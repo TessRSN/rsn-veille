@@ -125,7 +125,8 @@ final class Formulaire {
         $fiche->region = Fiche::deviner_region('', $lieu, $format);
         $fiche->url = self::url($brut('url'));
         $fiche->resume = $resume;
-        $fiche->langue = 'fr';
+        // Langue de la page où l'on a rempli le formulaire ; toute autre valeur vaut « fr ».
+        $fiche->langue = $brut('langue') === 'en' ? 'en' : 'fr';
         // Thèmes des réglages de l'équipe (comme la collecte), pas ceux par défaut.
         $fiche->themes = Collecte::pertinence()->themes($titre . ' ' . $resume);
         $fiche->source = Fiche::SOURCE_PROPOSITION;

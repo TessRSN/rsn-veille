@@ -323,6 +323,30 @@ final class DonneesTest extends TestCase {
         $this->assertSame('ecosysteme', Donnees::organise_par('ecosysteme-numerique'));
     }
 
+    public function test_langue_courante_fr_sans_wpml_et_en_avec_wpml(): void {
+        $this->assertSame('fr', Donnees::langue_courante());
+        add_filter('wpml_current_language', static fn() => 'en');
+        $this->assertSame('en', Donnees::langue_courante());
+    }
+
+    public function test_langue_courante_hors_fr_en_vaut_fr(): void {
+        add_filter('wpml_current_language', static fn() => 'de');
+        $this->assertSame('fr', Donnees::langue_courante());
+    }
+
+    public function test_json_porte_la_langue(): void {
+        $this->assertSame('fr', Donnees::construire('2026-10-25', $this->entrepot, [])['langue']);
+        $this->assertSame('en', Donnees::construire('2026-10-25', $this->entrepot, [], false, 'en')['langue']);
+        $this->assertSame('fr', Donnees::construire('2026-10-25', $this->entrepot, [], false, 'xx')['langue']);
+        add_filter('wpml_current_language', static fn() => 'en');
+        $this->assertSame('en', Donnees::construire('2026-10-25', $this->entrepot, [])['langue']);
+        $this->assertSame('en', Donnees::en_cache()['langue']);
+    }
+
+    public function test_elements_accepte_la_langue(): void {
+        $this->assertSame([], Donnees::elements($this->entrepot, [], '2026-10-25', 'en'));
+    }
+
     public function test_transients_par_langue(): void {
         $this->assertSame('rsn_veille_json_fr', Donnees::transient(Donnees::TRANSIENT));
         add_filter('wpml_current_language', static fn() => 'en');

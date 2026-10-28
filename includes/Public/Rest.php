@@ -37,10 +37,28 @@ final class Rest {
         ]);
     }
 
-    /** Le JSON de la page publique (`Donnees`, sans niveau ni source), en cache une heure. */
+    /**
+     * Le JSON de la page publique (`Donnees`, sans niveau ni source), en cache une heure (par langue).
+     *
+     * `?lang=fr|en` : avec WPML, la réponse est dans cette langue (on bascule le temps de la lecture, puis on
+     * revient à la langue d'origine) ; sans WPML, ou si `lang` n'est ni `fr` ni `en`, il est ignoré.
+     */
     public static function repondre(mixed $requete = null): mixed {
         do_action('litespeed_control_set_nocache');
-        $reponse = rest_ensure_response(Donnees::en_cache());
+        $lang = is_object($requete) && method_exists($requete, 'get_param') ? $requete->get_param('lang') : null;
+        $origine = apply_filters('wpml_current_language', null);
+        $bascule = ($lang === 'fr' || $lang === 'en') && is_string($origine) && $origine !== '' && $origine !== $lang;
+        if ($bascule) {
+            do_action('wpml_switch_language', $lang);
+        }
+        try {
+            $donnees = Donnees::en_cache();
+        } finally {
+            if ($bascule) {
+                do_action('wpml_switch_language', $origine);
+            }
+        }
+        $reponse = rest_ensure_response($donnees);
         if (is_object($reponse) && method_exists($reponse, 'header')) {
             $reponse->header('Cache-Control', 'public, max-age=3600');
         }

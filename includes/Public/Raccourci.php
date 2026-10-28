@@ -128,6 +128,7 @@ final class Raccourci {
         $une = trim((string) $attributs['une']) === '0' ? '0' : '1';
         self::mettre_en_file();
 
+        $langue = Donnees::langue_courante();
         $json_donnees = self::json(Donnees::en_cache());
         $json_textes = self::json(self::textes());
         $hex = self::HEX;
