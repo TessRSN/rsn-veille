@@ -13,8 +13,10 @@
  * Administration : menus et crochets de pages (`toplevel_page_…`, `{menu}_page_…`), capacités de
  * l'utilisateur courant (liste `capacites`), rôles (`WP_Role`, chaque `add_cap` compté comme une
  * écriture), jetons déterministes (« jeton-{action} »), et `wp_send_json_*` / `wp_die` qui lèvent
- * `RsnVeilleArretRequete` au lieu d'arrêter PHP. La vérification de référence est
- * `tests/manuel/verifier-admin.md`.
+ * `RsnVeilleArretRequete` au lieu d'arrêter PHP. `remove_action` retire un rappel de même priorité ; l'écran
+ * courant (`ecran`, objet {base, post_type}) est lu par `get_current_screen` ; `wp_is_post_revision` et
+ * `wp_is_post_autosave` reconnaissent un post de type `revision` (nom contenant « autosave » pour la seconde).
+ * La vérification de référence est `tests/manuel/verifier-admin.md`.
  *
  * Réglages : `register_setting` pose le filtre `sanitize_option_{option}`, appliqué par `update_option`
  * (deux fois quand l'option n'existe pas encore, comme WordPress qui passe alors par `add_option`) ;
@@ -99,6 +101,8 @@ function rsn_veille_bouchons_reinitialiser(): void {
         'domaines' => [],
         // Articles lus par adresse ou identifiant : adresse => identifiant, identifiant => permalien, identifiant => noms de catégories.
         'urls' => [], 'permaliens' => [], 'categories' => [],
+        // Écran courant de l'administration (`get_current_screen`) : objet {base, post_type} posé par le test, ou null.
+        'ecran' => null,
     ];
     $GLOBALS['rsn_veille_wp']['roles'] = [
         'administrator' => new WP_Role('administrator', ['manage_options' => true, 'edit_posts' => true]),
@@ -178,6 +182,16 @@ if (!function_exists('sanitize_text_field')) {
 
 function add_action(string $crochet, callable $rappel, int $priorite = 10, int $nb_arguments = 1): void {
     $GLOBALS['rsn_veille_wp']['actions'][$crochet][] = ['rappel' => $rappel, 'nb_arguments' => $nb_arguments, 'priorite' => $priorite];
+}
+
+/** Comme WordPress : retire le rappel posé avec la même priorité. */
+function remove_action(string $crochet, callable $rappel, int $priorite = 10): bool {
+    $avant = count($GLOBALS['rsn_veille_wp']['actions'][$crochet] ?? []);
+    $GLOBALS['rsn_veille_wp']['actions'][$crochet] = array_values(array_filter(
+        $GLOBALS['rsn_veille_wp']['actions'][$crochet] ?? [],
+        static fn(array $a): bool => !($a['rappel'] === $rappel && $a['priorite'] === $priorite)
+    ));
+    return count($GLOBALS['rsn_veille_wp']['actions'][$crochet]) < $avant;
 }
 
 /**
@@ -531,6 +545,18 @@ function wp_update_post(array $article, bool $erreur = false): int|WP_Error {
     return wp_insert_post($article, $erreur, true);
 }
 
+/** Révision : un post de type `revision` (rend l'identifiant du parent), sinon false. */
+function wp_is_post_revision(int|WP_Post $article): int|false {
+    $post = $article instanceof WP_Post ? $article : get_post($article);
+    return $post !== null && $post->post_type === 'revision' ? $post->post_parent : false;
+}
+
+/** Sauvegarde automatique : une révision dont le nom contient « autosave », sinon false. */
+function wp_is_post_autosave(int|WP_Post $article): int|false {
+    $post = $article instanceof WP_Post ? $article : get_post($article);
+    return $post !== null && $post->post_type === 'revision' && str_contains($post->post_name, 'autosave') ? $post->post_parent : false;
+}
+
 function get_post(int $id): ?WP_Post {
     $post = $GLOBALS['rsn_veille_wp']['posts'][$id] ?? null;
     return $post === null ? null : clone $post;
@@ -805,6 +831,11 @@ function add_submenu_page(string $parent, string $titre_page, string $titre_menu
 /** Note la métabox (id, titre, rappel, écran, contexte, priorité) dans `metaboxes`, consultable par un test. */
 function add_meta_box(string $id, string $titre, callable $rappel, string|array|null $ecran = null, string $contexte = 'advanced', string $priorite = 'default', ?array $args = null): void {
     $GLOBALS['rsn_veille_wp']['metaboxes'][$id] = compact('id', 'titre', 'rappel', 'ecran', 'contexte', 'priorite', 'args');
+}
+
+/** Écran courant posé par le test (`ecran`), null hors d'un écran connu. */
+function get_current_screen(): ?object {
+    return $GLOBALS['rsn_veille_wp']['ecran'];
 }
 
 /** Capacités de l'utilisateur courant : liste posée par le test (`capacites`). */

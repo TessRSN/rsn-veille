@@ -61,6 +61,18 @@ lancent par `npx wp-env run cli wp …`.
       recharger : l'onglet « À vérifier (1) » la liste avec « Absent de la source depuis le
       20 octobre 2026 ». **Garder publiée** la retire de l'onglet, `rsn_veille_absent_depuis` n'existe
       plus et `rsn_veille_absences` vaut 0. **Retirer** (sur une autre fiche marquée) la passe en `draft`.
+- [ ] **Encadré « Détails de la fiche »** (version 0.6.0) : le lien « Modifier » d'une fiche ouvre l'éditeur avec
+      l'encadré sous le texte, l'origine et l'état à droite du titre. Choisir **Appel** : les champs de
+      l'événement se masquent, la date limite, la catégorie et la date de publication apparaissent ; choisir
+      **Événement** : l'inverse. Changer la date limite (ou le lieu, le lien…) et enregistrer : la valeur est
+      gardée, le champ porte la pastille « corrigé à la main » et `wp post meta get <id> rsn_veille_champs_manuels`
+      le liste ; une collecte (Réglages) ne la remet pas. Une date de début vidée sur un événement garde l'ancienne
+      date, avec un avis rouge. Compte `lecteur` : pas d'accès à l'éditeur d'une fiche.
+- [ ] **Ajouter une fiche** (0.6.0) : le bouton en tête de la file d'approbation (à droite du titre) ouvre un
+      éditeur vide avec l'encadré (type « Événement » par défaut) ; avec un titre et une date de début, **Publier**
+      crée la fiche : `rsn_veille_source` vaut `manuel`, `rsn_veille_niveau` `M`, `rsn_veille_cle_source`
+      `manuel:<id>` ; elle est dans l'onglet « Publiées » et sur la page. « Enregistrer le brouillon » la laisse
+      hors de la page. Compte `lecteur` : pas de bouton.
 - [ ] Jeton expiré : dans la console du navigateur, `rsnVeilleAdmin.nonce = 'x'`, puis un bouton :
       message « Jeton de sécurité expiré : rechargez la page. » dans la ligne, fiche inchangée.
 - [ ] Réglage des rôles : `wp option patch insert rsn_veille_reglages roles '["author"]' --format=json`
@@ -72,7 +84,7 @@ lancent par `npx wp-env run cli wp …`.
       « N appariées en anglais, M orphelines » au-dessus des erreurs, erreurs repliées sous
       « N erreurs », et le déroulé de chaque source replié en bas de page.
 - [ ] Les fichiers `admin.css` et `admin.js` ne sont chargés que sur les pages du menu Veille (onglet
-      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.5.2`.
+      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.6.0`.
 - [ ] Aucune erreur PHP dans `wp-content/debug.log` ni dans la console du navigateur.
 
 ## Réglages (tâche 12)

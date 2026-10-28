@@ -8,6 +8,7 @@ use RSN\Veille\Entrepot;
 use RSN\Veille\EntrepotWordPress;
 use RSN\Veille\Fiche;
 use RSN\Veille\Public\Formulaire;
+use RSN\Veille\TypeContenu;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -58,6 +59,7 @@ final class PageFile {
             'url_admin' => admin_url(),
             'compteurs' => $entrepot->compter(),
             'plafond_atteint' => $plafond_atteint,
+            'peut_ajouter' => current_user_can('edit_posts'),
         ]);
     }
 
@@ -247,12 +249,13 @@ final class PageFile {
     // --- Rendu ---
 
     /**
-     * Page complète : titre, onglets, filtres, zone de message et tableau.
+     * Page complète : titre et bouton « Ajouter une fiche », onglets, filtres, zone de message et tableau.
      *
      * @param Fiche[] $fiches Fiches chargées (celles de l'onglet, ou toutes).
-     * @param array{url_admin?: string, compteurs?: array<string,int>, plafond_atteint?: bool} $options
+     * @param array{url_admin?: string, compteurs?: array<string,int>, plafond_atteint?: bool, peut_ajouter?: bool} $options
      *        `compteurs` : nombres par onglet de l'entrepôt (`Entrepot::compter`), sinon comptés sur $fiches ;
-     *        `plafond_atteint` : l'onglet ne montre que les `PLAFOND` fiches les plus récentes.
+     *        `plafond_atteint` : l'onglet ne montre que les `PLAFOND` fiches les plus récentes ;
+     *        `peut_ajouter` : bouton « Ajouter une fiche » (vrai par défaut).
      */
     public static function page_html(array $fiches, string $onglet, string $type, string $source, string $url_page, array $options): string {
         $compteurs = is_array($options['compteurs'] ?? null) ? $options['compteurs'] : self::compteurs($fiches);
@@ -263,8 +266,13 @@ final class PageFile {
                 self::PLAFOND
             )) . '</p>'
             : '';
+        // Bouton « Ajouter une fiche » à côté du titre, comme « Ajouter » des listes de WordPress.
+        $ajouter = ($options['peut_ajouter'] ?? true)
+            ? ' <a href="' . esc_url(admin_url('post-new.php?post_type=' . TypeContenu::TYPE)) . '" class="page-title-action">' . esc_html__('Ajouter une fiche', 'rsn-veille') . '</a>'
+            : '';
         return '<div class="wrap rsn-veille-admin">'
-            . '<h1>' . esc_html__("File d'approbation", 'rsn-veille') . '</h1>'
+            . '<h1 class="wp-heading-inline">' . esc_html__("File d'approbation", 'rsn-veille') . '</h1>'
+            . $ajouter . '<hr class="wp-header-end">'
             . self::onglets_html($onglet, $compteurs, $type, $source, $url_page)
             . self::filtres_html($onglet, $type, $source, self::sources_distinctes($fiches))
             . '<div class="rsn-veille-message" role="status" aria-live="polite"></div>'

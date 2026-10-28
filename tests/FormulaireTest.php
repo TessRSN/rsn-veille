@@ -244,6 +244,156 @@ final class FormulaireTest extends TestCase {
         $this->assertFalse(Formulaire::debit_depasse($cle));
     }
 
+    // --- valider : appel de financement ou de candidatures ---
+
+    /** Jeu complet et valide d'un appel (date limite après AUJOURDHUI). */
+    private static function appel(array $champs = []): array {
+        return $champs + [
+            'type' => 'appel',
+            'titre' => 'Appel à projets en santé numérique 2027',
+            'echeance' => '2026-12-15',
+            'organisateur' => 'Fonds de recherche du Québec',
+            'url' => 'https://frq.gouv.qc.ca/appel-2027',
+            'resume' => "Financement de projets d'IA en santé.",
+            'courriel' => 'personne@exemple.org',
+            'site_web' => '',
+            // Champs d'événement que le formulaire masqué pourrait encore envoyer : ignorés.
+            'debut' => '2026-11-20',
+            'fin' => '2026-11-21',
+            'format' => 'Hybride',
+            'lieu' => 'HEC Montréal, Montréal',
+        ];
+    }
+
+    public function test_appel_valide_donne_une_fiche_appel_a_approuver(): void {
+        $resultat = Formulaire::valider(self::appel(), self::AUJOURDHUI);
+
+        $this->assertSame([], $resultat['erreurs']);
+        $fiche = $resultat['fiche'];
+        $this->assertInstanceOf(Fiche::class, $fiche);
+        $this->assertSame('appel', $fiche->type);
+        $this->assertSame('a_approuver', $fiche->statut);
+        $this->assertSame('proposition', $fiche->source);
+        $this->assertSame('M', $fiche->niveau);
+        $this->assertSame('Appel à projets en santé numérique 2027', $fiche->titre);
+        $this->assertSame('Fonds de recherche du Québec', $fiche->organisateur);
+        $this->assertSame('2026-12-15', $fiche->echeance);
+        $this->assertSame('https://frq.gouv.qc.ca/appel-2027', $fiche->url);
+        $this->assertSame(self::AUJOURDHUI, $fiche->debut, 'date de publication : le jour de l\'envoi');
+        $this->assertSame(self::AUJOURDHUI, $fiche->fin);
+        $this->assertSame('', $fiche->format);
+        $this->assertSame('', $fiche->lieu);
+        $this->assertSame('', $fiche->region);
+        $this->assertSame('', $fiche->categorie);
+        $this->assertSame('personne@exemple.org', $resultat['courriel']);
+        $this->assertStringStartsWith('proposition:', $fiche->cle_source);
+        $this->assertSame([$fiche->cle_source], $fiche->cles_source);
+        $this->assertTrue($fiche->appel_en_cours(self::AUJOURDHUI));
+    }
+
+    public function test_appel_date_limite_du_jour_acceptee(): void {
+        $resultat = Formulaire::valider(self::appel(['echeance' => self::AUJOURDHUI]), self::AUJOURDHUI);
+        $this->assertSame([], $resultat['erreurs']);
+        $this->assertSame(self::AUJOURDHUI, $resultat['fiche']->echeance);
+    }
+
+    public function test_appel_date_limite_manquante(): void {
+        $resultat = Formulaire::valider(self::appel(['echeance' => '']), self::AUJOURDHUI);
+        $this->assertNull($resultat['fiche']);
+        $this->assertSame(['echeance' => 'Date limite obligatoire'], $resultat['erreurs']);
+    }
+
+    public function test_appel_date_limite_invalide(): void {
+        foreach (['2026-02-30', '15/12/2026', '2026-12-15T10:00', 'bientôt'] as $date) {
+            $resultat = Formulaire::valider(self::appel(['echeance' => $date]), self::AUJOURDHUI);
+            $this->assertNull($resultat['fiche'], $date);
+            $this->assertSame(['echeance' => 'Date limite invalide'], $resultat['erreurs'], $date);
+        }
+    }
+
+    public function test_appel_date_limite_passee(): void {
+        $resultat = Formulaire::valider(self::appel(['echeance' => '2026-10-24']), self::AUJOURDHUI);
+        $this->assertNull($resultat['fiche']);
+        $this->assertSame(['echeance' => 'La date limite est passée'], $resultat['erreurs']);
+    }
+
+    public function test_appel_lien_manquant_ou_invalide(): void {
+        foreach (['', 'javascript:alert(1)', 'ftp://exemple.org/appel', 'pas un lien'] as $lien) {
+            $resultat = Formulaire::valider(self::appel(['url' => $lien]), self::AUJOURDHUI);
+            $this->assertNull($resultat['fiche'], $lien);
+            $this->assertSame(['url' => 'Lien obligatoire'], $resultat['erreurs'], $lien);
+        }
+    }
+
+    public function test_appel_titre_et_organisme_obligatoires_et_un_message_par_champ(): void {
+        $resultat = Formulaire::valider(self::appel(['titre' => '  ', 'organisateur' => '<b></b>', 'echeance' => '', 'url' => '']), self::AUJOURDHUI);
+        $this->assertNull($resultat['fiche']);
+        $this->assertSame(['titre', 'echeance', 'organisateur', 'url'], array_keys($resultat['erreurs']));
+    }
+
+    public function test_appel_ignore_les_champs_d_evenement_et_la_date_de_debut_manquante(): void {
+        // Le formulaire d'un appel n'envoie pas de début : ce n'est pas une erreur.
+        $resultat = Formulaire::valider(self::appel(['debut' => '', 'fin' => '', 'format' => '', 'lieu' => '']), self::AUJOURDHUI);
+        $this->assertSame([], $resultat['erreurs']);
+        $this->assertSame(self::AUJOURDHUI, $resultat['fiche']->debut);
+    }
+
+    public function test_type_inconnu_ou_absent_vaut_evenement(): void {
+        foreach (['', 'concert', 'APPEL', 'Appel', ['appel']] as $type) {
+            $champs = self::champs(['type' => $type, 'echeance' => '2026-12-15']);
+            $resultat = Formulaire::valider($champs, self::AUJOURDHUI);
+            $this->assertSame([], $resultat['erreurs'], json_encode($type));
+            $this->assertSame('evenement', $resultat['fiche']->type, json_encode($type));
+            $this->assertSame('2026-11-20', $resultat['fiche']->debut);
+            $this->assertNull($resultat['fiche']->echeance, 'la date limite ne sert qu\'à un appel');
+        }
+        $evenement = Formulaire::valider(self::champs(['type' => 'evenement']), self::AUJOURDHUI)['fiche'];
+        $this->assertSame('evenement', $evenement->type);
+        $this->assertSame('Hybride', $evenement->format);
+    }
+
+    public function test_appel_champ_piege_rempli_rejet_silencieux(): void {
+        $resultat = Formulaire::valider(self::appel(['site_web' => 'https://pourriel.example', 'echeance' => '']), self::AUJOURDHUI);
+        $this->assertNull($resultat['fiche']);
+        $this->assertSame([], $resultat['erreurs']);
+    }
+
+    public function test_appel_balises_retirees_et_longueurs(): void {
+        $fiche = Formulaire::valider(self::appel(['titre' => '<b>Appel</b> <script>alert(1)</script>ouvert', 'organisateur' => str_repeat('é', 200)]), self::AUJOURDHUI)['fiche'];
+        $this->assertSame('Appel ouvert', $fiche->titre);
+        $this->assertSame(120, mb_strlen($fiche->organisateur));
+    }
+
+    public function test_appel_en_anglais_garde_la_langue_et_message_anglais(): void {
+        $fiche = Formulaire::valider(self::appel(['langue' => 'en']), self::AUJOURDHUI)['fiche'];
+        $this->assertSame('en', $fiche->langue);
+    }
+
+    public function test_appel_envoye_par_l_action_ajax_cree_une_fiche_appel_a_approuver(): void {
+        $limite = gmdate('Y-m-d', time() + 30 * 86400);
+        [$reponse, $statut] = $this->envoyer(self::appel(['langue' => 'en', 'echeance' => $limite]));
+
+        $this->assertSame(200, $statut);
+        $this->assertTrue($reponse['data']['ok']);
+        $fiches = self::fiches();
+        $this->assertCount(1, $fiches);
+        $this->assertSame('pending', $fiches[0]->post_status);
+        $fiche = (new EntrepotWordPress())->obtenir($fiches[0]->ID);
+        $this->assertSame('appel', $fiche->type);
+        $this->assertSame($limite, $fiche->echeance);
+        $this->assertSame(\rsn_veille_aujourdhui(), $fiche->debut);
+        $this->assertSame('en', $fiche->langue);
+        $this->assertSame('proposition', $fiche->source);
+    }
+
+    public function test_appel_refuse_par_l_action_ajax_en_400_avec_un_message_par_champ(): void {
+        [$reponse, $statut] = $this->envoyer(self::appel(['echeance' => '2020-01-01', 'url' => '']));
+        $this->assertSame(400, $statut);
+        $this->assertSame('La date limite est passée', $reponse['data']['erreurs']['echeance']);
+        $this->assertSame('Lien obligatoire', $reponse['data']['erreurs']['url']);
+        $this->assertSame([], self::fiches());
+    }
+
     // --- traiter (action AJAX) ---
 
     /** Lance l'action AJAX et rend [réponse, statut HTTP]. */
@@ -406,6 +556,19 @@ final class FormulaireTest extends TestCase {
         $this->assertSame('Merci, cet événement est déjà dans la veille.', $reponse['data']['message']);
         $this->assertCount(1, self::fiches());
         $this->assertSame($avant, serialize($GLOBALS['rsn_veille_wp']['meta'][$id]), 'la fiche publiée ne change pas');
+    }
+
+    public function test_doublon_d_un_appel_publie_dit_appel(): void {
+        // Appel publié du jour (un appel proposé a pour début le jour de l'envoi), même titre.
+        (new EntrepotWordPress())->creer(Fiche::depuis_tableau([
+            'type' => 'appel', 'titre' => 'Appel à projets en santé numérique 2027', 'debut' => self::AUJOURDHUI, 'fin' => self::AUJOURDHUI,
+            'echeance' => '2026-12-15', 'organisateur' => 'Fonds de recherche du Québec', 'source' => 'FRQ : appels', 'niveau' => 'B',
+            'statut' => 'publie', 'cle_source' => 'frq_appels:9', 'cles_source' => ['frq_appels:9'],
+        ]));
+        [$reponse, $statut] = $this->envoyer(self::appel());
+        $this->assertSame(200, $statut);
+        $this->assertSame('Merci, cet appel est déjà dans la veille.', $reponse['data']['message']);
+        $this->assertCount(1, self::fiches());
     }
 
     public function test_meme_url_mais_autre_evenement_cree_une_fiche(): void {

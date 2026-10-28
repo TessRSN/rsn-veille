@@ -215,6 +215,17 @@ final class PageFileTest extends TestCase {
         $this->assertDoesNotMatchRegularExpression('#Ancienne</strong> <span class="rsn-veille-nouveau"#u', $html);
     }
 
+    public function test_bouton_ajouter_une_fiche_en_tete_de_la_file(): void {
+        $html = PageFile::page_html([], 'a_approuver', '', '', 'https://exemple.test/wp-admin/admin.php?page=rsn-veille', self::OPTIONS);
+        $this->assertStringContainsString('<a href="https://exemple.test/wp-admin/post-new.php?post_type=rsn_veille" class="page-title-action">Ajouter une fiche</a>', $html);
+        // À côté du titre de la page, avant les onglets.
+        $this->assertLessThan(strpos($html, 'nav-tab-wrapper'), strpos($html, 'Ajouter une fiche'));
+        $this->assertGreaterThan(strpos($html, "File d'approbation"), strpos($html, 'Ajouter une fiche'));
+        // Sans le droit de créer des fiches : pas de bouton.
+        $sans = PageFile::page_html([], 'a_approuver', '', '', 'https://exemple.test/', self::OPTIONS + ['peut_ajouter' => false]);
+        $this->assertStringNotContainsString('Ajouter une fiche', $sans);
+    }
+
     public function test_rendu_a_verifier_affiche_nouveau_mais_pas_les_autres_onglets(): void {
         $lot = [self::fiche(['id' => 1, 'statut' => 'publie', 'absent_depuis' => '2026-10-26', 'cree_le' => '2026-10-26'])];
         $url = 'https://exemple.test/wp-admin/admin.php?page=rsn-veille';

@@ -94,14 +94,15 @@ function animer(racine, noeudDonnees) {
     const debutCourt = t('date_longue', premier(a.j), MOIS_LONG[a.m - 1], a.a !== b.a ? a.a : '').replace(/[,\s]+$/, '');
     return t('du_au', debutCourt, dateLongue(k.fin));
   }
-  // Pastilles (spec 4.5) : type, qui organise, format, langue, thèmes.
+  // Pastilles (spec 4.5) : type, qui organise, format (événements seulement : un appel n'en a pas, même s'il en garde
+  // un d'avant son passage en appel), langue, thèmes.
   function pastilles(k) {
     const appel = k.type === 'appel';
     const p = [`<span class="pill type${appel ? ' appel' : ''}">${esc(t(appel ? 'appel' : 'evenement'))}</span>`];
     if (enCours(k)) p.push(`<span class="pill etat">${esc(t('en_cours'))}</span>`);
     if (estRSN(k)) p.push(`<span class="pill rsn">${esc(libelle('qui', 'rsn'))}</span>`);
     else if (k.organisateur) p.push(qui(k) === 'partenaires' ? `<span class="pill part">${esc(t('partenaire', k.organisateur))}</span>` : `<span class="pill orga">${esc(k.organisateur)}</span>`);
-    if (k.format) p.push(`<span class="pill">${esc(libelle('formats', k.format))}</span>`);
+    if (k.format && !appel) p.push(`<span class="pill">${esc(libelle('formats', k.format))}</span>`);
     // Pastille de langue : seulement quand la fiche n'est pas dans la langue de la page.
     if ((k.langue === 'fr' || k.langue === 'en') && k.langue !== LANGUE) p.push(`<span class="pill">${esc(t(k.langue === 'en' ? 'en_anglais' : 'en_francais'))}</span>`);
     k.themes.forEach(e => p.push(`<span class="pill theme">${esc(e)}</span>`));
@@ -179,7 +180,8 @@ function animer(racine, noeudDonnees) {
     const q = filtres.q.trim().toLowerCase();
     if (q) L = L.filter(k => (k.titre + ' ' + k.organisateur + ' ' + (k.resume || '') + ' ' + k.themes.join(' ')).toLowerCase().includes(q));
     L = L.filter(parType).filter(parQui);
-    if (filtres.format) L = L.filter(k => k.format === filtres.format);
+    // Le format ne vaut que pour les événements : un appel n'est jamais retenu par ce filtre.
+    if (filtres.format) L = L.filter(k => k.type !== 'appel' && k.format === filtres.format);
     if (filtres.region) L = L.filter(k => k.region === filtres.region);
     if (filtres.theme) L = L.filter(k => k.themes.includes(filtres.theme));
     if (filtres.orga) L = L.filter(k => k.organisateur === filtres.orga);
@@ -428,7 +430,7 @@ function animer(racine, noeudDonnees) {
     const cible = $('#vue-agenda');
     if (cible) cible.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   });
-  // Formulaire « Proposer un événement » : envoi en fetch vers admin-ajax.php (action rsn_veille_proposer,
+  // Formulaire « Proposer un événement ou un appel » : envoi en fetch vers admin-ajax.php (action rsn_veille_proposer,
   // jeton de window.rsnVeillePublic), erreurs sous les champs et en tête, remerciement à la place du formulaire.
   const CONFIG = window.rsnVeillePublic || {};
   let jeton = String(CONFIG.nonce || '');
@@ -480,7 +482,35 @@ function animer(racine, noeudDonnees) {
     }
     return r;
   }
+  // Bascule « Un événement » / « Un appel de financement ou de candidatures » (boutons à aria-pressed, champ caché `type`).
+  // Un appel remplace les dates de début et de fin, le format et le lieu par une date limite ; le titre du formulaire, les
+  // libellés « Organisateur » / « Organisme » et « Lien d'information » / « Lien de l'appel » et l'exemple du titre suivent
+  // (textes traduits de la page). Un champ masqué est désactivé (il n'est pas envoyé) et n'est jamais requis ; les champs
+  // `data-requis-pour` ne sont requis que pour leur type.
+  const boutonsType = form ? Array.from(form.querySelectorAll('[data-type]')) : [];
+  function choisirType(type) {
+    if (!form || !boutonsType.length) return;
+    type = type === 'appel' ? 'appel' : 'evenement';
+    const appel = type === 'appel';
+    effacerErreurs();
+    boutonsType.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.type === type)));
+    $('#p-type').value = type;
+    form.querySelectorAll('[data-pour]').forEach(el => {
+      const cache = el.dataset.pour !== type;
+      el.hidden = cache;
+      el.querySelectorAll('input, select, textarea').forEach(c => { c.disabled = cache; });
+    });
+    form.querySelectorAll('[data-requis-pour]').forEach(c => { c.required = c.dataset.requisPour === type && !c.disabled; });
+    const texte = (selecteur, cle) => { const n = $(selecteur); if (n) n.textContent = t(cle); };
+    texte('#dialogue h2', appel ? 'titre_proposer_appel' : 'titre_proposer_evenement');
+    texte('#lab-orga', appel ? 'libelle_organisme' : 'libelle_organisateur');
+    texte('#lab-url', appel ? 'libelle_lien_appel' : 'libelle_lien_info');
+    $('#p-titre').placeholder = t(appel ? 'placeholder_titre_appel' : 'placeholder_titre_evenement');
+  }
+  boutonsType.forEach(b => b.addEventListener('click', () => choisirType(b.dataset.type)));
   function ouvrirFormulaire() {
+    // À chaque ouverture le formulaire revient à « Un événement » ; un clic sur le bouton d'un formulaire déjà ouvert garde le choix en cours.
+    if ($('#dialogue').hidden || form.hidden) choisirType('evenement');
     $('#dialogue').hidden = false; form.hidden = false; $('#p-merci').hidden = true; $('#p-titre').focus();
   }
   on('#btn-proposer', 'click', ouvrirFormulaire);

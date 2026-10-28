@@ -461,4 +461,15 @@ final class EntrepotContratTest extends TestCase {
         $this->assertFalse(metadata_exists('post', $id, 'rsn_veille_image_manuelle'));
         $this->assertSame('', $e->obtenir($id)->image_manuelle);
     }
+
+    /** @dataProvider entrepots */
+    public function test_champs_manuels_gardes_a_la_creation_et_a_la_mise_a_jour(string $nom): void {
+        $e = self::entrepot($nom);
+        $id = $e->creer(self::fiche(['champs_manuels' => ['debut', 'url']]));
+        $this->assertSame(['debut', 'url'], $e->obtenir($id)->champs_manuels);
+        $e->mettre_a_jour($id, ['champs_manuels' => ['debut', 'url', 'ville']]);
+        $this->assertSame(['debut', 'url', 'ville'], $e->trouver_par_cle_source('ex:1')->champs_manuels);
+        $sans = $e->obtenir($e->creer(self::fiche(['cle_source' => 'ex:7', 'cles_source' => ['ex:7'], 'titre' => 'Autre', 'debut' => '2026-12-01'])));
+        $this->assertSame([], $sans->champs_manuels);
+    }
 }

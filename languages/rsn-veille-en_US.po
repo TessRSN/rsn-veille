@@ -56,6 +56,9 @@ msgstr "Sending failed. Try again later."
 msgid "Merci, cet événement est déjà dans la veille."
 msgstr "Thank you, this event is already listed."
 
+msgid "Merci, cet appel est déjà dans la veille."
+msgstr "Thank you, this call is already listed."
+
 msgid "Image trop lourde (3 Mo au plus)."
 msgstr "Image too large (3 MB at most)."
 
@@ -720,3 +723,45 @@ msgstr ""
 
 msgid "Voir les sources lues ↓"
 msgstr "See the sources we read ↓"
+
+msgid "Proposer un événement ou un appel"
+msgstr "Suggest an event or a call"
+
+msgid "Vous proposez"
+msgstr "You are suggesting"
+
+msgid "Un événement"
+msgstr "An event"
+
+msgid "Un appel de financement ou de candidatures"
+msgstr "A funding or applications call"
+
+msgid "Proposer un appel"
+msgstr "Suggest a call"
+
+msgid "Date limite"
+msgstr "Deadline"
+
+msgid "Dernier jour pour déposer."
+msgstr "Last day to apply."
+
+msgid "Organisme"
+msgstr "Organization"
+
+msgid "Lien de l'appel"
+msgstr "Link to the call"
+
+msgid "Ex. : Appel à projets en santé numérique 2027"
+msgstr "E.g., Call for projects in digital health 2027"
+
+msgid "Date limite obligatoire"
+msgstr "Deadline required"
+
+msgid "Date limite invalide"
+msgstr "Invalid deadline"
+
+msgid "La date limite est passée"
+msgstr "The deadline has passed"
+
+msgid "Lien obligatoire"
+msgstr "Link required"
