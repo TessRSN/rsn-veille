@@ -1,4 +1,4 @@
-# Parcours de vérification de bout en bout (version 0.6.0)
+# Parcours de vérification de bout en bout (version 0.6.1)
 
 Ce parcours enchaîne, dans l'ordre d'un vrai usage, toutes les listes de vérification manuelles :
 `verifier-admin.md` (administration), `verifier-public.md` (page publique, formulaire, REST et iCal) et
@@ -191,7 +191,7 @@ est vide pour la page Veille choisie.
     (la bande ne doit causer aucun défilement horizontal). Consigner tout écart dans le tableau des écarts.
     Vérifier aussi à 375 px (cartes empilées).
 12. Section **Ressources et cohabitation** de `verifier-public.md` : ressources seulement sur la page Veille
-    (chargées avec `?ver=0.6.0`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
+    (chargées avec `?ver=0.6.1`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
     si installé (la page anglaise a ses propres points, 24 à 32).
 13. Section **REST et iCal** : `/wp-json/rsn/v1/veille` (aucune clé retirée), `/veille.ics` (CRLF, en-têtes,
     validateur iCal, abonnement dans un agenda).
@@ -202,7 +202,7 @@ est vide pour la page Veille choisie.
     et il n'est pas à la une du RSN.
 15. **Purge à la mise à jour** : `wp option delete rsn_veille_version`, puis charger une page de wp-admin ; le transient
     `rsn_veille_json_fr` a disparu (`wp transient get rsn_veille_json_fr` ne rend rien) et
-    `wp option get rsn_veille_version` rend `0.6.0`. Un second chargement ne purge plus.
+    `wp option get rsn_veille_version` rend `0.6.1`. Un second chargement ne purge plus.
 16. **Bandeau continu** (version 0.3.0 ; exige le thème Vault, absent de wp-env : à faire sur rsn.quebec, sur la page
     ordinaire avec un bloc Code court, renommée « Événements et appels », fenêtre large) :
     - aucun écart blanc entre l'en-tête du thème (fil d'Ariane et titre) et l'intro du bandeau, ni entre l'intro, les
@@ -254,7 +254,7 @@ est vide pour la page Veille choisie.
     menu pour l'essai). Après la mise à jour : LiteSpeed › Purger tout. `/en/…` répond 200, le `<body>` porte la
     classe `rsn-veille-page`, `div.rsn-veille` porte `lang="en"` (la page française, `lang="fr"`), et
     `wp transient get rsn_veille_json_en` se remplit à la première visite (distinct de `rsn_veille_json_fr`).
-25. **Textes et dates en anglais** : bandeau (« Subscribe to the calendar », « Suggest an event or a call »), « Featured by the
+25. **Textes et dates en anglais** : bandeau (« Subscribe to the calendar », « Make a suggestion »), « Featured by the
     RSN », « Deadlines », filtres (« Show », « Who organizes », « Month », « Format », « Location », « Themes »,
     « Organizer », « Reset filters »), pastilles (« Event », « Call », « Ongoing », « Deadline to be announced », « New »,
     « Closes in N days »), boutons (« More information », « View the call »), calendrier (jours, légende,
@@ -328,14 +328,14 @@ est vide pour la page Veille choisie.
       (titre, date de début) puis **Publier** : la fiche paraît sur la page ; `wp post meta get <ID> rsn_veille_cle_source`
       rend `manuel:<ID>`, `rsn_veille_niveau` `M`, `rsn_veille_source` `manuel`. Un événement sans date de début valide
       garde sa date du jour et un avis le dit.
-    - *Proposer un appel depuis la page* (hors connexion) : le bouton jaune dit « Proposer un événement ou un appel » ;
+    - *Proposer un appel depuis la page* (hors connexion) : le bouton jaune dit « Faire une proposition » (0.6.1) ;
       « Vous proposez » bascule entre « Un événement » (par défaut) et « Un appel de financement ou de candidatures ».
       Avec l'appel : plus de dates, de format ni de lieu ; « Date limite » (aide « Dernier jour pour déposer. »),
       « Organisme » et « Lien de l'appel » ; le titre devient « Proposer un appel ». Une date limite **passée** est
       refusée (« La date limite est passée ») ; un **lien manquant** est refusé (« Lien obligatoire ») ; une
       date limite manquante est refusée (« Date limite obligatoire »). Un appel valide arrive dans « À approuver » en appel (`rsn_veille_type`
       `appel`, `rsn_veille_echeance`), sans lieu ni format.
-    - *Anglais* : sur la page anglaise, bouton « Suggest an event or a call », « You are suggesting », « An event » /
+    - *Anglais* : sur la page anglaise, bouton « Make a suggestion », « You are suggesting », « An event » /
       « A funding or applications call », « Suggest a call », « Deadline », « Organization », « Link to the call », et les
       messages « The deadline has passed » et « Link required ». La fiche reçue porte la langue `en`.
     - *Rien d'autre ne change* : une proposition d'événement se comporte comme avant (étape 8) ; une fiche
@@ -356,7 +356,7 @@ changement de fiche (`wp transient delete rsn_veille_json_fr` et `rsn_veille_jso
 1. **Rendu et hauteur** (hors connexion, fenêtre de 1 440 px) : trois colonnes, le calendrier du mois, « Au RSN » et
    « Dans l'écosystème ». La bande est nettement plus basse qu'avant (environ 1 040 px pour l'ancienne bande ; mesurer
    la section avec les outils du navigateur et la noter dans le tableau des écarts). `accueil.css` et `accueil.js`
-   sont chargés avec `?ver=0.6.0` (le CSS dans l'en-tête, le script en pied de page) sur l'accueil ; ni `veille.css` ni `veille.js`. Aucune erreur dans la
+   sont chargés avec `?ver=0.6.1` (le CSS dans l'en-tête, le script en pied de page) sur l'accueil ; ni `veille.css` ni `veille.js`. Aucune erreur dans la
    console, aucun défilement horizontal (`document.documentElement.scrollWidth === document.documentElement.clientWidth`).
    **Charger l'accueil sans toucher la souris ni le clavier** : la bande doit se dessiner d'elle-même ; si elle reste vide,
    exclure `accueil.js` du délai du JavaScript de LiteSpeed (LiteSpeed › Optimisation de page › Réglages JS).

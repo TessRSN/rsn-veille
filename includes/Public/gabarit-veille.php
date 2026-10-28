@@ -50,7 +50,7 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
       <div class="act">
         <div class="boutons">
           <a class="btn clair" href="<?php echo esc_url($adresse_webcal, ['http', 'https', 'webcal']); ?>"><?php echo $agenda_ics; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?><?php echo esc_html__("S'abonner au calendrier", 'rsn-veille'); ?></a>
-          <button class="btn jaune" id="btn-proposer" type="button"><?php echo esc_html__('Proposer un événement ou un appel', 'rsn-veille'); ?> <?php echo $fleche; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?></button>
+          <button class="btn jaune" id="btn-proposer" type="button"><?php echo esc_html__('Faire une proposition', 'rsn-veille'); ?> <?php echo $fleche; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?></button>
         </div>
         <div class="autres"><span><?php echo esc_html__('Google Agenda :', 'rsn-veille'); ?></span> <a href="<?php echo esc_url($lien_google); ?>" target="_blank" rel="noopener"><?php echo esc_html(_x('ajouter', 'lien d\'ajout à Google Agenda', 'rsn-veille')); ?></a> <button type="button" class="copier" id="rsn-veille-copier" data-adresse="<?php echo esc_url($adresse_ics); ?>"><?php echo esc_html__('Copier l’adresse', 'rsn-veille'); ?></button> <span class="copie" id="rsn-veille-copie" role="status" hidden></span></div>
       </div>
