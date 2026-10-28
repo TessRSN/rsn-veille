@@ -7,6 +7,8 @@ use PHPUnit\Framework\TestCase;
 use RSN\Veille\Admin\PageInfolettre;
 use RSN\Veille\Admin\PageRadar;
 use RSN\Veille\Admin\Menu;
+use RSN\Veille\EntrepotWordPress;
+use RSN\Veille\Fiche;
 
 final class PageInfolettreTest extends TestCase {
     private const OPTIONS = [
@@ -215,6 +217,25 @@ final class PageInfolettreTest extends TestCase {
     public function test_afficher_refuse_sans_capacite(): void {
         $this->expectException(RsnVeilleArretRequete::class);
         PageInfolettre::afficher();
+    }
+
+    public function test_afficher_reste_en_francais_meme_si_la_langue_courante_est_l_anglais(): void {
+        $GLOBALS['rsn_veille_wp']['capacites'] = [Menu::CAPACITE];
+        $jour = \rsn_veille_aujourdhui();
+        (new EntrepotWordPress())->creer(Fiche::depuis_tableau([
+            'type' => 'appel', 'titre' => 'Appel de projets', 'debut' => $jour, 'echeance' => gmdate('Y-m-d', strtotime($jour . ' +40 days')),
+            'organisateur' => 'RSN', 'source' => 'RSN : appels', 'niveau' => 'B', 'statut' => 'publie',
+            'cle_source' => 'rsn_appels:abc', 'cles_source' => ['rsn_appels:abc'], 'url' => 'https://rsn.quebec/appel-de-projets/',
+        ]));
+        wp_insert_post(['ID' => 2749, 'post_type' => 'post', 'post_status' => 'publish', 'post_title' => 'Call for projects']);
+        $GLOBALS['rsn_veille_wp']['urls']['https://rsn.quebec/appel-de-projets/'] = 2710;
+        add_filter('wpml_current_language', static fn($valeur) => 'en');
+        add_filter('wpml_object_id', static fn($id) => 2749);
+        ob_start();
+        PageInfolettre::afficher();
+        $html = (string) ob_get_clean();
+        $this->assertStringContainsString('Appel de projets', $html, "l'infolettre est française : la langue de l'administration ne la traduit pas");
+        $this->assertStringNotContainsString('Call for projects', $html);
     }
 
     public function test_programmes_rsn_sans_la_fonction_du_site_liste_vide(): void {

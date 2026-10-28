@@ -179,8 +179,13 @@ final class Fiche {
      * seulement lettres et chiffres : ponctuation, espaces et émojis disparaissent).
      */
     public function cle_dedoublonnage(): string {
-        $titre = preg_replace('/[^a-z0-9]/', '', self::simplifier($this->titre)) ?? '';
-        return ($this->debut ?? '') . '|' . substr($titre, 0, 22);
+        return self::cle_dedoublonnage_de($this->debut ?? '', $this->titre);
+    }
+
+    /** La même clé pour un début et un titre donnés (le titre français d'un événement du RSN, par exemple). */
+    public static function cle_dedoublonnage_de(string $debut, string $titre): string {
+        $titre = preg_replace('/[^a-z0-9]/', '', self::simplifier($titre)) ?? '';
+        return $debut . '|' . substr($titre, 0, 22);
     }
 
     /**

@@ -42,6 +42,11 @@
  * `pieces_supprimees`, métas `_thumbnail_id` retirées). La vérification de référence est la section Formulaire de
  * `tests/manuel/verifier-public.md`.
  *
+ * Articles lus par adresse ou par identifiant : `url_to_postid` (table `urls`, adresse => identifiant, 0 si inconnue),
+ * `get_the_title`, `get_the_excerpt` (lus dans les articles de `wp_insert_post`), `get_permalink` (table `permaliens`,
+ * identifiant => adresse, sinon `https://exemple.test/?p=ID`) et `get_the_category` (table `categories`,
+ * identifiant => noms, rendus en objets `{name}`). Les filtres WPML se posent avec `add_filter`.
+ *
  * Traductions : `load_plugin_textdomain` note ses appels (`domaines`) sans charger de fichier, `plugin_basename`
  * rend « dossier/fichier.php ».
  *
@@ -88,6 +93,8 @@ function rsn_veille_bouchons_reinitialiser(): void {
         'requetes_http' => [], 'reponse_http' => null,
         // Traductions : appels à load_plugin_textdomain.
         'domaines' => [],
+        // Articles lus par adresse ou identifiant : adresse => identifiant, identifiant => permalien, identifiant => noms de catégories.
+        'urls' => [], 'permaliens' => [], 'categories' => [],
     ];
     $GLOBALS['rsn_veille_wp']['roles'] = [
         'administrator' => new WP_Role('administrator', ['manage_options' => true, 'edit_posts' => true]),
@@ -511,6 +518,28 @@ function wp_update_post(array $article, bool $erreur = false): int|WP_Error {
 function get_post(int $id): ?WP_Post {
     $post = $GLOBALS['rsn_veille_wp']['posts'][$id] ?? null;
     return $post === null ? null : clone $post;
+}
+
+function url_to_postid(string $url): int {
+    return (int) ($GLOBALS['rsn_veille_wp']['urls'][$url] ?? 0);
+}
+
+function get_the_title(int|WP_Post $article = 0): string {
+    return (string) get_post_field('post_title', is_object($article) ? (int) $article->ID : $article);
+}
+
+function get_the_excerpt(int|WP_Post|null $article = null): string {
+    return (string) get_post_field('post_excerpt', is_object($article) ? (int) $article->ID : (int) $article);
+}
+
+function get_permalink(int|WP_Post $article = 0): string|false {
+    $id = is_object($article) ? (int) $article->ID : $article;
+    return $GLOBALS['rsn_veille_wp']['permaliens'][$id] ?? 'https://exemple.test/?p=' . $id;
+}
+
+/** @return object[] */
+function get_the_category(int $id = 0): array {
+    return array_map(static fn(string $nom): object => (object) ['name' => $nom], $GLOBALS['rsn_veille_wp']['categories'][$id] ?? []);
 }
 
 function get_post_status(int $id): string|false {

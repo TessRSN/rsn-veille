@@ -101,8 +101,9 @@ final class Donnees {
      * avec ces bornes (`Entrepot::lister_pour_page`) : jamais toute la base.
      *
      * @param array<int,array<string,mixed>> $evenements_rsn
-     * @param ?string $langue `fr` ou `en` ; par défaut la langue courante. Réservée aux étapes qui choisissent
-     *                        le texte d'une fiche selon la langue : pour l'instant, elle ne change rien.
+     * @param ?string $langue `fr` ou `en` ; par défaut la langue courante. En `en`, les appels du RSN prennent
+     *                        le texte de leur traduction WPML et une fiche collectée du site prend le texte de
+     *                        l'événement anglais de son groupe de traduction.
      * @return array<int,array<string,mixed>>
      */
     public static function elements(Entrepot $e, array $evenements_rsn, ?string $aujourdhui = null, ?string $langue = null): array {
@@ -119,22 +120,32 @@ final class Donnees {
         $appels = [];
         /** @var array<string,int> $positions Clé de dédoublonnage => position de la première fiche qui l'a. */
         $positions = [];
+        /** @var array<string,int> $groupes Groupe de traduction => position de la fiche collectée du site qui en fait partie. */
+        $groupes = [];
         foreach ($e->lister_pour_page($limite_evenements, $aujourdhui, $limite_appels) as $fiche) {
             if ($fiche->type === 'appel') {
                 if ($fiche->appel_en_cours($aujourdhui)) {
-                    $appels[] = $fiche->vers_tableau();
+                    $appel = $fiche->vers_tableau();
+                    $appels[] = $langue !== 'fr' ? self::appel_traduit($appel, $langue) : $appel;
                 }
             } elseif ($fiche->type === 'evenement' && $recent($fiche)) {
+                // Clé sur le titre de la fiche (français), calculée avant toute traduction.
                 $cle = $fiche->cle_dedoublonnage();
                 $position = $positions[$cle] ?? null;
                 if ($position === null) {
-                    $positions[$cle] = count($evenements);
+                    $position = count($evenements);
+                    $positions[$cle] = $position;
                     $evenements[] = $fiche->vers_tableau();
                 } elseif ((string) $evenements[$position]['source'] === Fiche::SOURCE_PROPOSITION && !$fiche->est_proposition()) {
                     // Doublon entre fiches de veille : une proposition publiée cède la place à la fiche collectée.
                     $evenements[$position] = $fiche->vers_tableau();
+                } else {
+                    // Sinon, la première fiche de même date et même titre reste seule.
+                    continue;
                 }
-                // Sinon, la première fiche de même date et même titre reste seule.
+                foreach (self::groupes_de_la_fiche($fiche) as $groupe) {
+                    $groupes[$groupe] ??= $position;
+                }
             }
         }
 
@@ -151,7 +162,12 @@ final class Donnees {
             if (in_array($brut['organise_par'] ?? null, self::ORGANISE_PAR, true)) {
                 $tableau['organise_par'] = $brut['organise_par'];
             }
-            $position = $positions[$rsn->cle_dedoublonnage()] ?? null;
+            // Même groupe de traduction que la fiche collectée du site : un doublon, quels que soient les titres.
+            // Sinon, même début et même titre français (`titre_fr`, à défaut le titre).
+            $groupe = self::groupe_de_l_evenement($brut);
+            $titre_fr = trim((string) ($brut['titre_fr'] ?? ''));
+            $position = ($groupe !== null ? ($groupes[$groupe] ?? null) : null)
+                ?? $positions[Fiche::cle_dedoublonnage_de((string) $rsn->debut, $titre_fr !== '' ? $titre_fr : $rsn->titre)] ?? null;
             if ($position === null) {
                 $evenements[] = $tableau;
             } elseif ((string) $evenements[$position]['image_url'] === '' && (string) ($evenements[$position]['image_manuelle'] ?? '') === '') {
@@ -162,6 +178,12 @@ final class Donnees {
                 // La fiche collectée garde son image, mais l'événement du RSN fait foi pour « Qui organise ».
                 $evenements[$position]['categorie_rsn'] = $tableau['categorie_rsn'];
                 $evenements[$position]['organise_par'] = $tableau['organise_par'] ?? null;
+                // Et, si l'événement gardé est dans la langue de la page alors que la fiche ne l'est pas, son texte.
+                if ((string) ($brut['langue'] ?? '') === $langue && (string) $evenements[$position]['langue'] !== $langue) {
+                    foreach (['titre', 'resume', 'lieu', 'ville', 'url', 'langue'] as $cle) {
+                        $evenements[$position][$cle] = $tableau[$cle];
+                    }
+                }
             }
         }
 
@@ -170,6 +192,83 @@ final class Donnees {
         $cle_appel = static fn(array $a): array => [$a['echeance'] === null ? 1 : 0, (string) $a['echeance'], (string) $a['debut'], (string) $a['titre']];
         usort($appels, static fn(array $a, array $b): int => $cle_appel($a) <=> $cle_appel($b));
         return array_merge($evenements, $appels);
+    }
+
+    /**
+     * Groupes de traduction d'une fiche collectée du site : un par clé de source `rsn:<id>` (identifiant de
+     * l'article français de The Events Calendar), soit le groupe WPML de l'article, soit, sans WPML, l'identifiant.
+     *
+     * @return string[]
+     */
+    private static function groupes_de_la_fiche(Fiche $fiche): array {
+        $groupes = [];
+        foreach (array_merge([$fiche->cle_source], $fiche->cles_source) as $cle) {
+            if (preg_match('/^rsn:(\d+)$/', (string) $cle, $m) !== 1 || (int) $m[1] <= 0) {
+                continue;
+            }
+            $trid = apply_filters('wpml_element_trid', null, (int) $m[1], 'post_tribe_events');
+            $groupes[] = self::cle_de_groupe(is_int($trid) || (is_string($trid) && ctype_digit($trid)) ? (int) $trid : null, (int) $m[1]);
+        }
+        return array_values(array_unique($groupes));
+    }
+
+    /** Groupe de traduction d'un événement du RSN : son `tec_trid`, sinon l'identifiant de l'article gardé (`rsn-tec:<id>`). */
+    private static function groupe_de_l_evenement(array $brut): ?string {
+        $trid = $brut['tec_trid'] ?? null;
+        $trid = is_int($trid) || (is_string($trid) && ctype_digit($trid)) ? (int) $trid : null;
+        if (preg_match('/^rsn-tec:(\d+)$/', (string) ($brut['cle_source'] ?? ''), $m) !== 1) {
+            return $trid !== null && $trid > 0 ? self::cle_de_groupe($trid, 0) : null;
+        }
+        return self::cle_de_groupe($trid, (int) $m[1]);
+    }
+
+    /** Clé d'un groupe : le groupe WPML s'il existe, sinon l'identifiant de l'article. Null si ni l'un ni l'autre. */
+    private static function cle_de_groupe(?int $trid, int $id): ?string {
+        $numero = $trid !== null && $trid > 0 ? $trid : $id;
+        return $numero > 0 ? (string) $numero : null;
+    }
+
+    /**
+     * Appel du RSN (`rsn_appels:`) dans la langue de la page : si l'adresse est celle d'un article du site qui a
+     * une traduction WPML, titre, résumé (extrait), adresse et catégorie viennent de cette traduction. Sans
+     * traduction, l'appel reste en français. L'échéance et le reste ne changent pas.
+     *
+     * @param array<string,mixed> $appel
+     * @return array<string,mixed>
+     */
+    private static function appel_traduit(array $appel, string $langue): array {
+        $cles = array_merge([(string) ($appel['cle_source'] ?? '')], array_map('strval', (array) ($appel['cles_source'] ?? [])));
+        if (array_filter($cles, static fn(string $cle): bool => str_starts_with($cle, 'rsn_appels:')) === []) {
+            return $appel;
+        }
+        $id = url_to_postid((string) ($appel['url'] ?? ''));
+        if ($id <= 0) {
+            return $appel;
+        }
+        $traduit = apply_filters('wpml_object_id', $id, 'post', false, $langue);
+        if (!(is_int($traduit) || (is_string($traduit) && ctype_digit($traduit))) || (int) $traduit <= 0) {
+            return $appel;
+        }
+        $traduit = (int) $traduit;
+        $titre = Fiche::nettoyer_texte((string) get_the_title($traduit));
+        $resume = Fiche::nettoyer_texte((string) get_the_excerpt($traduit));
+        $url = get_permalink($traduit);
+        $categories = get_the_category($traduit);
+        $categorie = is_array($categories) && isset($categories[0]->name) ? Fiche::nettoyer_texte((string) $categories[0]->name) : '';
+        if ($titre !== '') {
+            $appel['titre'] = $titre;
+        }
+        if ($resume !== '') {
+            $appel['resume'] = $resume;
+        }
+        if (is_string($url) && $url !== '') {
+            $appel['url'] = $url;
+        }
+        if ($categorie !== '') {
+            $appel['categorie'] = $categorie;
+        }
+        $appel['langue'] = $langue;
+        return $appel;
     }
 
     /**
