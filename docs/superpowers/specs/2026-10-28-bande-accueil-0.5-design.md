@@ -35,7 +35,10 @@ Trois colonnes, sous l'en-tête Elementor existant (petite ligne, titre, intro, 
    plus de sept jours déjà commencée), **un seul par organisateur** (le plus proche), chacun en ligne : tuile de date
    (jour et mois court ; la date du jour pour un événement en cours), titre sur deux lignes au plus, organisateur ·
    format, et « En anglais » / « In French » quand la langue de la fiche diffère de celle de la page. Avec un jour choisi
-   dans le calendrier : tous les événements de l'écosystème de ce jour, sans limite ni règle d'organisateur.
+   dans le calendrier : tous les événements de ce jour, RSN compris (pastille « RSN » sur la ligne), sans limite ni règle
+   d'organisateur. *Décision prise après la revue finale : la version d'origine ne montrait que l'écosystème, et le jour
+   de l'atelier du RSN affichait « Aucun événement ».* La liste par défaut vide dit « Aucun événement de l'écosystème à
+   venir. » (`aucun_eco`) ; « Aucun événement ce jour-là. » (`aucun_jour`) ne sert plus qu'à un jour sans rien.
 
 Tout dans la langue de la page (WPML), sur l'accueil français comme sur l'accueil anglais : textes, dates (`date_longue`, `du_au*`, mois courts et longs, jours courts),
 formats traduits, titres et liens des événements comme sur l'agenda (`Donnees::elements` de la langue courante).
@@ -71,7 +74,8 @@ largeur et les deux autres colonnes restent côte à côte ; sous 640 px, une co
 - Textes : les clés de dates de `Raccourci::textes()` (réutilisées, pas dupliquées : `mois`, `mois_longs`,
   `jours_courts`, `premier_du_mois`, `date_longue`, `du_au_meme_mois`, `du_au`, `formats`, `en_anglais`,
   `en_francais`) plus les clés propres : `au_rsn` « Au RSN », `dans_ecosysteme` « Dans l'écosystème », `le_jour`
-  « Le %s », `tous` « Tous », `aucun_jour` « Aucun événement ce jour-là. », `aucun_rsn` (phrase du § 2),
+  « Le %s », `tous` « Tous », `aucun_jour` « Aucun événement ce jour-là. », `aucun_eco` « Aucun événement de l'écosystème à venir. »
+  (« No upcoming ecosystem events. »), `aucun_rsn` (phrase du § 2),
   `autres_rsn` (pluriel `_n` : « + %d autre événement du RSN → » / « + %d autres événements du RSN → »),
   `mois_precedent`, `mois_suivant`, `legende_rsn` « RSN », `legende_ecosysteme` « Écosystème », `rsn` « RSN ».
   Toutes au `.po` (anglais : « At the RSN », « In the ecosystem », « On %s », « All », « No events that day. »,
@@ -93,7 +97,9 @@ largeur et les deux autres colonnes restent côte à côte ; sous 640 px, une co
 - `Collecte::purger_caches()` purge aussi l'accueil : `get_option('page_on_front')` et ses traductions WPML (même
   mécanique que `pages_veille()`), `litespeed_purge_post` et suppression de `_elementor_element_cache` pour chacune.
   Ainsi la bande suit la collecte de nuit et la mise à jour de l'extension (purge au changement de version).
-- Le cache LiteSpeed de l'accueil expire de toute façon à minuit (extrait 61) : rien d'autre.
+- Un cache (Elementor sur 24 h, LiteSpeed) peut servir la sortie du code court un jour plus tard. Le script prend donc
+  comme « aujourd'hui » la plus tardive de `data-aujourdhui` et de la date de Montréal du navigateur, entoure ce jour et
+  recalcule `rsn` et `eco` à partir de `calendrier` avec les règles de `Accueil::selection`, qui reste la référence testée.
 
 ### 4.4 Version et documents
 

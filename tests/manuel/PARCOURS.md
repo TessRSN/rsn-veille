@@ -305,15 +305,17 @@ changement de fiche (`wp transient delete rsn_veille_json_fr` et `rsn_veille_jso
 1. **Rendu et hauteur** (hors connexion, fenêtre de 1 440 px) : trois colonnes, le calendrier du mois, « Au RSN » et
    « Dans l'écosystème ». La bande est nettement plus basse qu'avant (environ 1 040 px pour l'ancienne bande ; mesurer
    la section avec les outils du navigateur et la noter dans le tableau des écarts). `accueil.css` et `accueil.js`
-   sont chargés avec `?ver=0.5.0` dans l'en-tête de l'accueil ; ni `veille.css` ni `veille.js`. Aucune erreur dans la
+   sont chargés avec `?ver=0.5.0` (le CSS dans l'en-tête, le script en pied de page) sur l'accueil ; ni `veille.css` ni `veille.js`. Aucune erreur dans la
    console, aucun défilement horizontal (`document.documentElement.scrollWidth === document.documentElement.clientWidth`).
+   **Charger l'accueil sans toucher la souris ni le clavier** : la bande doit se dessiner d'elle-même ; si elle reste vide,
+   exclure `accueil.js` du délai du JavaScript de LiteSpeed (LiteSpeed › Optimisation de page › Réglages JS).
 2. **Calendrier** : mois courant au départ, la flèche précédente désactivée ; la flèche suivante va jusqu'au dernier
    mois qui a un événement, puis se désactive. Jours passés grisés, aujourd'hui entouré. Point jaune les jours qui ont
    un événement du RSN, point marine ceux qui ont un événement de l'écosystème ; une série de plus de 7 jours ne
    pointe que son premier jour.
 3. **Filtre par jour** : cliquer un jour pointé ; la colonne de droite devient « Le 4 novembre » (ou la date choisie)
    avec le bouton « Tous » et **tous** les événements de l'écosystème de ce jour (plus de quatre si on en crée autant,
-   deux d'un même organisateur compris) ; un jour qui n'a qu'un événement du RSN affiche « Aucun événement ce jour-là. ».
+   deux d'un même organisateur compris) ; un jour qui n'a qu'un événement du RSN l'affiche, avec la pastille « RSN » sur sa ligne (dans l'ordre du début puis du titre). La liste par défaut, quand aucun événement de l'écosystème n'est à venir, dit « Aucun événement de l'écosystème à venir. ».
    Recliquer le jour, ou « Tous », revient à la liste. Changer de mois défait le jour choisi.
 4. **Au RSN, quatre cas** (créer ou retirer des événements du RSN à venir, `rsn_veille_organisateur` = `RSN`, et purger) :
    - **aucun** : la phrase « Pas d'événement du RSN à venir pour le moment. Les prochains seront annoncés ici. » ;
@@ -336,9 +338,12 @@ changement de fiche (`wp transient delete rsn_veille_json_fr` et `rsn_veille_jso
    au-dessus sur toute la largeur et les deux autres colonnes côte à côte ; les flèches et les jours se touchent au doigt.
 10. **Code court ailleurs que sur l'accueil** : dans un widget Code court d'une autre page Elementor, la bande s'affiche
     avec ses styles (ressources chargées au rendu, après le contenu). `add_filter('rsn_veille_charger_accueil', '__return_true')`
-    les charge en tête.
+    les charge en tête. Cette page n'est pas purgée par la collecte : la bande y suit les caches de LiteSpeed et d'Elementor.
+11. **Après minuit, sans purge** : afficher l'accueil le lendemain de la dernière purge, sans rien vider ; le jour entouré
+    dans le calendrier et les colonnes « Au RSN » et « Dans l'écosystème » sont ceux du jour (un événement fini la veille
+    n'y est plus), même si la page vient du cache.
 
-**Terminé quand** : les points 1 à 10 donnent le résultat attendu sur l'accueil français et, avec WPML, sur l'accueil anglais.
+**Terminé quand** : les points 1 à 11 donnent le résultat attendu sur l'accueil français et, avec WPML, sur l'accueil anglais.
 
 ## 8. Formulaire « Proposer un événement »
 
