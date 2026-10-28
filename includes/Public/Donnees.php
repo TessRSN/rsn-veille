@@ -180,7 +180,11 @@ final class Donnees {
                 $evenements[$position]['organise_par'] = $tableau['organise_par'] ?? null;
                 // Et, si l'événement gardé est dans la langue de la page alors que la fiche ne l'est pas, son texte.
                 if ((string) ($brut['langue'] ?? '') === $langue && (string) $evenements[$position]['langue'] !== $langue) {
+                    // Titre, adresse et langue toujours ; résumé, lieu et ville seulement s'ils sont renseignés.
                     foreach (['titre', 'resume', 'lieu', 'ville', 'url', 'langue'] as $cle) {
+                        if (in_array($cle, ['resume', 'lieu', 'ville'], true) && trim((string) ($tableau[$cle] ?? '')) === '') {
+                            continue;
+                        }
                         $evenements[$position][$cle] = $tableau[$cle];
                     }
                 }
@@ -222,10 +226,16 @@ final class Donnees {
         return self::cle_de_groupe($trid, (int) $m[1]);
     }
 
-    /** Clé d'un groupe : le groupe WPML s'il existe, sinon l'identifiant de l'article. Null si ni l'un ni l'autre. */
+    /**
+     * Clé d'un groupe : `trid:<n>` quand il vient de WPML, sinon `id:<n>` (identifiant de l'article). Un trid et un
+     * identifiant de même valeur n'ont aucun lien : sans WPML les deux côtés donnent `id:` et se rejoignent.
+     * Null si ni l'un ni l'autre.
+     */
     private static function cle_de_groupe(?int $trid, int $id): ?string {
-        $numero = $trid !== null && $trid > 0 ? $trid : $id;
-        return $numero > 0 ? (string) $numero : null;
+        if ($trid !== null && $trid > 0) {
+            return 'trid:' . $trid;
+        }
+        return $id > 0 ? 'id:' . $id : null;
     }
 
     /**
@@ -250,6 +260,10 @@ final class Donnees {
             return $appel;
         }
         $traduit = (int) $traduit;
+        if ($traduit === $id) {
+            // WPML rend l'article d'origine : pas de traduction, l'appel reste en français.
+            return $appel;
+        }
         $titre = Fiche::nettoyer_texte((string) get_the_title($traduit));
         $resume = Fiche::nettoyer_texte((string) get_the_excerpt($traduit));
         $url = get_permalink($traduit);

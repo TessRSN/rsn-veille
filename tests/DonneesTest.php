@@ -481,6 +481,26 @@ final class DonneesTest extends TestCase {
         $this->assertSame('Partner events', $items[0]['categorie_rsn']);
     }
 
+    public function test_evenement_anglais_sans_lieu_ni_resume_la_fiche_garde_les_siens(): void {
+        $this->entrepot->creer($this->fiche_du_site());
+        $this->groupes_wpml([12 => 7]);
+        $items = Donnees::elements($this->entrepot, [$this->evenement_anglais(['lieu' => '', 'ville' => '', 'resume' => ''])], '2026-10-25', 'en');
+        $this->assertCount(1, $items);
+        $this->assertSame('Scientific Days', $items[0]['titre']);
+        $this->assertSame('https://rsn.quebec/en/event/scientific-days/', $items[0]['url']);
+        $this->assertSame('en', $items[0]['langue']);
+        $this->assertSame('Montréal', $items[0]['lieu']);
+        $this->assertSame('Montréal', $items[0]['ville']);
+        $this->assertSame('Résumé en français.', $items[0]['resume']);
+    }
+
+    public function test_un_trid_et_un_identifiant_d_article_de_meme_valeur_ne_sont_pas_un_doublon(): void {
+        // Fiche rsn:12 sans groupe WPML (groupe « id 12 ») contre un événement du groupe de traduction 12 : deux groupes distincts.
+        $this->entrepot->creer($this->fiche_du_site());
+        $evenement = $this->evenement_anglais(['titre_fr' => 'Tout autre titre', 'tec_trid' => 12]);
+        $this->assertCount(2, Donnees::elements($this->entrepot, [$evenement], '2026-10-25', 'en'));
+    }
+
     // --- Appels du RSN traduits ---
 
     private function appel_rsn(): Fiche {
@@ -538,6 +558,19 @@ final class DonneesTest extends TestCase {
         $this->assertSame('Résumé en français.', $items[0]['resume']);
         $this->assertSame('https://rsn.quebec/appel-de-projets/', $items[0]['url']);
         $this->assertSame('Financement', $items[0]['categorie']);
+        $this->assertSame('fr', $items[0]['langue']);
+    }
+
+    public function test_appel_rsn_dont_la_traduction_est_l_article_d_origine_reste_inchange(): void {
+        $this->entrepot->creer($this->appel_rsn());
+        $this->traduction_appel();
+        // WPML rend l'article d'origine (pas de traduction en anglais) : ni titre, ni langue changés.
+        $GLOBALS['rsn_veille_wp']['filtres']['wpml_object_id'] = [static fn($id) => $id];
+        wp_insert_post(['ID' => 2710, 'post_type' => 'post', 'post_status' => 'publish', 'post_title' => 'Titre de l\'article d\'origine', 'post_excerpt' => 'Extrait d\'origine.']);
+        $items = Donnees::elements($this->entrepot, [], '2026-10-25', 'en');
+        $this->assertSame('Appel de projets', $items[0]['titre']);
+        $this->assertSame('Résumé en français.', $items[0]['resume']);
+        $this->assertSame('https://rsn.quebec/appel-de-projets/', $items[0]['url']);
         $this->assertSame('fr', $items[0]['langue']);
     }
 
