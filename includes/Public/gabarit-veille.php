@@ -31,19 +31,40 @@ $avec_limites = $section !== 'agenda';
 $avec_une = $section === 'tout' && $une !== '0';
 $horloge = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>';
 $agenda_ics = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 7h12M6 1.5v3M10 1.5v3"/></svg>';
+$info = '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.4"/><path d="M8 7.2v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="4.8" r=".95" fill="currentColor"/></svg>';
+// Abonnement : l'adresse du calendrier de la langue courante (WPML la met sous /en/), en webcal:// pour Calendrier et
+// Outlook, en lien d'ajout pour Google Agenda, et telle quelle pour le bouton « Copier l'adresse ».
+$adresse_ics = home_url('/veille.ics');
+$adresse_webcal = (string) preg_replace('#^https?://#i', 'webcal://', $adresse_ics);
+$lien_google = 'https://calendar.google.com/calendar/render?cid=' . rawurlencode($adresse_webcal);
+// Point « Comment ça marche » : seulement avec la table des sources (section « tout »), vers laquelle il mène.
+$avec_info = $section === 'tout';
 $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12 12 4M6 4h6v6"/></svg>';
 ?>
-<div class="rsn-veille" lang="<?php echo esc_attr($langue); ?>" role="region" aria-label="<?php echo esc_attr__("Veille de l'écosystème", 'rsn-veille'); ?>" data-section="<?php echo esc_attr($section); ?>" data-une="<?php echo esc_attr($une); ?>">
+<div class="rsn-veille" lang="<?php echo esc_attr($langue); ?>" role="region" aria-label="<?php echo esc_attr__("Agenda de l'écosystème", 'rsn-veille'); ?>" data-section="<?php echo esc_attr($section); ?>" data-une="<?php echo esc_attr($une); ?>">
 <?php if ($avec_agenda) : ?>
 <div class="bandeau">
   <div class="wrap">
     <div class="tete">
-      <p><?php echo esc_html__("Les événements du RSN, ceux de nos partenaires et tout ce qui bouge en santé numérique au Québec : réseaux thématiques, IVADO, Obvia, Mila, FRQ, Digital Health Canada. Les appels de financement et de candidatures y figurent avec leur date limite.", 'rsn-veille'); ?></p>
+      <p><?php echo esc_html__("Les événements du RSN, ceux de nos partenaires et tout ce qui bouge en santé numérique au Québec : réseaux thématiques, IVADO, Obvia, Mila, FRQ, Digital Health Canada. Les appels de financement et de candidatures y figurent avec leur date limite.", 'rsn-veille'); ?><?php if ($avec_info) : ?><button type="button" class="info-btn" id="rsn-veille-info" aria-expanded="false" aria-controls="rsn-veille-panneau"><?php echo $info; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?><span><?php echo esc_html__('Comment ça marche', 'rsn-veille'); ?></span></button><?php endif; ?></p>
       <div class="act">
-        <a class="btn clair" href="<?php echo esc_url(home_url('/veille.ics')); ?>"><?php echo $agenda_ics; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?><?php echo esc_html__("S'abonner au calendrier", 'rsn-veille'); ?></a>
-        <button class="btn jaune" id="btn-proposer" type="button"><?php echo esc_html__('Proposer un événement', 'rsn-veille'); ?> <?php echo $fleche; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?></button>
+        <div class="boutons">
+          <a class="btn clair" href="<?php echo esc_url($adresse_webcal, ['http', 'https', 'webcal']); ?>"><?php echo $agenda_ics; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?><?php echo esc_html__("S'abonner au calendrier", 'rsn-veille'); ?></a>
+          <button class="btn jaune" id="btn-proposer" type="button"><?php echo esc_html__('Proposer un événement', 'rsn-veille'); ?> <?php echo $fleche; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?></button>
+        </div>
+        <div class="autres"><span><?php echo esc_html__('Google Agenda :', 'rsn-veille'); ?></span> <a href="<?php echo esc_url($lien_google); ?>" target="_blank" rel="noopener"><?php echo esc_html(_x('ajouter', 'lien d\'ajout à Google Agenda', 'rsn-veille')); ?></a> <button type="button" class="copier" id="rsn-veille-copier" data-adresse="<?php echo esc_url($adresse_ics); ?>"><?php echo esc_html__('Copier l’adresse', 'rsn-veille'); ?></button> <span class="copie" id="rsn-veille-copie" role="status" hidden></span></div>
       </div>
     </div>
+<?php if ($avec_info) : ?>
+    <div class="panneau" id="rsn-veille-panneau" hidden>
+      <button type="button" class="fermer" id="rsn-veille-fermer" aria-label="<?php echo esc_attr__('Fermer', 'rsn-veille'); ?>">×</button>
+      <h2 tabindex="-1"><?php echo esc_html__('Un agenda tenu par une veille semi-automatique', 'rsn-veille'); ?></h2>
+      <p><?php echo esc_html__('Chaque nuit, l’agenda lit les sites qui publient leurs événements de façon structurée :', 'rsn-veille'); ?></p>
+      <ul><li><?php echo esc_html__('des calendriers en ligne et des flux RSS ;', 'rsn-veille'); ?></li><li><?php echo esc_html__('des pages d’événements bien organisées ;', 'rsn-veille'); ?></li><li><?php echo esc_html__('les événements et les appels du RSN.', 'rsn-veille'); ?></li></ul>
+      <p><?php echo esc_html__('L’équipe du RSN vérifie ce qui est ambigu et ajoute à la main ce qui manque. Un organisme ne figure pas ici ? Son site ne publie souvent pas ses événements dans un format lisible automatiquement : proposez-nous l’événement.', 'rsn-veille'); ?></p>
+      <div class="liens"><a href="#sources"><?php echo esc_html__('Voir les sources lues ↓', 'rsn-veille'); ?></a><button type="button" id="rsn-veille-panneau-proposer"><?php echo esc_html__('Proposer un événement', 'rsn-veille'); ?></button></div>
+    </div>
+<?php endif; ?>
   </div>
 </div>
 <?php endif; ?>
@@ -147,7 +168,7 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
 <?php endif; ?>
 
 <?php if ($section === 'tout') : ?>
-  <section class="sources">
+  <section class="sources" id="sources">
     <div class="shead"><h2><svg class="hex" viewBox="0 0 24 26" aria-hidden="true" style="color:var(--navy)"><path d="M12 2 21.5 7.5v11L12 24 2.5 18.5v-11Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg><?php echo esc_html__('Sources lues', 'rsn-veille'); ?></h2><span class="aside" id="maj"></span></div>
     <div class="tableau"><table>
       <thead><tr><th><?php echo esc_html__('Source', 'rsn-veille'); ?></th><th><?php echo esc_html__("Ce qu'on lit", 'rsn-veille'); ?></th><th style="text-align:right"><?php echo esc_html__('Éléments', 'rsn-veille'); ?></th></tr></thead>

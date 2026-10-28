@@ -731,13 +731,21 @@ if (!function_exists('esc_attr')) {
     }
 }
 if (!function_exists('esc_url')) {
-    /** Comme esc_url : protocoles autorisés seulement (vide sinon), puis encodé pour un attribut. */
-    function esc_url(string $url): string {
+    /**
+     * Comme esc_url : protocoles autorisés seulement (vide sinon), puis encodé pour un attribut. Le deuxième
+     * paramètre est la liste des protocoles, comme dans WordPress ; sans lui, le bouchon n'accepte que http, https et
+     * mailto (plus strict que wp_allowed_protocols(), qui accepte aussi webcal et d'autres) : un protocole de plus,
+     * comme webcal pour l'abonnement au calendrier, doit être demandé explicitement (0.5.1).
+     *
+     * @param array<int,string>|null $protocoles
+     */
+    function esc_url(string $url, ?array $protocoles = null): string {
         $url = trim($url);
         if ($url === '') {
             return '';
         }
-        if (preg_match('/^([a-z][a-z0-9+.-]*):/i', $url, $m) === 1 && !in_array(strtolower($m[1]), ['http', 'https', 'mailto'], true)) {
+        $autorises = $protocoles ?? ['http', 'https', 'mailto'];
+        if (preg_match('/^([a-z][a-z0-9+.-]*):/i', $url, $m) === 1 && !in_array(strtolower($m[1]), $autorises, true)) {
             return '';
         }
         return htmlspecialchars(esc_url_raw($url), ENT_QUOTES, 'UTF-8');

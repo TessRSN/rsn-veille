@@ -256,6 +256,8 @@ final class Raccourci {
             'date_limite_a_venir' => __('Date limite à venir', 'rsn-veille'),
             'limites_precedentes' => __('Dates limites précédentes', 'rsn-veille'),
             'limites_suivantes' => __('Dates limites suivantes', 'rsn-veille'),
+            // Abonnement au calendrier : retour du bouton « Copier l'adresse ».
+            'adresse_copiee' => __('Adresse copiée', 'rsn-veille'),
         ];
     }
 }

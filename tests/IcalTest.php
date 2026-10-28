@@ -32,7 +32,7 @@ final class IcalTest extends TestCase {
         $this->assertSame('BEGIN:VCALENDAR', $lignes[0]);
         $this->assertContains('VERSION:2.0', $lignes);
         $this->assertContains('PRODID:-//RSN//Veille//FR', $lignes);
-        $this->assertContains("X-WR-CALNAME:Veille de l'écosystème RSN", $lignes);
+        $this->assertContains("X-WR-CALNAME:Agenda de l'écosystème RSN", $lignes);
         $this->assertSame('END:VCALENDAR', end($lignes));
         $this->assertStringNotContainsString('BEGIN:VEVENT', $ics);
     }

@@ -60,7 +60,7 @@ final class Ical {
             'PRODID:-//RSN//Veille//FR',
             'CALSCALE:GREGORIAN',
             'METHOD:PUBLISH',
-            'X-WR-CALNAME:' . self::texte(__("Veille de l'écosystème RSN", 'rsn-veille')),
+            'X-WR-CALNAME:' . self::texte(__("Agenda de l'écosystème RSN", 'rsn-veille')),
             'X-WR-TIMEZONE:' . self::FUSEAU,
             'REFRESH-INTERVAL;VALUE=DURATION:PT12H',
             'X-PUBLISHED-TTL:PT12H',
