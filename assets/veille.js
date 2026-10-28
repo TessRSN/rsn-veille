@@ -488,21 +488,23 @@ function animer(racine, noeudDonnees) {
 
   // Abonnement au calendrier : « Copier l'adresse » copie l'adresse https:// du calendrier de la langue (data-adresse) ;
   // le retour (role="status") dit « Adresse copiée » 2,5 s, ou, si le presse-papiers est refusé, affiche l'adresse elle-même.
-  let minuterieCopie = 0;
+  let minuterieCopie = 0, minuterieTexte = 0;
   on('#rsn-veille-copier', 'click', () => {
     const adresse = $('#rsn-veille-copier').dataset.adresse || '';
     const retour = $('#rsn-veille-copie');
     if (!retour) return;
-    const dire = texte => {
-      clearTimeout(minuterieCopie);
+    // « Adresse copiée » disparaît après 2,5 s ; l'adresse affichée par le repli reste jusqu'au clic suivant (pour la sélectionner).
+    const dire = (texte, temporaire) => {
+      clearTimeout(minuterieCopie); clearTimeout(minuterieTexte);
       // Région visible d'abord, texte ensuite : un lecteur d'écran n'annonce pas un texte posé en même temps que l'affichage.
       retour.textContent = ''; retour.hidden = false;
-      setTimeout(() => { retour.textContent = texte; }, 50);
-      minuterieCopie = setTimeout(() => { retour.hidden = true; retour.textContent = ''; }, 2500);
+      minuterieTexte = setTimeout(() => { retour.textContent = texte; }, 50);
+      if (temporaire) minuterieCopie = setTimeout(() => { retour.hidden = true; retour.textContent = ''; }, 2500);
     };
+    clearTimeout(minuterieCopie); clearTimeout(minuterieTexte);
     try {
-      navigator.clipboard.writeText(adresse).then(() => dire(t('adresse_copiee')), () => dire(adresse));
-    } catch (e) { dire(adresse); }
+      navigator.clipboard.writeText(adresse).then(() => dire(t('adresse_copiee'), true), () => dire(adresse, false));
+    } catch (e) { dire(adresse, false); }
   });
 
   // Point « Comment ça marche » : panneau déplié dans le bandeau (section « tout » seulement, avec la table des sources).
@@ -519,7 +521,11 @@ function animer(racine, noeudDonnees) {
     const fermerPanneau = () => { ouvrirPanneau(false); boutonInfo.focus(); };
     boutonInfo.addEventListener('click', () => ouvrirPanneau(panneau.hidden));
     on('#rsn-veille-fermer', 'click', fermerPanneau);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !panneau.hidden) fermerPanneau(); });
+    // Échap ne ferme le panneau que si le focus est dedans ou sur son bouton : ailleurs (recherche qu'on vide, formulaire),
+    // il garde son sens et ne vole pas le focus.
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !panneau.hidden && (panneau.contains(document.activeElement) || document.activeElement === boutonInfo)) fermerPanneau();
+    });
     // « Voir les sources lues » : défilement jusqu'à la table (sans animation si le mouvement est réduit), titre surligné un instant.
     let minuterieSurlignage = 0;
     const lienSources = panneau.querySelector('a[href="#sources"]');
@@ -534,7 +540,8 @@ function animer(racine, noeudDonnees) {
       clearTimeout(minuterieSurlignage);
       minuterieSurlignage = setTimeout(() => cible.classList.remove('surligne'), 2200);
     });
-    on('#rsn-veille-panneau-proposer', 'click', ouvrirFormulaire);
+    // Le formulaire s'ouvre plus bas : le panneau se referme (sans rendre le focus, qui va au titre du formulaire).
+    on('#rsn-veille-panneau-proposer', 'click', () => { ouvrirPanneau(false); ouvrirFormulaire(); });
   }
   on('#form-proposition', 'submit', async e => {
     e.preventDefault();

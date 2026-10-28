@@ -299,14 +299,16 @@ est vide pour la page Veille choisie.
     - *Google Agenda* : sous les boutons, « Google Agenda : ajouter » (« Google Calendar: add ») s'ouvre dans un nouvel
       onglet sur la page d'ajout de Google, avec l'adresse du calendrier de la langue déjà remplie.
     - *Copie* : « Copier l'adresse » (« Copy the address ») affiche « Adresse copiée » (« Address copied ») environ 2,5 s ;
-      coller donne `https://…/veille.ics` (`/en/` en anglais). Refuser l'accès au presse-papiers (ou ouvrir la page en
-      `http://`) : le retour montre alors l'adresse elle-même.
+      coller donne `https://…/veille.ics` (`/en/` en anglais). Pour voir le repli, refuser la permission du presse-papiers
+      (sur wp-env, `http://localhost` est un contexte sûr : la copie y marche) : le retour montre alors l'adresse elle-même, et elle
+      y reste jusqu'au clic suivant (elle se sélectionne).
     - *Point d'information* : « Comment ça marche » (« How it works »), au bout de l'intro du bandeau, déplie un panneau
-      dans le bandeau (texte, trois puces, deux liens) ; le focus va au titre du panneau. La croix et la touche Échap le
-      ferment et rendent le focus au bouton (le clavier : Tab, Entrée ; Maj + Tab revient au bouton).
+      dans le bandeau (texte, trois puces, deux liens) ; le focus va au titre du panneau. La croix et la touche Échap (le focus étant dans le panneau
+      ou sur le bouton ; Échap dans la recherche ne ferme rien et ne déplace pas le focus) le
+      ferment et rendent le focus au bouton (le clavier : Tab, Entrée ; Maj + Tab passe à la croix, puis aux commandes d'abonnement).
     - *Liens du panneau* : « Voir les sources lues ↓ » (« See the sources we read ↓ ») fait défiler jusqu'à « Sources lues »
       (sans animation avec « réduire les animations » activé dans le système) et surligne son titre un instant ;
-      « Proposer un événement » ouvre le formulaire comme le bouton jaune.
+      « Proposer un événement » ferme le panneau et ouvre le formulaire comme le bouton jaune.
     - *Autres sections* : sur une page avec `[rsn_veille section="agenda"]`, le point d'information et le panneau n'existent
       pas, l'abonnement (bouton, Google, copie) si ; sur `section="appels"`, pas de bandeau.
     - *Mise en page* : à droite du bandeau sur ordinateur, à gauche sous 820 px (essayer 375 px) ; aucun défilement
