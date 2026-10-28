@@ -36,7 +36,7 @@ msgid "Date de début obligatoire"
 msgstr "Start date required"
 
 msgid "Date de début invalide"
-msgstr "Start date invalid"
+msgstr "Invalid start date"
 
 msgid "Date de début trop ancienne (un an au plus)"
 msgstr "Start date too far in the past (one year at most)"
@@ -283,7 +283,7 @@ msgid "Plus…"
 msgstr "More…"
 
 msgid "Moins"
-msgstr "Fewer"
+msgstr "Show less"
 
 msgid "Tous"
 msgstr "All"
@@ -400,7 +400,7 @@ msgid "en cours"
 msgstr "ongoing"
 
 msgid "Date limite à venir"
-msgstr "Deadline to come"
+msgstr "Deadline to be announced"
 
 msgid "Dates limites précédentes"
 msgstr "Previous deadlines"
@@ -410,6 +410,9 @@ msgstr "Next deadlines"
 
 msgid "Veille de l'écosystème"
 msgstr "Ecosystem monitoring"
+
+msgid "Veille de l'écosystème RSN"
+msgstr "RSN ecosystem monitoring"
 
 msgid ""
 "Les événements du RSN, ceux de nos partenaires et tout ce qui bouge en "
@@ -540,12 +543,12 @@ msgid ""
 "flux du FRQ, du CRM, du RSN, de CARES et des Prix Hippocrate. La date "
 "limite est extraite du texte quand elle y figure."
 msgstr ""
-"Project calls, competitions and calls for applications found in the FRQ, "
-"CRM, RSN, CARES and Prix Hippocrate feeds. The deadline is extracted "
+"Calls for proposals, competitions and calls for applications found in the "
+"FRQ, CRM, RSN, CARES and Prix Hippocrate feeds. The deadline is extracted "
 "from the text when it appears there."
 
 msgid "Sources lues"
-msgstr "Sources read"
+msgstr "Sources monitored"
 
 msgid "Source"
 msgstr "Source"
@@ -562,8 +565,8 @@ msgid ""
 "de l'équipe."
 msgstr ""
 "Sources without a feed (CRES, Polytechnique, McGill, Le Point en santé, "
-"PLS conference, LinkedIn) go through the Suggest button or are entered "
-"by the team."
+"PLS conference, LinkedIn) go through the Suggest an event button or are "
+"entered by the team."
 
 msgid "RSN : événements"
 msgstr "RSN: events"

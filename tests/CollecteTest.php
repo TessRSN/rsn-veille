@@ -341,6 +341,20 @@ final class CollecteTest extends TestCase {
         $this->assertCount(2, $this->demandes);
     }
 
+    public function test_mila_evenement_non_traduit_a_la_meme_adresse_n_est_pas_apparie(): void {
+        $entrepot = new EntrepotMemoire();
+        // La page anglaise liste l'atelier 11 avec l'adresse française : pas de version anglaise.
+        $en = self::MILA_EN;
+        $en[0] = [11, 'Atelier IA', '/fr/evenement/atelier', 'Résumé français', '2026-11-05', '2026-11-05'];
+        $this->servir_mila(self::reponse('text/html; charset=UTF-8', self::page_mila($en)));
+        $ligne = Collecte::collecter_source(Sources::par_defaut()['mila'], new Depot($entrepot), new Pertinence());
+
+        $this->assertSame([2, []], [$ligne['crees'], $ligne['erreurs']]);
+        $this->assertSame(1, $ligne['appariees_en'], 'seul le colloque est apparié');
+        $this->assertSame(['', '', ''], [$entrepot->trouver_par_cle_source('mila:11')->titre_en, $entrepot->trouver_par_cle_source('mila:11')->resume_en, $entrepot->trouver_par_cle_source('mila:11')->url_en]);
+        $this->assertSame('Data Symposium', $entrepot->trouver_par_cle_source('mila:12')->titre_en);
+    }
+
     public function test_titre_anglais_ecrit_purge_les_caches(): void {
         update_option(Collecte::OPTION_REGLAGES, ['page_veille_id' => 42]);
         $entrepot = new EntrepotMemoire();
@@ -427,6 +441,28 @@ final class CollecteTest extends TestCase {
         $this->assertCount(1, $ligne['erreurs']);
         $this->assertStringContainsString('?p=101', $ligne['erreurs'][0]);
         $this->assertSame(['Atelier', ''], [$entrepot->trouver_par_cle_source('ivado:100')->titre, $entrepot->trouver_par_cle_source('ivado:100')->titre_en]);
+    }
+
+    public function test_ivado_evenement_non_traduit_liste_sous_son_identifiant_francais_n_est_pas_apparie(): void {
+        $entrepot = new EntrepotMemoire();
+        // La page anglaise liste l'événement 100 (non traduit) sous son identifiant français : même clé de source.
+        $this->servir_ivado(['https://ivado.ca/en/events/' => self::reponse('text/html', self::calendrier_ivado([100 => '2026-11-06']))]);
+        $ligne = Collecte::collecter_source(Sources::par_defaut()['ivado'], new Depot($entrepot), new Pertinence());
+
+        $this->assertSame([1, []], [$ligne['crees'], $ligne['erreurs']]);
+        $this->assertSame(0, $ligne['appariees_en']);
+        $atelier = $entrepot->trouver_par_cle_source('ivado:100');
+        $this->assertSame(['Atelier', '', '', ''], [$atelier->titre, $atelier->titre_en, $atelier->resume_en, $atelier->url_en]);
+    }
+
+    public function test_ivado_flux_anglais_illisible_porte_le_prefixe_de_la_passe_anglaise(): void {
+        $entrepot = new EntrepotMemoire();
+        $this->servir_ivado(['https://ivado.ca/en/events/feed/' => self::reponse('', '', 'https://ivado.ca/en/events/feed/', 503, 'Réponse HTTP 503')]);
+        $ligne = Collecte::collecter_source(Sources::par_defaut()['ivado'], new Depot($entrepot), new Pertinence());
+        $this->assertCount(1, $ligne['erreurs']);
+        $this->assertStringStartsWith('Version anglaise : Flux des événements IVADO illisible', $ligne['erreurs'][0]);
+        // Le flux français, lui, n'est pas préfixé (aucune erreur ici) et la fiche française est intacte.
+        $this->assertSame(1, $ligne['crees']);
     }
 
     public function test_ivado_pages_anglaises_dans_le_meme_budget_que_les_francaises(): void {

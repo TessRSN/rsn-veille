@@ -185,6 +185,23 @@ final class Formulaire {
      * en 400 ; `{ok: false, message}` en 403 (jeton), 429 (débit) ou 500.
      */
     public static function traiter(): void {
+        // Les messages renvoyés (erreurs et remerciement) sont dans la langue du formulaire envoyé : la requête AJAX
+        // arrive sans la langue de la page. La locale est restaurée à la fin, quelle que soit la sortie.
+        $en_anglais = isset($_POST['langue']) && is_string($_POST['langue']) && wp_unslash($_POST['langue']) === 'en';
+        if ($en_anglais) {
+            switch_to_locale('en_US');
+        }
+        try {
+            self::traiter_dans_la_langue();
+        } finally {
+            if ($en_anglais) {
+                restore_previous_locale();
+            }
+        }
+    }
+
+    /** Corps de `traiter()`, exécuté dans la locale de la langue envoyée. */
+    private static function traiter_dans_la_langue(): void {
         if (check_ajax_referer(self::NONCE, 'nonce', false) === false) {
             wp_send_json_error(['ok' => false, 'message' => __('Jeton de sécurité expiré : rechargez la page.', 'rsn-veille')], 403);
             return;

@@ -434,7 +434,13 @@ final class Collecte {
                 return 0;
             }
             if ($ivado) {
+                // Une erreur du flux anglais d'IVADO porte le même préfixe que les autres erreurs de la passe anglaise.
+                $avant = count($ligne['erreurs']);
                 $source_en = self::avec_flux_ivado($source_en, $ligne);
+                for ($i = $avant, $n = count($ligne['erreurs']); $i < $n; $i++) {
+                    /* translators: %s : erreur du flux des événements IVADO anglais. */
+                    $ligne['erreurs'][$i] = sprintf(__('Version anglaise : %s', 'rsn-veille'), $ligne['erreurs'][$i]);
+                }
             }
             $resultat = self::lecteur_pour($source_en)->lire((string) $reponse['corps'], $source_en);
             foreach ($resultat->erreurs as $erreur) {
@@ -444,6 +450,12 @@ final class Collecte {
             $appariement = Appariement::apparier($francaises, $resultat->fiches);
             $ligne['orphelines_en'] = count($appariement['orphelines']);
             foreach ($appariement['paires'] as [$francaise, $anglaise]) {
+                // Événement non traduit, listé par la page anglaise sous son adresse française (toutes les sources) ou, pour
+                // IVADO, sous son identifiant français (WPML en donne un autre à chaque traduction) : ce n'est pas une
+                // version anglaise, rien à compléter. Chez Mila, les deux langues partagent le même identifiant.
+                if (($ivado && $anglaise->cle_source !== '' && $anglaise->cle_source === $francaise->cle_source) || ($anglaise->url !== '' && $anglaise->url === $francaise->url)) {
+                    continue;
+                }
                 $connue = $depot->fiche_de_cle($francaise);
                 if ($connue === null) {
                     continue;

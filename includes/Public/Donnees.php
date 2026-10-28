@@ -276,10 +276,22 @@ final class Donnees {
      */
     private static function appel_traduit(array $appel, string $langue): array {
         $cles = array_merge([(string) ($appel['cle_source'] ?? '')], array_map('strval', (array) ($appel['cles_source'] ?? [])));
-        if (array_filter($cles, static fn(string $cle): bool => str_starts_with($cle, 'rsn_appels:')) === []) {
+        $cles_appels = array_values(array_filter($cles, static fn(string $cle): bool => str_starts_with($cle, 'rsn_appels:')));
+        if ($cles_appels === []) {
             return $appel;
         }
-        $id = url_to_postid((string) ($appel['url'] ?? ''));
+        // L'identifiant de l'article vient d'abord du guid de la clé (`https://rsn.quebec/?p=N`), stable même quand
+        // le permalien du flux est une adresse que url_to_postid ne sait pas résoudre ; sinon, l'adresse de la fiche.
+        $id = 0;
+        foreach ($cles_appels as $cle) {
+            if (preg_match('/[?&]p=(\d+)/', substr($cle, strlen('rsn_appels:')), $m) === 1 && (int) $m[1] > 0) {
+                $id = (int) $m[1];
+                break;
+            }
+        }
+        if ($id <= 0) {
+            $id = url_to_postid((string) ($appel['url'] ?? ''));
+        }
         if ($id <= 0) {
             return $appel;
         }
@@ -293,7 +305,9 @@ final class Donnees {
             return $appel;
         }
         $titre = Fiche::nettoyer_texte((string) get_the_title($traduit));
-        $resume = Fiche::nettoyer_texte((string) get_the_excerpt($traduit));
+        // L'extrait saisi de l'article traduit (post_excerpt), pas celui que WordPress tire du contenu ; vide, le résumé français reste.
+        $article = get_post($traduit);
+        $resume = $article instanceof \WP_Post ? Fiche::court(Fiche::nettoyer_texte((string) $article->post_excerpt)) : '';
         $url = get_permalink($traduit);
         $categories = get_the_category($traduit);
         $categorie = is_array($categories) && isset($categories[0]->name) ? Fiche::nettoyer_texte((string) $categories[0]->name) : '';

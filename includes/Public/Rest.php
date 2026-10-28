@@ -50,11 +50,14 @@ final class Rest {
         $bascule = ($lang === 'fr' || $lang === 'en') && is_string($origine) && $origine !== '' && $origine !== $lang;
         if ($bascule) {
             do_action('wpml_switch_language', $lang);
+            // La locale suit la langue : les noms de sources du cache passent par __() et doivent être dans la bonne langue.
+            switch_to_locale($lang === 'en' ? 'en_US' : 'fr_FR');
         }
         try {
             $donnees = Donnees::en_cache();
         } finally {
             if ($bascule) {
+                restore_previous_locale();
                 do_action('wpml_switch_language', $origine);
             }
         }

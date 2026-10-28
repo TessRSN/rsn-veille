@@ -72,6 +72,26 @@ final class RestTest extends TestCase {
         $this->assertNotFalse(get_transient('rsn_veille_json_en'));
     }
 
+    public function test_lang_en_bascule_aussi_la_locale_puis_la_restaure(): void {
+        self::simuler_wpml('fr');
+        Rest::repondre(self::requete('en'));
+        $this->assertSame([['en_US']], rsn_veille_bouchons_declenchements('switch_to_locale'));
+        $this->assertSame([[]], rsn_veille_bouchons_declenchements('restore_previous_locale'));
+
+        $GLOBALS['rsn_veille_langue_test'] = 'en';
+        Rest::repondre(self::requete('fr'));
+        $this->assertSame([['en_US'], ['fr_FR']], rsn_veille_bouchons_declenchements('switch_to_locale'));
+        $this->assertCount(2, rsn_veille_bouchons_declenchements('restore_previous_locale'));
+    }
+
+    public function test_sans_bascule_la_locale_ne_change_pas(): void {
+        self::simuler_wpml('en');
+        Rest::repondre(self::requete('en'));
+        Rest::repondre(self::requete('de'));
+        $this->assertSame([], rsn_veille_bouchons_declenchements('switch_to_locale'));
+        $this->assertSame([], rsn_veille_bouchons_declenchements('restore_previous_locale'));
+    }
+
     public function test_lang_identique_a_la_langue_courante_ne_bascule_pas(): void {
         self::simuler_wpml('en');
         Rest::repondre(self::requete('en'));

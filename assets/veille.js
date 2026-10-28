@@ -75,10 +75,10 @@ function animer(racine, noeudDonnees) {
     const a = d(k.debut), b = d(k.fin || k.debut);
     const meme = !k.fin || k.fin === k.debut;
     // Série commencée et pas finie : la date de fin avec « en cours », pas un début déjà passé.
-    if (enCours(k)) return `<div class="jour">→${b.j}<small>${MOIS[b.m - 1]}<b>${esc(t('en_cours_tuile'))}</b></small></div>`;
-    if (meme) return `<div class="jour">${a.j}<small>${MOIS[a.m - 1]}<b>${a.a}</b></small></div>`;
-    if (a.m === b.m) return `<div class="jour">${a.j}–${b.j}<small>${MOIS[a.m - 1]}<b>${a.a}</b></small></div>`;
-    return `<div class="jour">${a.j}<small>${MOIS[a.m - 1]}<b>${a.a}</b></small></div>`;
+    if (enCours(k)) return `<div class="jour">→${b.j}<small>${esc(MOIS[b.m - 1])}<b>${esc(t('en_cours_tuile'))}</b></small></div>`;
+    if (meme) return `<div class="jour">${a.j}<small>${esc(MOIS[a.m - 1])}<b>${a.a}</b></small></div>`;
+    if (a.m === b.m) return `<div class="jour">${a.j}–${b.j}<small>${esc(MOIS[a.m - 1])}<b>${a.a}</b></small></div>`;
+    return `<div class="jour">${a.j}<small>${esc(MOIS[a.m - 1])}<b>${a.a}</b></small></div>`;
   }
   const ICO_DATE = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 7h12M6 1.5v3M10 1.5v3"/></svg>';
   const ICO_LIEU = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 14.5s4.5-4.2 4.5-7.5a4.5 4.5 0 0 0-9 0c0 3.3 4.5 7.5 4.5 7.5Z"/><circle cx="8" cy="7" r="1.6"/></svg>';
@@ -101,16 +101,18 @@ function animer(racine, noeudDonnees) {
     if (enCours(k)) p.push(`<span class="pill etat">${esc(t('en_cours'))}</span>`);
     if (estRSN(k)) p.push(`<span class="pill rsn">${esc(libelle('qui', 'rsn'))}</span>`);
     else if (k.organisateur) p.push(qui(k) === 'partenaires' ? `<span class="pill part">${esc(t('partenaire', k.organisateur))}</span>` : `<span class="pill orga">${esc(k.organisateur)}</span>`);
-    if (k.format) p.push(`<span class="pill">${esc(k.format)}</span>`);
+    if (k.format) p.push(`<span class="pill">${esc(libelle('formats', k.format))}</span>`);
     // Pastille de langue : seulement quand la fiche n'est pas dans la langue de la page.
     if ((k.langue === 'fr' || k.langue === 'en') && k.langue !== LANGUE) p.push(`<span class="pill">${esc(t(k.langue === 'en' ? 'en_anglais' : 'en_francais'))}</span>`);
     k.themes.forEach(e => p.push(`<span class="pill theme">${esc(e)}</span>`));
     return `<div class="pills">${p.join('')}</div>`;
   }
   const classeRSN = k => estRSN(k) ? ' rsn' : '';
+  // Attribut `lang` du texte d'une fiche dans l'autre langue que la page (lecteurs d'écran, césure, guillemets).
+  const attrLangue = k => (k.langue === 'fr' || k.langue === 'en') && k.langue !== LANGUE ? ` lang="${esc(k.langue)}"` : '';
   // ligne compacte (événements passés, comme la section « Passés » de la page Événements)
   function ligneEv(k) {
-    return `<div class="ev${classeRSN(k)}">${HEX}${blocJour(k)}<div class="corps"><div class="tx">
+    return `<div class="ev${classeRSN(k)}">${HEX}${blocJour(k)}<div class="corps"><div class="tx"${attrLangue(k)}>
       ${pastilles(k)}
       <h3><a href="${lien(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
       <div class="meta"><b>${esc(k.organisateur)}</b>${lieuTexte(k) ? ' · ' + esc(lieuTexte(k)) : ''}</div>
@@ -120,11 +122,11 @@ function animer(racine, noeudDonnees) {
   // fiche à venir : même ligne que les passés, avec l'image à gauche du texte et les lignes date / lieu
   function carteEv(k, compact) {
     if (compact === true) return ligneEv(k);
-    const lieu = [lieuTexte(k), k.format].filter(Boolean).join(' · ');
+    const lieu = [lieuTexte(k), k.format && libelle('formats', k.format)].filter(Boolean).join(' · ');
     const image = /^https?:\/\//i.test(k.image_url || '');
     return `<div class="ev${classeRSN(k)}${image ? ' avec-image' : ''}">${HEX}${blocJour(k)}<div class="corps">
       ${image ? `<a class="im" href="${lien(k.url)}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"><img src="${lien(k.image_url)}" alt="" loading="lazy" decoding="async"></a>` : ''}
-      <div class="tx">
+      <div class="tx"${attrLangue(k)}>
         ${pastilles(k)}
         <h3><a href="${lien(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
         <div class="infos"><span>${ICO_DATE}${periode(k)}</span>${lieu ? `<span>${ICO_LIEU}${esc(lieu)}</span>` : ''}</div>
@@ -150,9 +152,9 @@ function animer(racine, noeudDonnees) {
   function carteAppel(k) {
     const lim = limite(k);
     const x = d(lim || k.debut);
-    const tuile = lim ? `<div class="tuile"><b>${x.j}</b><span>${MOIS[x.m - 1]}</span><i>${esc(t('date_limite'))}</i></div>`
-      : `<div class="tuile gris"><b>${x.j}</b><span>${MOIS[x.m - 1]}</span><i>${esc(t('publie'))}</i></div>`;
-    return `<div class="ev appel-ev${classeRSN(k)}">${HEX}${tuile}<div class="corps"><div class="tx">
+    const tuile = lim ? `<div class="tuile"><b>${x.j}</b><span>${esc(MOIS[x.m - 1])}</span><i>${esc(t('date_limite'))}</i></div>`
+      : `<div class="tuile gris"><b>${x.j}</b><span>${esc(MOIS[x.m - 1])}</span><i>${esc(t('publie'))}</i></div>`;
+    return `<div class="ev appel-ev${classeRSN(k)}">${HEX}${tuile}<div class="corps"><div class="tx"${attrLangue(k)}>
       ${pastilles(k)}
       <h3><a href="${lien(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
       <div class="meta"><b>${esc(k.organisateur)}</b> · ${esc(k.categorie || t('appel'))}${lim ? ' · ' + esc(t('publie_le', dateCourte(k.debut))) : ` <span class="pill etat">${esc(t('date_limite_a_venir'))}</span>`}</div>
@@ -327,7 +329,7 @@ function animer(racine, noeudDonnees) {
         detail = esc(String(k.resume || '').split(/[.!?…](?=\s|$)/)[0].trim().slice(0, 70));
       } else {
         texte = t('evenement_rsn');
-        detail = [periode(k), k.format && esc(k.format)].filter(Boolean).join(' · ');
+        detail = [periode(k), k.format && esc(libelle('formats', k.format))].filter(Boolean).join(' · ');
       }
       return `<a class="une" href="${lien(k.url)}" target="_blank" rel="noopener"><div class="date"><b>${x.j}</b><span>${esc(MOIS[x.m - 1])}</span></div><div><span class="etat${etat ? ' ' + etat : ''}">${esc(texte)}</span><h3>${esc(k.titre)}</h3>${detail ? `<div class="m">${detail}</div>` : ''}</div><span class="fl" aria-hidden="true">→</span></a>`;
     }).join('');

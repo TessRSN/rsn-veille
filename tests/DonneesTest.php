@@ -534,6 +534,47 @@ final class DonneesTest extends TestCase {
         $this->assertSame('rsn_appels:abc', $items[0]['cle_source']);
     }
 
+    public function test_appel_rsn_identifiant_tire_du_guid_de_la_cle_de_source(): void {
+        // Le guid `?p=2710` donne l'article même si l'adresse de la fiche n'est pas dans la table des adresses.
+        $fiche = $this->appel_rsn();
+        $fiche->cle_source = 'rsn_appels:https://rsn.quebec/?p=2710';
+        $fiche->cles_source = ['rsn_appels:https://rsn.quebec/?p=2710'];
+        $this->entrepot->creer($fiche);
+        $this->traduction_appel();
+        $GLOBALS['rsn_veille_wp']['urls'] = [];
+        $items = Donnees::elements($this->entrepot, [], '2026-10-25', 'en');
+        $this->assertSame('Call for projects', $items[0]['titre']);
+        $this->assertSame('https://rsn.quebec/en/call-for-projects/', $items[0]['url']);
+        $this->assertSame('en', $items[0]['langue']);
+    }
+
+    public function test_appel_rsn_guid_dans_cles_source_et_cle_sans_p_repli_sur_l_adresse(): void {
+        // Identifiant dans `cles_source` seulement (clé principale sans `?p=`).
+        $fiche = $this->appel_rsn();
+        $fiche->cles_source = ['rsn_appels:abc', 'rsn_appels:https://rsn.quebec/?post_type=x&p=2710'];
+        $this->entrepot->creer($fiche);
+        $this->traduction_appel();
+        $GLOBALS['rsn_veille_wp']['urls'] = [];
+        $this->assertSame('Call for projects', Donnees::elements($this->entrepot, [], '2026-10-25', 'en')[0]['titre']);
+    }
+
+    public function test_appel_rsn_cle_sans_p_repli_sur_url_to_postid(): void {
+        // Clé `rsn_appels:abc` sans `?p=` : l'identifiant vient de l'adresse (table des adresses).
+        $this->entrepot->creer($this->appel_rsn());
+        $this->traduction_appel();
+        $this->assertSame('Call for projects', Donnees::elements($this->entrepot, [], '2026-10-25', 'en')[0]['titre']);
+    }
+
+    public function test_appel_rsn_extrait_de_l_article_traduit_nettoye_et_raccourci(): void {
+        $this->entrepot->creer($this->appel_rsn());
+        $this->traduction_appel(['post_excerpt' => '<p>' . str_repeat('word ', 100) . '</p>', 'post_content' => 'Contenu complet qui ne sert pas.']);
+        $resume = Donnees::elements($this->entrepot, [], '2026-10-25', 'en')[0]['resume'];
+        $this->assertStringEndsWith('…', $resume);
+        $this->assertLessThanOrEqual(261, mb_strlen($resume));
+        $this->assertStringNotContainsString('<p>', $resume);
+        $this->assertStringNotContainsString('Contenu complet', $resume);
+    }
+
     public function test_appel_rsn_en_francais_aucune_traduction_tentee(): void {
         $this->entrepot->creer($this->appel_rsn());
         $this->traduction_appel();

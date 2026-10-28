@@ -48,7 +48,9 @@
  * identifiant => noms, rendus en objets `{name}`). Les filtres WPML se posent avec `add_filter`.
  *
  * Traductions : `load_plugin_textdomain` note ses appels (`domaines`) sans charger de fichier, `plugin_basename`
- * rend « dossier/fichier.php ».
+ * rend « dossier/fichier.php ». `switch_to_locale` et `restore_previous_locale` sont inertes (aucune locale n'est
+ * chargée) : ils notent seulement leurs appels dans `declenchees` (`switch_to_locale` => [[locale], …],
+ * `restore_previous_locale` => [[], …]), lisibles par `rsn_veille_bouchons_declenchements()`.
  *
  * HTTP : `wp_remote_get` note ses appels (`requetes_http`) et rend `reponse_http` (200 vide par défaut) ;
  * `wp_remote_retrieve_response_code`, `_header` (nom insensible à la casse) et `_body`.
@@ -188,6 +190,18 @@ function do_action(string $crochet, mixed ...$arguments): void {
     foreach ($GLOBALS['rsn_veille_wp']['actions'][$crochet] ?? [] as $action) {
         ($action['rappel'])(...array_slice($arguments, 0, $action['nb_arguments']));
     }
+}
+
+/** Inerte : aucune locale n'est chargée, l'appel est noté dans `declenchees['switch_to_locale']`. */
+function switch_to_locale(string $locale): bool {
+    $GLOBALS['rsn_veille_wp']['declenchees']['switch_to_locale'][] = [$locale];
+    return true;
+}
+
+/** Inerte : l'appel est noté dans `declenchees['restore_previous_locale']`. */
+function restore_previous_locale(): string|false {
+    $GLOBALS['rsn_veille_wp']['declenchees']['restore_previous_locale'][] = [];
+    return false;
 }
 
 /** Arguments de chaque déclenchement d’une action (outil de test, pas une fonction WordPress). */
