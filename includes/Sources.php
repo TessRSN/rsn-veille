@@ -34,9 +34,15 @@ final class Sources {
 
             // Événements : pages HTML structurées (niveau C).
             self::entree('obvia', __('Obvia : événements', 'rsn-veille'), 'https://www.obvia.ca/evenements', 'html_obvia', 'C', 'numerique', 'Obvia', ['base' => 'https://www.obvia.ca']),
-            self::entree('mila', __('Mila : événements', 'rsn-veille'), 'https://mila.quebec/fr/evenements', 'html_mila', 'C', 'numerique', 'Mila', ['base' => 'https://mila.quebec']),
+            // url_en : version anglaise de la page, lue après la française pour compléter titre, résumé et lien anglais.
+            self::entree('mila', __('Mila : événements', 'rsn-veille'), 'https://mila.quebec/fr/evenements', 'html_mila', 'C', 'numerique', 'Mila', ['base' => 'https://mila.quebec', 'url_en' => 'https://mila.quebec/en/events']),
             self::entree('frq_evenements', __('FRQ : événements', 'rsn-veille'), 'https://frq.gouv.qc.ca/evenements/', 'html_frq', 'C', 'generaliste', 'Fonds de recherche du Québec', ['base' => 'https://frq.gouv.qc.ca']),
-            self::entree('ivado', __('IVADO : événements', 'rsn-veille'), 'https://ivado.ca/evenements/', 'html_ivado', 'C', 'numerique', 'IVADO', ['base' => 'https://ivado.ca', 'flux_evenements_url' => 'https://ivado.ca/evenements/feed/']),
+            self::entree('ivado', __('IVADO : événements', 'rsn-veille'), 'https://ivado.ca/evenements/', 'html_ivado', 'C', 'numerique', 'IVADO', [
+                'base' => 'https://ivado.ca',
+                'flux_evenements_url' => 'https://ivado.ca/evenements/feed/',
+                'url_en' => 'https://ivado.ca/en/events/',
+                'flux_evenements_url_en' => 'https://ivado.ca/en/events/feed/',
+            ]),
 
             // Appels : flux RSS filtrés par catégorie ou par titre (niveau B).
             self::entree('frq_appels', __('FRQ : appels', 'rsn-veille'), 'https://frq.gouv.qc.ca/feed/', 'rss', 'B', 'sante_numerique', 'Fonds de recherche du Québec', ['mode' => 'appels', 'categories' => ['Appel']]),

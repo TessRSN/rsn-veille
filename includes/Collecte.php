@@ -329,6 +329,7 @@ final class Collecte {
         $cles_vues = [];
         $compteurs = self::compteurs_vides();
         $echec = false;
+        $ecritures_en = 0;
         self::$purge_suspendue = true;
         try {
             [$accept, $reconnaitre] = self::CONTENUS[str_starts_with($type, 'html_') ? 'html' : $type] ?? ['any', null];
@@ -352,6 +353,8 @@ final class Collecte {
                 // Une source lisible qui ne rend rien (gabarit changé ?) ne compte pas comme collecte réussie.
                 $reussie = $resultat->fiches !== [] || $resultat->ignores > 0;
 
+                // Pages d'événements IVADO : plafond et budget partagés par les deux langues.
+                $resolutions = ['debut' => self::horloge(), 'reste' => ResolutionIvado::MAX];
                 if ($type === 'html_ivado') {
                     // Chaque fiche est intégrée dès qu'elle est résolue.
                     $integrer = static function (Fiche $fiche) use ($source, $depot, $pertinence, &$compteurs): void {
@@ -360,11 +363,16 @@ final class Collecte {
                     $resolution = ResolutionIvado::resoudre($resultat->fiches, $source, $depot, [self::class, 'obtenir'], $integrer, ResolutionIvado::MAX, ResolutionIvado::BUDGET, [self::class, 'horloge']);
                     $ligne['en_attente'] = $resolution['en_attente'];
                     array_push($ligne['erreurs'], ...$resolution['erreurs']);
+                    $resolutions['reste'] -= self::tentatives($resolution);
                 } else {
                     // Fiche par fiche (comme integrer_resultat) : les compteurs restent justes après une exception.
                     foreach ($resultat->fiches as $fiche) {
                         self::integrer_fiche($fiche, $source, $depot, $pertinence, $compteurs);
                     }
+                }
+
+                if ((string) ($source['url_en'] ?? '') !== '') {
+                    $ecritures_en = self::apparier_anglais($source, $resultat->fiches, $depot, $ligne, $accept, $reconnaitre, $resolutions);
                 }
             }
             $depot->signaler_absents($id, $cles_vues, $reussie, \rsn_veille_aujourdhui());
@@ -377,11 +385,130 @@ final class Collecte {
             self::$purge_suspendue = false;
         }
         $ligne = array_merge($ligne, $compteurs);
-        if ($echec || $compteurs['crees'] + $compteurs['fusionnes'] + $compteurs['mis_a_jour'] + $compteurs['annules'] > 0) {
+        // Un titre anglais écrit change aussi la page publique (version anglaise).
+        if ($echec || $ecritures_en + $compteurs['crees'] + $compteurs['fusionnes'] + $compteurs['mis_a_jour'] + $compteurs['annules'] > 0) {
             self::purger_caches();
         }
         $ligne['duree_ms'] = (int) round((microtime(true) - $debut) * 1000);
         return $ligne;
+    }
+
+    /**
+     * Version anglaise d'une source (`url_en`), lue après l'intégration française : mêmes client HTTP, contenu
+     * attendu, `anti_cache` et lecteur, sur une copie de la source (`url` ⇒ `url_en`, `flux_evenements_url` ⇒
+     * `flux_evenements_url_en`, `langue` ⇒ `en`). Les anglaises sont appariées aux françaises par leurs dates
+     * (`Appariement`) et ne sont jamais intégrées : chaque paire complète seulement la fiche déjà enregistrée
+     * de la française (`Depot::completer_anglais`, qui n'écrit jamais une valeur vide).
+     *
+     * IVADO : la page d'un événement anglais n'est lue que si la fiche connue en a besoin (`page_anglaise_a_lire`),
+     * dans le plafond et le budget restants des résolutions françaises ($resolutions : `debut` des résolutions,
+     * `reste` des tentatives) ; non résolue (plafond, budget, page en erreur), la paire attend la collecte suivante.
+     *
+     * Consigne `appariees_en` (paires écrites ou déjà à jour) et `orphelines_en` (anglaises sans équivalent) ;
+     * une version anglaise illisible ou une exception va dans `erreurs` sans faire échouer la source.
+     *
+     * @param Fiche[] $francaises Fiches françaises lues (et intégrées) à cette collecte.
+     * @param array{debut: float, reste: int} $resolutions
+     * @return int Fiches dont des champs anglais ont été écrits.
+     */
+    private static function apparier_anglais(array $source, array $francaises, Depot $depot, array &$ligne, string $accept, ?string $reconnaitre, array $resolutions): int {
+        $ligne['appariees_en'] = 0;
+        $ligne['orphelines_en'] = 0;
+        $ecritures = 0;
+        $ivado = ($source['type'] ?? '') === 'html_ivado';
+        $source_en = ['url' => (string) $source['url_en'], 'langue' => 'en'] + $source;
+        unset($source_en['flux_evenements'], $source_en['flux_evenements_url']);
+        if ((string) ($source['flux_evenements_url_en'] ?? '') !== '') {
+            $source_en['flux_evenements_url'] = (string) $source['flux_evenements_url_en'];
+        }
+        try {
+            $reponse = self::obtenir(self::url_de_requete($source_en), ['accept' => $accept]);
+            if (($reponse['erreur'] ?? null) !== null) {
+                /* translators: 1 : adresse de la version anglaise, 2 : erreur. */
+                $ligne['erreurs'][] = sprintf(__('Version anglaise %1$s illisible : %2$s', 'rsn-veille'), $source_en['url'], (string) $reponse['erreur']);
+                return 0;
+            }
+            if ($reconnaitre === null || !Http::$reconnaitre($reponse)) {
+                /* translators: 1 : adresse de la version anglaise, 2 : type de contenu reçu. */
+                $ligne['erreurs'][] = sprintf(__('Version anglaise %1$s : contenu inattendu (type %2$s)', 'rsn-veille'), $source_en['url'], ($reponse['type'] ?? '') !== '' ? $reponse['type'] : __('inconnu', 'rsn-veille'));
+                return 0;
+            }
+            if ($ivado) {
+                $source_en = self::avec_flux_ivado($source_en, $ligne);
+            }
+            $resultat = self::lecteur_pour($source_en)->lire((string) $reponse['corps'], $source_en);
+            foreach ($resultat->erreurs as $erreur) {
+                /* translators: %s : erreur du lecteur. */
+                $ligne['erreurs'][] = sprintf(__('Version anglaise : %s', 'rsn-veille'), $erreur);
+            }
+            $appariement = Appariement::apparier($francaises, $resultat->fiches);
+            $ligne['orphelines_en'] = count($appariement['orphelines']);
+            foreach ($appariement['paires'] as [$francaise, $anglaise]) {
+                $connue = $depot->fiche_de_cle($francaise);
+                if ($connue === null) {
+                    continue;
+                }
+                if ($ivado) {
+                    if (!self::page_anglaise_a_lire($connue, $anglaise)) {
+                        // Titre anglais déjà là : l'anglaise n'a que son adresse courte, rien à écrire.
+                        $ligne['appariees_en']++;
+                        continue;
+                    }
+                    $anglaise = self::resoudre_anglaise($anglaise, $source_en, $depot, $ligne, $resolutions);
+                    if ($anglaise === null) {
+                        continue;
+                    }
+                }
+                if ($depot->completer_anglais($connue, $anglaise->titre, $anglaise->resume, $anglaise->url)) {
+                    $ecritures++;
+                }
+                $ligne['appariees_en']++;
+            }
+        } catch (\Throwable $e) {
+            /* translators: %s : message de l'exception. */
+            $ligne['erreurs'][] = sprintf(__('Version anglaise : %s', 'rsn-veille'), $e->getMessage());
+        }
+        return $ecritures;
+    }
+
+    /**
+     * Vrai si la page de l'événement anglais d'IVADO doit être lue : la fiche connue n'a pas de titre anglais,
+     * ou l'anglaise donne une adresse finale différente de l'adresse anglaise enregistrée. L'adresse courte
+     * « ?p=id » que rend le calendrier n'est pas comparée : elle diffère toujours de l'adresse finale enregistrée.
+     */
+    private static function page_anglaise_a_lire(Fiche $connue, Fiche $anglaise): bool {
+        if ($connue->titre_en === '') {
+            return true;
+        }
+        $courte = preg_match('~^https://ivado\.ca/\?p=\d+$~', $anglaise->url) === 1;
+        return !$courte && $connue->url_en !== $anglaise->url;
+    }
+
+    /**
+     * Résout une anglaise d'IVADO (`ResolutionIvado`) dans le plafond et le budget restants, qu'elle consomme ;
+     * ses erreurs vont dans la ligne. Null si elle n'est pas résolue.
+     *
+     * @param array{debut: float, reste: int} $resolutions
+     */
+    private static function resoudre_anglaise(Fiche $anglaise, array $source_en, Depot $depot, array &$ligne, array &$resolutions): ?Fiche {
+        $resolue = null;
+        $recueillir = static function (Fiche $fiche) use (&$resolue): void {
+            $resolue = $fiche;
+        };
+        $budget = ResolutionIvado::BUDGET - (self::horloge() - $resolutions['debut']);
+        $resolution = ResolutionIvado::resoudre([$anglaise], $source_en, $depot, [self::class, 'obtenir'], $recueillir, max(0, $resolutions['reste']), $budget, [self::class, 'horloge']);
+        $resolutions['reste'] -= self::tentatives($resolution);
+        array_push($ligne['erreurs'], ...$resolution['erreurs']);
+        return $resolue;
+    }
+
+    /**
+     * Pages demandées par une résolution IVADO : chaque tentative est résolue ou donne exactement une erreur.
+     *
+     * @param array{resolues: int, erreurs: string[], en_attente: int} $resolution
+     */
+    private static function tentatives(array $resolution): int {
+        return $resolution['resolues'] + count($resolution['erreurs']);
     }
 
     /**

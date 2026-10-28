@@ -83,4 +83,22 @@ final class PageJournalTest extends TestCase {
 
         $this->assertStringContainsString('Aucune collecte terminée', PageJournal::page_html([], ''));
     }
+
+    public function test_appariement_anglais_affiche_s_il_est_consigne(): void {
+        $html = PageJournal::ligne_html('mila', 'Mila', self::entree(['appariees_en' => 3, 'orphelines_en' => 1]));
+        $this->assertStringContainsString('3 appariées en anglais, 1 orpheline', $html);
+        $this->assertStringContainsString('Aucune', $html);
+        $un = PageJournal::ligne_html('ivado', 'IVADO', self::entree(['appariees_en' => 1, 'orphelines_en' => 0, 'erreurs' => ['HTTP 500']]));
+        $this->assertStringContainsString('1 appariée en anglais, 0 orphelines', $un);
+        $this->assertStringContainsString('1 erreur', $un);
+        // Toujours une cellule de moins que de colonnes : la phrase est dans la cellule des erreurs.
+        $this->assertSame(substr_count(PageJournal::ligne_html('mila', 'Mila', self::entree()), '<td'), substr_count($html, '<td'));
+    }
+
+    public function test_sans_appariement_anglais_rien_d_affiche(): void {
+        $html = PageJournal::ligne_html('obvia', 'Obvia', self::entree());
+        $this->assertStringNotContainsString('anglais', $html);
+        $abime = PageJournal::ligne_html('mila', 'Mila', self::entree(['appariees_en' => 'beaucoup']));
+        $this->assertStringContainsString('0 appariées en anglais, 0 orphelines', $abime);
+    }
 }
