@@ -3,7 +3,7 @@
 #   msgfmt --check --statistics -o languages/rsn-veille-en_US.mo languages/rsn-veille-en_US.po
 msgid ""
 msgstr ""
-"Project-Id-Version: rsn-veille 0.5.0\n"
+"Project-Id-Version: rsn-veille 0.5.1\n"
 "Report-Msgid-Bugs-To: \n"
 "PO-Revision-Date: 2026-10-27 12:00-0400\n"
 "Last-Translator: Réseau santé numérique\n"
@@ -417,6 +417,12 @@ msgstr "Ecosystem monitoring"
 msgid "Veille de l'écosystème RSN"
 msgstr "RSN ecosystem monitoring"
 
+msgid "Agenda de l'écosystème"
+msgstr "Ecosystem calendar"
+
+msgid "Agenda de l'écosystème RSN"
+msgstr "RSN ecosystem calendar"
+
 msgid ""
 "Les événements du RSN, ceux de nos partenaires et tout ce qui bouge en "
 "santé numérique au Québec : réseaux thématiques, IVADO, Obvia, Mila, "
@@ -667,3 +673,50 @@ msgstr "+ %d more RSN events →"
 
 msgid "Voir l'agenda de l'écosystème"
 msgstr "See the ecosystem calendar"
+
+msgid "Comment ça marche"
+msgstr "How it works"
+
+msgid "Google Agenda :"
+msgstr "Google Calendar:"
+
+msgctxt "lien d'ajout à Google Agenda"
+msgid "ajouter"
+msgstr "add"
+
+msgid "Copier l’adresse"
+msgstr "Copy the address"
+
+msgid "Adresse copiée"
+msgstr "Address copied"
+
+msgid "Fermer"
+msgstr "Close"
+
+msgid "Un agenda tenu par une veille semi-automatique"
+msgstr "A calendar kept up by semi-automatic monitoring"
+
+msgid "Chaque nuit, l’agenda lit les sites qui publient leurs événements de façon structurée :"
+msgstr "Every night, the calendar reads the websites that publish their events in a structured way:"
+
+msgid "des calendriers en ligne et des flux RSS ;"
+msgstr "online calendars and RSS feeds;"
+
+msgid "des pages d’événements bien organisées ;"
+msgstr "well-organized event pages;"
+
+msgid "les événements et les appels du RSN."
+msgstr "the RSN’s own events and calls."
+
+msgid ""
+"L’équipe du RSN vérifie ce qui est ambigu et ajoute à la main ce qui "
+"manque. Un organisme ne figure pas ici ? Son site ne publie souvent pas "
+"ses événements dans un format lisible automatiquement : proposez-nous "
+"l’événement."
+msgstr ""
+"The RSN team checks anything unclear and adds what is missing by hand. An "
+"organization isn’t listed? Its website often doesn’t publish its events in "
+"a machine-readable format: suggest the event to us."
+
+msgid "Voir les sources lues ↓"
+msgstr "See the sources we read ↓"

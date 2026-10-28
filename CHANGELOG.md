@@ -1,5 +1,26 @@
 # Journal des modifications
 
+## 0.5.1 (2026-10-28)
+
+L'Agenda de l'écosystème (`[rsn_veille]`, en français et en anglais) : le bouton « S'abonner au calendrier » s'abonne vraiment, et un point « Comment ça marche » explique d'où viennent les événements (conception : `docs/superpowers/specs/2026-10-28-abonnement-info-0.5.1-design.md`, maquette : `docs/maquette/agenda-info-v1.html`). Aucune migration : rien à refaire dans les réglages, et les caches sont vidés au premier chargement de wp-admin avec la nouvelle version. Le fichier iCal lui-même (contenu, rythme) ne change pas, sauf le nom du calendrier.
+
+### Abonnement au calendrier
+- **Lien `webcal://`** : le bouton pointait vers `https://…/veille.ics` ; un clic téléchargeait le fichier, importé une fois, et les nouveaux événements n'arrivaient jamais. Il pointe maintenant vers l'adresse du calendrier de la langue de la page (`/veille.ics`, `/en/veille.ics` avec WPML) en `webcal://` : Calendrier (Mac, iPhone) et Outlook ouvrent un abonnement qui se met à jour.
+- **Google Agenda**, qui ne comprend pas `webcal://` : sous les boutons, « Google Agenda : ajouter » ouvre la page d'ajout de Google (nouvel onglet, adresse encodée), et « Copier l'adresse » copie l'adresse `https://…/veille.ics` de la langue (retour « Adresse copiée » 2,5 s ; si le presse-papiers est refusé, le retour affiche l'adresse elle-même).
+- **Nom du calendrier** (`X-WR-CALNAME`) : « Agenda de l'écosystème RSN » (« RSN ecosystem calendar » en anglais), au lieu de « Veille de l'écosystème RSN ». Le libellé du conteneur (`aria-label`) devient « Agenda de l'écosystème ».
+- La disposition du bandeau : les boutons restent sur une ligne, la ligne « Google Agenda » dessous ; alignés à droite, à gauche sous 820 px et dans un conteneur de 760 px.
+
+### Point « Comment ça marche »
+- Un bouton « Comment ça marche » (« How it works ») au bout de l'intro du bandeau déplie, dans le bandeau, un court texte : l'agenda est tenu par une veille semi-automatique qui lit chaque nuit les sources structurées, l'équipe vérifie et complète à la main, et un organisme qui n'y figure pas peut proposer son événement. Deux liens : « Voir les sources lues ↓ » (défilement jusqu'à la table, sans animation si le mouvement est réduit, titre surligné un instant ; la section reçoit `id="sources"`) et « Proposer un événement » (ferme le panneau et ouvre le formulaire, comme le bouton jaune).
+- Clic pour ouvrir ou fermer (ça marche au téléphone et au clavier) ; la croix ou la touche Échap (quand le focus est dans le panneau ou sur son bouton, pas ailleurs : la recherche garde son Échap) ferment et rendent le focus au bouton ; à l'ouverture, le focus va au titre du panneau. `aria-expanded` et `aria-controls` sur le bouton.
+- Seulement dans la section « tout » : le panneau mène à la table des sources, qui n'existe que là. Avec `section="agenda"`, le bandeau n'a que l'abonnement et « Proposer un événement ».
+
+### Livraison
+- Numéro de version 0.5.1 (`rsn-veille.php`, `RSN_VEILLE_VERSION`) ; `LISEZMOI.md` et guide d'installation à jour (bandeau, version, section « Après la mise à jour de la 0.5.0 vers la 0.5.1») ; textes anglais ajoutés au `.po`, `.mo` recompilé.
+- Bouchon de test `esc_url` : second paramètre (liste de protocoles) pris en charge, comme dans WordPress ; sans lui, le bouchon n'accepte toujours que http, https et mailto.
+- Parcours de vérification manuelle (`tests/manuel/PARCOURS.md`, étape 33) et `tests/manuel/verifier-public.md` mis à jour (`?ver=0.5.1`).
+- 664 tests PHPUnit ; le script (ouverture, fermeture, Échap, focus, copie y compris refus du presse-papiers, lien vers les sources) a été essayé dans un faux DOM, hors du dépôt. Le rendu réel et l'abonnement dans Calendrier, Outlook et Google ne sont vérifiables que sur rsn.quebec : le parcours manuel n'a pas encore été déroulé.
+
 ## 0.5.0 (2026-10-28)
 
 La bande « Prochains événements » de l'accueil de rsn.quebec, en français et en anglais, devient un code court de l'extension : `[rsn_veille_accueil]` (conception : `docs/superpowers/specs/2026-10-28-bande-accueil-0.5-design.md`, maquette : variante A de `docs/maquette/accueil-v1.html`). Elle remplace `[rsn_events_cards limit="3"]` du thème enfant, qui reste disponible. Aucune migration : rien à refaire dans les réglages, et les caches de la page Veille, de l'accueil et de leurs traductions sont vidés au premier chargement de wp-admin avec la nouvelle version. **Le remplacement du code court est à faire par l'équipe dans Elementor**, sur l'accueil français (page 152) et sur sa traduction anglaise (page 1147) ; le guide d'installation, section 6, dit comment. Les clés du JSON public `/wp-json/rsn/v1/veille` sont inchangées.

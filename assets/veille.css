@@ -37,7 +37,26 @@
 .rsn-veille .bandeau{background:var(--navy);color:#fff;padding-block:12px 30px;box-shadow:0 0 0 100vmax var(--navy);clip-path:inset(-1px -100vmax 0)}
 .rsn-veille .bandeau .tete{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:18px 40px}
 .rsn-veille .bandeau p{margin:0;max-width:56ch;font-size:15.5px;line-height:1.5;color:rgba(255,255,255,.82)}
-.rsn-veille .bandeau .act{display:flex;flex-wrap:wrap;gap:12px}
+.rsn-veille .bandeau .act{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.rsn-veille .bandeau .boutons{display:flex;flex-wrap:wrap;align-items:normal;gap:12px;margin-top:0}
+/* Ligne sous les boutons : ajout à Google Agenda et copie de l'adresse (le bouton « S'abonner » ouvre l'abonnement webcal://). */
+.rsn-veille .bandeau .autres{font-size:12.5px;line-height:1.5;color:rgba(255,255,255,.75);display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:flex-end}
+.rsn-veille.rsn-veille .bandeau .autres a,.rsn-veille.rsn-veille .bandeau .autres button{color:#fff;background:none;border:0;padding:0;font-size:12.5px;font-weight:600;text-decoration:underline;text-decoration-color:rgba(255,255,255,.45);text-underline-offset:3px}
+.rsn-veille.rsn-veille .bandeau .autres a:hover,.rsn-veille.rsn-veille .bandeau .autres button:hover{color:#fff;text-decoration-color:var(--yellow)}
+.rsn-veille .bandeau .copie{color:var(--yellow);font-weight:600}
+/* Point « Comment ça marche » au bout de l'intro, et panneau déplié sous la tête du bandeau (pas de bulle flottante :
+   le clip-path du bandeau la couperait). */
+.rsn-veille.rsn-veille .bandeau .info-btn{display:inline-flex;align-items:center;gap:6px;vertical-align:1px;margin-left:6px;border:1px solid rgba(255,255,255,.55);background:transparent;color:#fff;border-radius:999px;padding:1px 9px 1px 3px;font-size:12.5px;font-weight:600;line-height:20px}
+.rsn-veille .bandeau .info-btn svg{width:16px;height:16px;flex:0 0 auto}
+.rsn-veille.rsn-veille .bandeau .info-btn:hover,.rsn-veille.rsn-veille .bandeau .info-btn[aria-expanded="true"]{background:rgba(255,255,255,.12);border-color:#fff}
+.rsn-veille .bandeau .panneau{margin-top:18px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.22);border-radius:14px;padding:16px 20px;max-width:820px;color:rgba(255,255,255,.88);font-size:14.5px;line-height:1.5}
+.rsn-veille .bandeau .panneau h2{margin:0 0 6px;font-family:var(--sans);font-size:15px;line-height:1.4;font-weight:700;color:#fff;text-wrap:wrap}
+.rsn-veille .bandeau .panneau p{margin:0 0 8px;max-width:72ch;font-size:inherit;color:inherit}
+.rsn-veille .bandeau .panneau ul{margin:4px 0 10px;padding-left:18px;list-style:disc;display:grid;gap:3px}
+.rsn-veille .bandeau .panneau .liens{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:4px}
+.rsn-veille.rsn-veille .bandeau .panneau .liens a,.rsn-veille.rsn-veille .bandeau .panneau .liens button{color:#fff;font-weight:600;font-size:14px;background:none;border:0;padding:0;text-decoration:underline;text-decoration-color:var(--yellow);text-underline-offset:3px}
+.rsn-veille.rsn-veille .bandeau .panneau .fermer{float:right;margin:-6px -8px 0 10px;width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:#fff;font-size:20px;line-height:1}
+.rsn-veille.rsn-veille .bandeau .panneau .fermer:hover{background:rgba(255,255,255,.12)}
 .rsn-veille.rsn-veille .btn{display:inline-flex;align-items:center;gap:9px;padding:11px 20px;border-radius:10px;background:var(--yellow-tint);color:var(--ink);font-weight:600;font-size:14.5px;border:1px solid transparent;transition:background .2s,border-color .2s}
 .rsn-veille.rsn-veille .btn svg{width:15px;height:15px;color:var(--yellow-ink);transition:transform .2s}
 .rsn-veille.rsn-veille .btn:hover{border-color:var(--yellow-ink);background:#fff}
@@ -198,6 +217,9 @@
 
 /* Sources */
 .rsn-veille .sources{margin:64px 0 60px}
+.rsn-veille .sources{scroll-margin-top:96px}
+/* Arrivée par le lien « Voir les sources lues » du panneau : le titre est surligné un instant. */
+.rsn-veille .sources:target .shead h2,.rsn-veille .sources.surligne .shead h2{background:var(--yellow-tint);border-radius:6px;padding:0 6px;margin-left:-6px}
 .rsn-veille .tableau{overflow-x:auto}
 .rsn-veille .sources table{width:100%;border-collapse:collapse;font-size:14px}
 .rsn-veille .sources th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;padding:10px 12px 8px 0;border-bottom:1px solid var(--rule)}
@@ -281,6 +303,8 @@
 @media (prefers-reduced-motion:reduce){.rsn-veille.rsn-veille .btn,.rsn-veille.rsn-veille .btn svg{transition:none}.rsn-veille .limites .defile{scroll-behavior:auto}}
 @media (max-width:820px){
   .rsn-veille .deux{grid-template-columns:minmax(0,1fr);gap:34px}
+  .rsn-veille .bandeau .act{align-items:flex-start}
+  .rsn-veille .bandeau .autres{justify-content:flex-start}
   .rsn-veille .cote{position:static}
   .rsn-veille .ev{grid-template-columns:52px minmax(0,1fr);gap:14px;padding-left:22px}
   .rsn-veille .jour{font-size:22px}
@@ -296,6 +320,8 @@
 
 /* Mêmes règles selon la largeur du bloc lui-même (colonne de contenu étroite dans une fenêtre large). */
 @container rsn-veille (max-width:760px){
+  .rsn-veille .bandeau .act{align-items:flex-start}
+  .rsn-veille .bandeau .autres{justify-content:flex-start}
   .rsn-veille .ev.avec-image{grid-template-columns:52px minmax(0,1fr)}
   .rsn-veille .ev.avec-image .corps{grid-template-columns:minmax(0,1fr)}
   .rsn-veille .ev.avec-image .im{grid-column:1;width:100%;max-width:none;aspect-ratio:16/9;max-height:none;min-height:0;align-self:start;border-radius:10px 10px 0 0}

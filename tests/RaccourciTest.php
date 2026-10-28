@@ -44,7 +44,7 @@ final class RaccourciTest extends TestCase {
         $this->publier();
         $html = do_shortcode('[rsn_veille]');
 
-        $this->assertStringStartsWith('<div class="rsn-veille" lang="fr" role="region" aria-label="Veille de l&#039;écosystème" data-section="tout" data-une="1">', trim($html));
+        $this->assertStringStartsWith('<div class="rsn-veille" lang="fr" role="region" aria-label="Agenda de l&#039;écosystème" data-section="tout" data-une="1">', trim($html));
         $this->assertStringNotContainsString('<main', $html, 'le gabarit du site a déjà son <main>');
         $donnees = $this->donnees_incorporees($html);
         $this->assertSame(['genere_le', 'langue', 'sources', 'items'], array_keys($donnees));
@@ -180,7 +180,7 @@ final class RaccourciTest extends TestCase {
         $this->assertStringNotContainsString('id="vue-appels"', $html);
 
         $this->assertStringContainsString('<div class="bandeau">', $html);
-        $this->assertStringContainsString('<a class="btn clair" href="https://exemple.test/veille.ics">', $html);
+        $this->assertStringContainsString('<a class="btn clair" href="webcal://exemple.test/veille.ics">', $html);
         $this->assertStringContainsString("S&#039;abonner au calendrier", $html);
         $this->assertStringContainsString('<button class="btn jaune" id="btn-proposer" type="button">', $html);
         $this->assertStringNotContainsString('class="actions"', $html);
@@ -208,6 +208,63 @@ final class RaccourciTest extends TestCase {
                 $this->assertGreaterThan($positions[$i - 1], $position, $ordre[$i] . ' après ' . $ordre[$i - 1]);
             }
         }
+    }
+
+    public function test_abonnement_webcal_lien_google_et_copie_dans_le_bandeau(): void {
+        foreach (['tout', 'agenda'] as $section) {
+            Raccourci::reinitialiser();
+            $html = Raccourci::rendre(['section' => $section]);
+            $this->assertStringContainsString('<a class="btn clair" href="webcal://exemple.test/veille.ics">', $html, $section);
+            $this->assertStringNotContainsString('href="https://exemple.test/veille.ics"', $html, $section . ' : plus de téléchargement direct');
+            // Ligne « autres » sous les boutons, dans .act : Google Agenda (adresse webcal encodée) et copie.
+            $this->assertMatchesRegularExpression('#<div class="act">\s*<div class="boutons">.*?</div>\s*<div class="autres">#s', $html, $section);
+            $this->assertStringContainsString('<span>Google Agenda :</span>', $html, $section);
+            $this->assertStringContainsString('<a href="https://calendar.google.com/calendar/render?cid=webcal%3A%2F%2Fexemple.test%2Fveille.ics" target="_blank" rel="noopener">ajouter</a>', $html, $section);
+            $this->assertStringContainsString('<button type="button" class="copier" id="rsn-veille-copier" data-adresse="https://exemple.test/veille.ics">Copier l’adresse</button>', $html, $section);
+            $this->assertStringContainsString('<span class="copie" id="rsn-veille-copie" role="status" hidden></span>', $html, $section);
+        }
+        Raccourci::reinitialiser();
+        $appels = Raccourci::rendre(['section' => 'appels']);
+        $this->assertStringNotContainsString('webcal://', $appels, 'pas de bandeau dans la section appels');
+        $this->assertStringNotContainsString('rsn-veille-copier', $appels);
+    }
+
+    public function test_point_d_information_et_panneau_dans_le_bandeau_de_la_section_tout(): void {
+        $html = Raccourci::rendre([]);
+
+        // Bouton à la fin du paragraphe d'intro du bandeau.
+        $this->assertStringContainsString('Digital Health Canada. Les appels de financement et de candidatures y figurent avec leur date limite.<button type="button" class="info-btn" id="rsn-veille-info" aria-expanded="false" aria-controls="rsn-veille-panneau">', $html);
+        $this->assertStringContainsString('<span>Comment ça marche</span></button></p>', $html);
+        // Panneau caché, juste après .tete, dans le .wrap du bandeau.
+        $this->assertMatchesRegularExpression('#</div>\s*<div class="panneau" id="rsn-veille-panneau" hidden>\s*<button type="button" class="fermer" id="rsn-veille-fermer" aria-label="Fermer">×</button>\s*<h2 tabindex="-1">Un agenda tenu par une veille semi-automatique</h2>#s', $html);
+        $this->assertStringContainsString('Chaque nuit, l’agenda lit les sites qui publient leurs événements de façon structurée :', $html);
+        $this->assertStringContainsString('<li>des calendriers en ligne et des flux RSS ;</li>', $html);
+        $this->assertStringContainsString('<li>des pages d’événements bien organisées ;</li>', $html);
+        $this->assertStringContainsString('<li>les événements et les appels du RSN.</li>', $html);
+        $this->assertStringContainsString('proposez-nous l’événement.</p>', $html);
+        $this->assertStringContainsString('<a href="#sources">Voir les sources lues ↓</a>', $html);
+        $this->assertStringContainsString('<button type="button" id="rsn-veille-panneau-proposer">Proposer un événement</button>', $html);
+        // La section des sources porte l'ancre.
+        $this->assertStringContainsString('<section class="sources" id="sources">', $html);
+        // Ordre : .tete, panneau, puis la fin du bandeau.
+        $this->assertLessThan(strpos($html, 'id="rsn-veille-panneau"'), strpos($html, 'class="tete"'));
+        $this->assertLessThan(strpos($html, 'class="alaune"'), strpos($html, 'id="rsn-veille-panneau"'));
+    }
+
+    public function test_pas_de_point_d_information_ni_de_panneau_sans_la_section_des_sources(): void {
+        foreach (['agenda', 'appels'] as $section) {
+            Raccourci::reinitialiser();
+            $html = Raccourci::rendre(['section' => $section]);
+            foreach (['rsn-veille-info', 'rsn-veille-panneau', 'info-btn', 'Voir les sources lues', 'id="sources"', 'aria-controls'] as $absent) {
+                $this->assertStringNotContainsString($absent, $html, $section . ' : ' . $absent);
+            }
+        }
+        Raccourci::reinitialiser();
+        $this->assertStringContainsString('id="btn-proposer"', Raccourci::rendre(['section' => 'agenda']), 'le bandeau et son abonnement restent');
+    }
+
+    public function test_textes_du_script_pour_la_copie(): void {
+        $this->assertSame('Adresse copiée', Raccourci::textes()['adresse_copiee']);
     }
 
     public function test_rendu_a_des_div_equilibres_pour_chaque_section(): void {

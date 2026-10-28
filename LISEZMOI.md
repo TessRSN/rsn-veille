@@ -1,12 +1,12 @@
 # RSN : veille de l'écosystème
 
-Extension WordPress du Réseau santé numérique (RSN), version 0.5.0. Elle collecte des sources externes (flux RSS, calendriers, pages publiques, The Events Calendar), en tire des fiches d'actualités, d'événements et d'appels, puis les présente sur une page publique « Événements et appels » (raccourci `[rsn_veille]`), en français et en anglais, et la bande « Prochains événements » de l'accueil (code court `[rsn_veille_accueil]`). L'équipe approuve les fiches dans wp-admin (menu **Veille**), repère des nouvelles dans le Radar, prépare les blocs de l'infolettre et, si elle le veut, reçoit un courriel hebdomadaire.
+Extension WordPress du Réseau santé numérique (RSN), version 0.5.1. Elle collecte des sources externes (flux RSS, calendriers, pages publiques, The Events Calendar), en tire des fiches d'actualités, d'événements et d'appels, puis les présente sur une page publique « Événements et appels » (raccourci `[rsn_veille]`), en français et en anglais, et la bande « Prochains événements » de l'accueil (code court `[rsn_veille_accueil]`). L'équipe approuve les fiches dans wp-admin (menu **Veille**), repère des nouvelles dans le Radar, prépare les blocs de l'infolettre et, si elle le veut, reçoit un courriel hebdomadaire.
 
 Les règles de confiance, la priorité des niveaux (A, C, M, B) et la conception complète se trouvent dans `docs/superpowers/specs/2026-10-25-veille-ecosysteme-design.md`. Pour installer l'extension sur un site, passer à la page rsn.quebec et dépanner, voir **`docs/installation-et-bascule.md`**. Le dossier `docs/` (ce guide compris) n'est pas dans le zip de l'extension : il se lit dans le dépôt GitHub, https://github.com/TessRSN/rsn-veille. L'historique des versions est dans `CHANGELOG.md`.
 
 ## La page publique
 
-Le raccourci `[rsn_veille]` rend, dans l'ordre : le bandeau (une courte intro et deux boutons, « S'abonner au calendrier », lien vers `/veille.ics`, et « Proposer un événement »), la bande « À la une du RSN », le formulaire de proposition (fermé tant qu'on ne le demande pas), la bande « Dates limites », puis deux colonnes (filtres à gauche, liste ou calendrier à droite) et « Sources lues ». Sur le thème Vault (UiCore) de rsn.quebec, le bandeau prolonge l'en-tête de la page : même bleu `#003469`, sans écart blanc, comme « À la une » (voir `docs/installation-et-bascule.md`, section 4, pour la classe `rsn-veille-page` qui le permet).
+Le raccourci `[rsn_veille]` rend, dans l'ordre : le bandeau (une courte intro et deux boutons, « S'abonner au calendrier », un lien `webcal://` vers `/veille.ics` (`/en/veille.ics` en anglais) qui ouvre un abonnement dans Calendrier ou Outlook, et « Proposer un événement » ; dessous, « Google Agenda : ajouter » et « Copier l'adresse » ; et, dans la section « tout » seulement, le point « Comment ça marche » qui déplie un court texte sur la veille semi-automatique, avec un lien vers « Sources lues »), la bande « À la une du RSN », le formulaire de proposition (fermé tant qu'on ne le demande pas), la bande « Dates limites », puis deux colonnes (filtres à gauche, liste ou calendrier à droite) et « Sources lues ». Sur le thème Vault (UiCore) de rsn.quebec, le bandeau prolonge l'en-tête de la page : même bleu `#003469`, sans écart blanc, comme « À la une » (voir `docs/installation-et-bascule.md`, section 4, pour la classe `rsn-veille-page` qui le permet).
 
 - **À la une du RSN** : les trois prochains éléments organisés par le RSN (événements à venir ou en cours, et appels en cours qui ont une date limite), triés par date, avec les étiquettes « Événement RSN », « Nouveau » ou « Ferme dans N jours ». Même bleu que le bandeau, jusqu'aux bords de la fenêtre, sans élargir la page ; absente s'il n'y a rien à montrer.
 - **Dates limites** : une puce par appel en cours qui a une date limite, triées par date ; deux flèches (gauche et droite) font défiler les puces.
@@ -60,7 +60,7 @@ docs/                     devis, plan, inventaire des sources, maquette, guide d
 
 - `composer install` (installe PHPUnit, dépendance de développement seulement), puis **`composer test`**. Les classes pures de `includes/` sont testées sans WordPress grâce à `tests/bootstrap.php` et `tests/bouchons-wordpress.php`.
 - Le bouchon de WordPress est **une imitation, pas la référence** : il peut différer du vrai WordPress (échappement, `wp_date`, requêtes de fiches, `kses`). Ce qui touche WordPress lui-même (menus, AJAX, cron, formulaire, médiathèque, mails) se vérifie dans un WordPress réel avec les listes de `tests/manuel/` : **`tests/manuel/PARCOURS.md`** les enchaîne dans l'ordre du parcours (`verifier-admin.md`, `verifier-public.md` et deux scripts `wp eval-file`).
-- Les tests tournent avec la version de PHP de la machine (le verrou Composer vise PHP 8.0.30) ; il n'y a pas d'intégration continue en 0.5.0.
+- Les tests tournent avec la version de PHP de la machine (le verrou Composer vise PHP 8.0.30) ; il n'y a pas d'intégration continue en 0.5.1.
 
 ## Lancer wp-env
 
@@ -71,12 +71,12 @@ Pour essayer l'extension dans un WordPress local, il faut Docker et `@wordpress/
 Le zip de l'extension se fabrique à partir d'un commit, sans tests ni documents de conception :
 
 ```
-git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.5.0.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
+git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.5.1.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
 ```
 
 (les fichiers `rsn-veille-*.zip` sont ignorés par Git). Le guide d'installation décrit aussi l'installation depuis GitHub (WP Pusher ou Git Updater).
 
-## Limites connues de la version 0.5.0
+## Limites connues de la version 0.5.1
 
 - **File d'approbation** : pas de pagination ; les onglets « Publiées » et « Écartées » montrent les 200 fiches les plus récentes (les compteurs restent exacts), « À approuver » et « À vérifier » sont chargés en entier ; la liste des sources du filtre ne reprend que celles de l'onglet affiché ; un statut changé dans l'éditeur WordPress ne marque pas la fiche comme traitée à la main ; « À approuver » et « À vérifier » sont triées par le jour d'arrivée (`cree_le`) : une fiche sans jour d'arrivée prend le jour de son post (qui suit la date de l'événement) ; le repère « Nouveau » a la granularité du jour (arrivée aujourd'hui ou hier) ; un menu absent à la première requête après une mise à jour sans réactivation (recharger la page).
 - **Courriel hebdomadaire** : la fenêtre de 7 jours peut se chevaucher d'un courriel à l'autre (une fiche peut figurer dans deux courriels) ; les fiches approuvées dans la semaine comptent comme « publiées automatiquement » ; les fiches créées avant le champ `cree_le` n'y figurent pas ; les destinataires sont visibles les uns des autres.

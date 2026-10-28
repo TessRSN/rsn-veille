@@ -45,7 +45,7 @@ function animer(racine, noeudDonnees) {
   // Langue de la page (« fr » ou « en ») : un JSON incorporé plus ancien n'a pas ce champ, on retombe sur « fr ».
   const LANGUE = D.langue === 'en' ? 'en' : 'fr';
   // Gabarits de date en français, pour une page servie depuis un cache plus ancien que ce script (textes sans ces clés).
-  const DEFAUT = { date_longue: '%1$s %2$s %3$s', date_courte: '%1$s %2$s %3$s', heure: '%1$s h %2$s', premier_du_mois: '1er', du_au_meme_mois: 'Du %1$s au %2$s %3$s %4$s', du_au: 'Du %1$s au %2$s', en_francais: 'En français' };
+  const DEFAUT = { date_longue: '%1$s %2$s %3$s', date_courte: '%1$s %2$s %3$s', heure: '%1$s h %2$s', premier_du_mois: '1er', du_au_meme_mois: 'Du %1$s au %2$s %3$s %4$s', du_au: 'Du %1$s au %2$s', en_francais: 'En français', adresse_copiee: 'Adresse copiée' };
   // Textes : « %d » reçoit le nombre, « %1$s », « %2$s »… la valeur de ce rang (l'ordre peut changer à la
   // traduction), un « %s » simple la valeur suivante ; pluriel : 2 et plus en français, tout sauf 1 en anglais
   // (comme plural=(n != 1) du .po anglais : 0 prend le pluriel).
@@ -485,6 +485,64 @@ function animer(racine, noeudDonnees) {
   }
   on('#btn-proposer', 'click', ouvrirFormulaire);
   on('#btn-annuler', 'click', () => { effacerErreurs(); $('#dialogue').hidden = true; });
+
+  // Abonnement au calendrier : « Copier l'adresse » copie l'adresse https:// du calendrier de la langue (data-adresse) ;
+  // le retour (role="status") dit « Adresse copiée » 2,5 s, ou, si le presse-papiers est refusé, affiche l'adresse elle-même.
+  let minuterieCopie = 0, minuterieTexte = 0;
+  on('#rsn-veille-copier', 'click', () => {
+    const adresse = $('#rsn-veille-copier').dataset.adresse || '';
+    const retour = $('#rsn-veille-copie');
+    if (!retour) return;
+    // « Adresse copiée » disparaît après 2,5 s ; l'adresse affichée par le repli reste jusqu'au clic suivant (pour la sélectionner).
+    const dire = (texte, temporaire) => {
+      clearTimeout(minuterieCopie); clearTimeout(minuterieTexte);
+      // Région visible d'abord, texte ensuite : un lecteur d'écran n'annonce pas un texte posé en même temps que l'affichage.
+      retour.textContent = ''; retour.hidden = false;
+      minuterieTexte = setTimeout(() => { retour.textContent = texte; }, 50);
+      if (temporaire) minuterieCopie = setTimeout(() => { retour.hidden = true; retour.textContent = ''; }, 2500);
+    };
+    clearTimeout(minuterieCopie); clearTimeout(minuterieTexte);
+    try {
+      navigator.clipboard.writeText(adresse).then(() => dire(t('adresse_copiee'), true), () => dire(adresse, false));
+    } catch (e) { dire(adresse, false); }
+  });
+
+  // Point « Comment ça marche » : panneau déplié dans le bandeau (section « tout » seulement, avec la table des sources).
+  const boutonInfo = $('#rsn-veille-info');
+  const panneau = $('#rsn-veille-panneau');
+  if (boutonInfo && panneau) {
+    const titrePanneau = panneau.querySelector('h2');
+    const ouvrirPanneau = ouvert => {
+      panneau.hidden = !ouvert;
+      boutonInfo.setAttribute('aria-expanded', ouvert ? 'true' : 'false');
+      if (ouvert && titrePanneau) titrePanneau.focus();
+    };
+    // Fermer par la croix ou Échap rend le focus au bouton qui avait ouvert le panneau.
+    const fermerPanneau = () => { ouvrirPanneau(false); boutonInfo.focus(); };
+    boutonInfo.addEventListener('click', () => ouvrirPanneau(panneau.hidden));
+    on('#rsn-veille-fermer', 'click', fermerPanneau);
+    // Échap ne ferme le panneau que si le focus est dedans ou sur son bouton : ailleurs (recherche qu'on vide, formulaire),
+    // il garde son sens et ne vole pas le focus.
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !panneau.hidden && (panneau.contains(document.activeElement) || document.activeElement === boutonInfo)) fermerPanneau();
+    });
+    // « Voir les sources lues » : défilement jusqu'à la table (sans animation si le mouvement est réduit), titre surligné un instant.
+    let minuterieSurlignage = 0;
+    const lienSources = panneau.querySelector('a[href="#sources"]');
+    if (lienSources) lienSources.addEventListener('click', e => {
+      const cible = $('#sources');
+      if (!cible) return;
+      e.preventDefault();
+      cible.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      const titre = cible.querySelector('h2');
+      if (titre) { titre.setAttribute('tabindex', '-1'); titre.focus({ preventScroll: true }); }
+      cible.classList.add('surligne');
+      clearTimeout(minuterieSurlignage);
+      minuterieSurlignage = setTimeout(() => cible.classList.remove('surligne'), 2200);
+    });
+    // Le formulaire s'ouvre plus bas : le panneau se referme (sans rendre le focus, qui va au titre du formulaire).
+    on('#rsn-veille-panneau-proposer', 'click', () => { ouvrirPanneau(false); ouvrirFormulaire(); });
+  }
   on('#form-proposition', 'submit', async e => {
     e.preventDefault();
     const bouton = form.querySelector('[type="submit"]');

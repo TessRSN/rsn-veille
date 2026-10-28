@@ -21,7 +21,7 @@ WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se lancent par `n
 
 ## Page publique
 
-- [ ] La page affiche l'intro, « S'abonner au calendrier » (lien vers `/veille.ics`) et « Proposer un
+- [ ] La page affiche l'intro, « S'abonner au calendrier » (lien `webcal://…/veille.ics`) et « Proposer un
       événement », la bande « À la une du RSN », la bande « Dates limites », puis la colonne de filtres
       (recherche, **Afficher**, **Qui organise**, Mois avec « Plus tard » et « Événements passés », Format, Lieu,
       Thèmes repliés à six avec « Plus… », Organisateur, Réinitialiser), la liste unifiée et « Sources lues ».
@@ -114,7 +114,7 @@ débit : `wp transient list --search='rsn_veille_debit_*'` puis `wp transient de
 
 ## Ressources et cohabitation
 
-- [ ] Sur la page Veille, `veille.css` et `veille.js` sont chargés avec `?ver=0.5.0` (onglet Réseau) ;
+- [ ] Sur la page Veille, `veille.css` et `veille.js` sont chargés avec `?ver=0.5.1` (onglet Réseau) ;
       sur une autre page du site (accueil, Nouvelles), ni l'un ni l'autre.
 - [ ] Les polices Google ne sont pas chargées une seconde fois par l'extension (pas de feuille
       `rsn-veille-polices`) ; `add_filter('rsn_veille_charger_polices', '__return_true')` dans un
@@ -137,6 +137,14 @@ débit : `wp transient list --search='rsn_veille_debit_*'` puis `wp transient de
 - [ ] `curl -i http://localhost:8888/veille.ics` : 200 sans redirection vers `/veille.ics/`, `Content-Type: text/calendar; charset=utf-8`,
       `Content-Disposition: inline; filename="veille.ics"`, fins de ligne CRLF (`curl -s … | od -c | head`).
 - [ ] Le fichier passe le validateur https://icalendar.org/validator.html.
+- [ ] Le bouton « S'abonner au calendrier » est un lien `webcal://…/veille.ics` (`/en/veille.ics` sur la page anglaise) : il
+      ouvre un abonnement dans Calendrier ou Outlook, sans télécharger de fichier. À côté, « Google Agenda : ajouter » ouvre la
+      page d'ajout de Google (nouvel onglet) avec l'adresse remplie, et « Copier l'adresse » copie `https://…/veille.ics` (retour
+      « Adresse copiée », ou l'adresse elle-même si le presse-papiers est refusé). Le calendrier s'appelle « Agenda de
+      l'écosystème RSN » (« RSN ecosystem calendar »).
+- [ ] Point « Comment ça marche » (section `tout`) : le panneau s'ouvre au clic, se ferme par la croix et par Échap (focus
+      rendu au bouton), « Voir les sources lues » mène à « Sources lues » en surlignant son titre, « Proposer un événement »
+      ouvre le formulaire. Absent avec `section="agenda"` (le reste du bandeau y est). Détail : `PARCOURS.md`, étape 33.
 - [ ] Abonnement dans Google Agenda, Apple Calendrier ou Outlook (URL publique, ou import du fichier) :
       événements d'une journée sur la bonne date (sans décalage d'un jour), événements à heure à la
       bonne heure de Montréal, deux heures, lieu, description et lien ; un second import ne crée pas

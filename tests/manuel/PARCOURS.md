@@ -1,4 +1,4 @@
-# Parcours de vérification de bout en bout (version 0.5.0)
+# Parcours de vérification de bout en bout (version 0.5.1)
 
 Ce parcours enchaîne, dans l'ordre d'un vrai usage, toutes les listes de vérification manuelles :
 `verifier-admin.md` (administration), `verifier-public.md` (page publique, formulaire, REST et iCal) et
@@ -191,7 +191,7 @@ est vide pour la page Veille choisie.
     (la bande ne doit causer aucun défilement horizontal). Consigner tout écart dans le tableau des écarts.
     Vérifier aussi à 375 px (cartes empilées).
 12. Section **Ressources et cohabitation** de `verifier-public.md` : ressources seulement sur la page Veille
-    (chargées avec `?ver=0.5.0`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
+    (chargées avec `?ver=0.5.1`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
     si installé (la page anglaise a ses propres points, 24 à 32).
 13. Section **REST et iCal** : `/wp-json/rsn/v1/veille` (aucune clé retirée), `/veille.ics` (CRLF, en-têtes,
     validateur iCal, abonnement dans un agenda).
@@ -202,7 +202,7 @@ est vide pour la page Veille choisie.
     et il n'est pas à la une du RSN.
 15. **Purge à la mise à jour** : `wp option delete rsn_veille_version`, puis charger une page de wp-admin ; le transient
     `rsn_veille_json_fr` a disparu (`wp transient get rsn_veille_json_fr` ne rend rien) et
-    `wp option get rsn_veille_version` rend `0.5.0`. Un second chargement ne purge plus.
+    `wp option get rsn_veille_version` rend `0.5.1`. Un second chargement ne purge plus.
 16. **Bandeau continu** (version 0.3.0 ; exige le thème Vault, absent de wp-env : à faire sur rsn.quebec, sur la page
     ordinaire avec un bloc Code court, renommée « Événements et appels », fenêtre large) :
     - aucun écart blanc entre l'en-tête du thème (fil d'Ariane et titre) et l'intro du bandeau, ni entre l'intro, les
@@ -262,7 +262,7 @@ est vide pour la page Veille choisie.
     et messages d'erreur du script. Dates : « October 1, 2026 », « October 4–18, 2026 », « Nov. 5, 2026 », heure
     « 8:00 », tuiles aux mois courts anglais (« Jan. », « Feb. », « Sept. »…). Le format (« In person », « Virtual »,
     « Hybrid ») est traduit sur les pastilles, les cartes et la bande « À la une ». Thèmes et organisateurs restent en
-    français (limite connue). Le nom du calendrier `/en/veille.ics` est « RSN ecosystem monitoring ». **Page française** : aucun texte changé, sauf l'heure (« 8 h 00 » et non « 08 h 00 »).
+    français (limite connue). Le nom du calendrier `/en/veille.ics` est « RSN ecosystem calendar » (« Agenda de l'écosystème RSN » pour `/veille.ics`). **Page française** : aucun texte changé, sauf l'heure (« 8 h 00 » et non « 08 h 00 »).
 26. **Événements du RSN en anglais** : un événement du RSN dont la traduction anglaise existe y paraît une seule
     fois, avec le titre, le résumé, le lieu et le lien `/en/evenement/…` de la version anglaise, l'image de la
     fiche, et sans pastille de langue ; l'événement collecté depuis rsn.quebec (fiche avec image) ne fait pas de
@@ -282,7 +282,7 @@ est vide pour la page Veille choisie.
     dans l'éditeur d'une fiche.
 30. **iCal anglais** : `/en/veille.ics` répond en 200 (CRLF, `Content-Type: text/calendar`), avec les titres et les
     liens anglais des événements du RSN ; `/veille.ics` reste en français. Le bouton « Subscribe to the calendar »
-    de la page anglaise pointe vers `/en/veille.ics`.
+    de la page anglaise pointe vers `/en/veille.ics` (en `webcal://`, voir l'étape 33).
 31. **Page française sans doublon anglais** : « RSN Scientific Days » n'est plus à côté de « Journées scientifiques
     RSN » (30 mars 2026), et aucun événement du RSN n'y paraît en double ; le JSON français (`?lang=fr`) n'a plus
     d'événement du RSN en `langue` `en`.
@@ -290,11 +290,34 @@ est vide pour la page Veille choisie.
     `?lang=fr` le contenu français depuis n'importe quelle adresse ; une valeur autre (`?lang=de`) est ignorée ; le
     changement de langue d'une requête n'affecte pas la page servie ensuite. L'infolettre (Veille › Infolettre)
     reste en français, même administrateur connecté en locale anglaise.
+33. **Abonnement au calendrier et point « Comment ça marche »** (version 0.5.1), sur la page française puis sur la page
+    anglaise (exiger un navigateur de bureau et, si possible, un iPhone) :
+    - *Abonnement Apple / Outlook* : « S'abonner au calendrier » (« Subscribe to the calendar ») ne télécharge plus de
+      fichier : le lien commence par `webcal://` (`…/veille.ics`, `…/en/veille.ics` en anglais) et ouvre Calendrier (Mac,
+      iPhone) ou Outlook sur une demande d'abonnement. Le calendrier s'appelle « Agenda de l'écosystème RSN » (« RSN
+      ecosystem calendar »), et de nouveaux événements y arrivent sans nouvelle importation.
+    - *Google Agenda* : sous les boutons, « Google Agenda : ajouter » (« Google Calendar: add ») s'ouvre dans un nouvel
+      onglet sur la page d'ajout de Google, avec l'adresse du calendrier de la langue déjà remplie.
+    - *Copie* : « Copier l'adresse » (« Copy the address ») affiche « Adresse copiée » (« Address copied ») environ 2,5 s ;
+      coller donne `https://…/veille.ics` (`/en/` en anglais). Pour voir le repli, refuser la permission du presse-papiers
+      (sur wp-env, `http://localhost` est un contexte sûr : la copie y marche) : le retour montre alors l'adresse elle-même, et elle
+      y reste jusqu'au clic suivant (elle se sélectionne).
+    - *Point d'information* : « Comment ça marche » (« How it works »), au bout de l'intro du bandeau, déplie un panneau
+      dans le bandeau (texte, trois puces, deux liens) ; le focus va au titre du panneau. La croix et la touche Échap (le focus étant dans le panneau
+      ou sur le bouton ; Échap dans la recherche ne ferme rien et ne déplace pas le focus) le
+      ferment et rendent le focus au bouton (le clavier : Tab, Entrée ; Maj + Tab passe à la croix, puis aux commandes d'abonnement).
+    - *Liens du panneau* : « Voir les sources lues ↓ » (« See the sources we read ↓ ») fait défiler jusqu'à « Sources lues »
+      (sans animation avec « réduire les animations » activé dans le système) et surligne son titre un instant ;
+      « Proposer un événement » ferme le panneau et ouvre le formulaire comme le bouton jaune.
+    - *Autres sections* : sur une page avec `[rsn_veille section="agenda"]`, le point d'information et le panneau n'existent
+      pas, l'abonnement (bouton, Google, copie) si ; sur `section="appels"`, pas de bandeau.
+    - *Mise en page* : à droite du bandeau sur ordinateur, à gauche sous 820 px (essayer 375 px) ; aucun défilement
+      horizontal ; le panneau n'est pas coupé par le fond bleu ; contour blanc au clavier.
 
 **Terminé quand** : toutes les cases de ces sections de `verifier-public.md` sont cochées, sauf celles du formulaire
-(étape 8), et chacun des points 4 à 32 ci-dessus donne le résultat attendu.
+(étape 8), et chacun des points 4 à 33 ci-dessus donne le résultat attendu.
 
-## 7 bis. Bande de l'accueil (`[rsn_veille_accueil]`, version 0.5.0)
+## 7 bis. Bande de l'accueil (`[rsn_veille_accueil]`, version 0.5.0, ressources chargées avec la version courante)
 
 Exige une page d'accueil statique (Réglages › Lecture). Sur wp-env, créer une page « Accueil » avec un bloc Code court
 contenant `[rsn_veille_accueil]` et la choisir comme page d'accueil ; sur rsn.quebec, c'est l'accueil français (page 152)
@@ -305,7 +328,7 @@ changement de fiche (`wp transient delete rsn_veille_json_fr` et `rsn_veille_jso
 1. **Rendu et hauteur** (hors connexion, fenêtre de 1 440 px) : trois colonnes, le calendrier du mois, « Au RSN » et
    « Dans l'écosystème ». La bande est nettement plus basse qu'avant (environ 1 040 px pour l'ancienne bande ; mesurer
    la section avec les outils du navigateur et la noter dans le tableau des écarts). `accueil.css` et `accueil.js`
-   sont chargés avec `?ver=0.5.0` (le CSS dans l'en-tête, le script en pied de page) sur l'accueil ; ni `veille.css` ni `veille.js`. Aucune erreur dans la
+   sont chargés avec `?ver=0.5.1` (le CSS dans l'en-tête, le script en pied de page) sur l'accueil ; ni `veille.css` ni `veille.js`. Aucune erreur dans la
    console, aucun défilement horizontal (`document.documentElement.scrollWidth === document.documentElement.clientWidth`).
    **Charger l'accueil sans toucher la souris ni le clavier** : la bande doit se dessiner d'elle-même ; si elle reste vide,
    exclure `accueil.js` du délai du JavaScript de LiteSpeed (LiteSpeed › Optimisation de page › Réglages JS).
