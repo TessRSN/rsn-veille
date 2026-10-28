@@ -256,12 +256,13 @@ est vide pour la page Veille choisie.
     `wp transient get rsn_veille_json_en` se remplit à la première visite (distinct de `rsn_veille_json_fr`).
 25. **Textes et dates en anglais** : bandeau (« Subscribe to the calendar », « Suggest an event »), « Featured by the
     RSN », « Deadlines », filtres (« Show », « Who organizes », « Month », « Format », « Location », « Themes »,
-    « Organizer », « Reset filters »), pastilles (« Event », « Call », « Ongoing », « Deadline to come », « New »,
+    « Organizer », « Reset filters »), pastilles (« Event », « Call », « Ongoing », « Deadline to be announced », « New »,
     « Closes in N days »), boutons (« More information », « View the call »), calendrier (jours, légende,
     « Today »), compteurs (« 12 events and 3 calls to come » ; « 0 events » au pluriel), table des sources, formulaire
     et messages d'erreur du script. Dates : « October 1, 2026 », « October 4–18, 2026 », « Nov. 5, 2026 », heure
-    « 8:00 », tuiles aux mois courts anglais (« Jan. », « Feb. », « Sept. »…). Thèmes et organisateurs restent en
-    français (limite connue). **Page française** : aucun texte changé, sauf l'heure (« 8 h 00 » et non « 08 h 00 »).
+    « 8:00 », tuiles aux mois courts anglais (« Jan. », « Feb. », « Sept. »…). Le format (« In person », « Virtual »,
+    « Hybrid ») est traduit sur les pastilles, les cartes et la bande « À la une ». Thèmes et organisateurs restent en
+    français (limite connue). Le nom du calendrier `/en/veille.ics` est « RSN ecosystem monitoring ». **Page française** : aucun texte changé, sauf l'heure (« 8 h 00 » et non « 08 h 00 »).
 26. **Événements du RSN en anglais** : un événement du RSN dont la traduction anglaise existe y paraît une seule
     fois, avec le titre, le résumé, le lieu et le lien `/en/evenement/…` de la version anglaise, l'image de la
     fiche, et sans pastille de langue ; l'événement collecté depuis rsn.quebec (fiche avec image) ne fait pas de
