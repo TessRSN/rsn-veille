@@ -170,6 +170,24 @@ final class AccueilTest extends TestCase {
         $this->assertNull($sel['rsn'][0]['image_url']);
     }
 
+    public function test_deux_evenements_sans_organisateur_sont_tous_deux_dans_l_ecosysteme(): void {
+        $items = [
+            $this->ev('2026-11-03', ['titre' => 'Sans organisateur 1', 'organisateur' => '']),
+            $this->ev('2026-11-04', ['titre' => 'Sans organisateur 2', 'organisateur' => null]),
+            $this->ev('2026-11-05', ['titre' => 'Espaces seuls', 'organisateur' => '  ']),
+        ];
+        $this->assertSame(['Sans organisateur 1', 'Sans organisateur 2', 'Espaces seuls'], $this->titres(Accueil::selection($items, self::AUJ)['eco']));
+    }
+
+    public function test_organisateur_dont_le_premier_evenement_est_une_serie_longue_commencee_garde_le_suivant(): void {
+        $items = [
+            $this->ev('2026-10-01', ['titre' => 'Cours Mila (série)', 'fin' => '2026-12-15', 'organisateur' => 'Mila']),
+            $this->ev('2026-11-12', ['titre' => 'Colloque Mila', 'organisateur' => 'Mila']),
+            $this->ev('2026-11-20', ['titre' => 'Autre Mila', 'organisateur' => 'Mila']),
+        ];
+        $this->assertSame(['Colloque Mila'], $this->titres(Accueil::selection($items, self::AUJ)['eco']));
+    }
+
     public function test_aucun_rsn_et_liste_vide(): void {
         $sel = Accueil::selection([$this->ev('2026-11-03')], self::AUJ);
         $this->assertSame([], $sel['rsn']);
@@ -383,6 +401,7 @@ final class AccueilTest extends TestCase {
         $this->assertSame('Le %s', $textes['le_jour']);
         $this->assertSame('Tous', $textes['tous']);
         $this->assertSame('Aucun événement ce jour-là.', $textes['aucun_jour']);
+        $this->assertSame('Aucun événement de l\'écosystème à venir.', $textes['aucun_eco']);
         $this->assertSame('Pas d\'événement du RSN à venir pour le moment. Les prochains seront annoncés ici.', $textes['aucun_rsn']);
         $this->assertSame(['+ %d autre événement du RSN →', '+ %d autres événements du RSN →'], $textes['autres_rsn']);
         $this->assertSame('Mois précédent', $textes['mois_precedent']);

@@ -3,7 +3,7 @@
 #   msgfmt --check --statistics -o languages/rsn-veille-en_US.mo languages/rsn-veille-en_US.po
 msgid ""
 msgstr ""
-"Project-Id-Version: rsn-veille 0.4.0\n"
+"Project-Id-Version: rsn-veille 0.5.0\n"
 "Report-Msgid-Bugs-To: \n"
 "PO-Revision-Date: 2026-10-27 12:00-0400\n"
 "Last-Translator: Réseau santé numérique\n"
@@ -263,6 +263,9 @@ msgstr "No events match these filters."
 
 msgid "Aucun événement ce jour-là."
 msgstr "No events on that day."
+
+msgid "Aucun événement de l'écosystème à venir."
+msgstr "No upcoming ecosystem events."
 
 msgid "Aucun appel en cours."
 msgstr "No open calls."

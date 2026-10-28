@@ -30,14 +30,18 @@ function animer(racine) {
 
   const pad = n => String(n).padStart(2, '0');
   const ISO = /^\d{4}-\d{2}-\d{2}$/;
-  // Aujourd'hui : celui du serveur (data-aujourdhui, fuseau de Montréal) ; sinon Montréal calculé ici.
+  // Aujourd'hui : la plus tardive des deux dates, celle du serveur (data-aujourdhui, fuseau de Montréal) et celle de
+  // Montréal calculée ici. La sortie du code court peut être servie un jour plus tard par un cache (Elementor, LiteSpeed) :
+  // la date du serveur ne peut alors que retarder, jamais avancer.
   const AUJ = (() => {
-    if (ISO.test(racine.dataset.aujourdhui || '')) return racine.dataset.aujourdhui;
+    const serveur = ISO.test(racine.dataset.aujourdhui || '') ? racine.dataset.aujourdhui : '';
+    let local = '';
     try {
       const s = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-      if (ISO.test(s)) return s;
+      if (ISO.test(s)) local = s;
     } catch (e) { /* repli ci-dessous */ }
-    const x = new Date(); return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`;
+    if (!local) { const x = new Date(); local = `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`; }
+    return serveur > local ? serveur : local;
   })();
   const LANGUE = D.langue === 'en' || (D.langue !== 'fr' && racine.lang === 'en') ? 'en' : 'fr';
   const MOIS = Array.isArray(T.mois) ? T.mois : ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -68,10 +72,35 @@ function animer(racine) {
   const estRSN = k => k.organise_par === 'rsn';
   const enCours = k => k.debut < AUJ && fin(k) >= AUJ;
 
-  const rsn = valides(D.rsn);
-  const eco = valides(D.eco);
   const calendrier = valides(D.calendrier);
-  const parJourEco = jour => calendrier.filter(k => !estRSN(k) && dansJour(k, jour));
+  // Événements d'un jour, ceux du RSN compris, dans l'ordre du calendrier (début puis titre).
+  const parJour = jour => calendrier.filter(k => dansJour(k, jour));
+
+  // Sélection des colonnes recalculée ici selon AUJ, car le serveur l'a faite à sa date, peut-être celle d'hier.
+  // La référence, testée, est Accueil::selection (PHP) : mêmes règles, à garder identiques. À venir : fin (ou début)
+  // au plus tôt aujourd'hui, sans série de plus de sept jours déjà commencée ; `rsn` = tous les événements du RSN,
+  // triés par début puis titre ; `eco` = les autres, un par organisateur (organisateur vide : jamais regroupé),
+  // quatre au plus. Sans `calendrier` (données anormales), on garde `rsn` et `eco` tels que le serveur les a envoyés.
+  const NB_ECO = 4;
+  const cmp = (a, b) => a < b ? -1 : a > b ? 1 : 0;
+  const comparer = (a, b) => cmp(a.debut, b.debut) || cmp(String(a.titre || '').toLowerCase(), String(b.titre || '').toLowerCase());
+  const aVenir = k => fin(k) >= AUJ && !(longue(k) && enCours(k));
+  let rsn, eco;
+  if (Array.isArray(D.calendrier)) {
+    const venir = calendrier.filter(aVenir).sort(comparer);
+    rsn = venir.filter(estRSN);
+    eco = [];
+    const vus = {};
+    for (const k of venir) {
+      if (estRSN(k) || eco.length >= NB_ECO) continue;
+      const org = String(k.organisateur == null ? '' : k.organisateur).trim();
+      if (org !== '') { if (Object.prototype.hasOwnProperty.call(vus, org)) continue; vus[org] = true; }
+      eco.push(k);
+    }
+  } else {
+    rsn = valides(D.rsn);
+    eco = valides(D.eco);
+  }
 
   // Dates : « 4 novembre 2026 » / « November 4, 2026 », périodes comme l'agenda (gabarits du .po).
   const dateLongue = s => { const x = d(s); return t('date_longue', premier(x.j), MOIS_LONG[x.m - 1], x.a); };
@@ -124,7 +153,7 @@ function animer(racine) {
     const infos = meta([k.organisateur, k.format && libelleFormat(k.format), pastilleLangue(k)]);
     return `<a class="rsna-ligne${jour && dansJour(k, jour) ? ' rsna-sel' : ''}" ${href(k.url)}${attrLangue(k)}>`
       + `<div class="rsna-tuile"><b>${x.j}</b><span>${esc(MOIS[x.m - 1])}</span></div>`
-      + `<div><h3>${esc(k.titre)}</h3>${infos ? `<span class="rsna-meta">${infos}</span>` : ''}</div></a>`;
+      + `<div>${estRSN(k) ? `<span class="rsna-pill">${esc(t('rsn'))}</span>` : ''}<h3>${esc(k.titre)}</h3>${infos ? `<span class="rsna-meta">${infos}</span>` : ''}</div></a>`;
   }
 
   // Calendrier : mois affiché (AAAA-MM) et jour choisi (AAAA-MM-JJ ou vide).
@@ -156,28 +185,38 @@ function animer(racine) {
       const iso = `${etat.mois}-${pad(j)}`;
       const p = points[iso];
       const cls = ['rsna-jour', iso < AUJ ? 'rsna-passe' : '', iso === AUJ ? 'rsna-auj' : '', p ? 'rsna-a' : ''].filter(Boolean).join(' ');
-      if (!p) { h += `<span class="${cls}">${j}</span>`; continue; }
+      const courant = iso === AUJ ? ' aria-current="date"' : '';
+      if (!p) { h += `<span class="${cls}"${courant}>${j}</span>`; continue; }
       const etiquette = [dateSansAnnee(iso), p.rsn ? t('legende_rsn') : '', p.eco ? t('legende_ecosysteme') : ''].filter(Boolean).join(', ');
-      h += `<button type="button" class="${cls}" data-jour="${iso}" aria-pressed="${etat.jour === iso}" aria-label="${esc(etiquette)}">${j}`
+      h += `<button type="button" class="${cls}" data-jour="${iso}"${courant} aria-pressed="${etat.jour === iso}" aria-label="${esc(etiquette)}">${j}`
         + `<span class="rsna-pts">${p.rsn ? '<i class="rsna-pt-rsn"></i>' : ''}${p.eco ? '<i class="rsna-pt"></i>' : ''}</span></button>`;
     }
     return `${h}</div><div class="rsna-legende"><span><i class="rsna-pt-rsn"></i>${esc(t('legende_rsn'))}</span><span><i class="rsna-pt"></i>${esc(t('legende_ecosysteme'))}</span></div>`;
   }
 
+  // Contenu de la colonne de droite actuellement dessiné (jour choisi ou vide) ; null avant le premier rendu.
+  let listeDessinee = null;
   // Dessine ce qui dépend du mois et du jour choisi ; `focus` : sélecteurs des boutons à refocaliser, le premier qui
   // existe et n'est pas désactivé (le calendrier est redessiné, le focus clavier serait perdu).
   function rendre(focus) {
     cal.innerHTML = htmlCalendrier();
-    if (etat.jour) {
-      sous.textContent = t('le_jour', dateSansAnnee(etat.jour));
-      bouton.textContent = t('tous');
-      bouton.hidden = false;
-    } else {
-      sous.textContent = t('dans_ecosysteme');
-      bouton.hidden = true;
+    // La colonne de droite ne change qu'avec le jour choisi : la redessiner à chaque changement de mois ferait relire
+    // la liste par les lecteurs d'écran (aria-live) sans raison.
+    if (listeDessinee !== etat.jour) {
+      listeDessinee = etat.jour;
+      if (etat.jour) {
+        sous.textContent = t('le_jour', dateSansAnnee(etat.jour));
+        bouton.textContent = t('tous');
+        bouton.hidden = false;
+      } else {
+        sous.textContent = t('dans_ecosysteme');
+        bouton.hidden = true;
+      }
+      // Jour choisi : tous les événements de ce jour, ceux du RSN compris (pastille « RSN » sur la ligne).
+      const lignes = etat.jour ? parJour(etat.jour) : eco;
+      const vide = etat.jour ? t('aucun_jour') : t('aucun_eco');
+      liste.innerHTML = lignes.length ? lignes.map(k => ligne(k, etat.jour)).join('') : `<div class="rsna-vide-jour">${esc(vide)}</div>`;
     }
-    const lignes = etat.jour ? parJourEco(etat.jour) : eco;
-    liste.innerHTML = lignes.length ? lignes.map(k => ligne(k, etat.jour)).join('') : `<div class="rsna-vide-jour">${esc(t('aucun_jour'))}</div>`;
     for (const selecteur of focus || []) {
       const candidat = racine.querySelector(selecteur);
       if (candidat && !candidat.disabled && candidat.focus) { candidat.focus(); break; }
@@ -206,8 +245,9 @@ function animer(racine) {
   });
 
   colRsn.innerHTML = htmlRSN();
-  liste.setAttribute('aria-live', 'polite');
   rendre([]);
+  // aria-live après le premier rendu seulement : la liste de départ n'est pas annoncée au chargement.
+  liste.setAttribute('aria-live', 'polite');
   racine.classList.add('rsna-pret');
 }
 })();

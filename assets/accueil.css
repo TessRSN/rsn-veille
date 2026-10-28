@@ -3,7 +3,7 @@
  * Repris de la variante A de docs/maquette/accueil-v1.html (maquette validée) : calendrier du mois à gauche,
  * événements du RSN au centre, événements de l'écosystème à droite. Tous les sélecteurs sont préfixés par
  * .rsn-veille-accueil pour cohabiter avec le thème et Elementor ; aucune classe nue. Les éléments cliquables
- * (boutons, liens) portent le préfixe doublé (spécificité 0,3,0) pour passer devant le kit Elementor
+ * (boutons, liens, anneau de focus) portent le préfixe doublé (spécificité 0,3,0) pour passer devant le kit Elementor
  * (.elementor-kit-N button:hover, 0,2,1). Polices et couleurs du site : aucune police n'est chargée ici.
  * L'en-tête de la bande (petite ligne, titre, intro, lien) reste dans Elementor.
  */
@@ -18,7 +18,7 @@
 }
 .rsn-veille-accueil *{box-sizing:border-box}
 .rsn-veille-accueil [hidden]{display:none!important}
-.rsn-veille-accueil :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.rsn-veille-accueil.rsn-veille-accueil :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .rsn-veille-accueil.rsn-veille-accueil a{color:inherit;text-decoration:none}
 .rsn-veille-accueil.rsn-veille-accueil button{font:inherit;color:inherit;cursor:pointer;margin:0;text-transform:none;letter-spacing:normal;box-shadow:none}
 .rsn-veille-accueil p{margin:0}
@@ -92,6 +92,7 @@
 .rsn-veille-accueil .rsna-ligne h3{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:14px;font-weight:600;line-height:1.3;color:var(--ink)}
 .rsn-veille-accueil .rsna-ligne .rsna-meta{display:block;margin-top:2px;font-size:12px}
 .rsn-veille-accueil .rsna-ligne:hover h3{color:var(--blue)}
+.rsn-veille-accueil .rsna-ligne .rsna-pill{margin-bottom:3px;padding:3px 7px;font-size:10px}
 .rsn-veille-accueil .rsna-ligne.rsna-sel .rsna-tuile{background:var(--navy);color:#fff}
 .rsn-veille-accueil .rsna-vide-jour{padding:6px 0;font-size:13px;color:var(--muted)}
 

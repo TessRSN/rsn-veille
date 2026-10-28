@@ -131,6 +131,10 @@ final class Accueil {
      * écartée de `rsn` et `eco` (elle reste au calendrier). Les appels et les fiches sans début sont ignorés.
      * Un événement sans organisateur n'est regroupé avec aucun autre.
      *
+     * Cette fonction est la référence, testée. `assets/accueil.js` en reprend les règles (même sélection de `rsn` et
+     * `eco`) à partir de `calendrier` et de la date du navigateur, car le rendu peut être servi par un cache un jour plus
+     * tard : en changer une, c'est changer l'autre.
+     *
      * @param array<int,array<string,mixed>> $items Éléments de `Donnees` (événements et appels).
      * @param string $aujourdhui Date du jour, Y-m-d.
      * @return array{rsn:array<int,array<string,mixed>>,eco:array<int,array<string,mixed>>,calendrier:array<int,array<string,mixed>>}
@@ -219,6 +223,7 @@ final class Accueil {
             'le_jour' => __('Le %s', 'rsn-veille'),
             'tous' => __('Tous', 'rsn-veille'),
             'aucun_jour' => __('Aucun événement ce jour-là.', 'rsn-veille'),
+            'aucun_eco' => __("Aucun événement de l'écosystème à venir.", 'rsn-veille'),
             'aucun_rsn' => __("Pas d'événement du RSN à venir pour le moment. Les prochains seront annoncés ici.", 'rsn-veille'),
             'autres_rsn' => [__('+ %d autre événement du RSN →', 'rsn-veille'), __('+ %d autres événements du RSN →', 'rsn-veille')],
             'mois_precedent' => __('Mois précédent', 'rsn-veille'),
