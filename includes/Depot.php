@@ -21,6 +21,12 @@ final class Depot {
     /** Seuls champs qu'une collecte peut modifier sur une fiche existante. */
     private const CHAMPS_FACTUELS = ['debut', 'fin', 'heure', 'echeance', 'url', 'image_url', 'prix', 'lieu', 'ville', 'titre_en', 'resume_en', 'url_en'];
 
+    /**
+     * Champs factuels qu'une correction à la main protège de la collecte (`Fiche::$champs_manuels`) : tant que le
+     * nom y figure, ni la collecte de la même source ni une source plus fiable ne changent le champ.
+     */
+    public const CHAMPS_PROTEGEABLES = ['debut', 'fin', 'heure', 'echeance', 'url', 'lieu', 'ville'];
+
     /** Champs anglais : une valeur vide n'écrase jamais une valeur existante, et une source moins fiable peut les combler. */
     private const CHAMPS_ANGLAIS = ['titre_en', 'resume_en', 'url_en'];
 
@@ -238,6 +244,9 @@ final class Depot {
     private function champs_a_combler(Fiche $existante, Fiche $entrante): array {
         $champs = [];
         foreach (array_merge(self::CHAMPS_A_COMBLER, self::CHAMPS_ANGLAIS) as $nom) {
+            if (in_array($nom, $existante->champs_manuels, true)) {
+                continue;
+            }
             if ($existante->$nom === '' && $entrante->$nom !== '') {
                 $champs[$nom] = $entrante->$nom;
             }
@@ -303,14 +312,18 @@ final class Depot {
     }
 
     /**
-     * Champs factuels de l'entrant non vides et différents de l'existant ; la région est refaite
-     * si la ville ou le lieu changent.
+     * Champs factuels de l'entrant non vides et différents de l'existant, sauf ceux corrigés à la main ;
+     * la région est refaite si la ville ou le lieu sont effectivement écrits.
      *
      * @return array<string,mixed>
      */
     private function champs_factuels(Fiche $existante, Fiche $entrante): array {
         $champs = [];
         foreach (self::CHAMPS_FACTUELS as $nom) {
+            // Corrigé à la main : la collecte n'y touche plus.
+            if (in_array($nom, $existante->champs_manuels, true)) {
+                continue;
+            }
             $valeur = $entrante->$nom;
             if ($valeur !== null && $valeur !== '' && $valeur !== $existante->$nom) {
                 $champs[$nom] = $valeur;

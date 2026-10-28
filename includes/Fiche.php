@@ -77,6 +77,11 @@ final class Fiche {
     public array $cles_source = [];
     /** @var array<string,string> Dernier titre vu par clé de source (posé et suivi par le dépôt, pour repérer une annulation). */
     public array $titres_source = [];
+    /**
+     * @var string[] Noms des champs factuels corrigés à la main (parmi `Depot::CHAMPS_PROTEGEABLES`) : la collecte
+     * ne les change plus.
+     */
+    public array $champs_manuels = [];
     /** Catégorie propre aux appels. */
     public string $categorie = '';
     /** Date limite propre aux appels (Y-m-d). */

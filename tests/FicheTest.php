@@ -163,4 +163,13 @@ final class FicheTest extends TestCase {
         $this->assertSame('2026-11-01', $appel(['debut' => '2026-01-01', 'fin' => '2026-11-01'])->limite_appel());
         $this->assertNull($appel(['debut' => '2026-01-01', 'fin' => '2026-01-01'])->limite_appel());
     }
+
+    public function test_champs_manuels_aller_retour_vers_et_depuis_tableau(): void {
+        $this->assertSame([], (new Fiche())->champs_manuels);
+        $f = Fiche::depuis_tableau(['champs_manuels' => ['debut', 'url', 7]]);
+        $this->assertSame(['debut', 'url', '7'], $f->champs_manuels);
+        $this->assertSame(['debut', 'url', '7'], $f->vers_tableau()['champs_manuels']);
+        $this->assertSame(['debut', 'url', '7'], Fiche::depuis_tableau($f->vers_tableau())->champs_manuels);
+        $this->assertSame([], Fiche::depuis_tableau(['champs_manuels' => 'debut'])->champs_manuels);
+    }
 }

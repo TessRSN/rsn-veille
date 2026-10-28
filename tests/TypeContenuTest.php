@@ -67,4 +67,12 @@ final class TypeContenuTest extends TestCase {
         $this->assertFalse($type['show_in_menu']);
         $this->assertFalse($type['public']);
     }
+
+    public function test_champs_manuels_limites_aux_champs_protegeables(): void {
+        $this->assertSame('array', TypeContenu::METAS['champs_manuels']);
+        $this->assertSame(['debut', 'url', 'ville'], TypeContenu::nettoyer_meta('champs_manuels', [4 => 'debut', 'titre', 'url', 'debut', 'ville', 'inconnu', '', 7]));
+        $this->assertSame([], TypeContenu::nettoyer_meta('champs_manuels', 'debut'));
+        $this->assertSame([], TypeContenu::nettoyer_meta('champs_manuels', []));
+        $this->assertArrayHasKey('rsn_veille_champs_manuels', $GLOBALS['rsn_veille_wp']['metas_enregistrees']);
+    }
 }

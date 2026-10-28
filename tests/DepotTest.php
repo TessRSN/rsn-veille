@@ -507,4 +507,85 @@ final class DepotTest extends TestCase {
         $this->assertSame('fusionne', $d->integrer($this->fiche(['titre' => 'Colloque santé numérique', 'debut' => '2026-11-20', 'source' => 'RSN', 'niveau' => 'A', 'statut' => 'publie', 'cle_source' => 'rsn:1'])));
         $this->assertCount(2, $e->lister(''));
     }
+
+    public function test_champs_proteges_ne_changent_plus_par_la_meme_source(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $f = $this->fiche(['titre' => 'Atelier', 'debut' => '2026-11-12', 'fin' => '2026-11-12', 'url' => 'https://a.test/x', 'heure' => '09:00', 'cle_source' => 'dhc:1', 'niveau' => 'A', 'statut' => 'publie']);
+        $this->assertSame('cree', $d->integrer($f));
+        $e->mettre_a_jour(1, ['champs_manuels' => ['debut', 'url']]);
+        // Même source, autre début, autre URL : rien ne change.
+        $f2 = clone $f; $f2->debut = '2026-12-01'; $f2->url = 'https://a.test/y';
+        $this->assertSame('inchange', $d->integrer($f2));
+        $x = $e->trouver_par_cle_source('dhc:1');
+        $this->assertSame(['2026-11-12', 'https://a.test/x'], [$x->debut, $x->url]);
+        // Les champs non protégés suivent toujours la source.
+        $f3 = clone $f2; $f3->heure = '10:30';
+        $this->assertSame('mis_a_jour', $d->integrer($f3));
+        $x = $e->trouver_par_cle_source('dhc:1');
+        $this->assertSame(['2026-11-12', 'https://a.test/x', '10:30'], [$x->debut, $x->url, $x->heure]);
+        $this->assertSame(['debut', 'url'], $x->champs_manuels);
+    }
+
+    public function test_champs_proteges_gardes_face_a_un_doublon_d_une_source_plus_fiable(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $b = $this->fiche(['titre' => 'Colloque annuel', 'debut' => '2026-11-12', 'url' => 'https://b.test/c', 'cle_source' => 'frq:9', 'niveau' => 'B', 'source' => 'FRQ', 'statut' => 'publie']);
+        $this->assertSame('cree', $d->integrer($b));
+        $e->mettre_a_jour(1, ['champs_manuels' => ['debut', 'url']]);
+        $a = $this->fiche(['titre' => 'Colloque annuel', 'debut' => '2026-11-12', 'fin' => '2026-11-13', 'heure' => '08:30', 'url' => 'https://a.test/c', 'cle_source' => 'dhc:1', 'niveau' => 'A', 'source' => 'DHC']);
+        $this->assertSame('fusionne', $d->integrer($a));
+        $x = $e->trouver_par_cle_source('dhc:1');
+        // Début et URL corrigés à la main gardés ; fin et heure, non protégées, viennent de la source plus fiable.
+        $this->assertSame(['2026-11-12', 'https://b.test/c', '2026-11-13', '08:30', 'A'], [$x->debut, $x->url, $x->fin, $x->heure, $x->niveau]);
+        $this->assertCount(1, $e->lister(''));
+    }
+
+    public function test_url_protegee_n_est_pas_comblee_par_une_source_moins_fiable(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $a = $this->fiche(['titre' => 'Forum', 'debut' => '2026-11-12', 'url' => '', 'cle_source' => 'dhc:1', 'niveau' => 'A', 'statut' => 'publie']);
+        $this->assertSame('cree', $d->integrer($a));
+        // L'équipe a volontairement vidé l'URL : la source moins fiable ne la remet pas.
+        $e->mettre_a_jour(1, ['champs_manuels' => ['url']]);
+        $b = $this->fiche(['titre' => 'Forum', 'debut' => '2026-11-12', 'url' => 'https://b.test/f', 'image_url' => 'https://b.test/f.png', 'cle_source' => 'frq:2', 'niveau' => 'B']);
+        $this->assertSame('fusionne', $d->integrer($b));
+        $x = $e->trouver_par_cle_source('dhc:1');
+        $this->assertSame(['', 'https://b.test/f.png'], [$x->url, $x->image_url]);
+    }
+
+    public function test_ville_protegee_ne_change_ni_la_ville_ni_la_region(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $f = $this->fiche(['titre' => 'Congrès', 'debut' => '2026-11-12', 'ville' => 'Montréal', 'region' => 'Québec', 'cle_source' => 'dhc:1', 'niveau' => 'A', 'statut' => 'publie']);
+        $this->assertSame('cree', $d->integrer($f));
+        $e->mettre_a_jour(1, ['champs_manuels' => ['ville']]);
+        $f2 = clone $f; $f2->ville = 'Toronto';
+        $this->assertSame('inchange', $d->integrer($f2));
+        $x = $e->trouver_par_cle_source('dhc:1');
+        $this->assertSame(['Montréal', 'Québec'], [$x->ville, $x->region]);
+    }
+
+    public function test_region_refaite_seulement_des_champs_ecrits_quand_le_lieu_est_protege(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $f = $this->fiche(['titre' => 'Congrès', 'debut' => '2026-11-12', 'ville' => 'Montréal', 'lieu' => 'Palais des congrès', 'region' => 'Québec', 'cle_source' => 'dhc:1', 'niveau' => 'A', 'statut' => 'publie']);
+        $this->assertSame('cree', $d->integrer($f));
+        $e->mettre_a_jour(1, ['champs_manuels' => ['lieu']]);
+        // Le lieu protégé reste celui de la fiche ; la ville écrite sert au calcul avec ce lieu.
+        $f2 = clone $f; $f2->lieu = 'Convention Center'; $f2->ville = 'Toronto';
+        $this->assertSame('mis_a_jour', $d->integrer($f2));
+        $x = $e->trouver_par_cle_source('dhc:1');
+        $this->assertSame(['Toronto', 'Palais des congrès'], [$x->ville, $x->lieu]);
+        $this->assertSame(Fiche::deviner_region('Toronto', 'Palais des congrès', ''), $x->region);
+    }
+
+    public function test_sans_champs_manuels_la_collecte_change_toujours_les_champs_factuels(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $f = $this->fiche(['titre' => 'Atelier', 'debut' => '2026-11-12', 'url' => 'https://a.test/x', 'cle_source' => 'dhc:1', 'niveau' => 'A', 'statut' => 'publie']);
+        $d->integrer($f);
+        $f2 = clone $f; $f2->debut = '2026-12-01'; $f2->url = 'https://a.test/y';
+        $this->assertSame('mis_a_jour', $d->integrer($f2));
+        $x = $e->trouver_par_cle_source('dhc:1');
+        $this->assertSame(['2026-12-01', 'https://a.test/y', []], [$x->debut, $x->url, $x->champs_manuels]);
+    }
+
+    public function test_liste_de_champs_proteges_publique(): void {
+        $this->assertSame(['debut', 'fin', 'heure', 'echeance', 'url', 'lieu', 'ville'], Depot::CHAMPS_PROTEGEABLES);
+    }
 }

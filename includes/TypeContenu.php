@@ -51,6 +51,7 @@ final class TypeContenu {
         'cle_source' => 'string',
         'cles_source' => 'array',
         'titres_source' => 'object',
+        'champs_manuels' => 'array',
         'categorie' => 'string',
         'echeance' => 'string',
         'titre_en' => 'string',
@@ -191,6 +192,10 @@ final class TypeContenu {
             case 'cles_source':
                 $cles = array_map(static fn($cle): string => self::brut($cle), is_array($valeur) ? $valeur : []);
                 return array_values(array_unique(array_filter($cles, static fn(string $c): bool => $c !== '')));
+            case 'champs_manuels':
+                // Liste de noms de champs factuels : tout autre nom est écarté.
+                $noms = array_map(static fn($nom): string => self::chaine($nom), is_array($valeur) ? $valeur : []);
+                return array_values(array_unique(array_filter($noms, static fn(string $n): bool => in_array($n, Depot::CHAMPS_PROTEGEABLES, true))));
             case 'titres_source':
                 $titres = [];
                 foreach (is_array($valeur) ? $valeur : [] as $cle => $titre) {
