@@ -44,7 +44,7 @@ Sans cron du serveur (c'est-à-dire sans `DISABLE_WP_CRON`), l'extension fonctio
 git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.4.0.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
 ```
 
-Le zip contient `rsn-veille.php`, `uninstall.php`, `includes/` et `assets/` (et les documents de racine), sans tests, sans documents de conception et sans `vendor/`. Dans wp-admin : **Extensions › Ajouter › Téléverser une extension**, choisir le zip, installer, puis activer.
+Le zip contient `rsn-veille.php`, `uninstall.php`, `includes/`, `assets/` et `languages/` (la traduction anglaise de la page en dépend) (et les documents de racine), sans tests, sans documents de conception et sans `vendor/`. Dans wp-admin : **Extensions › Ajouter › Téléverser une extension**, choisir le zip, installer, puis activer.
 
 - **Avantages** : rien d'autre à installer ni à payer ; aucun jeton à confier au site ; le contenu installé est exactement celui du zip, sans fichiers de développement.
 - **Limites** : chaque correction demande de refaire un zip et de le téléverser par-dessus l'ancien (WordPress propose alors de remplacer l'extension) ; il faut penser à augmenter le numéro de version pour que les ressources en cache du navigateur soient renouvelées ; pas de retour en arrière en un clic.
@@ -69,8 +69,8 @@ Quelle que soit la voie, l'activation lance les mêmes opérations (voir section
 ### Après la mise à jour de la 0.3.0 vers la 0.4.0
 
 1. Remplacer l'extension (zip par-dessus l'ancienne, ou mise à jour WP Pusher / Git Updater). **Rien d'autre à faire côté extension** : aucune réactivation, aucune migration, aucun réglage à refaire. Le dossier `languages/` (traduction anglaise) vient avec l'extension.
-2. **La purge des caches est automatique** (voir plus bas) : au premier chargement de wp-admin avec la nouvelle version, l'extension vide le cache du JSON public de chaque langue. **Ensuite, purger LiteSpeed › Gestion › Purger tout** : le HTML en cache de la page française contient encore les anciens doublons anglais des événements du RSN.
-3. **Créer la traduction anglaise de la page** dans WPML : voir « Temps 3 : la version anglaise avec WPML » (section 5). Tant qu'elle n'existe pas, rien ne change pour les visiteurs, sauf que la page française ne montre plus de doublon anglais (« RSN Scientific Days » à côté de « Journées scientifiques RSN »).
+2. **La purge des caches est automatique** (voir plus bas) : au premier chargement de wp-admin avec la nouvelle version, l'extension vide les caches du JSON public et de l'iCal de chaque langue, ainsi que ceux de LiteSpeed et d'Elementor pour la page Veille et ses traductions. **Ensuite, purger LiteSpeed › Gestion › Purger tout** : le HTML en cache de la page française contient encore les anciens doublons anglais des événements du RSN.
+3. **Créer la traduction anglaise de la page** dans WPML : voir « Temps 3 : la version anglaise avec WPML » (section 5). Tant qu'elle n'existe pas, rien ne change pour les visiteurs, sauf deux détails sur la page française : elle ne montre plus de doublon anglais (« RSN Scientific Days » à côté de « Journées scientifiques RSN »), et l'heure s'écrit « 8 h 00 » au lieu de « 08 h 00 ».
 4. **Mila et IVADO** : leur version anglaise est lue à la prochaine collecte de chaque source (une source par passage). Pour ne pas attendre, lancer la collecte depuis Veille › Réglages et lire le Journal : la ligne de chaque source dit « N appariées en anglais, M orphelines ». Les fiches déjà en base reçoivent leurs champs anglais à ce passage.
 5. Vérifier avec la section 7 de `tests/manuel/PARCOURS.md` (étape 7, points 24 à 32, et étape 8).
 
@@ -184,7 +184,7 @@ Deux voies. La **voie A** est recommandée : depuis la 0.3.0, la page de référ
    - **Mila et IVADO** : titre, résumé et lien anglais une fois la collecte passée ; sinon le français, marqué « In French » (`/wp-json/rsn/v1/veille?lang=en` : `langue` vaut `en` pour les fiches appariées) ;
    - Obvia, le FRQ et les autres sources restent en français avec « In French » ; Digital Health Canada n'a pas de pastille ;
    - **page française** : plus de doublon anglais des événements du RSN ;
-   - **formulaire** : une proposition envoyée depuis la page anglaise arrive dans « À approuver » avec la langue anglaise (« En anglais » sur la page française une fois publiée) ;
+   - **formulaire** : une proposition envoyée depuis la page anglaise arrive dans « À approuver » ; sa langue n'est pas visible dans la file, elle se lit avec `wp post meta get <ID> rsn_veille_langue` (`en`), et la fiche porte « En anglais » sur la page française une fois publiée ;
    - retirer une fiche dans la file et vérifier qu'elle disparaît aussi de la page anglaise.
 6. **Limites à connaître** : thèmes et noms d'organisateurs restent en français ; l'administration, les courriels, l'infolettre et le Journal sont en français ; seuls Mila et IVADO sont appariés dans les deux langues. Sans WPML, `?lang=en` ne change rien. Voir « Limites connues » du `LISEZMOI.md`.
 

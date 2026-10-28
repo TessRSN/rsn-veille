@@ -80,7 +80,9 @@ Dans la même étape, la case **Rôles** de la section Vérifications (« Régla
    elle-même le visiteur. Les autres fiches IVADO gardent leur adresse `ivado.ca` et leur résumé complété.
 
 5. **Mila et IVADO en anglais** (version 0.4.0) : dans le Journal, les lignes de Mila et d'IVADO portent « N appariées en
-   anglais, M orphelines » (sur les pages lues le 27 octobre : Mila 3 appariées, IVADO 6, aucune orpheline) ; une
+   anglais, M orphelines » (« orphelines » compte les événements de la page anglaise sans équivalent français ; une
+   fiche française sans page anglaise n'est pas comptée). Sur les pages lues le 27 octobre : Mila 3 appariées, IVADO 6,
+   aucune orpheline ; ce relevé date de ce jour-là, et un écart de compte n'est pas un défaut de l'extension. Une
    erreur de lecture de la page anglaise est consignée sans faire échouer la source. Les fiches déjà en base
    reçoivent leurs champs anglais à ce passage (`wp post meta get <ID> rsn_veille_titre_en`). Le résultat sur la
    page est vérifié à l'étape 7, point 29.
@@ -247,7 +249,6 @@ est vide pour la page Veille choisie.
     **au-dessus du texte, à l'intérieur du fond gris**, avec le trait jaune à gauche ; l'en-tête du thème est resserré.
 23. **`section="agenda"`** : le bandeau est là, sans la bande des dates limites ; **`une="0"`** : le bandeau seul en tête
     (pas de « À la une », pas de filet), le reste intact ; **`section="appels"`** : pas de bandeau.
-
 24. **Page anglaise créée** (version 0.4.0 ; exige WPML, absent de wp-env : à faire sur rsn.quebec) : dans WPML, la
     page « Événements et appels » a une traduction anglaise, titre « Events and calls », contenu `[rsn_veille]` (hors
     menu pour l'essai). Après la mise à jour : LiteSpeed › Purger tout. `/en/…` répond 200, le `<body>` porte la
@@ -266,17 +267,17 @@ est vide pour la page Veille choisie.
     fiche, et sans pastille de langue ; l'événement collecté depuis rsn.quebec (fiche avec image) ne fait pas de
     doublon avec lui. Un événement sans traduction anglaise paraît en français avec la pastille « In French ».
 27. **Appels du RSN en anglais** : un appel du RSN dont l'article a une traduction WPML y paraît avec le titre,
-    l'extrait, le lien `/en/…` et la catégorie (« Funding calls ») de la traduction, et la même date limite (dans
+    l'extrait, le lien `/en/…` et la catégorie de la traduction (le nom lu sur l'article, par exemple « Funding calls »), et la même date limite (dans
     « Deadlines » aussi). Un appel dont l'extrait traduit est vide garde son résumé français sous le titre anglais.
 28. **Fiche sans traduction, pastille** : une fiche française d'une autre source (Obvia, FRQ, RQRV, Réseau sommeil…)
     est inchangée sur la page anglaise et porte « In French » ; Digital Health Canada n'a pas de pastille. Sur la page
-    française, une fiche anglaise (Digital Health Canada, une proposition envoyée depuis la page anglaise) porte « En
-    anglais » et une fiche française n'a rien.
+    française, une fiche anglaise (Digital Health Canada ; une proposition envoyée depuis la page anglaise, voir l'étape 8)
+    porte « En anglais » et une fiche française n'a rien.
 29. **Mila et IVADO appariés** : sur la page anglaise, leurs événements ont titre, résumé et lien anglais et pas de
     pastille ; sur la page française, rien n'a changé. Contrôler dans le JSON
     (`curl -s 'https://…/wp-json/rsn/v1/veille?lang=en'`) : ces fiches ont `langue` à `en`, un titre anglais et une
-    adresse `mila.quebec/en/…` ou `ivado.ca/en/…`, alors que `?lang=fr` rend les mêmes fiches en français. Une
-    fiche orpheline (sans équivalent) reste en français avec « In French ». Les champs anglais n'apparaissent pas
+    adresse en général `mila.quebec/en/…` ou `ivado.ca/en/…` (une redirection vers un site externe est possible), alors que `?lang=fr` rend les mêmes fiches en français. Une
+    fiche française sans équivalent anglais reste en français avec « In French ». Les champs anglais n'apparaissent pas
     dans l'éditeur d'une fiche.
 30. **iCal anglais** : `/en/veille.ics` répond en 200 (CRLF, `Content-Type: text/calendar`), avec les titres et les
     liens anglais des événements du RSN ; `/veille.ics` reste en français. Le bouton « Subscribe to the calendar »
