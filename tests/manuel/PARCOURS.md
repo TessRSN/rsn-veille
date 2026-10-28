@@ -314,7 +314,7 @@ changement de fiche (`wp transient delete rsn_veille_json_fr` et `rsn_veille_jso
    un événement du RSN, point marine ceux qui ont un événement de l'écosystème ; une série de plus de 7 jours ne
    pointe que son premier jour.
 3. **Filtre par jour** : cliquer un jour pointé ; la colonne de droite devient « Le 4 novembre » (ou la date choisie)
-   avec le bouton « Tous » et **tous** les événements de l'écosystème de ce jour (plus de quatre si on en crée autant,
+   avec le bouton « Tous » et **tous** les événements de ce jour, ceux du RSN compris (plus de quatre si on en crée autant,
    deux d'un même organisateur compris) ; un jour qui n'a qu'un événement du RSN l'affiche, avec la pastille « RSN » sur sa ligne (dans l'ordre du début puis du titre). La liste par défaut, quand aucun événement de l'écosystème n'est à venir, dit « Aucun événement de l'écosystème à venir. ».
    Recliquer le jour, ou « Tous », revient à la liste. Changer de mois défait le jour choisi.
 4. **Au RSN, quatre cas** (créer ou retirer des événements du RSN à venir, `rsn_veille_organisateur` = `RSN`, et purger) :
