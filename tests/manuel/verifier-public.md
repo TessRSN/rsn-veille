@@ -44,7 +44,7 @@ WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se lancent par `n
       apparaît le jour de sa date limite (« Date limite · … »).
 - [ ] Appels (dans la liste unifiée, avec leur mois de date limite) : tuile jaune (date limite) ou grise
       (publication) ; un appel dont l'échéance est passée n'apparaît plus.
-- [ ] « Proposer un événement ou un appel » ouvre le formulaire (titre « Proposer un événement », ou « Proposer un appel » après la bascule sur « Un appel… »), « Annuler » le ferme
+- [ ] « Faire une proposition » (anglais « Make a suggestion ») ouvre le formulaire (titre « Proposer un événement », ou « Proposer un appel » après la bascule sur « Un appel… »), « Annuler » le ferme
       (envoi : voir la section Formulaire ci-dessous).
 - [ ] Le titre piégé s'affiche en texte (aucune alerte) ; dans le code source, le JSON de
       `#rsn-veille-donnees` contient `</script>` et `&`.
@@ -69,7 +69,7 @@ débit : `wp transient list --search='rsn_veille_debit_*'` puis `wp transient de
 - [ ] Remplir titre, date de début, organisateur, format, lieu, lien, description, courriel et une
       image JPEG ou PNG de moins de 3 Mo, puis « Envoyer à l'équipe » : le bouton se grise (« Envoi… »)
       pendant l'envoi, puis le formulaire laisse place à « Merci ! Votre proposition est dans la file
-      d'approbation de l'équipe du RSN. ». « Proposer un événement ou un appel » rouvre un formulaire vide.
+      d'approbation de l'équipe du RSN. ». « Faire une proposition » rouvre un formulaire vide.
 - [ ] Onglet Réseau : une requête POST `admin-ajax.php` (multipart) avec `action=rsn_veille_proposer`
       et `nonce`, réponse 200 `{"success":true,"data":{"ok":true,"message":…}}`, sans le courriel.
 - [ ] `wp post list --post_type=rsn_veille --post_status=pending` : la fiche est là ; Veille › File
@@ -114,7 +114,7 @@ débit : `wp transient list --search='rsn_veille_debit_*'` puis `wp transient de
 
 ## Ressources et cohabitation
 
-- [ ] Sur la page Veille, `veille.css` et `veille.js` sont chargés avec `?ver=0.6.0` (onglet Réseau) ;
+- [ ] Sur la page Veille, `veille.css` et `veille.js` sont chargés avec `?ver=0.6.1` (onglet Réseau) ;
       sur une autre page du site (accueil, Nouvelles), ni l'un ni l'autre.
 - [ ] Les polices Google ne sont pas chargées une seconde fois par l'extension (pas de feuille
       `rsn-veille-polices`) ; `add_filter('rsn_veille_charger_polices', '__return_true')` dans un

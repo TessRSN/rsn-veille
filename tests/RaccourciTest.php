@@ -111,7 +111,7 @@ final class RaccourciTest extends TestCase {
     public function test_bouton_jaune_et_lien_du_panneau_proposent_un_evenement_ou_un_appel(): void {
         $html = Raccourci::rendre([]);
         $this->assertSame(1, preg_match('#<button class="btn jaune" id="btn-proposer" type="button">(.*?)<svg#s', $html, $m));
-        $this->assertSame('Proposer un événement ou un appel', trim($m[1]));
+        $this->assertSame('Faire une proposition', trim($m[1]));
         $this->assertStringContainsString('<button type="button" id="rsn-veille-panneau-proposer">Proposer un événement ou un appel</button>', $html);
     }
 

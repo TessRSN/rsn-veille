@@ -1,5 +1,9 @@
 # Journal des modifications
 
+## 0.6.1 (2026-10-28)
+
+Retouche du bandeau de l'Agenda de l'écosystème, à la demande de l'équipe après la mise en ligne de la 0.6.0 : le libellé « Proposer un événement ou un appel » allongeait le bouton jaune et faisait passer les deux boutons sous l'intro. Le bouton jaune dit maintenant **« Faire une proposition »** (« Make a suggestion » en anglais) et les boutons reviennent à droite de l'intro. Le lien du panneau « Comment ça marche » garde « Proposer un événement ou un appel ». Numéro de version 0.6.1.
+
 ## 0.6.0 (2026-10-28)
 
 On peut choisir « événement » ou « appel » dans WordPress comme dans le formulaire public (conception : `docs/superpowers/specs/2026-10-28-fiche-type-0.6.0-design.md`, maquette : `docs/maquette/fiche-type-v1.html`). Aucune migration : rien à refaire dans les réglages, et les caches de la page Veille et de ses traductions sont vidés au premier chargement de wp-admin avec la nouvelle version. Les clés du JSON public `/wp-json/rsn/v1/veille` sont inchangées.

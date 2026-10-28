@@ -727,6 +727,9 @@ msgstr "See the sources we read ↓"
 msgid "Proposer un événement ou un appel"
 msgstr "Suggest an event or a call"
 
+msgid "Faire une proposition"
+msgstr "Make a suggestion"
+
 msgid "Vous proposez"
 msgstr "You are suggesting"
 
