@@ -19,7 +19,10 @@ if (!defined('ABSPATH')) {
  */
 final class Depot {
     /** Seuls champs qu'une collecte peut modifier sur une fiche existante. */
-    private const CHAMPS_FACTUELS = ['debut', 'fin', 'heure', 'echeance', 'url', 'image_url', 'prix', 'lieu', 'ville'];
+    private const CHAMPS_FACTUELS = ['debut', 'fin', 'heure', 'echeance', 'url', 'image_url', 'prix', 'lieu', 'ville', 'titre_en', 'resume_en', 'url_en'];
+
+    /** Champs anglais : une valeur vide n'écrase jamais une valeur existante, et une source moins fiable peut les combler. */
+    private const CHAMPS_ANGLAIS = ['titre_en', 'resume_en', 'url_en'];
 
     /** Champs qu'une source moins fiable que la fiche peut seulement combler s'ils sont vides. */
     private const CHAMPS_A_COMBLER = ['image_url', 'url'];
@@ -106,6 +109,24 @@ final class Depot {
             $this->titres_precedents[$id][$cle] = '';
         }
         return 'cree';
+    }
+
+    /**
+     * Complète les champs anglais d'une fiche déjà enregistrée : seules les valeurs non vides et différentes de
+     * l'existant sont écrites (une valeur vide n'efface jamais). Rend vrai si quelque chose a été écrit.
+     */
+    public function completer_anglais(Fiche $connue, string $titre_en, string $resume_en, string $url_en): bool {
+        $champs = [];
+        foreach (['titre_en' => $titre_en, 'resume_en' => $resume_en, 'url_en' => $url_en] as $nom => $valeur) {
+            if ($valeur !== '' && $valeur !== $connue->$nom) {
+                $champs[$nom] = $valeur;
+            }
+        }
+        if ($champs === [] || $connue->id === null) {
+            return false;
+        }
+        $this->entrepot->mettre_a_jour($connue->id, $champs);
+        return true;
     }
 
     /**
@@ -210,13 +231,13 @@ final class Depot {
     }
 
     /**
-     * Image et URL de l'entrant là où la fiche n'en a pas.
+     * Image, URL et champs anglais de l'entrant là où la fiche n'en a pas.
      *
      * @return array<string,string>
      */
     private function champs_a_combler(Fiche $existante, Fiche $entrante): array {
         $champs = [];
-        foreach (self::CHAMPS_A_COMBLER as $nom) {
+        foreach (array_merge(self::CHAMPS_A_COMBLER, self::CHAMPS_ANGLAIS) as $nom) {
             if ($existante->$nom === '' && $entrante->$nom !== '') {
                 $champs[$nom] = $entrante->$nom;
             }

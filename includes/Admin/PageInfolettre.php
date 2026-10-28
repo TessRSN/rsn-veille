@@ -62,7 +62,8 @@ final class PageInfolettre {
         $horizon = self::horizon_demande(isset($_GET['jusqu_au']) ? wp_unslash($_GET['jusqu_au']) : null);
         $aujourdhui = \rsn_veille_aujourdhui();
         // Même source que la page publique : fiches publiées et événements du RSN dédoublonnés, sans les champs d'équipe.
-        $donnees = Donnees::construire($aujourdhui, new EntrepotWordPress(), EvenementsRsn::lire(), false);
+        // L'infolettre est française : toujours `fr`, quelle que soit la langue de l'administration.
+        $donnees = Donnees::construire($aujourdhui, new EntrepotWordPress(), EvenementsRsn::lire(langue: 'fr'), false, 'fr');
         // Sortie entièrement échappée par les méthodes de rendu.
         echo self::page_html($donnees['items'], PageRadar::lire_gardees(), self::programmes_rsn(), [
             'aujourdhui' => $aujourdhui,

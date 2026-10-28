@@ -1,4 +1,4 @@
-# Parcours de vérification de bout en bout (version 0.3.0)
+# Parcours de vérification de bout en bout (version 0.4.0)
 
 Ce parcours enchaîne, dans l'ordre d'un vrai usage, toutes les listes de vérification manuelles :
 `verifier-admin.md` (administration), `verifier-public.md` (page publique, formulaire, REST et iCal) et
@@ -78,6 +78,14 @@ Dans la même étape, la case **Rôles** de la section Vérifications (« Régla
    (`https://event.fourwaves.com/aihealthsymposium`) et non l'adresse `ivado.ca` de la page de redirection
    (`wp post meta get <ID> rsn_veille_url`). Une fiche IVADO plus ancienne garde son adresse `ivado.ca`, qui redirige
    elle-même le visiteur. Les autres fiches IVADO gardent leur adresse `ivado.ca` et leur résumé complété.
+
+5. **Mila et IVADO en anglais** (version 0.4.0) : dans le Journal, les lignes de Mila et d'IVADO portent « N appariées en
+   anglais, M orphelines » (« orphelines » compte les événements de la page anglaise sans équivalent français ; une
+   fiche française sans page anglaise n'est pas comptée). Sur les pages lues le 27 octobre : Mila 3 appariées, IVADO 6,
+   aucune orpheline ; ce relevé date de ce jour-là, et un écart de compte n'est pas un défaut de l'extension. Une
+   erreur de lecture de la page anglaise est consignée sans faire échouer la source. Les fiches déjà en base
+   reçoivent leurs champs anglais à ce passage (`wp post meta get <ID> rsn_veille_titre_en`). Le résultat sur la
+   page est vérifié à l'étape 7, point 29.
 
 **Terminé quand** : le Journal montre les 13 sources, au plus quelques erreurs de réseau expliquées (un 403 est
 une erreur consignée, pas un défaut), et la file `rsn_veille_file` est vide.
@@ -183,9 +191,8 @@ est vide pour la page Veille choisie.
     (la bande ne doit causer aucun défilement horizontal). Consigner tout écart dans le tableau des écarts.
     Vérifier aussi à 375 px (cartes empilées).
 12. Section **Ressources et cohabitation** de `verifier-public.md` : ressources seulement sur la page Veille
-    (chargées avec `?ver=0.3.0`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
-    si installé (sur la page anglaise, les textes des bandes s'affichent en français tant qu'ils ne sont pas traduits :
-    limite connue, pas un écart).
+    (chargées avec `?ver=0.4.0`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
+    si installé (la page anglaise a ses propres points, 24 à 32).
 13. Section **REST et iCal** : `/wp-json/rsn/v1/veille` (aucune clé retirée), `/veille.ics` (CRLF, en-têtes,
     validateur iCal, abonnement dans un agenda).
 14. **Qui organise des catégories TEC** : une catégorie TEC de slug `rsn` classe ses événements sous RSN, `partenaires`
@@ -195,7 +202,7 @@ est vide pour la page Veille choisie.
     et il n'est pas à la une du RSN.
 15. **Purge à la mise à jour** : `wp option delete rsn_veille_version`, puis charger une page de wp-admin ; le transient
     `rsn_veille_json_fr` a disparu (`wp transient get rsn_veille_json_fr` ne rend rien) et
-    `wp option get rsn_veille_version` rend `0.3.0`. Un second chargement ne purge plus.
+    `wp option get rsn_veille_version` rend `0.4.0`. Un second chargement ne purge plus.
 16. **Bandeau continu** (version 0.3.0 ; exige le thème Vault, absent de wp-env : à faire sur rsn.quebec, sur la page
     ordinaire avec un bloc Code court, renommée « Événements et appels », fenêtre large) :
     - aucun écart blanc entre l'en-tête du thème (fil d'Ariane et titre) et l'intro du bandeau, ni entre l'intro, les
@@ -242,9 +249,50 @@ est vide pour la page Veille choisie.
     **au-dessus du texte, à l'intérieur du fond gris**, avec le trait jaune à gauche ; l'en-tête du thème est resserré.
 23. **`section="agenda"`** : le bandeau est là, sans la bande des dates limites ; **`une="0"`** : le bandeau seul en tête
     (pas de « À la une », pas de filet), le reste intact ; **`section="appels"`** : pas de bandeau.
+24. **Page anglaise créée** (version 0.4.0 ; exige WPML, absent de wp-env : à faire sur rsn.quebec) : dans WPML, la
+    page « Événements et appels » a une traduction anglaise, titre « Events and calls », contenu `[rsn_veille]` (hors
+    menu pour l'essai). Après la mise à jour : LiteSpeed › Purger tout. `/en/…` répond 200, le `<body>` porte la
+    classe `rsn-veille-page`, `div.rsn-veille` porte `lang="en"` (la page française, `lang="fr"`), et
+    `wp transient get rsn_veille_json_en` se remplit à la première visite (distinct de `rsn_veille_json_fr`).
+25. **Textes et dates en anglais** : bandeau (« Subscribe to the calendar », « Suggest an event »), « Featured by the
+    RSN », « Deadlines », filtres (« Show », « Who organizes », « Month », « Format », « Location », « Themes »,
+    « Organizer », « Reset filters »), pastilles (« Event », « Call », « Ongoing », « Deadline to be announced », « New »,
+    « Closes in N days »), boutons (« More information », « View the call »), calendrier (jours, légende,
+    « Today »), compteurs (« 12 events and 3 calls to come » ; « 0 events » au pluriel), table des sources, formulaire
+    et messages d'erreur du script. Dates : « October 1, 2026 », « October 4–18, 2026 », « Nov. 5, 2026 », heure
+    « 8:00 », tuiles aux mois courts anglais (« Jan. », « Feb. », « Sept. »…). Le format (« In person », « Virtual »,
+    « Hybrid ») est traduit sur les pastilles, les cartes et la bande « À la une ». Thèmes et organisateurs restent en
+    français (limite connue). Le nom du calendrier `/en/veille.ics` est « RSN ecosystem monitoring ». **Page française** : aucun texte changé, sauf l'heure (« 8 h 00 » et non « 08 h 00 »).
+26. **Événements du RSN en anglais** : un événement du RSN dont la traduction anglaise existe y paraît une seule
+    fois, avec le titre, le résumé, le lieu et le lien `/en/evenement/…` de la version anglaise, l'image de la
+    fiche, et sans pastille de langue ; l'événement collecté depuis rsn.quebec (fiche avec image) ne fait pas de
+    doublon avec lui. Un événement sans traduction anglaise paraît en français avec la pastille « In French ».
+27. **Appels du RSN en anglais** : un appel du RSN dont l'article a une traduction WPML y paraît avec le titre,
+    l'extrait, le lien `/en/…` et la catégorie de la traduction (le nom lu sur l'article, par exemple « Funding calls »), et la même date limite (dans
+    « Deadlines » aussi). Un appel dont l'extrait traduit est vide garde son résumé français sous le titre anglais.
+28. **Fiche sans traduction, pastille** : une fiche française d'une autre source (Obvia, FRQ, RQRV, Réseau sommeil…)
+    est inchangée sur la page anglaise et porte « In French » ; Digital Health Canada n'a pas de pastille. Sur la page
+    française, une fiche anglaise (Digital Health Canada ; une proposition envoyée depuis la page anglaise, voir l'étape 8)
+    porte « En anglais » et une fiche française n'a rien.
+29. **Mila et IVADO appariés** : sur la page anglaise, leurs événements ont titre, résumé et lien anglais et pas de
+    pastille ; sur la page française, rien n'a changé. Contrôler dans le JSON
+    (`curl -s 'https://…/wp-json/rsn/v1/veille?lang=en'`) : ces fiches ont `langue` à `en`, un titre anglais et une
+    adresse en général `mila.quebec/en/…` ou `ivado.ca/en/…` (une redirection vers un site externe est possible), alors que `?lang=fr` rend les mêmes fiches en français. Une
+    fiche française sans équivalent anglais reste en français avec « In French ». Les champs anglais n'apparaissent pas
+    dans l'éditeur d'une fiche.
+30. **iCal anglais** : `/en/veille.ics` répond en 200 (CRLF, `Content-Type: text/calendar`), avec les titres et les
+    liens anglais des événements du RSN ; `/veille.ics` reste en français. Le bouton « Subscribe to the calendar »
+    de la page anglaise pointe vers `/en/veille.ics`.
+31. **Page française sans doublon anglais** : « RSN Scientific Days » n'est plus à côté de « Journées scientifiques
+    RSN » (30 mars 2026), et aucun événement du RSN n'y paraît en double ; le JSON français (`?lang=fr`) n'a plus
+    d'événement du RSN en `langue` `en`.
+32. **JSON et API** : `/wp-json/rsn/v1/veille` porte `langue` (`fr` hors préfixe), `?lang=en` rend le contenu anglais et
+    `?lang=fr` le contenu français depuis n'importe quelle adresse ; une valeur autre (`?lang=de`) est ignorée ; le
+    changement de langue d'une requête n'affecte pas la page servie ensuite. L'infolettre (Veille › Infolettre)
+    reste en français, même administrateur connecté en locale anglaise.
 
 **Terminé quand** : toutes les cases de ces sections de `verifier-public.md` sont cochées, sauf celles du formulaire
-(étape 8), et chacun des points 4 à 23 ci-dessus donne le résultat attendu.
+(étape 8), et chacun des points 4 à 32 ci-dessus donne le résultat attendu.
 
 ## 8. Formulaire « Proposer un événement »
 
@@ -254,6 +302,11 @@ absence de la fiche et du courriel sur la page, le JSON et l'iCal tant qu'elle n
 débit (sixième envoi refusé), champ piège, erreurs de saisie, doublon, jeton, administrateur connecté, image
 (nom aléatoire, écart de la proposition supprime l'image), plafond du site. Entre deux séries, vider les
 compteurs : `wp transient delete --all`.
+
+**Formulaire anglais** (version 0.4.0 ; WPML) : sur la page anglaise, le formulaire est en anglais (champs, bouton, messages
+d'erreur et de réussite). Envoyer une proposition : la fiche arrive dans « À approuver » avec la langue anglaise
+(`wp post meta get <ID> rsn_veille_langue` rend `en`) ; publiée, elle porte « En anglais » sur la page française et
+aucune pastille sur la page anglaise. Une proposition envoyée depuis la page française est enregistrée `fr`.
 
 **Terminé quand** : toutes les cases de la section sont cochées, et la proposition publiée à la main apparaît
 sur la page avec son image, sans courriel nulle part.

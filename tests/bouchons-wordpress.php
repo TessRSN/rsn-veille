@@ -42,6 +42,16 @@
  * `pieces_supprimees`, métas `_thumbnail_id` retirées). La vérification de référence est la section Formulaire de
  * `tests/manuel/verifier-public.md`.
  *
+ * Articles lus par adresse ou par identifiant : `url_to_postid` (table `urls`, adresse => identifiant, 0 si inconnue),
+ * `get_the_title`, `get_the_excerpt` (lus dans les articles de `wp_insert_post`), `get_permalink` (table `permaliens`,
+ * identifiant => adresse, sinon `https://exemple.test/?p=ID`) et `get_the_category` (table `categories`,
+ * identifiant => noms, rendus en objets `{name}`). Les filtres WPML se posent avec `add_filter`.
+ *
+ * Traductions : `load_plugin_textdomain` note ses appels (`domaines`) sans charger de fichier, `plugin_basename`
+ * rend « dossier/fichier.php ». `switch_to_locale` et `restore_previous_locale` sont inertes (aucune locale n'est
+ * chargée) : ils notent seulement leurs appels dans `declenchees` (`switch_to_locale` => [[locale], …],
+ * `restore_previous_locale` => [[], …]), lisibles par `rsn_veille_bouchons_declenchements()`.
+ *
  * HTTP : `wp_remote_get` note ses appels (`requetes_http`) et rend `reponse_http` (200 vide par défaut) ;
  * `wp_remote_retrieve_response_code`, `_header` (nom insensible à la casse) et `_body`.
  *
@@ -83,6 +93,10 @@ function rsn_veille_bouchons_reinitialiser(): void {
         'courriels' => [], 'wp_mail_reussit' => true,
         // HTTP : appels à wp_remote_get (adresse et arguments) et réponse à rendre (null : 200 vide).
         'requetes_http' => [], 'reponse_http' => null,
+        // Traductions : appels à load_plugin_textdomain.
+        'domaines' => [],
+        // Articles lus par adresse ou identifiant : adresse => identifiant, identifiant => permalien, identifiant => noms de catégories.
+        'urls' => [], 'permaliens' => [], 'categories' => [],
     ];
     $GLOBALS['rsn_veille_wp']['roles'] = [
         'administrator' => new WP_Role('administrator', ['manage_options' => true, 'edit_posts' => true]),
@@ -176,6 +190,18 @@ function do_action(string $crochet, mixed ...$arguments): void {
     foreach ($GLOBALS['rsn_veille_wp']['actions'][$crochet] ?? [] as $action) {
         ($action['rappel'])(...array_slice($arguments, 0, $action['nb_arguments']));
     }
+}
+
+/** Inerte : aucune locale n'est chargée, l'appel est noté dans `declenchees['switch_to_locale']`. */
+function switch_to_locale(string $locale): bool {
+    $GLOBALS['rsn_veille_wp']['declenchees']['switch_to_locale'][] = [$locale];
+    return true;
+}
+
+/** Inerte : l'appel est noté dans `declenchees['restore_previous_locale']`. */
+function restore_previous_locale(): string|false {
+    $GLOBALS['rsn_veille_wp']['declenchees']['restore_previous_locale'][] = [];
+    return false;
 }
 
 /** Arguments de chaque déclenchement d’une action (outil de test, pas une fonction WordPress). */
@@ -506,6 +532,28 @@ function wp_update_post(array $article, bool $erreur = false): int|WP_Error {
 function get_post(int $id): ?WP_Post {
     $post = $GLOBALS['rsn_veille_wp']['posts'][$id] ?? null;
     return $post === null ? null : clone $post;
+}
+
+function url_to_postid(string $url): int {
+    return (int) ($GLOBALS['rsn_veille_wp']['urls'][$url] ?? 0);
+}
+
+function get_the_title(int|WP_Post $article = 0): string {
+    return (string) get_post_field('post_title', is_object($article) ? (int) $article->ID : $article);
+}
+
+function get_the_excerpt(int|WP_Post|null $article = null): string {
+    return (string) get_post_field('post_excerpt', is_object($article) ? (int) $article->ID : (int) $article);
+}
+
+function get_permalink(int|WP_Post $article = 0): string|false {
+    $id = is_object($article) ? (int) $article->ID : $article;
+    return $GLOBALS['rsn_veille_wp']['permaliens'][$id] ?? 'https://exemple.test/?p=' . $id;
+}
+
+/** @return object[] */
+function get_the_category(int $id = 0): array {
+    return array_map(static fn(string $nom): object => (object) ['name' => $nom], $GLOBALS['rsn_veille_wp']['categories'][$id] ?? []);
 }
 
 function get_post_status(int $id): string|false {
@@ -943,6 +991,20 @@ function get_pages(array $arguments = []): array {
 }
 
 // --- Public : raccourcis, REST, réécriture (imitation de shortcodes.php, rest-api.php, rewrite.php) ---
+
+// Traductions : `load_plugin_textdomain` note l'appel (`domaines`) sans rien charger (les textes restent en français).
+if (!function_exists('load_plugin_textdomain')) {
+    function load_plugin_textdomain(string $domaine, string|false $obsolete = false, string|false $chemin = false): bool {
+        $GLOBALS['rsn_veille_wp']['domaines'][] = ['domaine' => $domaine, 'obsolete' => $obsolete, 'chemin' => $chemin];
+        return true;
+    }
+}
+// `plugin_basename` : « dossier-de-l-extension/fichier.php » (le dossier parent et le fichier).
+if (!function_exists('plugin_basename')) {
+    function plugin_basename(string $fichier): string {
+        return basename(dirname($fichier)) . '/' . basename($fichier);
+    }
+}
 
 if (!function_exists('_x')) {
     function _x(string $texte, string $contexte, string $domaine = 'default'): string {

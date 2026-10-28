@@ -144,8 +144,25 @@ final class PageJournal {
         }
         $erreurs = is_array($entree['erreurs'] ?? null) ? array_filter($entree['erreurs'], 'is_scalar') : [];
         $duree = $entree['duree_ms'] ?? 0;
-        return $html . '<td>' . self::erreurs_html($erreurs) . '</td>'
+        return $html . '<td>' . self::anglais_html($entree) . self::erreurs_html($erreurs) . '</td>'
             . '<td>' . esc_html(self::duree(is_numeric($duree) ? (int) $duree : 0)) . '</td>';
+    }
+
+    /**
+     * Appariement de la version anglaise (Mila, IVADO), au-dessus des erreurs : « 3 appariées en anglais,
+     * 1 orpheline ». Vide si l'entrée n'en consigne pas (source sans version anglaise, entrée ancienne).
+     */
+    private static function anglais_html(array $entree): string {
+        if (!array_key_exists('appariees_en', $entree) && !array_key_exists('orphelines_en', $entree)) {
+            return '';
+        }
+        $appariees = is_numeric($entree['appariees_en'] ?? null) ? (int) $entree['appariees_en'] : 0;
+        $orphelines = is_numeric($entree['orphelines_en'] ?? null) ? (int) $entree['orphelines_en'] : 0;
+        /* translators: %d : nombre d'événements appariés à leur version anglaise. */
+        $texte = sprintf(_n('%d appariée en anglais', '%d appariées en anglais', $appariees, 'rsn-veille'), $appariees);
+        /* translators: %d : nombre d'événements anglais sans équivalent français. */
+        $texte .= ', ' . sprintf(_n('%d orpheline', '%d orphelines', $orphelines, 'rsn-veille'), $orphelines);
+        return '<div class="rsn-veille-anglais">' . esc_html($texte) . '</div>';
     }
 
     /** @param array<int|string,scalar> $erreurs Liste repliée sous « N erreurs », ou « Aucune ». */

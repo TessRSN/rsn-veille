@@ -81,6 +81,13 @@ final class Fiche {
     public string $categorie = '';
     /** Date limite propre aux appels (Y-m-d). */
     public ?string $echeance = null;
+    /**
+     * Titre, résumé et adresse en anglais, posés par la collecte (appariement avec une page anglaise) : sur la
+     * page anglaise, ils remplacent `titre`, `resume` et `url` quand ils sont renseignés. Jamais publiés tels quels.
+     */
+    public string $titre_en = '';
+    public string $resume_en = '';
+    public string $url_en = '';
     // Champs de persistance.
     public ?int $id = null;
     public ?string $absent_depuis = null;
@@ -179,8 +186,13 @@ final class Fiche {
      * seulement lettres et chiffres : ponctuation, espaces et émojis disparaissent).
      */
     public function cle_dedoublonnage(): string {
-        $titre = preg_replace('/[^a-z0-9]/', '', self::simplifier($this->titre)) ?? '';
-        return ($this->debut ?? '') . '|' . substr($titre, 0, 22);
+        return self::cle_dedoublonnage_de($this->debut ?? '', $this->titre);
+    }
+
+    /** La même clé pour un début et un titre donnés (le titre français d'un événement du RSN, par exemple). */
+    public static function cle_dedoublonnage_de(string $debut, string $titre): string {
+        $titre = preg_replace('/[^a-z0-9]/', '', self::simplifier($titre)) ?? '';
+        return $debut . '|' . substr($titre, 0, 22);
     }
 
     /**

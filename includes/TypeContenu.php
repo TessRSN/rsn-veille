@@ -53,6 +53,9 @@ final class TypeContenu {
         'titres_source' => 'object',
         'categorie' => 'string',
         'echeance' => 'string',
+        'titre_en' => 'string',
+        'resume_en' => 'string',
+        'url_en' => 'string',
         'absent_depuis' => 'string',
         'absences' => 'integer',
         'manuel' => 'boolean',
@@ -174,6 +177,7 @@ final class TypeContenu {
     public static function nettoyer_meta(string $nom, mixed $valeur): mixed {
         switch ($nom) {
             case 'url':
+            case 'url_en':
             case 'image_url':
                 return esc_url_raw(self::chaine($valeur));
             case 'absences':

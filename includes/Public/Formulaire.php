@@ -49,7 +49,7 @@ final class Formulaire {
     public const META_IMAGE_PROPOSEE = TypeContenu::PREFIXE . 'image_proposee';
 
     /** Champs texte lus dans la requête. */
-    private const CHAMPS = ['titre', 'debut', 'fin', 'organisateur', 'format', 'lieu', 'url', 'resume', 'courriel', 'site_web'];
+    private const CHAMPS = ['titre', 'debut', 'fin', 'organisateur', 'format', 'lieu', 'url', 'resume', 'courriel', 'site_web', 'langue'];
 
     private const FORMATS = ['Présentiel', 'Virtuel', 'Hybride'];
 
@@ -125,7 +125,8 @@ final class Formulaire {
         $fiche->region = Fiche::deviner_region('', $lieu, $format);
         $fiche->url = self::url($brut('url'));
         $fiche->resume = $resume;
-        $fiche->langue = 'fr';
+        // Langue de la page où l'on a rempli le formulaire ; toute autre valeur vaut « fr ».
+        $fiche->langue = $brut('langue') === 'en' ? 'en' : 'fr';
         // Thèmes des réglages de l'équipe (comme la collecte), pas ceux par défaut.
         $fiche->themes = Collecte::pertinence()->themes($titre . ' ' . $resume);
         $fiche->source = Fiche::SOURCE_PROPOSITION;
@@ -184,6 +185,23 @@ final class Formulaire {
      * en 400 ; `{ok: false, message}` en 403 (jeton), 429 (débit) ou 500.
      */
     public static function traiter(): void {
+        // Les messages renvoyés (erreurs et remerciement) sont dans la langue du formulaire envoyé : la requête AJAX
+        // arrive sans la langue de la page. La locale est restaurée à la fin, quelle que soit la sortie.
+        $en_anglais = isset($_POST['langue']) && is_string($_POST['langue']) && wp_unslash($_POST['langue']) === 'en';
+        if ($en_anglais) {
+            switch_to_locale('en_US');
+        }
+        try {
+            self::traiter_dans_la_langue();
+        } finally {
+            if ($en_anglais) {
+                restore_previous_locale();
+            }
+        }
+    }
+
+    /** Corps de `traiter()`, exécuté dans la locale de la langue envoyée. */
+    private static function traiter_dans_la_langue(): void {
         if (check_ajax_referer(self::NONCE, 'nonce', false) === false) {
             wp_send_json_error(['ok' => false, 'message' => __('Jeton de sécurité expiré : rechargez la page.', 'rsn-veille')], 403);
             return;

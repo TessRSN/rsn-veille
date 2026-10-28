@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
 /**
  * Calendrier iCal (RFC 5545) des événements publiés, servi à `/veille.ics`.
  *
- * Classe pure : aucune fonction WordPress.
+ * Classe pure, à une exception près : le nom du calendrier passe par `__()` (traduit selon la locale courante).
  */
 final class Ical {
     /** Base du transient du calendrier généré (une heure, suffixé par la langue : Donnees::transient), vidé avec le JSON public. */
@@ -60,7 +60,7 @@ final class Ical {
             'PRODID:-//RSN//Veille//FR',
             'CALSCALE:GREGORIAN',
             'METHOD:PUBLISH',
-            "X-WR-CALNAME:Veille de l'écosystème RSN",
+            'X-WR-CALNAME:' . self::texte(__("Veille de l'écosystème RSN", 'rsn-veille')),
             'X-WR-TIMEZONE:' . self::FUSEAU,
             'REFRESH-INTERVAL;VALUE=DURATION:PT12H',
             'X-PUBLISHED-TTL:PT12H',

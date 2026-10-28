@@ -2,7 +2,7 @@
 /**
  * Plugin Name: RSN : veille de l'écosystème
  * Description: Collecte et présente la veille de l'écosystème de la santé numérique au Québec.
- * Version: 0.3.0
+ * Version: 0.4.0
  * Author: Réseau santé numérique
  * Requires at least: 6.0
  * Requires PHP: 8.0
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('RSN_VEILLE_VERSION', '0.3.0');
+define('RSN_VEILLE_VERSION', '0.4.0');
 define('RSN_VEILLE_DOSSIER', __DIR__);
 define('RSN_VEILLE_URL', function_exists('plugin_dir_url') ? plugin_dir_url(__FILE__) : '');
 
@@ -33,6 +33,8 @@ spl_autoload_register(static function (string $classe): void {
 });
 
 if (function_exists('add_action')) {
+    // Textes publics en anglais : languages/rsn-veille-en_US.mo, lu quand la locale de la requête est en_US.
+    add_action('init', 'rsn_veille_charger_traductions');
     add_action('init', [\RSN\Veille\TypeContenu::class, 'enregistrer']);
     // Collecte nocturne (rsn_veille_nuit, rsn_veille_source) et purge de la page Veille à chaque écriture de fiche.
     \RSN\Veille\Collecte::accrocher();
@@ -62,6 +64,14 @@ if (function_exists('register_activation_hook')) {
     register_deactivation_hook(__FILE__, [\RSN\Veille\Collecte::class, 'deplanifier']);
     register_deactivation_hook(__FILE__, [\RSN\Veille\Courriel::class, 'deplanifier']);
     register_deactivation_hook(__FILE__, [\RSN\Veille\Public\Rest::class, 'desactiver']);
+}
+
+/**
+ * Charge le domaine de traduction « rsn-veille » depuis le dossier languages/ de l'extension.
+ * Sur `init`, avant le rendu de la page (gabarit, `Raccourci::textes()`) et la lecture des noms de sources.
+ */
+function rsn_veille_charger_traductions(): void {
+    load_plugin_textdomain('rsn-veille', false, dirname(plugin_basename(__FILE__)) . '/languages');
 }
 
 /**

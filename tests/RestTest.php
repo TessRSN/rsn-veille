@@ -34,11 +34,82 @@ final class RestTest extends TestCase {
         $this->assertSame('public, max-age=3600', $reponse->get_headers()['Cache-Control']);
         $this->assertCount(1, rsn_veille_bouchons_declenchements('litespeed_control_set_nocache'));
         $donnees = $reponse->get_data();
-        $this->assertSame(['genere_le', 'sources', 'items'], array_keys($donnees));
+        $this->assertSame(['genere_le', 'langue', 'sources', 'items'], array_keys($donnees));
         $this->assertSame('Obvia', $donnees['items'][0]['organisateur']);
         $this->assertArrayNotHasKey('niveau', $donnees['items'][0]);
         $this->assertArrayNotHasKey('source', $donnees['items'][0]);
         $this->assertArrayNotHasKey('cle_source', $donnees['items'][0]);
+    }
+
+    /** Requête de test : seul `get_param` compte. */
+    private static function requete(?string $lang): object {
+        return new class($lang) {
+            public function __construct(private ?string $lang) {
+            }
+
+            public function get_param(string $nom): mixed {
+                return $nom === 'lang' ? $this->lang : null;
+            }
+        };
+    }
+
+    /** WPML simulé : la langue courante suit `wpml_switch_language`. */
+    private static function simuler_wpml(string $langue): void {
+        $GLOBALS['rsn_veille_langue_test'] = $langue;
+        add_filter('wpml_current_language', static fn() => $GLOBALS['rsn_veille_langue_test']);
+        add_action('wpml_switch_language', static function (string $nouvelle): void {
+            $GLOBALS['rsn_veille_langue_test'] = $nouvelle;
+        });
+    }
+
+    public function test_lang_en_avec_wpml_bascule_puis_restaure(): void {
+        self::simuler_wpml('fr');
+        $reponse = Rest::repondre(self::requete('en'));
+
+        $this->assertSame([['en'], ['fr']], rsn_veille_bouchons_declenchements('wpml_switch_language'));
+        $this->assertSame('en', $reponse->get_data()['langue']);
+        $this->assertSame('fr', $GLOBALS['rsn_veille_langue_test']);
+        $this->assertNotFalse(get_transient('rsn_veille_json_en'));
+    }
+
+    public function test_lang_en_bascule_aussi_la_locale_puis_la_restaure(): void {
+        self::simuler_wpml('fr');
+        Rest::repondre(self::requete('en'));
+        $this->assertSame([['en_US']], rsn_veille_bouchons_declenchements('switch_to_locale'));
+        $this->assertSame([[]], rsn_veille_bouchons_declenchements('restore_previous_locale'));
+
+        $GLOBALS['rsn_veille_langue_test'] = 'en';
+        Rest::repondre(self::requete('fr'));
+        $this->assertSame([['en_US'], ['fr_FR']], rsn_veille_bouchons_declenchements('switch_to_locale'));
+        $this->assertCount(2, rsn_veille_bouchons_declenchements('restore_previous_locale'));
+    }
+
+    public function test_sans_bascule_la_locale_ne_change_pas(): void {
+        self::simuler_wpml('en');
+        Rest::repondre(self::requete('en'));
+        Rest::repondre(self::requete('de'));
+        $this->assertSame([], rsn_veille_bouchons_declenchements('switch_to_locale'));
+        $this->assertSame([], rsn_veille_bouchons_declenchements('restore_previous_locale'));
+    }
+
+    public function test_lang_identique_a_la_langue_courante_ne_bascule_pas(): void {
+        self::simuler_wpml('en');
+        Rest::repondre(self::requete('en'));
+        $this->assertSame([], rsn_veille_bouchons_declenchements('wpml_switch_language'));
+    }
+
+    public function test_lang_ignoree_sans_wpml(): void {
+        $reponse = Rest::repondre(self::requete('en'));
+        $this->assertSame([], rsn_veille_bouchons_declenchements('wpml_switch_language'));
+        $this->assertSame('fr', $reponse->get_data()['langue']);
+    }
+
+    public function test_lang_invalide_ou_absente_ne_bascule_pas(): void {
+        self::simuler_wpml('fr');
+        Rest::repondre(self::requete('de'));
+        Rest::repondre(self::requete(null));
+        Rest::repondre();
+        $this->assertSame([], rsn_veille_bouchons_declenchements('wpml_switch_language'));
     }
 
     public function test_regle_ics_et_variable_de_requete(): void {

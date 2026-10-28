@@ -78,6 +78,14 @@ final class FormulaireTest extends TestCase {
         $this->assertStringNotContainsString('personne@exemple.org', serialize($fiche->vers_tableau()));
     }
 
+    public function test_langue_recue_en_ou_fr_sinon_fr(): void {
+        $this->assertSame('en', Formulaire::valider(self::champs(['langue' => 'en']), self::AUJOURDHUI)['fiche']->langue);
+        $this->assertSame('fr', Formulaire::valider(self::champs(['langue' => 'fr']), self::AUJOURDHUI)['fiche']->langue);
+        $this->assertSame('fr', Formulaire::valider(self::champs(), self::AUJOURDHUI)['fiche']->langue);
+        $this->assertSame('fr', Formulaire::valider(self::champs(['langue' => 'xx']), self::AUJOURDHUI)['fiche']->langue);
+        $this->assertSame('fr', Formulaire::valider(self::champs(['langue' => ['en']]), self::AUJOURDHUI)['fiche']->langue);
+    }
+
     public function test_themes_des_reglages_et_non_ceux_par_defaut(): void {
         update_option(Collecte::OPTION_REGLAGES, ['themes' => [['nom' => 'Souveraineté', 'mots' => ['souveraineté']]]]);
         $fiche = Formulaire::valider(self::champs(), self::AUJOURDHUI)['fiche'];
@@ -314,6 +322,36 @@ final class FormulaireTest extends TestCase {
         // Hors proposition, une écriture de fiche purge toujours.
         wp_insert_post(['post_type' => 'rsn_veille', 'post_title' => 'Fiche', 'post_status' => 'publish']);
         $this->assertSame([[42]], rsn_veille_bouchons_declenchements('litespeed_purge_post'));
+    }
+
+    public function test_langue_en_bascule_la_locale_en_anglais_puis_la_restaure(): void {
+        // Réponse d'erreur (jeton invalide) comme réponse de succès : la locale est basculée avant et restaurée après.
+        foreach ([[self::champs(['langue' => 'en']), 'mauvais'], [self::champs(['langue' => 'en']), 'jeton-rsn_veille_proposer'], [self::champs(['langue' => 'en', 'titre' => '']), 'jeton-rsn_veille_proposer']] as $n => [$champs, $jeton]) {
+            $this->envoyer($champs, $jeton);
+            $this->assertCount($n + 1, rsn_veille_bouchons_declenchements('switch_to_locale'));
+            $this->assertCount($n + 1, rsn_veille_bouchons_declenchements('restore_previous_locale'));
+        }
+        $this->assertSame(['en_US'], rsn_veille_bouchons_declenchements('switch_to_locale')[0]);
+    }
+
+    public function test_langue_fr_ou_absente_ne_bascule_pas_la_locale(): void {
+        $this->envoyer(self::champs(['langue' => 'fr']));
+        $this->envoyer(self::champs());
+        $this->envoyer(self::champs(['langue' => 'de']));
+        $this->assertSame([], rsn_veille_bouchons_declenchements('switch_to_locale'));
+        $this->assertSame([], rsn_veille_bouchons_declenchements('restore_previous_locale'));
+    }
+
+    public function test_langue_en_recue_par_l_action_ajax_enregistre_une_fiche_en(): void {
+        [, $statut] = $this->envoyer(self::champs(['langue' => 'en']));
+        $this->assertSame(200, $statut);
+        $this->assertSame('en', (new EntrepotWordPress())->obtenir(self::fiches()[0]->ID)->langue);
+    }
+
+    public function test_langue_absente_de_l_action_ajax_enregistre_une_fiche_fr(): void {
+        [, $statut] = $this->envoyer(self::champs());
+        $this->assertSame(200, $statut);
+        $this->assertSame('fr', (new EntrepotWordPress())->obtenir(self::fiches()[0]->ID)->langue);
     }
 
     public function test_sans_courriel_aucune_meta(): void {

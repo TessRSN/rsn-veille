@@ -39,6 +39,14 @@ final class TypeContenuTest extends TestCase {
         $this->assertSame('a@exemple.ca', TypeContenu::nettoyer_meta('courriel_proposant', 'a@exemple.ca'));
     }
 
+    public function test_url_en_est_nettoyee_comme_url(): void {
+        $this->assertSame('https://exemple.ca/en/a%20b', TypeContenu::nettoyer_meta('url_en', 'https://exemple.ca/en/a b'));
+        foreach (["  https://exemple.ca/en/a b ", 'https://exemple.ca/en/<script>x</script>?q="1"', 'javascript:alert(1)', ''] as $adresse) {
+            $this->assertSame(TypeContenu::nettoyer_meta('url', $adresse), TypeContenu::nettoyer_meta('url_en', $adresse), $adresse);
+        }
+        $this->assertStringNotContainsString('<', (string) TypeContenu::nettoyer_meta('url_en', 'https://exemple.ca/<b>'));
+    }
+
     public function test_cles_et_titres_source_gardes_tels_quels(): void {
         $this->assertSame('rss:https://x.ca/?p=1&caf%C3%A9', TypeContenu::nettoyer_meta('cle_source', 'rss:https://x.ca/?p=1&caf%C3%A9'));
         $this->assertSame(['a:1', 'b:%20'], TypeContenu::nettoyer_meta('cles_source', [2 => 'a:1', 5 => 'b:%20', 6 => '', 7 => 'a:1']));

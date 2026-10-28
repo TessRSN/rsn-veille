@@ -48,6 +48,15 @@ final class SourcesTest extends TestCase {
         $this->assertSame('appel|candidature', $sources['hippocrate_appels']['motif_titre']);
         $this->assertSame(8, $sources['inspq']['limite']);
         $this->assertSame('https://ivado.ca/evenements/feed/', $sources['ivado']['flux_evenements_url']);
+        // Version anglaise : Mila et IVADO seulement.
+        $this->assertSame('https://mila.quebec/en/events', $sources['mila']['url_en']);
+        $this->assertSame('https://ivado.ca/en/events/', $sources['ivado']['url_en']);
+        $this->assertSame('https://ivado.ca/en/events/feed/', $sources['ivado']['flux_evenements_url_en']);
+        foreach ($sources as $id => $s) {
+            if (!in_array($id, ['mila', 'ivado'], true)) {
+                $this->assertArrayNotHasKey('url_en', $s, $id);
+            }
+        }
         $this->assertSame('numerique', $sources['crm_appels']['type_source']);
         $this->assertSame('generaliste', $sources['frq']['type_source']);
         foreach (['frq_evenements', 'frq_appels', 'frq'] as $id) {

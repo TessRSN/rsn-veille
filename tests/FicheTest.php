@@ -78,6 +78,9 @@ final class FicheTest extends TestCase {
         $f->cles_source = ['ivado:123', 'crm:456'];
         $f->categorie = 'Subvention';
         $f->echeance = '2027-03-01';
+        $f->titre_en = 'AI in health call for projects';
+        $f->resume_en = 'A short summary.';
+        $f->url_en = 'https://exemple.org/en/call';
         $f->id = 42;
         $f->absent_depuis = '2026-10-20';
         $f->absences = 2;
@@ -92,6 +95,16 @@ final class FicheTest extends TestCase {
         $this->assertSame('fr', $defaut->langue);
         $this->assertSame('a_approuver', $defaut->statut);
         $this->assertNull($defaut->id);
+        $this->assertSame(['', '', ''], [$defaut->titre_en, $defaut->resume_en, $defaut->url_en]);
+    }
+
+    public function test_champs_anglais_dans_le_tableau(): void {
+        $copie = Fiche::depuis_tableau(['titre_en' => 'Colloquium', 'resume_en' => 'Summary', 'url_en' => 'https://exemple.org/en']);
+        $this->assertSame(['Colloquium', 'Summary', 'https://exemple.org/en'], [$copie->titre_en, $copie->resume_en, $copie->url_en]);
+        $tableau = (new Fiche())->vers_tableau();
+        $this->assertSame('', $tableau['titre_en']);
+        $this->assertSame('', $tableau['resume_en']);
+        $this->assertSame('', $tableau['url_en']);
     }
 
     public function test_vers_tableau_expose_image_manuelle(): void {

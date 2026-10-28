@@ -32,6 +32,70 @@ final class DepotTest extends TestCase {
         $this->assertCount(1, $e->lister(''));
     }
 
+    public function test_fiche_connue_recoit_les_champs_anglais_de_la_source(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $f = $this->fiche(['titre' => 'Colloque', 'debut' => '2026-11-12', 'cle_source' => 'x:1', 'niveau' => 'C', 'statut' => 'publie']);
+        $this->assertSame('cree', $d->integrer($f));
+        $f2 = clone $f; $f2->titre_en = 'Colloquium'; $f2->resume_en = 'Summary'; $f2->url_en = 'https://exemple.ca/en';
+        $this->assertSame('mis_a_jour', $d->integrer($f2));
+        $x = $e->trouver_par_cle_source('x:1');
+        $this->assertSame(['Colloquium', 'Summary', 'https://exemple.ca/en'], [$x->titre_en, $x->resume_en, $x->url_en]);
+
+        // Une valeur anglaise vide n'écrase jamais l'existante.
+        $this->assertSame('inchange', $d->integrer(clone $f));
+        $this->assertSame('Colloquium', $e->trouver_par_cle_source('x:1')->titre_en);
+    }
+
+    public function test_source_moins_fiable_ne_change_pas_un_champ_anglais_deja_rempli_mais_le_comble(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $d->integrer($this->fiche(['titre' => 'Colloque', 'debut' => '2026-11-12', 'cle_source' => 'x:1', 'niveau' => 'A', 'statut' => 'publie', 'titre_en' => 'Colloquium']));
+        $b = $this->fiche(['titre' => 'Colloque', 'debut' => '2026-11-12', 'cle_source' => 'x:1', 'niveau' => 'B', 'titre_en' => 'Other', 'resume_en' => 'Summary']);
+        $this->assertSame('mis_a_jour', $d->integrer($b));
+        $x = $e->trouver_par_cle_source('x:1');
+        $this->assertSame(['Colloquium', 'Summary'], [$x->titre_en, $x->resume_en]);
+    }
+
+    public function test_doublon_d_une_autre_source_passe_les_champs_anglais_a_la_fiche_gardee(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $d->integrer($this->fiche(['titre' => 'Hackathon', 'debut' => '2026-11-13', 'cle_source' => 'infolettre:3', 'niveau' => 'M', 'statut' => 'publie']));
+        // Source plus fiable.
+        $a = $this->fiche(['titre' => 'Hackathon', 'debut' => '2026-11-13', 'cle_source' => 'rsn:42', 'niveau' => 'A', 'titre_en' => 'Hackathon EN', 'resume_en' => 'Summary', 'url_en' => 'https://rsn.quebec/en/hackathon/']);
+        $this->assertSame('fusionne', $d->integrer($a));
+        $x = $e->lister('')[0];
+        $this->assertSame(['Hackathon EN', 'Summary', 'https://rsn.quebec/en/hackathon/'], [$x->titre_en, $x->resume_en, $x->url_en]);
+
+        // Source moins fiable : comble seulement ce que la fiche n'a pas.
+        $b = $this->fiche(['titre' => 'Hackathon', 'debut' => '2026-11-13', 'cle_source' => 'veille:9', 'niveau' => 'B', 'titre_en' => 'Autre titre', 'resume_en' => 'Autre résumé']);
+        $this->assertSame('fusionne', $d->integrer($b));
+        $x = $e->lister('')[0];
+        $this->assertSame(['Hackathon EN', 'Summary'], [$x->titre_en, $x->resume_en]);
+
+        $e2 = new EntrepotMemoire(); $d2 = new Depot($e2);
+        $d2->integrer($this->fiche(['titre' => 'Atelier', 'debut' => '2026-11-14', 'cle_source' => 'a:1', 'niveau' => 'A', 'statut' => 'publie']));
+        $d2->integrer($this->fiche(['titre' => 'Atelier', 'debut' => '2026-11-14', 'cle_source' => 'b:1', 'niveau' => 'C', 'titre_en' => 'Workshop']));
+        $this->assertSame('Workshop', $e2->lister('')[0]->titre_en);
+    }
+
+    public function test_completer_anglais_ecrit_les_champs_non_vides_et_differents(): void {
+        $e = new EntrepotMemoire(); $d = new Depot($e);
+        $d->integrer($this->fiche(['titre' => 'Colloque', 'debut' => '2026-11-12', 'cle_source' => 'x:1', 'niveau' => 'C', 'statut' => 'publie']));
+        $connue = $e->trouver_par_cle_source('x:1');
+
+        $this->assertTrue($d->completer_anglais($connue, 'Colloquium', '', 'https://exemple.ca/en'));
+        $x = $e->trouver_par_cle_source('x:1');
+        $this->assertSame(['Colloquium', '', 'https://exemple.ca/en'], [$x->titre_en, $x->resume_en, $x->url_en]);
+
+        // Rien de nouveau : rien d'écrit.
+        $this->assertFalse($d->completer_anglais($x, 'Colloquium', '', 'https://exemple.ca/en'));
+        // Valeurs vides : rien d'écrit, rien d'écrasé.
+        $this->assertFalse($d->completer_anglais($x, '', '', ''));
+        $this->assertSame('Colloquium', $e->trouver_par_cle_source('x:1')->titre_en);
+        // Un champ change, l'autre non.
+        $this->assertTrue($d->completer_anglais($x, 'Colloquium', 'Summary', 'https://exemple.ca/en'));
+        $x = $e->trouver_par_cle_source('x:1');
+        $this->assertSame(['Colloquium', 'Summary'], [$x->titre_en, $x->resume_en]);
+    }
+
     public function test_mise_a_jour_ignore_les_valeurs_vides_et_ne_touche_pas_le_reste(): void {
         $e = new EntrepotMemoire(); $d = new Depot($e);
         $f = $this->fiche([

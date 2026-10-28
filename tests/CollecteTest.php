@@ -256,6 +256,238 @@ final class CollecteTest extends TestCase {
         $this->assertCount(3, (new EntrepotWordPress())->lister(''));
     }
 
+    // --- Version anglaise (Mila, IVADO) ---
+
+    /** Page d'événements de Mila : [nid, titre, chemin, résumé, date de début, date de fin]. */
+    private static function page_mila(array $evenements): string {
+        $html = '<html><body>';
+        foreach ($evenements as [$nid, $titre, $chemin, $resume, $debut, $fin]) {
+            $html .= '<div data-nid="' . $nid . '"><div class="node--type-event">'
+                . '<div class="field-name-node-title"><a href="' . $chemin . '">' . $titre . '</a></div>'
+                . '<div class="field-name-body">' . $resume . '</div>'
+                . '<time datetime="' . $debut . 'T18:00:00-05:00">début</time><time datetime="' . $fin . 'T21:00:00-05:00">fin</time>'
+                . '</div></div>';
+        }
+        return $html . '</body></html>';
+    }
+
+    /** Calendrier d'IVADO : identifiant => date. */
+    private static function calendrier_ivado(array $evenements): string {
+        $html = '<html><body>';
+        foreach ($evenements as $id => $date) {
+            $html .= '<div class="calendarEvents" data-event-id="' . $id . '" data-event-start="' . $date . ' 00:00:00" data-event-end="' . $date . ' 00:00:00"></div>';
+        }
+        return $html . '</body></html>';
+    }
+
+    /** Flux RSS des événements : adresse => résumé. */
+    private static function flux(array $resumes): string {
+        $items = '';
+        foreach ($resumes as $lien => $resume) {
+            $items .= '<item><title>T</title><link>' . $lien . '</link><description>' . $resume . '</description><pubDate>Mon, 26 Oct 2026 10:00:00 +0000</pubDate></item>';
+        }
+        return '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Flux</title>' . $items . '</channel></rss>';
+    }
+
+    /** Faux client HTTP : réponses par adresse exacte, 404 sinon ; les adresses demandées vont dans $this->demandes. */
+    private function servir(array $pages): void {
+        Collecte::$obtenir_pour_tests = function (string $url, array $options = []) use ($pages): array {
+            $this->demandes[] = $url;
+            $page = $pages[$url] ?? self::reponse('', '', $url, 404, 'Réponse HTTP 404');
+            if ($page instanceof \Throwable) {
+                throw $page;
+            }
+            return $page + ['url_finale' => $url];
+        };
+    }
+
+    private const MILA_FR = [
+        [11, 'Atelier IA', '/fr/evenement/atelier', 'Résumé français', '2026-11-05', '2026-11-05'],
+        [12, 'Colloque données', '/fr/evenement/colloque', 'Deux jours', '2026-11-12', '2026-11-13'],
+    ];
+
+    private const MILA_EN = [
+        [11, 'AI Workshop', '/en/event/workshop', 'English summary', '2026-11-05', '2026-11-05'],
+        [12, 'Data Symposium', '/en/event/symposium', 'Two days', '2026-11-12', '2026-11-13'],
+        [13, 'English only', '/en/event/english-only', 'Only in English', '2026-11-20', '2026-11-20'],
+    ];
+
+    private function servir_mila(array|\Throwable|null $anglaise = null): void {
+        $this->servir([
+            'https://mila.quebec/fr/evenements' => self::reponse('text/html; charset=UTF-8', self::page_mila(self::MILA_FR)),
+            'https://mila.quebec/en/events' => $anglaise ?? self::reponse('text/html; charset=UTF-8', self::page_mila(self::MILA_EN)),
+        ]);
+    }
+
+    public function test_mila_version_anglaise_lue_et_appariee_aux_fiches_connues(): void {
+        $entrepot = new EntrepotMemoire();
+        $this->servir_mila();
+        $ligne = Collecte::collecter_source(Sources::par_defaut()['mila'], new Depot($entrepot), new Pertinence());
+
+        $this->assertSame(['https://mila.quebec/fr/evenements', 'https://mila.quebec/en/events'], $this->demandes);
+        $this->assertSame([2, 2, []], [$ligne['lus'], $ligne['crees'], $ligne['erreurs']]);
+        $this->assertSame([2, 1], [$ligne['appariees_en'], $ligne['orphelines_en']]);
+        $atelier = $entrepot->trouver_par_cle_source('mila:11');
+        $this->assertSame(['Atelier IA', 'https://mila.quebec/fr/evenement/atelier'], [$atelier->titre, $atelier->url]);
+        $this->assertSame(['AI Workshop', 'English summary', 'https://mila.quebec/en/event/workshop'], [$atelier->titre_en, $atelier->resume_en, $atelier->url_en]);
+        $this->assertSame('Data Symposium', $entrepot->trouver_par_cle_source('mila:12')->titre_en);
+        // Les fiches anglaises ne sont jamais intégrées.
+        $this->assertCount(2, $entrepot->lister(''));
+
+        // Seconde collecte : paires déjà à jour, toujours comptées, rien de réécrit.
+        $this->demandes = [];
+        $ligne = Collecte::collecter_source(Sources::par_defaut()['mila'], new Depot($entrepot), new Pertinence());
+        $this->assertSame([0, 2, 2, 1], [$ligne['crees'], $ligne['inchanges'], $ligne['appariees_en'], $ligne['orphelines_en']]);
+        $this->assertCount(2, $this->demandes);
+    }
+
+    public function test_mila_evenement_non_traduit_a_la_meme_adresse_n_est_pas_apparie(): void {
+        $entrepot = new EntrepotMemoire();
+        // La page anglaise liste l'atelier 11 avec l'adresse française : pas de version anglaise.
+        $en = self::MILA_EN;
+        $en[0] = [11, 'Atelier IA', '/fr/evenement/atelier', 'Résumé français', '2026-11-05', '2026-11-05'];
+        $this->servir_mila(self::reponse('text/html; charset=UTF-8', self::page_mila($en)));
+        $ligne = Collecte::collecter_source(Sources::par_defaut()['mila'], new Depot($entrepot), new Pertinence());
+
+        $this->assertSame([2, []], [$ligne['crees'], $ligne['erreurs']]);
+        $this->assertSame(1, $ligne['appariees_en'], 'seul le colloque est apparié');
+        $this->assertSame(['', '', ''], [$entrepot->trouver_par_cle_source('mila:11')->titre_en, $entrepot->trouver_par_cle_source('mila:11')->resume_en, $entrepot->trouver_par_cle_source('mila:11')->url_en]);
+        $this->assertSame('Data Symposium', $entrepot->trouver_par_cle_source('mila:12')->titre_en);
+    }
+
+    public function test_titre_anglais_ecrit_purge_les_caches(): void {
+        update_option(Collecte::OPTION_REGLAGES, ['page_veille_id' => 42]);
+        $entrepot = new EntrepotMemoire();
+        $this->servir_mila(self::reponse('text/html', '<html><body>vide</body></html>'));
+        Collecte::collecter_source(Sources::par_defaut()['mila'], new Depot($entrepot), new Pertinence());
+        $purges = count(rsn_veille_bouchons_declenchements('litespeed_purge_post'));
+
+        // Seule la version anglaise apporte du nouveau : la page publique change, donc purge.
+        $this->servir_mila();
+        $ligne = Collecte::collecter_source(Sources::par_defaut()['mila'], new Depot($entrepot), new Pertinence());
+        $this->assertSame([0, 2], [$ligne['crees'] + $ligne['mis_a_jour'] + $ligne['fusionnes'], $ligne['appariees_en']]);
+        $this->assertCount($purges + 1, rsn_veille_bouchons_declenchements('litespeed_purge_post'));
+    }
+
+    public function test_version_anglaise_illisible_consignee_sans_toucher_aux_fiches_francaises(): void {
+        foreach ([
+            'HTTP' => self::reponse('', '', 'https://mila.quebec/en/events', 500, 'Réponse HTTP 500'),
+            'contenu' => self::reponse('application/json', '{"a": 1}'),
+            'exception' => new RuntimeException('connexion coupée'),
+        ] as $cas => $anglaise) {
+            $entrepot = new EntrepotMemoire();
+            $this->servir_mila($anglaise);
+            $ligne = Collecte::collecter_source(Sources::par_defaut()['mila'], new Depot($entrepot), new Pertinence());
+            $this->assertSame(2, $ligne['crees'], $cas);
+            $this->assertCount(1, $ligne['erreurs'], $cas);
+            $this->assertStringContainsString('anglaise', $ligne['erreurs'][0], $cas);
+            $this->assertSame([0, 0], [$ligne['appariees_en'], $ligne['orphelines_en']], $cas);
+            $atelier = $entrepot->trouver_par_cle_source('mila:11');
+            $this->assertSame(['Atelier IA', ''], [$atelier->titre, $atelier->titre_en], $cas);
+        }
+    }
+
+    public function test_source_sans_version_anglaise_inchangee(): void {
+        $source = Sources::par_defaut()['mila'];
+        unset($source['url_en']);
+        $this->servir_mila();
+        $ligne = Collecte::collecter_source($source, new Depot(new EntrepotMemoire()), new Pertinence());
+        $this->assertSame(['https://mila.quebec/fr/evenements'], $this->demandes);
+        $this->assertArrayNotHasKey('appariees_en', $ligne);
+        $this->assertArrayNotHasKey('orphelines_en', $ligne);
+    }
+
+    /** IVADO : un événement le 6 novembre, 100 en français et 101 en anglais (WPML : identifiants distincts). */
+    private function servir_ivado(array $en_plus = []): void {
+        $this->servir($en_plus + [
+            'https://ivado.ca/evenements/' => self::reponse('text/html', self::calendrier_ivado([100 => '2026-11-06'])),
+            'https://ivado.ca/evenements/feed/' => self::reponse('application/rss+xml', self::flux(['https://ivado.ca/evenements/atelier/' => 'Résumé français'])),
+            'https://ivado.ca/?p=100' => self::reponse('text/html', '<html><head><title>Atelier | IVADO</title></head></html>', 'https://ivado.ca/evenements/atelier/'),
+            'https://ivado.ca/en/events/' => self::reponse('text/html', self::calendrier_ivado([101 => '2026-11-06', 102 => '2026-11-30'])),
+            'https://ivado.ca/en/events/feed/' => self::reponse('application/rss+xml', self::flux(['https://ivado.ca/en/events/workshop/' => 'English summary'])),
+            'https://ivado.ca/?p=101' => self::reponse('text/html', '<html><head><title>Workshop | IVADO</title></head></html>', 'https://ivado.ca/en/events/workshop/'),
+        ]);
+    }
+
+    public function test_ivado_page_anglaise_lue_seulement_tant_que_le_titre_anglais_manque(): void {
+        $entrepot = new EntrepotMemoire();
+        $this->servir_ivado();
+        $ligne = Collecte::collecter_source(Sources::par_defaut()['ivado'], new Depot($entrepot), new Pertinence());
+
+        $this->assertSame([1, 1, []], [$ligne['lus'], $ligne['crees'], $ligne['erreurs']]);
+        $this->assertSame([1, 1], [$ligne['appariees_en'], $ligne['orphelines_en']]);
+        $this->assertContains('https://ivado.ca/en/events/feed/', $this->demandes);
+        $this->assertContains('https://ivado.ca/?p=101', $this->demandes);
+        // L'anglaise orpheline n'est pas résolue : aucune fiche connue à compléter.
+        $this->assertNotContains('https://ivado.ca/?p=102', $this->demandes);
+        $atelier = $entrepot->trouver_par_cle_source('ivado:100');
+        $this->assertSame(['Atelier', 'https://ivado.ca/evenements/atelier/', 'Résumé français'], [$atelier->titre, $atelier->url, $atelier->resume]);
+        $this->assertSame(['Workshop', 'https://ivado.ca/en/events/workshop/', 'English summary'], [$atelier->titre_en, $atelier->url_en, $atelier->resume_en]);
+        $this->assertNull($entrepot->trouver_par_cle_source('ivado:101'));
+
+        // Titre anglais déjà présent : aucune page d'événement demandée, l'adresse anglaise finale est gardée.
+        $this->demandes = [];
+        $ligne = Collecte::collecter_source(Sources::par_defaut()['ivado'], new Depot($entrepot), new Pertinence());
+        $this->assertSame([1, []], [$ligne['appariees_en'], $ligne['erreurs']]);
+        $this->assertSame([], array_values(array_filter($this->demandes, static fn(string $u): bool => str_contains($u, '?p='))));
+        $this->assertSame('https://ivado.ca/en/events/workshop/', $entrepot->trouver_par_cle_source('ivado:100')->url_en);
+    }
+
+    public function test_ivado_page_anglaise_en_erreur_consignee(): void {
+        $entrepot = new EntrepotMemoire();
+        $this->servir_ivado(['https://ivado.ca/?p=101' => self::reponse('', '', 'https://ivado.ca/?p=101', 503, 'Réponse HTTP 503')]);
+        $ligne = Collecte::collecter_source(Sources::par_defaut()['ivado'], new Depot($entrepot), new Pertinence());
+        $this->assertSame([1, 0], [$ligne['crees'], $ligne['appariees_en']]);
+        $this->assertCount(1, $ligne['erreurs']);
+        $this->assertStringContainsString('?p=101', $ligne['erreurs'][0]);
+        $this->assertSame(['Atelier', ''], [$entrepot->trouver_par_cle_source('ivado:100')->titre, $entrepot->trouver_par_cle_source('ivado:100')->titre_en]);
+    }
+
+    public function test_ivado_evenement_non_traduit_liste_sous_son_identifiant_francais_n_est_pas_apparie(): void {
+        $entrepot = new EntrepotMemoire();
+        // La page anglaise liste l'événement 100 (non traduit) sous son identifiant français : même clé de source.
+        $this->servir_ivado(['https://ivado.ca/en/events/' => self::reponse('text/html', self::calendrier_ivado([100 => '2026-11-06']))]);
+        $ligne = Collecte::collecter_source(Sources::par_defaut()['ivado'], new Depot($entrepot), new Pertinence());
+
+        $this->assertSame([1, []], [$ligne['crees'], $ligne['erreurs']]);
+        $this->assertSame(0, $ligne['appariees_en']);
+        $atelier = $entrepot->trouver_par_cle_source('ivado:100');
+        $this->assertSame(['Atelier', '', '', ''], [$atelier->titre, $atelier->titre_en, $atelier->resume_en, $atelier->url_en]);
+    }
+
+    public function test_ivado_flux_anglais_illisible_porte_le_prefixe_de_la_passe_anglaise(): void {
+        $entrepot = new EntrepotMemoire();
+        $this->servir_ivado(['https://ivado.ca/en/events/feed/' => self::reponse('', '', 'https://ivado.ca/en/events/feed/', 503, 'Réponse HTTP 503')]);
+        $ligne = Collecte::collecter_source(Sources::par_defaut()['ivado'], new Depot($entrepot), new Pertinence());
+        $this->assertCount(1, $ligne['erreurs']);
+        $this->assertStringStartsWith('Version anglaise : Flux des événements IVADO illisible', $ligne['erreurs'][0]);
+        // Le flux français, lui, n'est pas préfixé (aucune erreur ici) et la fiche française est intacte.
+        $this->assertSame(1, $ligne['crees']);
+    }
+
+    public function test_ivado_pages_anglaises_dans_le_meme_budget_que_les_francaises(): void {
+        $entrepot = new EntrepotMemoire();
+        $temps = 0.0;
+        $this->servir_ivado();
+        $http = Collecte::$obtenir_pour_tests;
+        // La page française « prend » tout le budget : la page anglaise attend la collecte suivante.
+        Collecte::$obtenir_pour_tests = static function (string $url, array $options = []) use ($http, &$temps): array {
+            if (str_contains($url, '?p=')) {
+                $temps += ResolutionIvado::BUDGET;
+            }
+            return $http($url, $options);
+        };
+        Collecte::$horloge_pour_tests = static function () use (&$temps): float {
+            return $temps;
+        };
+        $ligne = Collecte::collecter_source(Sources::par_defaut()['ivado'], new Depot($entrepot), new Pertinence());
+        $this->assertSame(1, $ligne['crees']);
+        $this->assertContains('https://ivado.ca/?p=100', $this->demandes);
+        $this->assertNotContains('https://ivado.ca/?p=101', $this->demandes);
+        $this->assertSame([0, []], [$ligne['appariees_en'], $ligne['erreurs']]);
+        $this->assertSame('', $entrepot->trouver_par_cle_source('ivado:100')->titre_en);
+    }
+
     // --- Configuration ---
 
     public function test_lecteur_selon_le_type(): void {
@@ -411,6 +643,9 @@ final class CollecteTest extends TestCase {
             $sources['sommeil']['url'] => self::reponse('text/html; charset=UTF-8', '<!DOCTYPE html><html><head><title>Accueil</title></head></html>'),
             $sources['ivado']['url'] => self::reponse('text/html; charset=UTF-8', self::fixture('ivado.html')),
             $sources['ivado']['flux_evenements_url'] => self::reponse('application/rss+xml; charset=UTF-8', self::fixture('ivado_ev.xml')),
+            // Version anglaise sans événement : rien à apparier, aucune erreur.
+            $sources['ivado']['url_en'] => self::reponse('text/html; charset=UTF-8', '<!DOCTYPE html><html><body></body></html>'),
+            $sources['ivado']['flux_evenements_url_en'] => self::reponse('application/rss+xml; charset=UTF-8', self::fixture('ivado_ev.xml')),
         ];
         Collecte::$obtenir_pour_tests = function (string $url, array $options = []) use ($pages): array {
             $this->demandes[] = $url;
@@ -438,6 +673,7 @@ final class CollecteTest extends TestCase {
         $dhc = Journal::derniere('dhc');
         $this->assertSame([18, 18, 0, 0, 0, 0, 0, []], [$dhc['lus'], $dhc['crees'], $dhc['fusionnes'], $dhc['mis_a_jour'], $dhc['inchanges'], $dhc['ecartes'], $dhc['ignores'], $dhc['erreurs']]);
         $this->assertIsInt($dhc['duree_ms']);
+        $this->assertArrayNotHasKey('appariees_en', $dhc);
         $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $dhc['date']);
         $this->assertCount(18, (new EntrepotWordPress())->lister('publie'));
         $this->assertSame([[42]], rsn_veille_bouchons_declenchements('litespeed_purge_post'));

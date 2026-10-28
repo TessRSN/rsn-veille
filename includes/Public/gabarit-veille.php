@@ -15,6 +15,7 @@
  * @var string $section
  * @var string $une
  * @var string $suffixe
+ * @var string $langue Langue de la page : « fr » ou « en ».
  * @var string $json_donnees
  * @var string $json_textes
  * @var string $hex
@@ -32,7 +33,7 @@ $horloge = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wi
 $agenda_ics = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 7h12M6 1.5v3M10 1.5v3"/></svg>';
 $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12 12 4M6 4h6v6"/></svg>';
 ?>
-<div class="rsn-veille" role="region" aria-label="<?php echo esc_attr__("Veille de l'écosystème", 'rsn-veille'); ?>" data-section="<?php echo esc_attr($section); ?>" data-une="<?php echo esc_attr($une); ?>">
+<div class="rsn-veille" lang="<?php echo esc_attr($langue); ?>" role="region" aria-label="<?php echo esc_attr__("Veille de l'écosystème", 'rsn-veille'); ?>" data-section="<?php echo esc_attr($section); ?>" data-une="<?php echo esc_attr($une); ?>">
 <?php if ($avec_agenda) : ?>
 <div class="bandeau">
   <div class="wrap">
@@ -75,6 +76,7 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
         <label><?php echo esc_html__('Votre courriel (pour vous répondre)', 'rsn-veille'); ?> <input id="p-courriel" name="courriel" type="email" autocomplete="email"></label>
         <label><?php echo esc_html__('Image (facultative : JPEG, PNG ou WebP, 3 Mo au plus)', 'rsn-veille'); ?> <input id="p-image" name="image" type="file" accept="image/jpeg,image/png,image/webp"></label>
       </div>
+      <input type="hidden" name="langue" value="<?php echo esc_attr($langue); ?>">
       <div class="piege" aria-hidden="true"><label><?php echo esc_html__('Site web (laisser vide)', 'rsn-veille'); ?> <input name="site_web" type="text" tabindex="-1" autocomplete="off" aria-hidden="true"></label></div>
       <div class="boutons">
         <button class="btn" type="submit"><?php echo esc_html__("Envoyer à l'équipe", 'rsn-veille'); ?></button>

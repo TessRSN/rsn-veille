@@ -42,21 +42,26 @@ function animer(racine, noeudDonnees) {
   const VERROU_TYPE = racine.dataset.section === 'agenda';
   const filtres = { type: VERROU_TYPE ? 'evenement' : '', mois: '', qui: '', format: '', region: '', theme: '', orga: '', q: '' };
 
+  // Langue de la page (« fr » ou « en ») : un JSON incorporé plus ancien n'a pas ce champ, on retombe sur « fr ».
+  const LANGUE = D.langue === 'en' ? 'en' : 'fr';
+  // Gabarits de date en français, pour une page servie depuis un cache plus ancien que ce script (textes sans ces clés).
+  const DEFAUT = { date_longue: '%1$s %2$s %3$s', date_courte: '%1$s %2$s %3$s', heure: '%1$s h %2$s', premier_du_mois: '1er', du_au_meme_mois: 'Du %1$s au %2$s %3$s %4$s', du_au: 'Du %1$s au %2$s', en_francais: 'En français' };
   // Textes : « %d » reçoit le nombre, « %1$s », « %2$s »… la valeur de ce rang (l'ordre peut changer à la
-  // traduction), un « %s » simple la valeur suivante ; pluriel à la française (2 et plus).
+  // traduction), un « %s » simple la valeur suivante ; pluriel : 2 et plus en français, tout sauf 1 en anglais
+  // (comme plural=(n != 1) du .po anglais : 0 prend le pluriel).
   const remplir = (modele, valeurs) => {
     let i = 0;
     return String(modele).replace(/%(\d+)\$s|%s/g, (m, rang) => { const v = rang ? valeurs[rang - 1] : valeurs[i++]; return v === undefined ? '' : String(v); });
   };
-  const t = (cle, ...valeurs) => remplir(T[cle] !== undefined ? T[cle] : cle, valeurs);
-  const n = (cle, nombre, ...valeurs) => { const f = Array.isArray(T[cle]) ? T[cle] : [cle, cle]; return remplir(String(f[nombre > 1 ? 1 : 0]).replace('%d', nombre), valeurs); };
+  const t = (cle, ...valeurs) => remplir(T[cle] !== undefined ? T[cle] : (DEFAUT[cle] !== undefined ? DEFAUT[cle] : cle), valeurs);
+  const n = (cle, nombre, ...valeurs) => { const f = Array.isArray(T[cle]) ? T[cle] : [cle, cle]; return remplir(String(f[(LANGUE === 'en' ? nombre !== 1 : nombre > 1) ? 1 : 0]).replace('%d', nombre), valeurs); };
   const d = s => { const [a, m, j] = String(s || '').split('-').map(Number); return { a, m, j }; };
   const cap = s => s ? s[0].toUpperCase() + s.slice(1) : '';
   const premier = j => j === 1 ? t('premier_du_mois') : j;
-  const dateLongue = s => { if (!s) return ''; const x = d(s); return `${premier(x.j)} ${MOIS_LONG[x.m - 1]} ${x.a}`; };
+  const dateLongue = s => { if (!s) return ''; const x = d(s); return t('date_longue', premier(x.j), MOIS_LONG[x.m - 1], x.a); };
   // Nombre de jours calendaires de a à b (AAAA-MM-JJ), calculé en UTC : aucune heure locale en jeu.
   const jours = (a, b) => { const x = d(a), y = d(b); return Math.round((Date.UTC(y.a, y.m - 1, y.j) - Date.UTC(x.a, x.m - 1, x.j)) / 864e5); };
-  const dateCourte = s => { if (!s) return ''; const x = d(s); return `${x.j} ${MOIS[x.m - 1]} ${x.a}`; };
+  const dateCourte = s => { if (!s) return ''; const x = d(s); return t('date_courte', x.j, MOIS[x.m - 1], x.a); };
   const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   // Liens et images : http(s) seulement.
   const lien = u => /^https?:\/\//i.test(String(u || '')) ? esc(u) : '#';
@@ -70,18 +75,24 @@ function animer(racine, noeudDonnees) {
     const a = d(k.debut), b = d(k.fin || k.debut);
     const meme = !k.fin || k.fin === k.debut;
     // Série commencée et pas finie : la date de fin avec « en cours », pas un début déjà passé.
-    if (enCours(k)) return `<div class="jour">→${b.j}<small>${MOIS[b.m - 1]}<b>${esc(t('en_cours_tuile'))}</b></small></div>`;
-    if (meme) return `<div class="jour">${a.j}<small>${MOIS[a.m - 1]}<b>${a.a}</b></small></div>`;
-    if (a.m === b.m) return `<div class="jour">${a.j}–${b.j}<small>${MOIS[a.m - 1]}<b>${a.a}</b></small></div>`;
-    return `<div class="jour">${a.j}<small>${MOIS[a.m - 1]}<b>${a.a}</b></small></div>`;
+    if (enCours(k)) return `<div class="jour">→${b.j}<small>${esc(MOIS[b.m - 1])}<b>${esc(t('en_cours_tuile'))}</b></small></div>`;
+    if (meme) return `<div class="jour">${a.j}<small>${esc(MOIS[a.m - 1])}<b>${a.a}</b></small></div>`;
+    if (a.m === b.m) return `<div class="jour">${a.j}–${b.j}<small>${esc(MOIS[a.m - 1])}<b>${a.a}</b></small></div>`;
+    return `<div class="jour">${a.j}<small>${esc(MOIS[a.m - 1])}<b>${a.a}</b></small></div>`;
   }
   const ICO_DATE = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 7h12M6 1.5v3M10 1.5v3"/></svg>';
   const ICO_LIEU = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 14.5s4.5-4.2 4.5-7.5a4.5 4.5 0 0 0-9 0c0 3.3 4.5 7.5 4.5 7.5Z"/><circle cx="8" cy="7" r="1.6"/></svg>';
   function periode(k) {
-    const a = d(k.debut), b = d(k.fin || k.debut); const h = k.heure ? `, ${esc(k.heure).replace(':', ' h ')}` : '';
+    const a = d(k.debut), b = d(k.fin || k.debut);
+    // Heure « HH:MM » : « 8 h 00 » en français, « 8:00 » en anglais (gabarit « heure »), heures sans zéro de tête.
+    const hm = /^(\d{1,2}):(\d{2})/.exec(String(k.heure || ''));
+    const h = k.heure ? `, ${esc(hm ? t('heure', Number(hm[1]), hm[2]) : k.heure)}` : '';
     if (!k.fin || k.fin === k.debut) return `${dateLongue(k.debut)}${h}`;
     if (a.m === b.m && a.a === b.a) return t('du_au_meme_mois', a.j, b.j, MOIS_LONG[a.m - 1], a.a);
-    return t('du_au', `${premier(a.j)} ${MOIS_LONG[a.m - 1]}${a.a !== b.a ? ' ' + a.a : ''}`, dateLongue(k.fin));
+    // Début sans l'année quand elle est celle de la fin : « date_longue » avec une année vide, puis on retire le
+    // séparateur resté au bout (« 1er novembre » / « November 1 »).
+    const debutCourt = t('date_longue', premier(a.j), MOIS_LONG[a.m - 1], a.a !== b.a ? a.a : '').replace(/[,\s]+$/, '');
+    return t('du_au', debutCourt, dateLongue(k.fin));
   }
   // Pastilles (spec 4.5) : type, qui organise, format, langue, thèmes.
   function pastilles(k) {
@@ -90,15 +101,18 @@ function animer(racine, noeudDonnees) {
     if (enCours(k)) p.push(`<span class="pill etat">${esc(t('en_cours'))}</span>`);
     if (estRSN(k)) p.push(`<span class="pill rsn">${esc(libelle('qui', 'rsn'))}</span>`);
     else if (k.organisateur) p.push(qui(k) === 'partenaires' ? `<span class="pill part">${esc(t('partenaire', k.organisateur))}</span>` : `<span class="pill orga">${esc(k.organisateur)}</span>`);
-    if (k.format) p.push(`<span class="pill">${esc(k.format)}</span>`);
-    if (k.langue === 'en') p.push(`<span class="pill">${esc(t('en_anglais'))}</span>`);
+    if (k.format) p.push(`<span class="pill">${esc(libelle('formats', k.format))}</span>`);
+    // Pastille de langue : seulement quand la fiche n'est pas dans la langue de la page.
+    if ((k.langue === 'fr' || k.langue === 'en') && k.langue !== LANGUE) p.push(`<span class="pill">${esc(t(k.langue === 'en' ? 'en_anglais' : 'en_francais'))}</span>`);
     k.themes.forEach(e => p.push(`<span class="pill theme">${esc(e)}</span>`));
     return `<div class="pills">${p.join('')}</div>`;
   }
   const classeRSN = k => estRSN(k) ? ' rsn' : '';
+  // Attribut `lang` du texte d'une fiche dans l'autre langue que la page (lecteurs d'écran, césure, guillemets).
+  const attrLangue = k => (k.langue === 'fr' || k.langue === 'en') && k.langue !== LANGUE ? ` lang="${esc(k.langue)}"` : '';
   // ligne compacte (événements passés, comme la section « Passés » de la page Événements)
   function ligneEv(k) {
-    return `<div class="ev${classeRSN(k)}">${HEX}${blocJour(k)}<div class="corps"><div class="tx">
+    return `<div class="ev${classeRSN(k)}">${HEX}${blocJour(k)}<div class="corps"><div class="tx"${attrLangue(k)}>
       ${pastilles(k)}
       <h3><a href="${lien(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
       <div class="meta"><b>${esc(k.organisateur)}</b>${lieuTexte(k) ? ' · ' + esc(lieuTexte(k)) : ''}</div>
@@ -108,11 +122,11 @@ function animer(racine, noeudDonnees) {
   // fiche à venir : même ligne que les passés, avec l'image à gauche du texte et les lignes date / lieu
   function carteEv(k, compact) {
     if (compact === true) return ligneEv(k);
-    const lieu = [lieuTexte(k), k.format].filter(Boolean).join(' · ');
+    const lieu = [lieuTexte(k), k.format && libelle('formats', k.format)].filter(Boolean).join(' · ');
     const image = /^https?:\/\//i.test(k.image_url || '');
     return `<div class="ev${classeRSN(k)}${image ? ' avec-image' : ''}">${HEX}${blocJour(k)}<div class="corps">
       ${image ? `<a class="im" href="${lien(k.url)}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"><img src="${lien(k.image_url)}" alt="" loading="lazy" decoding="async"></a>` : ''}
-      <div class="tx">
+      <div class="tx"${attrLangue(k)}>
         ${pastilles(k)}
         <h3><a href="${lien(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
         <div class="infos"><span>${ICO_DATE}${periode(k)}</span>${lieu ? `<span>${ICO_LIEU}${esc(lieu)}</span>` : ''}</div>
@@ -138,9 +152,9 @@ function animer(racine, noeudDonnees) {
   function carteAppel(k) {
     const lim = limite(k);
     const x = d(lim || k.debut);
-    const tuile = lim ? `<div class="tuile"><b>${x.j}</b><span>${MOIS[x.m - 1]}</span><i>${esc(t('date_limite'))}</i></div>`
-      : `<div class="tuile gris"><b>${x.j}</b><span>${MOIS[x.m - 1]}</span><i>${esc(t('publie'))}</i></div>`;
-    return `<div class="ev appel-ev${classeRSN(k)}">${HEX}${tuile}<div class="corps"><div class="tx">
+    const tuile = lim ? `<div class="tuile"><b>${x.j}</b><span>${esc(MOIS[x.m - 1])}</span><i>${esc(t('date_limite'))}</i></div>`
+      : `<div class="tuile gris"><b>${x.j}</b><span>${esc(MOIS[x.m - 1])}</span><i>${esc(t('publie'))}</i></div>`;
+    return `<div class="ev appel-ev${classeRSN(k)}">${HEX}${tuile}<div class="corps"><div class="tx"${attrLangue(k)}>
       ${pastilles(k)}
       <h3><a href="${lien(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
       <div class="meta"><b>${esc(k.organisateur)}</b> · ${esc(k.categorie || t('appel'))}${lim ? ' · ' + esc(t('publie_le', dateCourte(k.debut))) : ` <span class="pill etat">${esc(t('date_limite_a_venir'))}</span>`}</div>
@@ -315,7 +329,7 @@ function animer(racine, noeudDonnees) {
         detail = esc(String(k.resume || '').split(/[.!?…](?=\s|$)/)[0].trim().slice(0, 70));
       } else {
         texte = t('evenement_rsn');
-        detail = [periode(k), k.format && esc(k.format)].filter(Boolean).join(' · ');
+        detail = [periode(k), k.format && esc(libelle('formats', k.format))].filter(Boolean).join(' · ');
       }
       return `<a class="une" href="${lien(k.url)}" target="_blank" rel="noopener"><div class="date"><b>${x.j}</b><span>${esc(MOIS[x.m - 1])}</span></div><div><span class="etat${etat ? ' ' + etat : ''}">${esc(texte)}</span><h3>${esc(k.titre)}</h3>${detail ? `<div class="m">${detail}</div>` : ''}</div><span class="fl" aria-hidden="true">→</span></a>`;
     }).join('');
@@ -348,7 +362,7 @@ function animer(racine, noeudDonnees) {
     const g = String(D.genere_le || '');
     if (!ISO.test(g.slice(0, 10))) return;
     const h = g.slice(11, 16);
-    $('#maj').textContent = /^\d{2}:\d{2}$/.test(h) ? t('collecte_du_a', dateLongue(g.slice(0, 10)), `${Number(h.slice(0, 2))} h ${h.slice(3)}`) : t('collecte_du', dateLongue(g.slice(0, 10)));
+    $('#maj').textContent = /^\d{2}:\d{2}$/.test(h) ? t('collecte_du_a', dateLongue(g.slice(0, 10)), t('heure', Number(h.slice(0, 2)), h.slice(3))) : t('collecte_du', dateLongue(g.slice(0, 10)));
   }
   function tout() { rendreUnes(); rendreLimites(); rendreTags(); rendreAgenda(); rendreAppels(); }
 

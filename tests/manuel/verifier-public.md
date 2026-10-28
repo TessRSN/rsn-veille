@@ -114,7 +114,7 @@ débit : `wp transient list --search='rsn_veille_debit_*'` puis `wp transient de
 
 ## Ressources et cohabitation
 
-- [ ] Sur la page Veille, `veille.css` et `veille.js` sont chargés avec `?ver=0.3.0` (onglet Réseau) ;
+- [ ] Sur la page Veille, `veille.css` et `veille.js` sont chargés avec `?ver=0.4.0` (onglet Réseau) ;
       sur une autre page du site (accueil, Nouvelles), ni l'un ni l'autre.
 - [ ] Les polices Google ne sont pas chargées une seconde fois par l'extension (pas de feuille
       `rsn-veille-polices`) ; `add_filter('rsn_veille_charger_polices', '__return_true')` dans un
@@ -126,13 +126,13 @@ débit : `wp transient list --search='rsn_veille_debit_*'` puis `wp transient de
       connexion) → la fiche apparaît (transient `rsn_veille_json_fr` vidé, page LiteSpeed et cache
       Elementor purgés) ; `wp transient get rsn_veille_json_fr` est vide juste après.
 - [ ] WPML : la page en anglais remplit `rsn_veille_json_en`, distinct de `rsn_veille_json_fr` ;
-      une purge vide les deux.
+      une purge vide les deux. Le détail de la page anglaise est dans `PARCOURS.md`, étape 7, points 24 à 32.
 - [ ] Modifier un événement TEC → la page Veille montre la modification au rechargement.
 
 ## REST et iCal
 
 - [ ] `curl -i http://localhost:8888/wp-json/rsn/v1/veille` : 200, `Cache-Control: public, max-age=3600`,
-      JSON `{genere_le, sources, items}` sans `niveau`, `source`, `cle_source`, `cles_source`,
+      JSON `{genere_le, langue, sources, items}` (`langue` vaut `fr` hors préfixe `/en/`) sans `niveau`, `source`, `cle_source`, `cles_source`,
       `courriel_proposant`, `absences`, `manuel` ; les fiches à approuver absentes.
 - [ ] `curl -i http://localhost:8888/veille.ics` : 200 sans redirection vers `/veille.ics/`, `Content-Type: text/calendar; charset=utf-8`,
       `Content-Disposition: inline; filename="veille.ics"`, fins de ligne CRLF (`curl -s … | od -c | head`).

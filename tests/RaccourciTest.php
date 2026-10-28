@@ -44,10 +44,10 @@ final class RaccourciTest extends TestCase {
         $this->publier();
         $html = do_shortcode('[rsn_veille]');
 
-        $this->assertStringStartsWith('<div class="rsn-veille" role="region" aria-label="Veille de l&#039;écosystème" data-section="tout" data-une="1">', trim($html));
+        $this->assertStringStartsWith('<div class="rsn-veille" lang="fr" role="region" aria-label="Veille de l&#039;écosystème" data-section="tout" data-une="1">', trim($html));
         $this->assertStringNotContainsString('<main', $html, 'le gabarit du site a déjà son <main>');
         $donnees = $this->donnees_incorporees($html);
-        $this->assertSame(['genere_le', 'sources', 'items'], array_keys($donnees));
+        $this->assertSame(['genere_le', 'langue', 'sources', 'items'], array_keys($donnees));
         $this->assertCount(1, $donnees['items']);
         $this->assertSame('Colloque santé numérique', $donnees['items'][0]['titre']);
         $this->assertArrayNotHasKey('niveau', $donnees['items'][0]);
@@ -95,6 +95,17 @@ final class RaccourciTest extends TestCase {
         // Un second rendu ne repasse pas la configuration.
         Raccourci::rendre([]);
         $this->assertCount(1, rsn_veille_bouchons_declenchements('litespeed_nonce'));
+    }
+
+    public function test_conteneur_et_champ_cache_portent_la_langue(): void {
+        $html = Raccourci::rendre([]);
+        $this->assertStringContainsString('<div class="rsn-veille" lang="fr" role="region"', $html);
+        $this->assertStringContainsString('<input type="hidden" name="langue" value="fr">', $html);
+
+        add_filter('wpml_current_language', static fn() => 'en');
+        $html = Raccourci::rendre([]);
+        $this->assertStringContainsString('<div class="rsn-veille" lang="en" role="region"', $html);
+        $this->assertStringContainsString('<input type="hidden" name="langue" value="en">', $html);
     }
 
     public function test_section_appels_sans_formulaire(): void {
@@ -260,7 +271,7 @@ final class RaccourciTest extends TestCase {
 
     public function test_textes_contiennent_les_nouvelles_cles(): void {
         $textes = Raccourci::textes();
-        foreach (['a_la_une', 'tout_le_rsn', 'evenement_rsn', 'nouveau', 'ferme_dans', 'ferme_demain', 'ferme_aujourdhui', 'date_limite_le', 'dates_limites', 'afficher', 'evenements', 'appels', 'evenement', 'partenaire', 'nb_evenements_et_appels', 'nb_elements', 'date_limite_puce', 'legende_date_limite', 's_abonner', 'aucun_element_filtres', 'tous', 'en_cours', 'en_cours_tuile', 'date_limite_a_venir', 'limites_precedentes', 'limites_suivantes'] as $cle) {
+        foreach (['a_la_une', 'tout_le_rsn', 'evenement_rsn', 'nouveau', 'ferme_dans', 'ferme_demain', 'ferme_aujourdhui', 'date_limite_le', 'dates_limites', 'afficher', 'evenements', 'appels', 'evenement', 'partenaire', 'nb_evenements_et_appels', 'nb_elements', 'date_limite_puce', 'legende_date_limite', 's_abonner', 'aucun_element_filtres', 'tous', 'en_cours', 'en_cours_tuile', 'date_limite_a_venir', 'limites_precedentes', 'limites_suivantes', 'en_francais', 'date_longue', 'date_courte', 'heure', 'premier_du_mois', 'du_au_meme_mois', 'du_au', 'en_anglais'] as $cle) {
             $this->assertArrayHasKey($cle, $textes, $cle);
         }
         foreach (['ferme_dans', 'nb_elements'] as $pluriel) {
@@ -280,6 +291,13 @@ final class RaccourciTest extends TestCase {
         $this->assertSame('en cours', $textes['en_cours_tuile']);
         $this->assertSame('Dates limites précédentes', $textes['limites_precedentes']);
         $this->assertSame('Dates limites suivantes', $textes['limites_suivantes']);
+        // Gabarits de date et d'heure : arguments positionnels pour que l'anglais puisse réordonner.
+        $this->assertSame('En français', $textes['en_francais']);
+        $this->assertSame('%1$s %2$s %3$s', $textes['date_longue']);
+        $this->assertSame('%1$s h %2$s', $textes['heure']);
+        $this->assertSame('1er', $textes['premier_du_mois']);
+        $this->assertSame('Du %1$s au %2$s %3$s %4$s', $textes['du_au_meme_mois']);
+        $this->assertSame('Du %1$s au %2$s', $textes['du_au']);
     }
 
     public function test_deux_raccourcis_dans_la_page_ont_des_noeuds_de_donnees_distincts(): void {
