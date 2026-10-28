@@ -1,5 +1,9 @@
 # Journal des modifications
 
+## 0.5.2 (2026-10-28)
+
+Retouche du bandeau de l'Agenda de l'écosystème, à la demande de l'équipe après la mise en ligne de la 0.5.1 : le bouton « Comment ça marche » perd son cadre arrondi et passe sur sa propre ligne, sous l'intro, aligné sur le début du paragraphe. Au survol et quand le panneau est ouvert, son texte est souligné. Rien d'autre ne change (comportement, textes, iCal). Numéro de version 0.5.2.
+
 ## 0.5.1 (2026-10-28)
 
 L'Agenda de l'écosystème (`[rsn_veille]`, en français et en anglais) : le bouton « S'abonner au calendrier » s'abonne vraiment, et un point « Comment ça marche » explique d'où viennent les événements (conception : `docs/superpowers/specs/2026-10-28-abonnement-info-0.5.1-design.md`, maquette : `docs/maquette/agenda-info-v1.html`). Aucune migration : rien à refaire dans les réglages, et les caches sont vidés au premier chargement de wp-admin avec la nouvelle version. Le fichier iCal lui-même (contenu, rythme) ne change pas, sauf le nom du calendrier.

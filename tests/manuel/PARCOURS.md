@@ -1,4 +1,4 @@
-# Parcours de vérification de bout en bout (version 0.5.1)
+# Parcours de vérification de bout en bout (version 0.5.2)
 
 Ce parcours enchaîne, dans l'ordre d'un vrai usage, toutes les listes de vérification manuelles :
 `verifier-admin.md` (administration), `verifier-public.md` (page publique, formulaire, REST et iCal) et
@@ -191,7 +191,7 @@ est vide pour la page Veille choisie.
     (la bande ne doit causer aucun défilement horizontal). Consigner tout écart dans le tableau des écarts.
     Vérifier aussi à 375 px (cartes empilées).
 12. Section **Ressources et cohabitation** de `verifier-public.md` : ressources seulement sur la page Veille
-    (chargées avec `?ver=0.5.1`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
+    (chargées avec `?ver=0.5.2`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
     si installé (la page anglaise a ses propres points, 24 à 32).
 13. Section **REST et iCal** : `/wp-json/rsn/v1/veille` (aucune clé retirée), `/veille.ics` (CRLF, en-têtes,
     validateur iCal, abonnement dans un agenda).
@@ -202,7 +202,7 @@ est vide pour la page Veille choisie.
     et il n'est pas à la une du RSN.
 15. **Purge à la mise à jour** : `wp option delete rsn_veille_version`, puis charger une page de wp-admin ; le transient
     `rsn_veille_json_fr` a disparu (`wp transient get rsn_veille_json_fr` ne rend rien) et
-    `wp option get rsn_veille_version` rend `0.5.1`. Un second chargement ne purge plus.
+    `wp option get rsn_veille_version` rend `0.5.2`. Un second chargement ne purge plus.
 16. **Bandeau continu** (version 0.3.0 ; exige le thème Vault, absent de wp-env : à faire sur rsn.quebec, sur la page
     ordinaire avec un bloc Code court, renommée « Événements et appels », fenêtre large) :
     - aucun écart blanc entre l'en-tête du thème (fil d'Ariane et titre) et l'intro du bandeau, ni entre l'intro, les
@@ -302,7 +302,7 @@ est vide pour la page Veille choisie.
       coller donne `https://…/veille.ics` (`/en/` en anglais). Pour voir le repli, refuser la permission du presse-papiers
       (sur wp-env, `http://localhost` est un contexte sûr : la copie y marche) : le retour montre alors l'adresse elle-même, et elle
       y reste jusqu'au clic suivant (elle se sélectionne).
-    - *Point d'information* : « Comment ça marche » (« How it works »), au bout de l'intro du bandeau, déplie un panneau
+    - *Point d'information* : « Comment ça marche » (« How it works »), sur sa propre ligne sous l'intro du bandeau, sans cadre et aligné sur le début du paragraphe (0.5.2), déplie un panneau
       dans le bandeau (texte, trois puces, deux liens) ; le focus va au titre du panneau. La croix et la touche Échap (le focus étant dans le panneau
       ou sur le bouton ; Échap dans la recherche ne ferme rien et ne déplace pas le focus) le
       ferment et rendent le focus au bouton (le clavier : Tab, Entrée ; Maj + Tab passe à la croix, puis aux commandes d'abonnement).
@@ -328,7 +328,7 @@ changement de fiche (`wp transient delete rsn_veille_json_fr` et `rsn_veille_jso
 1. **Rendu et hauteur** (hors connexion, fenêtre de 1 440 px) : trois colonnes, le calendrier du mois, « Au RSN » et
    « Dans l'écosystème ». La bande est nettement plus basse qu'avant (environ 1 040 px pour l'ancienne bande ; mesurer
    la section avec les outils du navigateur et la noter dans le tableau des écarts). `accueil.css` et `accueil.js`
-   sont chargés avec `?ver=0.5.1` (le CSS dans l'en-tête, le script en pied de page) sur l'accueil ; ni `veille.css` ni `veille.js`. Aucune erreur dans la
+   sont chargés avec `?ver=0.5.2` (le CSS dans l'en-tête, le script en pied de page) sur l'accueil ; ni `veille.css` ni `veille.js`. Aucune erreur dans la
    console, aucun défilement horizontal (`document.documentElement.scrollWidth === document.documentElement.clientWidth`).
    **Charger l'accueil sans toucher la souris ni le clavier** : la bande doit se dessiner d'elle-même ; si elle reste vide,
    exclure `accueil.js` du délai du JavaScript de LiteSpeed (LiteSpeed › Optimisation de page › Réglages JS).
