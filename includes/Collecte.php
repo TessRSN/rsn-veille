@@ -237,12 +237,13 @@ final class Collecte {
     // --- Purge des caches ---
 
     /**
-     * Purge LiteSpeed et le cache Elementor de la page Veille (réglage `page_veille_id`) et de ses
-     * traductions WPML, puis déclenche `rsn_veille_caches_purges` (cache du JSON public, etc.). Appelée par
-     * la collecte et par toute modification de fiches.
+     * Purge LiteSpeed et le cache Elementor de la page Veille (réglage `page_veille_id`), de la page d'accueil
+     * (`page_on_front`, qui porte la bande `[rsn_veille_accueil]`) et de leurs traductions WPML, puis déclenche
+     * `rsn_veille_caches_purges` (cache du JSON public, etc.). Appelée par la collecte et par toute modification
+     * de fiches.
      */
     public static function purger_caches(): void {
-        foreach (self::pages_veille() as $id_page) {
+        foreach (array_values(array_unique(array_merge(self::pages_veille(), self::pages_accueil()))) as $id_page) {
             do_action('litespeed_purge_post', $id_page);
             delete_post_meta($id_page, self::META_ELEMENTOR);
         }
@@ -270,7 +271,23 @@ final class Collecte {
      * @return int[]
      */
     public static function pages_veille(): array {
-        $id_page = (int) (self::reglages()['page_veille_id'] ?? 0);
+        return self::page_et_traductions((int) (self::reglages()['page_veille_id'] ?? 0));
+    }
+
+    /**
+     * Identifiant de la page d'accueil du site (réglage WordPress `page_on_front`) et de ses traductions WPML,
+     * comme `pages_veille` ; vide si l'accueil n'est pas une page statique.
+     *
+     * @return int[]
+     */
+    public static function pages_accueil(): array {
+        return self::page_et_traductions((int) get_option('page_on_front', 0));
+    }
+
+    /**
+     * @return int[]
+     */
+    private static function page_et_traductions(int $id_page): array {
         if ($id_page <= 0) {
             return [];
         }

@@ -642,3 +642,25 @@ msgstr "Acfas: news"
 
 msgid "Gouvernement du Québec : fil de presse"
 msgstr "Government of Quebec: newswire"
+
+# Bande « Prochains événements » de l'accueil ([rsn_veille_accueil]).
+msgid "Au RSN"
+msgstr "At the RSN"
+
+msgid "Dans l'écosystème"
+msgstr "In the ecosystem"
+
+msgid "Le %s"
+msgstr "On %s"
+
+msgid "Pas d'événement du RSN à venir pour le moment. Les prochains seront annoncés ici."
+msgstr "No upcoming RSN event for now. The next ones will be announced here."
+
+msgid "+ %d autre événement du RSN →"
+msgstr "+ %d more RSN event →"
+
+msgid "+ %d autres événements du RSN →"
+msgstr "+ %d more RSN events →"
+
+msgid "Voir l'agenda de l'écosystème"
+msgstr "See the ecosystem calendar"
