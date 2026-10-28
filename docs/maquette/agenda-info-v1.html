@@ -1,0 +1,170 @@
+<title>Agenda : abonnement et info</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Maquette du haut de la page « Agenda de l'écosystème » de rsn.quebec : en-tête du thème, bandeau de l'extension,
+   point d'information qui se déplie dans le bandeau, abonnement au calendrier. Couleurs et polices du site. */
+:root{--navy:#003469;--blue:#0061AF;--ink:#101828;--body:rgba(16,24,40,.72);--muted:#667085;--rule:#DCE1E8;--yellow:#FFCC4E;--yellow-tint:#FFF4D1;--light:#F5F9FC;
+  --serif:"DM Serif Display",Georgia,serif;--sans:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:light}
+body{background:#fff;color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+a{color:inherit}
+button{font:inherit;cursor:pointer}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1140px;margin:0 auto}
+:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.reglage{background:var(--light);border-bottom:1px solid var(--rule);padding-block:10px;font-size:13px;color:var(--body)}
+.reglage .wrap{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.reglage button{border:1px solid var(--rule);background:#fff;border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600;color:var(--navy)}
+.reglage button[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
+.reglage button:focus-visible{outline-color:var(--blue)}
+
+/* En-tête du thème (reproduit) */
+.theme{background:var(--navy);color:#fff;padding-block:44px 0}
+.ariane{font-size:14px;opacity:.7;margin:0 0 6px}
+.theme h1{margin:0;font-family:var(--serif);font-weight:400;font-size:clamp(34px,5vw,52px);line-height:1.08}
+
+/* Bandeau de l'extension */
+.bandeau{background:var(--navy);color:#fff;padding-block:12px 30px}
+.tete{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:18px 40px}
+.intro{margin:0;max-width:58ch;font-size:15.5px;line-height:1.5;color:rgba(255,255,255,.82)}
+.info-btn{display:inline-flex;align-items:center;gap:6px;vertical-align:1px;margin-left:6px;border:1px solid rgba(255,255,255,.55);background:transparent;color:#fff;border-radius:999px;padding:1px 9px 1px 3px;font-size:12.5px;font-weight:600;line-height:20px}
+.info-btn svg{width:16px;height:16px}
+.info-btn:hover,.info-btn[aria-expanded="true"]{background:rgba(255,255,255,.12);border-color:#fff}
+.act{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.boutons{display:flex;flex-wrap:wrap;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:9px;padding:11px 20px;border-radius:10px;font-weight:600;font-size:14.5px;border:1px solid transparent;text-decoration:none}
+.btn svg{width:15px;height:15px}
+.clair{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+.clair:hover{background:rgba(255,255,255,.1);border-color:#fff}
+.jaune{background:var(--yellow);color:var(--navy)}
+.jaune:hover{background:#fff}
+.autres{font-size:12.5px;color:rgba(255,255,255,.75);display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:flex-end}
+.autres a,.autres button{color:#fff;background:none;border:0;padding:0;font-size:12.5px;font-weight:600;text-decoration:underline;text-decoration-color:rgba(255,255,255,.45);text-underline-offset:3px}
+.autres a:hover,.autres button:hover{text-decoration-color:var(--yellow)}
+.copie{color:var(--yellow);font-weight:600}
+
+/* Panneau d'information, déplié dans le bandeau */
+.panneau{margin-top:18px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.22);border-radius:14px;padding:16px 20px 16px;max-width:820px;color:rgba(255,255,255,.88);font-size:14.5px}
+.panneau h2{margin:0 0 6px;font-family:var(--sans);font-size:15px;font-weight:700;color:#fff}
+.panneau p{margin:0 0 8px;max-width:72ch}
+.panneau ul{margin:4px 0 10px;padding-left:18px;display:grid;gap:3px}
+.panneau .liens{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:4px}
+.panneau .liens a,.panneau .liens button{color:#fff;font-weight:600;background:none;border:0;padding:0;text-decoration:underline;text-decoration-color:var(--yellow);text-underline-offset:3px;font-size:14px}
+.panneau .fermer{float:right;margin:-6px -8px 0 10px;width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:#fff;font-size:20px;line-height:1}
+.panneau .fermer:hover{background:rgba(255,255,255,.12)}
+
+/* Suite de la page (aperçu) et section des sources */
+.suite{padding-block:28px;color:var(--muted);font-size:14px}
+.ghost{height:220px;border:1px dashed var(--rule);border-radius:12px;display:flex;align-items:center;justify-content:center}
+.sources{padding-block:30px 60px}
+.sources h2{font-family:var(--serif);font-weight:400;color:var(--navy);font-size:28px;margin:0 0 12px}
+.sources table{width:100%;border-collapse:collapse;font-size:14px}
+.sources th,.sources td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule)}
+.sources th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+.sources td.n{text-align:right;font-variant-numeric:tabular-nums}
+.sources:target h2,.surligne h2{background:var(--yellow-tint);border-radius:6px;padding:0 6px;margin-left:-6px}
+.note{max-width:1140px;margin:0 auto;padding-block:0 40px;color:var(--body);font-size:14px}
+.note ul{padding-left:18px;display:grid;gap:6px;max-width:90ch}
+@media (max-width:820px){.act{align-items:flex-start}.autres{justify-content:flex-start}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+html{scroll-behavior:smooth}
+</style>
+
+<div class="reglage gut"><div class="wrap">
+  <span>Maquette · haut de l'Agenda de l'écosystème</span>
+  <button type="button" id="b-fr" aria-pressed="true">Français</button>
+  <button type="button" id="b-en" aria-pressed="false">English</button>
+</div></div>
+
+<header class="theme gut"><div class="wrap">
+  <p class="ariane" data-t="ariane"></p>
+  <h1 data-t="titre"></h1>
+</div></header>
+
+<section class="bandeau gut"><div class="wrap">
+  <div class="tete">
+    <p class="intro"><span data-t="intro"></span><button type="button" class="info-btn" id="info" aria-expanded="false" aria-controls="panneau">
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.4"/><path d="M8 7.2v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="4.8" r=".95" fill="currentColor"/></svg><span data-t="info"></span></button></p>
+    <div class="act">
+      <div class="boutons">
+        <a class="btn clair" href="webcal://rsn.quebec/veille.ics" data-lien="webcal"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 7h12M6 1.5v3M10 1.5v3"/></svg><span data-t="abonner"></span></a>
+        <button class="btn jaune" type="button"><span data-t="proposer"></span> <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12 12 4M6 4h6v6"/></svg></button>
+      </div>
+      <div class="autres"><span data-t="ou"></span><a href="#" data-lien="google" target="_blank" rel="noopener" data-t="google"></a><button type="button" id="copier" data-t="copier"></button><span class="copie" id="copie" role="status" hidden></span></div>
+    </div>
+  </div>
+  <div class="panneau" id="panneau" hidden>
+    <button type="button" class="fermer" id="fermer" data-t-aria="fermer">×</button>
+    <h2 data-t="p_titre"></h2>
+    <p data-t="p1"></p>
+    <ul><li data-t="p_l1"></li><li data-t="p_l2"></li><li data-t="p_l3"></li></ul>
+    <p data-t="p2"></p>
+    <div class="liens"><a href="#sources" data-t="p_sources"></a><a href="#" data-t="p_proposer"></a></div>
+  </div>
+</div></section>
+
+<div class="suite gut"><div class="wrap"><div class="ghost" data-t="suite"></div></div></div>
+
+<section class="sources gut" id="sources"><div class="wrap">
+  <h2 data-t="s_titre"></h2>
+  <table><thead><tr><th data-t="s_source"></th><th data-t="s_flux"></th><th data-t="s_n" style="text-align:right"></th></tr></thead>
+  <tbody>
+    <tr><td>RSN</td><td data-t="s_r1"></td><td class="n">16</td></tr>
+    <tr><td>Digital Health Canada</td><td data-t="s_r2"></td><td class="n">14</td></tr>
+    <tr><td>Obvia</td><td data-t="s_r3"></td><td class="n">10</td></tr>
+    <tr><td>IVADO</td><td data-t="s_r3"></td><td class="n">6</td></tr>
+  </tbody></table>
+</div></section>
+
+<section class="note gut"><ul>
+  <li><b>Le bouton « S'abonner au calendrier »</b> ouvre l'abonnement directement dans Calendrier (Mac, iPhone) et dans Outlook, au lieu de télécharger un fichier figé. Pour Google Agenda, qui ne comprend pas ce type de lien, un lien à côté ouvre la page d'ajout de Google, et « Copier l'adresse » copie l'adresse à coller ailleurs.</li>
+  <li><b>Le point « Comment ça marche »</b> déplie un court texte dans le bandeau, puis se referme avec la croix ou la touche Échap. Un clic marche aussi au téléphone et au clavier, contrairement au survol, et la bulle n'est pas coupée par le fond bleu. Le lien « Voir les sources lues » fait descendre jusqu'à la table des sources en bas de page.</li>
+  <li><b>Le calendrier</b> s'appellera « Agenda de l'écosystème RSN » dans les logiciels de calendrier (« RSN ecosystem calendar » en anglais).</li>
+</ul></section>
+
+<script>
+(function(){
+  const TX={
+    fr:{ariane:'Accueil › Agenda de l’écosystème',titre:'Agenda de l’écosystème',intro:'Les événements du RSN, ceux de nos partenaires et tout ce qui bouge en santé numérique au Québec : réseaux thématiques, IVADO, Obvia, Mila, FRQ, Digital Health Canada. Les appels de financement et de candidatures y figurent avec leur date limite.',
+      info:'Comment ça marche',abonner:'S’abonner au calendrier',proposer:'Proposer un événement',ou:'Google Agenda :',google:'ajouter',copier:'Copier l’adresse',copie:'Adresse copiée',fermer:'Fermer',
+      p_titre:'Un agenda tenu par une veille semi-automatique',
+      p1:'Chaque nuit, l’agenda lit les sites qui publient leurs événements de façon structurée :',
+      p_l1:'des calendriers en ligne et des flux RSS ;',p_l2:'des pages d’événements bien organisées ;',p_l3:'les événements et les appels du RSN.',
+      p2:'L’équipe du RSN vérifie ce qui est ambigu et ajoute à la main ce qui manque. Un organisme ne figure pas ici ? Son site ne publie souvent pas ses événements dans un format lisible automatiquement : proposez-nous l’événement.',
+      p_sources:'Voir les sources lues ↓',p_proposer:'Proposer un événement',
+      suite:'… la bande « À la une », les dates limites, les filtres et la liste…',s_titre:'Sources lues',s_source:'Source',s_flux:'Ce qu’on lit',s_n:'Éléments',s_r1:'Calendrier des événements du site',s_r2:'Calendrier des événements',s_r3:'Page des événements'},
+    en:{ariane:'Home › Ecosystem calendar',titre:'Ecosystem calendar',intro:'Events from the RSN, from our partners and everything happening in digital health in Quebec: thematic networks, IVADO, Obvia, Mila, FRQ, Digital Health Canada. Funding calls and calls for applications appear with their deadline.',
+      info:'How it works',abonner:'Subscribe to the calendar',proposer:'Suggest an event',ou:'Google Calendar:',google:'add',copier:'Copy the address',copie:'Address copied',fermer:'Close',
+      p_titre:'A calendar kept up by semi-automatic monitoring',
+      p1:'Every night, the calendar reads the websites that publish their events in a structured way:',
+      p_l1:'online calendars and RSS feeds;',p_l2:'well-organized event pages;',p_l3:'the RSN’s own events and calls.',
+      p2:'The RSN team checks anything unclear and adds what is missing by hand. An organization isn’t listed? Its website often doesn’t publish its events in a machine-readable format: suggest the event to us.',
+      p_sources:'See the sources we read ↓',p_proposer:'Suggest an event',
+      suite:'… the “Featured” band, deadlines, filters and the list…',s_titre:'Sources monitored',s_source:'Source',s_flux:'What we read',s_n:'Items',s_r1:'Site events calendar',s_r2:'Events calendar',s_r3:'Events page'}
+  };
+  let L='fr';
+  const ICS=()=>L==='en'?'rsn.quebec/en/veille.ics':'rsn.quebec/veille.ics';
+  function textes(){
+    document.querySelectorAll('[data-t]').forEach(n=>n.textContent=TX[L][n.dataset.t]);
+    document.querySelectorAll('[data-t-aria]').forEach(n=>n.setAttribute('aria-label',TX[L][n.dataset.tAria]));
+    document.querySelector('[data-lien="webcal"]').href='webcal://'+ICS();
+    document.querySelector('[data-lien="google"]').href='https://calendar.google.com/calendar/render?cid='+encodeURIComponent('webcal://'+ICS());
+    document.documentElement.lang=L;
+  }
+  const info=document.getElementById('info'), panneau=document.getElementById('panneau');
+  const ouvrir=o=>{panneau.hidden=!o;info.setAttribute('aria-expanded',o);if(o)panneau.querySelector('h2').setAttribute('tabindex','-1');};
+  info.addEventListener('click',()=>ouvrir(panneau.hidden));
+  document.getElementById('fermer').addEventListener('click',()=>{ouvrir(false);info.focus();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!panneau.hidden){ouvrir(false);info.focus();}});
+  panneau.querySelector('a[href="#sources"]').addEventListener('click',()=>{const s=document.getElementById('sources');s.classList.add('surligne');setTimeout(()=>s.classList.remove('surligne'),2200);});
+  document.getElementById('copier').addEventListener('click',()=>{
+    const ok=document.getElementById('copie'); const adr='https://'+ICS();
+    const dire=t=>{ok.textContent=t;ok.hidden=false;setTimeout(()=>ok.hidden=true,2500);};
+    try{navigator.clipboard.writeText(adr).then(()=>dire(TX[L].copie),()=>dire(adr));}catch(e){dire(adr);}
+  });
+  const langue=l=>{L=l;document.getElementById('b-fr').setAttribute('aria-pressed',l==='fr');document.getElementById('b-en').setAttribute('aria-pressed',l==='en');textes();};
+  document.getElementById('b-fr').addEventListener('click',()=>langue('fr'));
+  document.getElementById('b-en').addEventListener('click',()=>langue('en'));
+  langue('fr'); ouvrir(true);
+})();
+</script>
