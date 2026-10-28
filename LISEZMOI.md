@@ -1,6 +1,6 @@
 # RSN : veille de l'écosystème
 
-Extension WordPress du Réseau santé numérique (RSN), version 0.4.0. Elle collecte des sources externes (flux RSS, calendriers, pages publiques, The Events Calendar), en tire des fiches d'actualités, d'événements et d'appels, puis les présente sur une page publique « Événements et appels » (raccourci `[rsn_veille]`), en français et en anglais. L'équipe approuve les fiches dans wp-admin (menu **Veille**), repère des nouvelles dans le Radar, prépare les blocs de l'infolettre et, si elle le veut, reçoit un courriel hebdomadaire.
+Extension WordPress du Réseau santé numérique (RSN), version 0.5.0. Elle collecte des sources externes (flux RSS, calendriers, pages publiques, The Events Calendar), en tire des fiches d'actualités, d'événements et d'appels, puis les présente sur une page publique « Événements et appels » (raccourci `[rsn_veille]`), en français et en anglais, et la bande « Prochains événements » de l'accueil (code court `[rsn_veille_accueil]`). L'équipe approuve les fiches dans wp-admin (menu **Veille**), repère des nouvelles dans le Radar, prépare les blocs de l'infolettre et, si elle le veut, reçoit un courriel hebdomadaire.
 
 Les règles de confiance, la priorité des niveaux (A, C, M, B) et la conception complète se trouvent dans `docs/superpowers/specs/2026-10-25-veille-ecosysteme-design.md`. Pour installer l'extension sur un site, passer à la page rsn.quebec et dépanner, voir **`docs/installation-et-bascule.md`**. Le dossier `docs/` (ce guide compris) n'est pas dans le zip de l'extension : il se lit dans le dépôt GitHub, https://github.com/TessRSN/rsn-veille. L'historique des versions est dans `CHANGELOG.md`.
 
@@ -14,6 +14,18 @@ Le raccourci `[rsn_veille]` rend, dans l'ordre : le bandeau (une courte intro et
 - **Filtres** : recherche (titre, organisateur, résumé, thèmes), **Afficher** (Tout, Événements, Appels), **Qui organise** (Tous, RSN, Partenaires, Écosystème), Mois, Format, Lieu, Thèmes, Organisateur. Le **calendrier** montre aussi les appels, à leur date limite.
 - **Attributs** : `section="tout"` (par défaut), `section="agenda"` (événements seuls, filtre Afficher verrouillé, sans bande des dates limites) ou `section="appels"` (dates limites puis appels seuls) ; `une="0"` retire la bande « À la une » (page où le thème met déjà le RSN en avant). Pas de bande « À la une » hors de `section="tout"`.
 - **Deux langues** (depuis la 0.4.0, avec WPML) : la même page existe en anglais sur `/en/` (traduction WPML de la page, même raccourci). Les textes de l'interface viennent du fichier `languages/rsn-veille-en_US.po` (et du `.mo` compilé, à recompiler avec `msgfmt` après une retouche du `.po`), les dates s'écrivent à l'anglaise (« October 1, 2026 », « Nov. 5, 2026 »). Les événements et les appels du RSN sont montrés dans leur version anglaise quand WPML la fournit, sinon en français avec la pastille « In French » ; Mila et IVADO ont titre, résumé et lien anglais quand la collecte a pu apparier leurs deux pages. Le reste des fiches garde sa langue. La page française ne montre qu'une version de chaque événement du RSN. Le JSON accepte `?lang=fr|en` ; `/en/veille.ics` est le calendrier en anglais. Une proposition envoyée depuis la page anglaise est enregistrée en anglais. Détail et limites : voir ci-dessous et le guide d'installation, Temps 3.
+
+## La bande de l'accueil
+
+Depuis la 0.5.0, le code court `[rsn_veille_accueil]` rend la bande « Prochains événements » de l'accueil, sous un en-tête (petite ligne, titre, intro, lien) que l'équipe garde dans Elementor. Il remplace `[rsn_events_cards limit="3"]` du thème enfant, qui reste disponible. Marche à suivre sur le site : `docs/installation-et-bascule.md`, section 6.
+
+- **Trois colonnes** : le calendrier du mois, « Au RSN » et « Dans l'écosystème ». Sous 980 px, le calendrier passe au-dessus ; sous 640 px, une colonne.
+- **Calendrier** : les flèches vont du mois courant au dernier mois qui a un événement ; un point jaune marque les jours qui ont un événement du RSN, un point marine ceux qui ont un événement de l'écosystème ; une série de plus de sept jours ne pointe que son premier jour. Cliquer un jour pointé montre dans la colonne de l'écosystème tous les événements de l'écosystème de ce jour (sans limite) ; recliquer le jour ou « Tous » revient à la liste.
+- **Au RSN** : aucun événement à venir, une phrase ; un, une grande carte ; deux, deux cartes compactes ; trois ou plus, les deux prochains en cartes compactes et le lien « + N autres événements du RSN → » vers l'agenda.
+- **Dans l'écosystème** : les quatre prochains événements qui ne sont pas du RSN, un seul par organisateur (le plus proche), sans série de plus de sept jours déjà commencée.
+- **Langue** : français ou anglais selon la langue WPML de la page (accueil français, page 152 ; traduction anglaise, page 1147), avec les textes de `languages/rsn-veille-en_US.po`.
+- **Données et caches** : les événements viennent de `Donnees`, avec le cache JSON par langue de la page Veille (une heure au plus). La collecte de nuit, toute modification de fiche et la mise à jour de l'extension purgent aussi LiteSpeed et le cache Elementor de l'accueil et de ses traductions.
+- **Ressources** : `assets/accueil.css` et `assets/accueil.js`, chargés dans l'en-tête de l'accueil et des pages dont le contenu contient le code court, sinon au rendu (c'est le cas d'un code court posé dans un widget Elementor d'une autre page). Le filtre `rsn_veille_charger_accueil` force ou empêche le chargement en tête.
 
 ## Prérequis
 
@@ -30,8 +42,8 @@ includes/                 code PHP, espace de noms RSN\Veille (une classe par fi
   Http, Pertinence, Nouvelles, Courriel, TypeContenu, Journal, Verrou, ResolutionIvado, Appariement (Mila et IVADO, pages française et anglaise)
   Lecteurs/                 un lecteur par type de source (TEC, RSS, iCal, HTML Obvia, Mila, FRQ, IVADO)
   Admin/                    menu Veille, file, radar, infolettre, journal, réglages, import, métabox « Image de la fiche »
-  Public/                   raccourci [rsn_veille], formulaire public, JSON, REST, iCal
-assets/                   CSS et JS (public : veille.*, administration : admin.*)
+  Public/                   raccourcis [rsn_veille] et [rsn_veille_accueil] (Accueil), formulaire public, JSON, REST, iCal
+assets/                   CSS et JS (public : veille.* et accueil.*, administration : admin.*)
 languages/                traduction anglaise de la page publique (rsn-veille-en_US.po, source, et .mo compilé par msgfmt)
 tests/                    PHPUnit (*Test.php), bouchons de WordPress, fixtures/ (contenus réels), manuel/
 docs/                     devis, plan, inventaire des sources, maquette, guide d'installation
@@ -48,7 +60,7 @@ docs/                     devis, plan, inventaire des sources, maquette, guide d
 
 - `composer install` (installe PHPUnit, dépendance de développement seulement), puis **`composer test`**. Les classes pures de `includes/` sont testées sans WordPress grâce à `tests/bootstrap.php` et `tests/bouchons-wordpress.php`.
 - Le bouchon de WordPress est **une imitation, pas la référence** : il peut différer du vrai WordPress (échappement, `wp_date`, requêtes de fiches, `kses`). Ce qui touche WordPress lui-même (menus, AJAX, cron, formulaire, médiathèque, mails) se vérifie dans un WordPress réel avec les listes de `tests/manuel/` : **`tests/manuel/PARCOURS.md`** les enchaîne dans l'ordre du parcours (`verifier-admin.md`, `verifier-public.md` et deux scripts `wp eval-file`).
-- Les tests tournent avec la version de PHP de la machine (le verrou Composer vise PHP 8.0.30) ; il n'y a pas d'intégration continue en 0.4.0.
+- Les tests tournent avec la version de PHP de la machine (le verrou Composer vise PHP 8.0.30) ; il n'y a pas d'intégration continue en 0.5.0.
 
 ## Lancer wp-env
 
@@ -59,12 +71,12 @@ Pour essayer l'extension dans un WordPress local, il faut Docker et `@wordpress/
 Le zip de l'extension se fabrique à partir d'un commit, sans tests ni documents de conception :
 
 ```
-git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.4.0.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
+git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.5.0.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
 ```
 
 (les fichiers `rsn-veille-*.zip` sont ignorés par Git). Le guide d'installation décrit aussi l'installation depuis GitHub (WP Pusher ou Git Updater).
 
-## Limites connues de la version 0.4.0
+## Limites connues de la version 0.5.0
 
 - **File d'approbation** : pas de pagination ; les onglets « Publiées » et « Écartées » montrent les 200 fiches les plus récentes (les compteurs restent exacts), « À approuver » et « À vérifier » sont chargés en entier ; la liste des sources du filtre ne reprend que celles de l'onglet affiché ; un statut changé dans l'éditeur WordPress ne marque pas la fiche comme traitée à la main ; « À approuver » et « À vérifier » sont triées par le jour d'arrivée (`cree_le`) : une fiche sans jour d'arrivée prend le jour de son post (qui suit la date de l'événement) ; le repère « Nouveau » a la granularité du jour (arrivée aujourd'hui ou hier) ; un menu absent à la première requête après une mise à jour sans réactivation (recharger la page).
 - **Courriel hebdomadaire** : la fenêtre de 7 jours peut se chevaucher d'un courriel à l'autre (une fiche peut figurer dans deux courriels) ; les fiches approuvées dans la semaine comptent comme « publiées automatiquement » ; les fiches créées avant le champ `cree_le` n'y figurent pas ; les destinataires sont visibles les uns des autres.
@@ -76,6 +88,7 @@ git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.4.0.zip HEAD -- . 
 - **Page publique** : les listes de sources des légendes sont écrites en dur ; deux raccourcis sur la même page dupliquent certains identifiants HTML ; la colonne collante des filtres peut demander un réglage de `top` sous l'en-tête du thème ; **l'adaptation au thème Vault** (en-tête de page moins haut, bandeau qui le prolonge) est établie sur la page de test de rsn.quebec, une page ordinaire (bloc « Code court ») : elle n'agit que si la page porte la classe `rsn-veille-page` (raccourci dans le contenu de la page, page choisie dans les réglages ou sa traduction WPML ; pas de classe quand le raccourci est rendu ailleurs que dans le contenu de la page, ni quand le filtre `rsn_veille_charger_ressources` force le chargement), et sur une page Elementor les marges des sections laissent un écart entre l'en-tête et le bandeau ; avec un autre thème, le bandeau se place sous l'en-tête de ce thème, sans y toucher ; le titre de la page est celui de la page WordPress (à renommer « Événements et appels »), l'extension ne le change pas ; un appel « Nouveau » porte cette étiquette même si sa date limite est proche ; l'image mise en avant d'une fiche remplace l'image de la source sur la page et dans le JSON (l'iCal n'a pas d'image), sans champ de saisie dans l'éditeur.
 - **Page en anglais** : les thèmes (`rsn_theme`) et les noms d'organisateurs restent en français ; l'administration, les courriels, l'infolettre et le Journal restent en français (l'infolettre force le français) ; pas de troisième langue. Les textes viennent du `.mo` livré : une retouche faite dans WPML String Translation prime sur lui. Obvia, le FRQ et les autres sources restent dans une seule langue ; **seuls Mila et IVADO sont appariés** (par leurs dates : deux événements le même jour avec une seule version anglaise donnent l'anglaise à la première, et pour IVADO l'erreur est définitive ; pour IVADO, un résumé anglais paru après coup n'est pas repris (Mila est réécrit à chaque passage)). Les champs anglais (`titre_en`, `resume_en`, `url_en`) ne sont ni affichés ni modifiables dans l'administration et ne sont jamais effacés par une valeur vide. `?lang=en` du JSON est sans effet sans WPML. Les noms des sources sont traduits à l'appel (`Sources`) : une collecte lancée depuis l'administration en locale anglaise enregistrerait des noms de source en anglais dans les fiches (la collecte de nuit et l'administration de rsn.quebec sont en français). Un appel du RSN sans traduction WPML reste en français ; si l'extrait de sa traduction est vide, il garde son résumé français sous le titre anglais.
 - **Collecte (IVADO)** : une page d'événement IVADO est reconnue comme une redirection d'après son titre, son `<h1>`, un `meta refresh` ou une affectation de `window.location` par une adresse (littérale ou variable définie par une adresse littérale) ; une redirection construite autrement, ou par `window.top.location`, n'est pas reconnue et la fiche garde l'adresse IVADO. Sur une page de redirection, la fiche prend le titre de la balise `<title>` et reste sans résumé ; les fiches déjà en base ne sont pas relues et gardent l'adresse IVADO.
+- **Bande de l'accueil** : le code court n'a pas de réglage ni d'attribut (quatre événements de l'écosystème, un par organisateur, deux cartes du RSN au plus) ; l'en-tête de la bande et ses marges restent dans Elementor ; un code court posé dans une autre page Elementor que l'accueil a ses ressources au rendu seulement (donc après le contenu, pas dans l'en-tête de la page) ; la bande est dessinée par JavaScript, sans lui elle se réduit à un lien vers l'agenda ; elle suit le cache JSON d'une heure ; son rendu réel n'est établi que sur rsn.quebec, après le remplacement du code court dans Elementor.
 - **Tests** : le bouchon de WordPress ne reproduit pas tout (voir plus haut) ; la vérification de bout en bout dans WordPress reste manuelle (`tests/manuel/PARCOURS.md`).
 
 ## Licence

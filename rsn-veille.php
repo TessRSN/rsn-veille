@@ -2,7 +2,7 @@
 /**
  * Plugin Name: RSN : veille de l'écosystème
  * Description: Collecte et présente la veille de l'écosystème de la santé numérique au Québec.
- * Version: 0.4.0
+ * Version: 0.5.0
  * Author: Réseau santé numérique
  * Requires at least: 6.0
  * Requires PHP: 8.0
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('RSN_VEILLE_VERSION', '0.4.0');
+define('RSN_VEILLE_VERSION', '0.5.0');
 define('RSN_VEILLE_DOSSIER', __DIR__);
 define('RSN_VEILLE_URL', function_exists('plugin_dir_url') ? plugin_dir_url(__FILE__) : '');
 

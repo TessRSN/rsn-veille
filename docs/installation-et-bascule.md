@@ -1,6 +1,6 @@
 # Installation et bascule sur rsn.quebec
 
-Ce guide dit comment installer l'extension **RSN : veille de l'écosystème** (version 0.4.0) sur le site, quoi régler le premier jour, comment faire passer la page Veille à la place de la page Événements, et que faire quand quelque chose ne va pas. Rien n'est fait sur le site tant que la personne qui porte le projet ne l'a pas décidé : les étapes de la bascule se font une à une, avec un accord à chaque étape.
+Ce guide dit comment installer l'extension **RSN : veille de l'écosystème** (version 0.5.0) sur le site, quoi régler le premier jour, comment faire passer la page Veille à la place de la page Événements, et que faire quand quelque chose ne va pas. Rien n'est fait sur le site tant que la personne qui porte le projet ne l'a pas décidé : les étapes de la bascule se font une à une, avec un accord à chaque étape.
 
 ## 1. Prérequis
 
@@ -41,7 +41,7 @@ Sans cron du serveur (c'est-à-dire sans `DISABLE_WP_CRON`), l'extension fonctio
 À partir du dépôt, sur un poste avec Git (après avoir amené la branche voulue, par exemple `main`) :
 
 ```
-git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.4.0.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
+git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.5.0.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
 ```
 
 Le zip contient `rsn-veille.php`, `uninstall.php`, `includes/`, `assets/` et `languages/` (la traduction anglaise de la page en dépend) (et les documents de racine), sans tests, sans documents de conception et sans `vendor/`. Dans wp-admin : **Extensions › Ajouter › Téléverser une extension**, choisir le zip, installer, puis activer.
@@ -64,7 +64,13 @@ Le dépôt est **privé** (`TessRSN/rsn-veille`) et la branche de livraison est 
 
 **Premier essai : le zip** (voie 1), pour installer, régler et valider la page en brouillon sans rien d'autre à configurer. **Pour suivre les corrections** pendant les premières semaines : **WP Pusher** (voie 2), avec les mises à jour manuelles (un clic après chaque correction relue) plutôt qu'automatiques. Si WP Pusher est écarté pour son coût, Git Updater fait le même travail avec la même méthode.
 
-Quelle que soit la voie, l'activation lance les mêmes opérations (voir section 8).
+Quelle que soit la voie, l'activation lance les mêmes opérations (voir section 9).
+
+### Après la mise à jour de la 0.4.0 vers la 0.5.0
+
+1. Remplacer l'extension (zip par-dessus l'ancienne, ou mise à jour WP Pusher / Git Updater). **Rien d'autre à faire côté extension** : aucune réactivation, aucune migration, aucun réglage à refaire.
+2. **La purge des caches est automatique** : au premier chargement de wp-admin avec la nouvelle version, l'extension vide ses caches, ceux de LiteSpeed et d'Elementor pour la page Veille, **pour la page d'accueil** (réglage WordPress « Page d'accueil ») et pour leurs traductions WPML. Tant que le code court de l'accueil n'est pas remplacé, rien ne change pour les visiteurs.
+3. **Remplacer le code court de l'accueil dans Elementor** (français et anglais), puis purger LiteSpeed : voir la section 6, « Bande de l'accueil ».
 
 ### Après la mise à jour de la 0.3.0 vers la 0.4.0
 
@@ -188,7 +194,32 @@ Deux voies. La **voie A** est recommandée : depuis la 0.3.0, la page de référ
    - retirer une fiche dans la file et vérifier qu'elle disparaît aussi de la page anglaise.
 6. **Limites à connaître** : thèmes et noms d'organisateurs restent en français ; l'administration, les courriels, l'infolettre et le Journal sont en français ; seuls Mila et IVADO sont appariés dans les deux langues. Sans WPML, `?lang=en` ne change rien. Voir « Limites connues » du `LISEZMOI.md`.
 
-## 6. Dépannage
+## 6. Bande de l'accueil
+
+Depuis la 0.5.0, la bande « Prochains événements » de l'accueil est le code court `[rsn_veille_accueil]` de l'extension : un calendrier du mois, les événements du RSN et quatre événements de l'écosystème, en français et en anglais. L'ancienne bande (`[rsn_events_cards limit="3"]`, du thème enfant) reste disponible. Rien ne change sur le site tant que l'équipe n'a pas remplacé le code court.
+
+**Remplacer le code court, dans Elementor, sur les deux accueils :**
+1. Ouvrir l'accueil français (page 152) dans Elementor. Dans la section qui suit l'en-tête de la bande, trouver le widget **Code court** qui contient `[rsn_events_cards limit="3"]` et remplacer son contenu par `[rsn_veille_accueil]`. Mettre à jour.
+2. Faire la même chose sur sa traduction anglaise (page 1147) : le même code court rend la bande en anglais, selon la langue WPML de la page.
+3. **L'en-tête de la bande** (la petite ligne, le titre, l'intro et le lien) **reste dans Elementor** : le code court n'y touche pas et l'équipe le modifie comme avant.
+4. **Marges conseillées de la section d'en-tête** : 60 px en haut au lieu de 100, et 24 px en bas au lieu de 50, pour réduire la hauteur de l'ensemble. C'est un réglage d'Elementor, que l'extension ne fait pas.
+5. **LiteSpeed › Gestion › Purger tout**, puis regarder l'accueil (`/` et `/en/`) hors connexion.
+
+**Ce que la bande montre.**
+- *Calendrier du mois* : mois courant au départ, deux flèches pour changer de mois (pas avant le mois courant, pas au-delà du dernier mois qui a un événement). Un point jaune marque les jours qui ont un événement du RSN, un point marine ceux qui ont un événement de l'écosystème ; une série de plus de sept jours ne pointe que son premier jour. Cliquer un jour pointé affiche dans la colonne de droite **tous** les événements de l'écosystème de ce jour ; recliquer le jour, ou « Tous », revient à la liste.
+- *Au RSN* : aucun événement du RSN à venir, une phrase ; un, une grande carte ; deux, deux cartes compactes ; trois ou plus, les deux prochains et le lien « + N autres événements du RSN → » vers l'agenda dans la langue de la page.
+- *Dans l'écosystème* : les quatre prochains événements qui ne sont pas du RSN, un seul par organisateur, sans série de plus de sept jours déjà commencée.
+- Les événements sont ceux de l'agenda de la page Veille (les mêmes données, dans la langue de la page). Les appels n'y figurent pas.
+
+**Caches et ressources.**
+- Les données viennent du cache JSON de la page Veille (par langue, une heure au plus). La collecte de nuit, toute modification de fiche et la mise à jour de l'extension purgent aussi LiteSpeed et le cache Elementor de la page d'accueil et de ses traductions WPML. La page d'accueil est celle du réglage WordPress « Page d'accueil » (`page_on_front`) ; si ce réglage n'est pas une page statique, il n'y a rien à purger de ce côté. Le cache LiteSpeed de l'accueil expire de toute façon à minuit (extrait 61).
+- `accueil.css` et `accueil.js` (`?ver=0.5.0`) se chargent dans l'en-tête de la page d'accueil et de toute page dont le contenu contient `[rsn_veille_accueil]`. **Un code court posé dans un widget d'une autre page Elementor que l'accueil** n'a ses ressources qu'au rendu : elles arrivent après le contenu, et la bande s'affiche tout de même. Le filtre `rsn_veille_charger_accueil` force le chargement en tête d'une page : `add_filter('rsn_veille_charger_accueil', '__return_true')`.
+
+**Retour en arrière.** Dans Elementor, remettre `[rsn_events_cards limit="3"]` dans le widget Code court de la page 152 et de la page 1147 (et rétablir les marges de 100 px et de 50 px si elles ont été changées), puis purger LiteSpeed. L'extension peut rester active : tant que `[rsn_veille_accueil]` n'est dans aucune page, elle ne change rien à l'accueil.
+
+**Vérifier.** `tests/manuel/PARCOURS.md`, section 7 bis : bande de l'accueil en français et en anglais, calendrier, filtre par jour, mois, cas de 0, 1, 2 et 3 événements du RSN, hauteur, mobile.
+
+## 7. Dépannage
 
 | Symptôme | Cause probable | Quoi faire |
 |---|---|---|
@@ -202,15 +233,15 @@ Deux voies. La **voie A** est recommandée : depuis la 0.3.0, la page de référ
 | Le formulaire répond « Trop de propositions » | Limite de débit : 5 envois par heure et par adresse, 30 par heure pour tout le site | Attendre une heure, ou vider les transients `rsn_veille_debit_*` |
 | La page Radar s'ouvre lentement | La première ouverture lit les 12 flux (8 s au plus chacun) puis garde le résultat une heure | Attendre ; le bouton « Rafraîchir » relit les flux |
 
-## 7. Confidentialité et sécurité
+## 8. Confidentialité et sécurité
 
-- **Courriel des proposants** : le formulaire « Proposer un événement » demande un courriel de contact. C'est une **donnée personnelle** : l'extension l'enregistre dans une méta privée de la fiche (`rsn_veille_courriel_proposant`), ne l'affiche jamais sur la page, dans le JSON ni dans le fichier iCal, et ne s'en sert pas pour écrire. **La version 0.4.0 ne prévoit aucune durée de conservation automatique** : l'adresse reste avec la fiche tant que la fiche existe. À supprimer à la main : `wp post meta delete <ID> rsn_veille_courriel_proposant` avec WP-CLI (le type de contenu n'affiche pas le métabox « Champs personnalisés »), ou en supprimant la fiche entière, selon la politique de confidentialité du RSN. Une suppression automatique (par exemple 90 jours après la décision) est prévue pour une version suivante.
+- **Courriel des proposants** : le formulaire « Proposer un événement » demande un courriel de contact. C'est une **donnée personnelle** : l'extension l'enregistre dans une méta privée de la fiche (`rsn_veille_courriel_proposant`), ne l'affiche jamais sur la page, dans le JSON ni dans le fichier iCal, et ne s'en sert pas pour écrire. **La version 0.5.0 ne prévoit aucune durée de conservation automatique** : l'adresse reste avec la fiche tant que la fiche existe. À supprimer à la main : `wp post meta delete <ID> rsn_veille_courriel_proposant` avec WP-CLI (le type de contenu n'affiche pas le métabox « Champs personnalisés »), ou en supprimant la fiche entière, selon la politique de confidentialité du RSN. Une suppression automatique (par exemple 90 jours après la décision) est prévue pour une version suivante.
 - **Formulaire public** : protégé par un champ piège invisible, un jeton, une limite de débit et la vérification de l'image (JPEG, PNG ou WebP, 3 Mo au plus) ; les fiches reçues sont toujours « à approuver ». Le lien proposé n'est jamais chargé par le serveur.
 - **Limite de débit et adresse IP** : elle repose sur `REMOTE_ADDR`, seule source d'adresse digne de confiance (`X-Forwarded-For` se falsifie). **Si le site est derrière un mandataire inverse ou un réseau de diffusion de contenu, vérifier que le serveur transmet l'adresse réelle du visiteur dans `REMOTE_ADDR`** (module de restauration d'adresse). Sinon, tous les visiteurs partagent la même adresse et la limite de 5 envois par heure frappe tout le monde à la fois. L'adresse n'est jamais stockée en clair : le compteur est un transient dont le nom dérive de l'adresse hachée.
 - **Jeton GitHub** : voir la voie 2 (section 2). Aucun secret n'est stocké par l'extension elle-même.
 - **Données de l'équipe** : les fiches `rsn_veille` sont des contenus WordPress (sauvegardées avec la base du site).
 
-## 8. Ce que fait l'activation, la désactivation, la désinstallation
+## 9. Ce que fait l'activation, la désactivation, la désinstallation
 
 - **Activation** : planifie la collecte quotidienne (`rsn_veille_nuit`, à l'heure des réglages), donne la capacité `rsn_veille_gerer` aux rôles des réglages, ajoute la règle de réécriture de `/veille.ics` et régénère les règles, planifie le courriel hebdomadaire s'il est coché.
 - **Désactivation** : déplanifie les trois tâches (`rsn_veille_nuit`, `rsn_veille_source`, `rsn_veille_hebdo`) et retire la règle de `/veille.ics`. Les fiches, les réglages et la capacité restent.
@@ -226,6 +257,6 @@ Deux voies. La **voie A** est recommandée : depuis la 0.3.0, la page de référ
   ```
   Faire ce nettoyage **avant** de supprimer l'extension ; après coup, il faudrait la réinstaller le temps du nettoyage.
 
-## 9. Limites connues de la version 0.4.0
+## 10. Limites connues de la version 0.5.0
 
 Voir la section « Limites connues » du `LISEZMOI.md`.
