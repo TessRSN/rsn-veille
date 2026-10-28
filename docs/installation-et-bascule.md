@@ -1,6 +1,6 @@
 # Installation et bascule sur rsn.quebec
 
-Ce guide dit comment installer l'extension **RSN : veille de l'écosystème** (version 0.3.0) sur le site, quoi régler le premier jour, comment faire passer la page Veille à la place de la page Événements, et que faire quand quelque chose ne va pas. Rien n'est fait sur le site tant que la personne qui porte le projet ne l'a pas décidé : les étapes de la bascule se font une à une, avec un accord à chaque étape.
+Ce guide dit comment installer l'extension **RSN : veille de l'écosystème** (version 0.4.0) sur le site, quoi régler le premier jour, comment faire passer la page Veille à la place de la page Événements, et que faire quand quelque chose ne va pas. Rien n'est fait sur le site tant que la personne qui porte le projet ne l'a pas décidé : les étapes de la bascule se font une à une, avec un accord à chaque étape.
 
 ## 1. Prérequis
 
@@ -41,7 +41,7 @@ Sans cron du serveur (c'est-à-dire sans `DISABLE_WP_CRON`), l'extension fonctio
 À partir du dépôt, sur un poste avec Git (après avoir amené la branche voulue, par exemple `main`) :
 
 ```
-git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.3.0.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
+git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.4.0.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
 ```
 
 Le zip contient `rsn-veille.php`, `uninstall.php`, `includes/` et `assets/` (et les documents de racine), sans tests, sans documents de conception et sans `vendor/`. Dans wp-admin : **Extensions › Ajouter › Téléverser une extension**, choisir le zip, installer, puis activer.
@@ -65,6 +65,14 @@ Le dépôt est **privé** (`TessRSN/rsn-veille`) et la branche de livraison est 
 **Premier essai : le zip** (voie 1), pour installer, régler et valider la page en brouillon sans rien d'autre à configurer. **Pour suivre les corrections** pendant les premières semaines : **WP Pusher** (voie 2), avec les mises à jour manuelles (un clic après chaque correction relue) plutôt qu'automatiques. Si WP Pusher est écarté pour son coût, Git Updater fait le même travail avec la même méthode.
 
 Quelle que soit la voie, l'activation lance les mêmes opérations (voir section 8).
+
+### Après la mise à jour de la 0.3.0 vers la 0.4.0
+
+1. Remplacer l'extension (zip par-dessus l'ancienne, ou mise à jour WP Pusher / Git Updater). **Rien d'autre à faire côté extension** : aucune réactivation, aucune migration, aucun réglage à refaire. Le dossier `languages/` (traduction anglaise) vient avec l'extension.
+2. **La purge des caches est automatique** (voir plus bas) : au premier chargement de wp-admin avec la nouvelle version, l'extension vide le cache du JSON public de chaque langue. **Ensuite, purger LiteSpeed › Gestion › Purger tout** : le HTML en cache de la page française contient encore les anciens doublons anglais des événements du RSN.
+3. **Créer la traduction anglaise de la page** dans WPML : voir « Temps 3 : la version anglaise avec WPML » (section 5). Tant qu'elle n'existe pas, rien ne change pour les visiteurs, sauf que la page française ne montre plus de doublon anglais (« RSN Scientific Days » à côté de « Journées scientifiques RSN »).
+4. **Mila et IVADO** : leur version anglaise est lue à la prochaine collecte de chaque source (une source par passage). Pour ne pas attendre, lancer la collecte depuis Veille › Réglages et lire le Journal : la ligne de chaque source dit « N appariées en anglais, M orphelines ». Les fiches déjà en base reçoivent leurs champs anglais à ce passage.
+5. Vérifier avec la section 7 de `tests/manuel/PARCOURS.md` (étape 7, points 24 à 32, et étape 8).
 
 ### Après la mise à jour de la 0.2.0 vers la 0.3.0
 
@@ -165,9 +173,20 @@ Deux voies. La **voie A** est recommandée : depuis la 0.3.0, la page de référ
 ### Temps 3 : la version anglaise avec WPML
 
 1. Dans WPML › Réglages › **Traduction des types de publication** et **Traduction des taxonomies**, régler « Fiches de veille » (`rsn_veille`) et « Thèmes » (`rsn_theme`) sur **Non traduisible** : les fiches restent communes aux deux langues et l'écran des fiches n'est pas filtré par langue.
-2. Traduire la page publique `/calendrier-evenements/` (la page de test devenue publique dans la voie A ; dans la voie B, c'est l'ancienne page Elementor qu'on traduit) avec WPML (le raccourci `[rsn_veille]` se retrouve tel quel dans la version anglaise). L'extension garde ses caches (JSON et iCal) **par langue** (`rsn_veille_json_fr`, `rsn_veille_json_en`) et les vide tous ensemble ; elle purge aussi LiteSpeed et le cache Elementor de la page traduite (retrouvée par WPML à partir de la page choisie dans Réglages › Page Veille, qui reste la page française).
-3. Les textes de l'extension passent par la traduction de WordPress (domaine `rsn-veille`). La version 0.3.0 ne livre **aucun fichier de traduction** : la page anglaise affiche les textes français tant que les chaînes ne sont pas traduites. Cela vaut aussi pour les textes des bandes « À la une du RSN » et « Dates limites », et pour « En cours » et « Date limite à venir », écrits par le JavaScript de la page : ils sont dans la même liste de chaînes du domaine « rsn-veille ». Les traduire avec WPML › String Translation (chaînes du domaine « rsn-veille »), ou avec une extension comme Loco Translate.
-4. Vérifier la page anglaise : les mêmes fiches, les dates, le formulaire, `veille.ics` ; retirer une fiche dans la file et vérifier qu'elle disparaît aussi de la page anglaise (hors connexion).
+2. **Créer la traduction anglaise de la page** publique (`/calendrier-evenements/` dans la voie A, la page de test tant qu'elle n'est pas publique ; dans la voie B, l'ancienne page Elementor) avec WPML : même code court `[rsn_veille]` dans le contenu (les mêmes attributs, s'il y en a), titre « Events and calls ». La laisser hors menu tant que c'est un essai. L'extension la reconnaît : elle y charge ses ressources, pose la classe `rsn-veille-page` et purge ses caches. Elle garde ses caches (JSON et iCal) **par langue** (`rsn_veille_json_fr`, `rsn_veille_json_en`) et les vide tous ensemble ; elle purge aussi LiteSpeed et le cache Elementor de la page traduite (retrouvée par WPML à partir de la page choisie dans Réglages › Page Veille, qui reste la page française).
+3. Après la mise à jour de l'extension et la création de la page : **LiteSpeed › Gestion › Purger tout**.
+4. **Rien à traduire** dans WPML › String Translation : les textes anglais viennent du fichier `languages/rsn-veille-en_US.mo` livré avec l'extension (domaine `rsn-veille`). Si l'équipe veut retoucher une phrase, elle peut le faire dans String Translation (sa traduction prime sur le `.mo`) ; sinon, modifier le `.po` puis recompiler le `.mo` (`msgfmt -o languages/rsn-veille-en_US.mo languages/rsn-veille-en_US.po`) : un test échoue si le `.mo` ne suit pas le `.po`.
+5. **Vérifier la page anglaise**, hors connexion, sur `/en/…` :
+   - les textes (bandeau, « Featured by the RSN », filtres, mois, pastilles, formulaire) et les dates sont en anglais (« October 4–18, 2026 », « Nov. 5, 2026 », « 8:00 ») ; le calendrier aussi ;
+   - **calendrier** : le bouton « Subscribe to the calendar » mène à `/en/veille.ics`, qui répond en 200 avec des titres et des liens anglais (`/veille.ics` reste en français) ;
+   - **événements du RSN** : leur version anglaise (titre, résumé, lieu, lien `/en/evenement/…`) ; un événement sans traduction anglaise s'affiche en français avec la pastille « In French » ;
+   - **appels du RSN** : titre, extrait, lien et catégorie (« Funding calls ») traduits, même date limite ; un appel sans traduction est en français avec « In French » ;
+   - **Mila et IVADO** : titre, résumé et lien anglais une fois la collecte passée ; sinon le français, marqué « In French » (`/wp-json/rsn/v1/veille?lang=en` : `langue` vaut `en` pour les fiches appariées) ;
+   - Obvia, le FRQ et les autres sources restent en français avec « In French » ; Digital Health Canada n'a pas de pastille ;
+   - **page française** : plus de doublon anglais des événements du RSN ;
+   - **formulaire** : une proposition envoyée depuis la page anglaise arrive dans « À approuver » avec la langue anglaise (« En anglais » sur la page française une fois publiée) ;
+   - retirer une fiche dans la file et vérifier qu'elle disparaît aussi de la page anglaise.
+6. **Limites à connaître** : thèmes et noms d'organisateurs restent en français ; l'administration, les courriels, l'infolettre et le Journal sont en français ; seuls Mila et IVADO sont appariés dans les deux langues. Sans WPML, `?lang=en` ne change rien. Voir « Limites connues » du `LISEZMOI.md`.
 
 ## 6. Dépannage
 
@@ -185,7 +204,7 @@ Deux voies. La **voie A** est recommandée : depuis la 0.3.0, la page de référ
 
 ## 7. Confidentialité et sécurité
 
-- **Courriel des proposants** : le formulaire « Proposer un événement » demande un courriel de contact. C'est une **donnée personnelle** : l'extension l'enregistre dans une méta privée de la fiche (`rsn_veille_courriel_proposant`), ne l'affiche jamais sur la page, dans le JSON ni dans le fichier iCal, et ne s'en sert pas pour écrire. **La version 0.3.0 ne prévoit aucune durée de conservation automatique** : l'adresse reste avec la fiche tant que la fiche existe. À supprimer à la main : `wp post meta delete <ID> rsn_veille_courriel_proposant` avec WP-CLI (le type de contenu n'affiche pas le métabox « Champs personnalisés »), ou en supprimant la fiche entière, selon la politique de confidentialité du RSN. Une suppression automatique (par exemple 90 jours après la décision) est prévue pour une version suivante.
+- **Courriel des proposants** : le formulaire « Proposer un événement » demande un courriel de contact. C'est une **donnée personnelle** : l'extension l'enregistre dans une méta privée de la fiche (`rsn_veille_courriel_proposant`), ne l'affiche jamais sur la page, dans le JSON ni dans le fichier iCal, et ne s'en sert pas pour écrire. **La version 0.4.0 ne prévoit aucune durée de conservation automatique** : l'adresse reste avec la fiche tant que la fiche existe. À supprimer à la main : `wp post meta delete <ID> rsn_veille_courriel_proposant` avec WP-CLI (le type de contenu n'affiche pas le métabox « Champs personnalisés »), ou en supprimant la fiche entière, selon la politique de confidentialité du RSN. Une suppression automatique (par exemple 90 jours après la décision) est prévue pour une version suivante.
 - **Formulaire public** : protégé par un champ piège invisible, un jeton, une limite de débit et la vérification de l'image (JPEG, PNG ou WebP, 3 Mo au plus) ; les fiches reçues sont toujours « à approuver ». Le lien proposé n'est jamais chargé par le serveur.
 - **Limite de débit et adresse IP** : elle repose sur `REMOTE_ADDR`, seule source d'adresse digne de confiance (`X-Forwarded-For` se falsifie). **Si le site est derrière un mandataire inverse ou un réseau de diffusion de contenu, vérifier que le serveur transmet l'adresse réelle du visiteur dans `REMOTE_ADDR`** (module de restauration d'adresse). Sinon, tous les visiteurs partagent la même adresse et la limite de 5 envois par heure frappe tout le monde à la fois. L'adresse n'est jamais stockée en clair : le compteur est un transient dont le nom dérive de l'adresse hachée.
 - **Jeton GitHub** : voir la voie 2 (section 2). Aucun secret n'est stocké par l'extension elle-même.
@@ -207,6 +226,6 @@ Deux voies. La **voie A** est recommandée : depuis la 0.3.0, la page de référ
   ```
   Faire ce nettoyage **avant** de supprimer l'extension ; après coup, il faudrait la réinstaller le temps du nettoyage.
 
-## 9. Limites connues de la version 0.3.0
+## 9. Limites connues de la version 0.4.0
 
 Voir la section « Limites connues » du `LISEZMOI.md`.

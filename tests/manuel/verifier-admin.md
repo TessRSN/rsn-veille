@@ -68,10 +68,11 @@ lancent par `npx wp-env run cli wp …`.
       pas), puis ouvrir une page d'administration : `wp cap list editor` n'a plus `rsn_veille_gerer`,
       `author` et `administrator` l'ont. Remettre ensuite `["administrator","editor"]`.
 - [ ] **Journal** : après une collecte, « Dernière collecte terminée : … » en date lisible, une ligne
-      par source (les sources jamais collectées : « jamais collectée »), erreurs repliées sous
+      par source (les sources jamais collectées : « jamais collectée »), pour Mila et IVADO la mention
+      « N appariées en anglais, M orphelines » au-dessus des erreurs, erreurs repliées sous
       « N erreurs », et le déroulé de chaque source replié en bas de page.
 - [ ] Les fichiers `admin.css` et `admin.js` ne sont chargés que sur les pages du menu Veille (onglet
-      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.3.0`.
+      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.4.0`.
 - [ ] Aucune erreur PHP dans `wp-content/debug.log` ni dans la console du navigateur.
 
 ## Réglages (tâche 12)

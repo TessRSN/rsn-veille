@@ -1,5 +1,32 @@
 # Journal des modifications
 
+## 0.4.0 (2026-10-27)
+
+La page « Événements et appels » existe en anglais (conception : `docs/superpowers/specs/2026-10-27-page-anglaise-0.4-design.md`). Aucune migration : rien à refaire dans les réglages, et les caches du JSON public sont vidés au premier chargement de wp-admin avec la nouvelle version. **La traduction anglaise de la page est à créer dans WPML par l'équipe** (même code court `[rsn_veille]`, titre « Events and calls ») ; le guide d'installation, Temps 3, dit comment. Les clés du JSON public `/wp-json/rsn/v1/veille` sont inchangées, une clé `langue` s'y ajoute.
+
+### Page publique en anglais
+- **Textes de l'interface** : un fichier de traduction livré avec l'extension (`languages/rsn-veille-en_US.po` et `.mo`, 193 chaînes, chargé sur `init` par `load_plugin_textdomain`) traduit le bandeau, les bandes « À la une » et « Dates limites », les filtres, les en-têtes de mois, les pastilles, les boutons, le calendrier, les compteurs (pluriel anglais : « 0 events »), la table des sources, le formulaire et ses messages, et les messages d'erreur du script. Les noms des sources sont traduits à l'appel. Un test PHPUnit compare le `.po` aux chaînes du côté public et le `.mo` au `.po`.
+- **Dates à l'anglaise** : « October 1, 2026 », « October 4–18, 2026 », « Nov. 5, 2026 », heure « 8:00 ». Les mois courts anglais sont « Jan. », « Feb. », « Mar. », « Apr. », « May », « June », « July », « Aug. », « Sept. », « Oct. », « Nov. », « Dec. ». En français, la seule différence : « 08 h 00 » s'écrit « 8 h 00 ».
+- **Pastille de langue** : « In French » sur la page anglaise pour une fiche en français, « En anglais » sur la page française pour une fiche en anglais ; rien quand la fiche est dans la langue de la page. Digital Health Canada, déjà en anglais, n'a pas de pastille sur la page anglaise.
+- **Langue de la page** : `Donnees::langue_courante()` la lit de WPML (`fr` ou `en`, `fr` sans WPML). Le conteneur de la page porte `lang`, le JSON porte `langue`, l'API accepte `?lang=fr|en` (ignoré sans WPML), et le calendrier `/en/veille.ics` suit la langue du préfixe (`/veille.ics` reste en français).
+- **Formulaire** : un champ caché `langue` ; une proposition envoyée depuis la page anglaise est enregistrée avec `langue = en`.
+- **Événements du RSN** : un seul article par groupe de traduction WPML (`EvenementsRsn`), dans la langue de la page, sinon en français : titre, résumé, lieu, lien vers `/en/evenement/…` et image. Le dédoublonnage avec les fiches collectées du site se fait par groupe de traduction (`trid:` ou `id:`) ; la clé par début et titre reste celle du titre français. Quand la fiche collectée l'emporte (pour son image), elle prend le titre, le lien et la langue de la version anglaise, et son résumé, son lieu et sa ville s'ils ne sont pas vides.
+- **Appels du RSN** : traduits par WPML (`url_to_postid`, puis `wpml_object_id`) : titre, extrait (le résumé français est gardé si l'extrait est vide), lien et catégorie (« Funding calls »). L'échéance ne change pas. Un appel sans traduction reste en français, marqué « In French ».
+- **Mila et IVADO** : titre, résumé et lien anglais sur la fiche (champs `titre_en`, `resume_en`, `url_en`, jamais écrasés par une valeur vide, ni affichés ni modifiables dans l'administration), remplis à la collecte en appariant la page française et la page anglaise par leurs dates (`Appariement`). IVADO ne lit la page anglaise d'un événement que si son titre anglais manque, dans le même plafond de requêtes. Le Journal indique « N appariées en anglais, M orphelines » pour ces deux sources. Une fiche sans version anglaise reste en français, marquée.
+- **Autres sources** (Obvia, FRQ, RQRV, Réseau sommeil, CRM, CARES, Prix Hippocrate, propositions du public) : une seule langue, celle de la fiche.
+- **Infolettre** : toujours en français (`PageInfolettre` force `fr`).
+
+### Correction
+- **Doublons anglais sur la page française** : la page française montrait aussi la version anglaise des événements du RSN, par exemple « RSN Scientific Days » à côté de « Journées scientifiques RSN » (la version anglaise portait même la langue `fr`). Un seul article par groupe de traduction est maintenant gardé, dans la langue de la page.
+
+### Livraison
+- Numéro de version 0.4.0 (`rsn-veille.php`, `RSN_VEILLE_VERSION`, donc `?ver=0.4.0` sur `veille.css` et `veille.js`).
+- `LISEZMOI.md`, guide d'installation (Temps 3 réécrit : créer la traduction, purger LiteSpeed, vérifier la page anglaise) et parcours de vérification manuelle (`tests/manuel/PARCOURS.md`, `verifier-public.md`, `verifier-admin.md`) mis à jour.
+- 614 tests PHPUnit. Le rendu réel de la page anglaise n'est vérifiable que sur rsn.quebec, une fois la traduction de la page créée dans WPML : le parcours manuel n'a pas encore été déroulé.
+
+### Limites connues
+Voir « Limites connues de la version 0.4.0 » dans `LISEZMOI.md`. Principales : l'administration, les courriels, l'infolettre et le Journal restent en français ; les thèmes et les organisateurs ne sont pas traduits ; seuls Mila et IVADO sont appariés ; une collecte lancée depuis l'administration en locale anglaise stockerait des noms de source en anglais dans les fiches (la collecte de nuit et l'administration de rsn.quebec sont en français).
+
 ## 0.3.0 (2026-10-27)
 
 Retouches demandées après le premier passage de la 0.2.0 sur la page de test de rsn.quebec (maquette `docs/maquette/gabarit-v9.html`). Le reste de la page ne change pas. Aucune migration : rien à refaire dans les réglages, et la purge automatique des caches se fait au premier chargement de wp-admin. La page WordPress est à renommer « Événements et appels » par l'équipe (le titre est celui de la page, l'extension n'y touche pas). Les clés du JSON public `/wp-json/rsn/v1/veille` sont inchangées.
