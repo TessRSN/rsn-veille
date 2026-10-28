@@ -607,6 +607,61 @@ final class DonneesTest extends TestCase {
         $this->assertSame('Appel de projets', $items[0]['titre']);
     }
 
+    public function test_champs_anglais_appliques_en_anglais_seulement(): void {
+        $this->entrepot->creer($this->fiche(['titre_en' => 'Digital health colloquium', 'resume' => 'Résumé FR', 'resume_en' => 'EN summary', 'url_en' => 'https://www.obvia.ca/en/colloque']));
+        $this->entrepot->creer($this->fiche(['titre' => 'Atelier', 'debut' => '2026-11-20', 'cle_source' => 'obvia:2', 'cles_source' => ['obvia:2'], 'resume' => 'Résumé FR 2', 'titre_en' => 'Workshop']));
+
+        $en = Donnees::elements($this->entrepot, [], '2026-10-25', 'en');
+        $this->assertSame(['Digital health colloquium', 'EN summary', 'https://www.obvia.ca/en/colloque', 'en'], [$en[0]['titre'], $en[0]['resume'], $en[0]['url'], $en[0]['langue']]);
+        // Résumé et adresse anglais vides : ceux de la fiche restent.
+        $this->assertSame(['Workshop', 'Résumé FR 2', 'https://www.obvia.ca/evenements/colloque', 'en'], [$en[1]['titre'], $en[1]['resume'], $en[1]['url'], $en[1]['langue']]);
+
+        $fr = Donnees::elements($this->entrepot, [], '2026-10-25', 'fr');
+        $this->assertSame(['Colloque sur la santé numérique', 'Résumé FR', 'https://www.obvia.ca/evenements/colloque', 'fr'], [$fr[0]['titre'], $fr[0]['resume'], $fr[0]['url'], $fr[0]['langue']]);
+    }
+
+    public function test_fiche_sans_titre_en_reste_inchangee_en_anglais(): void {
+        $this->entrepot->creer($this->fiche(['resume_en' => 'EN summary', 'url_en' => 'https://www.obvia.ca/en/colloque']));
+        $e = Donnees::elements($this->entrepot, [], '2026-10-25', 'en')[0];
+        $this->assertSame(['Colloque sur la santé numérique', 'fr', 'https://www.obvia.ca/evenements/colloque'], [$e['titre'], $e['langue'], $e['url']]);
+    }
+
+    public function test_appel_collecte_prend_ses_champs_anglais(): void {
+        $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Appel à projets', 'debut' => '2026-10-20', 'echeance' => '2026-12-01', 'cle_source' => 'ivado:5', 'cles_source' => ['ivado:5'], 'titre_en' => 'Call for projects', 'url_en' => 'https://ivado.ca/en/call']));
+        $a = Donnees::elements($this->entrepot, [], '2026-10-25', 'en')[0];
+        $this->assertSame(['Call for projects', 'https://ivado.ca/en/call', 'en', '2026-12-01'], [$a['titre'], $a['url'], $a['langue'], $a['echeance']]);
+    }
+
+    public function test_les_champs_anglais_ne_sont_jamais_dans_le_json(): void {
+        $this->entrepot->creer($this->fiche(['titre_en' => 'Colloquium', 'resume_en' => 'EN summary', 'url_en' => 'https://www.obvia.ca/en/colloque']));
+        foreach (['fr', 'en'] as $langue) {
+            $item = Donnees::construire('2026-10-25', $this->entrepot, [], false, $langue)['items'][0];
+            $this->assertArrayNotHasKey('titre_en', $item);
+            $this->assertArrayNotHasKey('resume_en', $item);
+            $this->assertArrayNotHasKey('url_en', $item);
+            $this->assertStringNotContainsString('_en"', (string) json_encode($item));
+        }
+        $this->assertSame('Colloquium', Donnees::construire('2026-10-25', $this->entrepot, [], false, 'en')['items'][0]['titre']);
+    }
+
+    public function test_dedoublonnage_garde_la_cle_du_titre_francais_malgre_titre_en(): void {
+        $this->entrepot->creer($this->fiche(['titre_en' => 'Colloquium']));
+        $this->entrepot->creer($this->fiche(['cle_source' => 'obvia:99', 'cles_source' => ['obvia:99'], 'titre_en' => 'Colloquium bis']));
+        $this->assertCount(1, Donnees::elements($this->entrepot, [], '2026-10-25', 'en'));
+        // Un événement du RSN au titre français identique reste un doublon.
+        $rsn = $this->evenement_rsn(['titre' => 'Colloque sur la santé numérique', 'cle_source' => 'rsn-tec:7']);
+        $this->assertCount(1, Donnees::elements($this->entrepot, [$rsn], '2026-10-25', 'en'));
+    }
+
+    public function test_appel_du_rsn_traduit_par_wpml_prime_sur_les_champs_anglais(): void {
+        $this->traduction_appel();
+        $appel = $this->appel_rsn();
+        $appel->titre_en = 'Titre anglais de la fiche';
+        $this->entrepot->creer($appel);
+        $a = Donnees::elements($this->entrepot, [], '2026-10-25', 'en')[0];
+        $this->assertSame('Call for projects', $a['titre']);
+    }
+
     public function test_cle_dedoublonnage_de_est_celle_de_la_fiche(): void {
         $fiche = $this->fiche(['titre' => 'Journées scientifiques !']);
         $this->assertSame($fiche->cle_dedoublonnage(), Fiche::cle_dedoublonnage_de('2026-11-12', 'Journées scientifiques !'));

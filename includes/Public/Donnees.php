@@ -126,7 +126,12 @@ final class Donnees {
             if ($fiche->type === 'appel') {
                 if ($fiche->appel_en_cours($aujourdhui)) {
                     $appel = $fiche->vers_tableau();
-                    $appels[] = $langue !== 'fr' ? self::appel_traduit($appel, $langue) : $appel;
+                    if ($langue !== 'fr') {
+                        // La traduction WPML d'un appel du RSN prime ; sinon, les champs anglais de la fiche.
+                        $traduit = self::appel_traduit($appel, $langue);
+                        $appel = $traduit === $appel ? self::avec_champs_anglais($appel, $langue) : $traduit;
+                    }
+                    $appels[] = $appel;
                 }
             } elseif ($fiche->type === 'evenement' && $recent($fiche)) {
                 // Clé sur le titre de la fiche (français), calculée avant toute traduction.
@@ -135,10 +140,10 @@ final class Donnees {
                 if ($position === null) {
                     $position = count($evenements);
                     $positions[$cle] = $position;
-                    $evenements[] = $fiche->vers_tableau();
+                    $evenements[] = self::avec_champs_anglais($fiche->vers_tableau(), $langue);
                 } elseif ((string) $evenements[$position]['source'] === Fiche::SOURCE_PROPOSITION && !$fiche->est_proposition()) {
                     // Doublon entre fiches de veille : une proposition publiée cède la place à la fiche collectée.
-                    $evenements[$position] = $fiche->vers_tableau();
+                    $evenements[$position] = self::avec_champs_anglais($fiche->vers_tableau(), $langue);
                 } else {
                     // Sinon, la première fiche de même date et même titre reste seule.
                     continue;
@@ -196,6 +201,29 @@ final class Donnees {
         $cle_appel = static fn(array $a): array => [$a['echeance'] === null ? 1 : 0, (string) $a['echeance'], (string) $a['debut'], (string) $a['titre']];
         usort($appels, static fn(array $a, array $b): int => $cle_appel($a) <=> $cle_appel($b));
         return array_merge($evenements, $appels);
+    }
+
+    /**
+     * En anglais, une fiche qui porte un titre anglais passe en anglais : titre, résumé et adresse anglais (ceux
+     * qui sont renseignés) remplacent les français, `langue` vaut `en`. En français, ou sans titre anglais, rien
+     * ne change. Appelée après le calcul de la clé de dédoublonnage, qui reste celle du titre français.
+     *
+     * @param array<string,mixed> $element
+     * @return array<string,mixed>
+     */
+    private static function avec_champs_anglais(array $element, string $langue): array {
+        if ($langue !== 'en' || (string) ($element['titre_en'] ?? '') === '') {
+            return $element;
+        }
+        $element['titre'] = $element['titre_en'];
+        if ((string) ($element['resume_en'] ?? '') !== '') {
+            $element['resume'] = $element['resume_en'];
+        }
+        if ((string) ($element['url_en'] ?? '') !== '') {
+            $element['url'] = $element['url_en'];
+        }
+        $element['langue'] = 'en';
+        return $element;
     }
 
     /**

@@ -81,6 +81,13 @@ final class Fiche {
     public string $categorie = '';
     /** Date limite propre aux appels (Y-m-d). */
     public ?string $echeance = null;
+    /**
+     * Titre, résumé et adresse en anglais, posés par la collecte (appariement avec une page anglaise) : sur la
+     * page anglaise, ils remplacent `titre`, `resume` et `url` quand ils sont renseignés. Jamais publiés tels quels.
+     */
+    public string $titre_en = '';
+    public string $resume_en = '';
+    public string $url_en = '';
     // Champs de persistance.
     public ?int $id = null;
     public ?string $absent_depuis = null;

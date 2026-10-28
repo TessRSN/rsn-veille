@@ -198,6 +198,19 @@ final class EntrepotContratTest extends TestCase {
         $this->assertSame('inchange', (new Depot($e))->integrer($entrante));
     }
 
+    /** @dataProvider entrepots */
+    public function test_champs_anglais_survivent_a_l_aller_retour(string $nom): void {
+        $e = self::entrepot($nom);
+        $id = $e->creer(self::fiche(['titre_en' => 'Data workshop', 'resume_en' => 'A hands-on workshop.', 'url_en' => 'https://exemple.ca/en/workshop']));
+        $lue = $e->obtenir($id);
+        $this->assertSame(['Data workshop', 'A hands-on workshop.', 'https://exemple.ca/en/workshop'], [$lue->titre_en, $lue->resume_en, $lue->url_en]);
+        $e->mettre_a_jour($id, ['titre_en' => 'Data workshop (v2)']);
+        $lue = $e->obtenir($id);
+        $this->assertSame(['Data workshop (v2)', 'A hands-on workshop.'], [$lue->titre_en, $lue->resume_en]);
+        $sans = $e->obtenir($e->creer(self::fiche(['cle_source' => 'ex:9', 'cles_source' => ['ex:9'], 'titre' => 'Autre', 'debut' => '2026-12-01'])));
+        $this->assertSame(['', '', ''], [$sans->titre_en, $sans->resume_en, $sans->url_en]);
+    }
+
     public function test_wordpress_listes_renumerotees_et_cles_de_titres_gardees_a_la_lecture(): void {
         $e = new EntrepotWordPress();
         $id = $e->creer(self::fiche(['cles_source' => [3 => 'ex:2'], 'themes' => [5 => 'Financement']]));
