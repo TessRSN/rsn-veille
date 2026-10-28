@@ -49,7 +49,7 @@ final class Formulaire {
     public const META_IMAGE_PROPOSEE = TypeContenu::PREFIXE . 'image_proposee';
 
     /** Champs texte lus dans la requête. */
-    private const CHAMPS = ['titre', 'debut', 'fin', 'organisateur', 'format', 'lieu', 'url', 'resume', 'courriel', 'site_web'];
+    private const CHAMPS = ['titre', 'debut', 'fin', 'organisateur', 'format', 'lieu', 'url', 'resume', 'courriel', 'site_web', 'langue'];
 
     private const FORMATS = ['Présentiel', 'Virtuel', 'Hybride'];
 

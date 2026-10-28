@@ -324,6 +324,18 @@ final class FormulaireTest extends TestCase {
         $this->assertSame([[42]], rsn_veille_bouchons_declenchements('litespeed_purge_post'));
     }
 
+    public function test_langue_en_recue_par_l_action_ajax_enregistre_une_fiche_en(): void {
+        [, $statut] = $this->envoyer(self::champs(['langue' => 'en']));
+        $this->assertSame(200, $statut);
+        $this->assertSame('en', (new EntrepotWordPress())->obtenir(self::fiches()[0]->ID)->langue);
+    }
+
+    public function test_langue_absente_de_l_action_ajax_enregistre_une_fiche_fr(): void {
+        [, $statut] = $this->envoyer(self::champs());
+        $this->assertSame(200, $statut);
+        $this->assertSame('fr', (new EntrepotWordPress())->obtenir(self::fiches()[0]->ID)->langue);
+    }
+
     public function test_sans_courriel_aucune_meta(): void {
         $this->envoyer(self::champs(['courriel' => '']));
         $this->assertFalse(metadata_exists('post', self::fiches()[0]->ID, 'rsn_veille_courriel_proposant'));
