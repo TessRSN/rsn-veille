@@ -177,6 +177,7 @@ final class TypeContenu {
     public static function nettoyer_meta(string $nom, mixed $valeur): mixed {
         switch ($nom) {
             case 'url':
+            case 'url_en':
             case 'image_url':
                 return esc_url_raw(self::chaine($valeur));
             case 'absences':
