@@ -1,0 +1,383 @@
+<title>Bande Prochains événements</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Maquette de l'accueil de rsn.quebec : on reprend le système du site (DM Serif Display, Plus Jakarta Sans, marine, jaune),
+   deux variantes de la bande « Prochains événements » l'une sous l'autre, chacune dans un cadre de page à 1140 px. */
+:root{
+  --navy:#003469; --blue:#0061AF; --ink:#101828; --body:rgba(16,24,40,.72); --muted:#667085; --rule:#DCE1E8;
+  --yellow:#FFCC4E; --yellow-ink:#E3A800; --yellow-tint:#FFF4D1; --rsn-bg:#F6F8FA; --light:#F5F9FC; --page:#ffffff;
+  --eco:#3D6A99; --serif:"DM Serif Display",Georgia,serif; --sans:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+body{background:var(--light);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+a{color:inherit;text-decoration:none}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1140px;margin:0 auto}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+/* Barre de la maquette */
+.barre{background:var(--navy);color:#fff;padding-block:14px}
+.barre .wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 24px}
+.barre b{font-family:var(--serif);font-weight:400;font-size:20px}
+.barre p{margin:2px 0 0;font-size:13px;color:rgba(255,255,255,.78)}
+.reglages{display:flex;flex-wrap:wrap;gap:8px}
+.reglages button{border:1px solid rgba(255,255,255,.45);background:transparent;color:#fff;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
+.reglages button[aria-pressed="true"]{background:var(--yellow);border-color:var(--yellow);color:var(--navy)}
+
+/* En-tête de chaque variante */
+.variante{padding-block:34px 10px}
+.etiquette{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;margin:0 0 12px}
+.etiquette h2{margin:0;font-family:var(--serif);font-weight:400;font-size:24px;color:var(--navy)}
+.etiquette .hauteur{font-size:13px;font-weight:700;color:var(--navy);background:var(--yellow-tint);border-radius:999px;padding:3px 10px;font-variant-numeric:tabular-nums}
+.etiquette p{flex-basis:100%;margin:0;color:var(--body);max-width:78ch}
+.page{background:var(--page);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
+.bande{padding:40px 44px}
+
+/* Éléments communs du site */
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin:0 0 6px}
+.h2{font-family:var(--serif);font-weight:400;color:var(--navy);margin:0;line-height:1.08;text-wrap:balance}
+.intro{color:var(--body);margin:8px 0 0;max-width:52ch}
+.lien{font-weight:600;color:var(--navy);border-bottom:1.5px solid var(--yellow-ink);padding-bottom:1px;white-space:nowrap}
+.lien:hover{color:var(--blue)}
+.pill{display:inline-block;font-size:11px;font-weight:700;line-height:1;border-radius:999px;padding:4px 8px;background:var(--yellow);color:var(--navy);letter-spacing:.02em}
+.pill.eco{background:#E8EEF5;color:var(--navy);font-weight:600}
+.pill.lang{background:#fff;border:1px solid var(--rule);color:var(--body);font-weight:600}
+
+/* Mini-calendrier */
+.cal{width:100%;max-width:260px}
+.cal-tete{display:flex;align-items:center;justify-content:space-between;margin:0 0 6px}
+.cal-tete strong{font-family:var(--serif);font-weight:400;font-size:18px;color:var(--navy)}
+.cal-tete button{width:28px;height:28px;border-radius:50%;border:1px solid var(--rule);background:#fff;color:var(--navy);display:inline-flex;align-items:center;justify-content:center}
+.cal-tete button svg{width:13px;height:13px}
+.grille{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-variant-numeric:tabular-nums}
+.grille .jn{font-size:10.5px;font-weight:700;color:var(--muted);padding:2px 0 4px}
+.jour{position:relative;height:32px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;border-radius:8px;font-size:13px;color:var(--ink);padding:0}
+.jour.hors{visibility:hidden}
+.jour.passe{color:#A4ADBA}
+.jour.auj{font-weight:800;color:var(--navy);box-shadow:inset 0 0 0 1.5px var(--navy)}
+.jour.a{cursor:pointer}
+.jour.a:hover{background:var(--light)}
+.jour[aria-pressed="true"]{background:var(--navy);color:#fff}
+.jour .pts{position:absolute;left:50%;bottom:3px;transform:translateX(-50%);display:flex;gap:2px}
+.jour .pts i{width:5px;height:5px;border-radius:50%;background:var(--eco)}
+.jour .pts i.r{background:var(--yellow-ink)}
+.jour[aria-pressed="true"] .pts i{background:#fff}
+.jour[aria-pressed="true"] .pts i.r{background:var(--yellow)}
+.legende{display:flex;gap:12px;font-size:11.5px;color:var(--muted);margin-top:6px}
+.legende i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--eco);margin-right:5px;vertical-align:1px}
+.legende i.r{background:var(--yellow-ink)}
+
+/* Carte RSN (même langage que les fiches RSN de l'agenda : fond gris très pâle, trait jaune à gauche) */
+.rsn{display:grid;grid-template-columns:150px minmax(0,1fr);border-left:4px solid var(--yellow);border-radius:14px;overflow:hidden;background:var(--rsn-bg);min-height:100%}
+.rsn .im{background:#E8EEF5 center/cover no-repeat}
+.rsn .tx{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.rsn .quand{font-size:13px;font-weight:700;color:var(--navy)}
+.rsn h3{margin:0;font-family:var(--sans);font-size:16px;line-height:1.3;color:var(--ink);font-weight:700}
+.rsn .meta{font-size:12.5px;color:var(--muted)}
+.rsn:hover h3{color:var(--blue)}
+.rsn.vide{grid-template-columns:1fr;background:transparent;border-left-color:var(--rule)}
+
+/* Liste écosystème */
+.liste{display:flex;flex-direction:column}
+.ligne{display:grid;grid-template-columns:46px minmax(0,1fr);gap:12px;align-items:start;padding:9px 0;border-top:1px solid var(--rule)}
+.ligne:first-child{border-top:0;padding-top:2px}
+.tuile{width:46px;border-radius:9px;background:var(--light);text-align:center;padding:5px 0 4px;color:var(--navy)}
+.tuile b{display:block;font-family:var(--serif);font-weight:400;font-size:19px;line-height:1}
+.tuile span{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+.ligne h4{margin:0;font-size:14px;font-weight:600;line-height:1.3;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ligne .meta{font-size:12px;color:var(--muted);margin-top:2px}
+.ligne:hover h4{color:var(--blue)}
+.ligne.sel .tuile{background:var(--navy);color:#fff}
+.vide-jour{font-size:13px;color:var(--muted);padding:6px 0}
+.sous{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;display:flex;justify-content:space-between;gap:10px}
+.sous button{border:0;background:transparent;color:var(--blue);font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;padding:0}
+
+/* Variante A : trois colonnes, en-tête sur une ligne */
+.A .tete{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 30px;margin:0 0 22px}
+.A .h2{font-size:38px}
+.A .corps{display:grid;grid-template-columns:260px minmax(0,1fr) minmax(0,1.15fr);gap:28px;align-items:stretch}
+.A .col-rsn{display:flex;flex-direction:column;gap:12px}
+/* Le calendrier remplit la hauteur de sa colonne : les semaines s'étirent jusqu'au bas de la carte RSN et de la liste, légende en bas. */
+.A .col-cal{display:flex;flex-direction:column}
+.A .cal{max-width:none;flex:1;display:flex;flex-direction:column}
+.A .cal-tete{height:28px;margin:0 0 8px}
+.A .sous{height:28px;align-items:center;margin:0 0 8px}
+.A .col-rsn{gap:0}
+.A .grille{flex:1;grid-template-rows:auto;grid-auto-rows:minmax(30px,1fr)}
+.A .jour{height:auto}
+.A .legende{margin-top:10px}
+.A .rsn{grid-template-columns:1fr;grid-template-rows:150px auto}
+.A .rsn.compacte{grid-template-columns:96px minmax(0,1fr);grid-template-rows:auto;min-height:0}
+.rsn.compacte .tx{padding:10px 12px 12px;gap:4px}
+.rsn.compacte h3{font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.col-rsn [data-rsn]{display:flex;flex-direction:column;gap:10px;flex:1}
+.A .col-rsn [data-rsn] .rsn:only-child{flex:1}
+.rsn .im.sans{background:var(--navy) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 26'%3E%3Cpath d='M12 2 21.5 7.5v11L12 24 2.5 18.5v-11Z' fill='none' stroke='%23FFCC4E' stroke-width='2'/%3E%3C/svg%3E") center/34px no-repeat}
+.plus-rsn{font-size:13px;font-weight:600;color:var(--navy);border-bottom:1.5px solid var(--yellow-ink);align-self:flex-start;padding-bottom:1px}
+.exemple{font-size:11px;font-weight:700;color:#B54708;background:#FEF0C7;border-radius:4px;padding:1px 5px;margin-left:4px;vertical-align:1px}
+
+/* Variante B : bande basse, en-tête et calendrier à gauche, défilé de cartes à droite */
+.B .corps{display:grid;grid-template-columns:270px minmax(0,1fr);gap:34px;align-items:start}
+.B .h2{font-size:32px}
+.B .gauche{display:flex;flex-direction:column;gap:14px}
+.B .droite{display:flex;flex-direction:column;gap:12px;min-width:0}
+.B .rsn{grid-template-columns:170px minmax(0,1fr)}
+.B .defile-tete{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.B .fleches{display:flex;gap:6px}
+.B .fleches button{width:30px;height:30px;border-radius:50%;border:1px solid var(--rule);background:#fff;color:var(--navy);display:inline-flex;align-items:center;justify-content:center}
+.B .fleches button:disabled{opacity:.35;cursor:default}
+.B .fleches svg{width:13px;height:13px}
+.B .defile{display:flex;gap:10px;overflow-x:auto;scroll-behavior:smooth;scrollbar-width:none;padding:2px 0}
+.B .defile::-webkit-scrollbar{display:none}
+.B .mini{flex:0 0 210px;border:1px solid var(--rule);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:42px minmax(0,1fr);gap:10px;background:#fff}
+.B .mini .tuile{width:42px}
+.B .mini h4{margin:0;font-size:13px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.B .mini .meta{font-size:11.5px;color:var(--muted);margin-top:3px}
+.B .mini:hover{border-color:var(--navy)}
+.B .mini.sel{border-color:var(--navy);box-shadow:inset 0 0 0 1px var(--navy)}
+
+/* Ce qui se modifie dans Elementor */
+.el{position:relative}
+.voir-el .el{outline:2px dashed #2E90FA;outline-offset:3px;border-radius:4px}
+.voir-el .el::after{content:attr(data-el);position:absolute;top:-11px;left:6px;font:700 10px/1 var(--sans);background:#2E90FA;color:#fff;padding:3px 6px;border-radius:4px;white-space:nowrap;z-index:2}
+.voir-el .sc{outline:2px dashed #F04438}
+.voir-el .sc::after{background:#F04438}
+.notes{max-width:1140px;margin:0 auto;padding-block:22px 44px;color:var(--body);font-size:14px}
+.notes h3{font-family:var(--serif);font-weight:400;color:var(--navy);font-size:20px;margin:0 0 8px}
+.notes ul{margin:0;padding-left:18px;display:grid;gap:6px;max-width:90ch}
+.notes code{font-size:13px;background:#E8EEF5;border-radius:4px;padding:1px 5px}
+
+@media (max-width:980px){
+  .A .corps{grid-template-columns:1fr 1fr}
+  .A .col-cal{grid-column:1/-1}
+  .B .corps{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  .bande{padding:26px 18px}
+  .A .corps{grid-template-columns:1fr}
+  .A .h2{font-size:30px}
+  .rsn,.B .rsn{grid-template-columns:110px minmax(0,1fr)}
+  .A .rsn{grid-template-rows:130px auto}
+  .cal{max-width:none}
+}
+@media (prefers-reduced-motion:reduce){.B .defile{scroll-behavior:auto}}
+</style>
+
+<header class="barre gut">
+  <div class="wrap">
+    <div><b>Accueil · bande « Prochains événements »</b><p>Maquette, données réelles de l'agenda au 28 octobre 2026. Deux propositions l'une sous l'autre.</p></div>
+    <div class="reglages" role="group" aria-label="Réglages de la maquette">
+      <button type="button" id="b-fr" aria-pressed="true">Français</button>
+      <button type="button" id="b-en" aria-pressed="false">English</button>
+      <button type="button" id="b-el" aria-pressed="false">Voir ce qui se modifie dans Elementor</button>
+      <button type="button" id="b-ex" aria-pressed="false">Simuler trois événements du RSN</button>
+    </div>
+  </div>
+</header>
+
+<main id="racine">
+  <section class="variante gut" aria-labelledby="tA">
+    <div class="wrap">
+      <div class="etiquette"><h2 id="tA">A · Trois colonnes</h2><span class="hauteur" id="hA"></span>
+        <p>Le calendrier du mois, l'événement du RSN mis en avant, puis les prochains de l'écosystème, un par organisateur. Cliquer un jour du calendrier filtre la liste.</p></div>
+      <div class="page"><div class="bande A" id="bandeA">
+        <div class="tete">
+          <div>
+            <p class="eyebrow el" data-el="Elementor · Texte" data-t="eyebrow"></p>
+            <h3 class="h2 el" data-el="Elementor · Titre" data-t="titre"></h3>
+          </div>
+          <a class="lien el" data-el="Elementor · Lien" href="https://rsn.quebec/calendrier-evenements/" data-t="lien" data-href></a>
+        </div>
+        <div class="corps el sc" data-el="Code court [rsn_veille_accueil] · contenu automatique">
+          <div class="col-cal"><div class="cal" data-cal="A"></div></div>
+          <div class="col-rsn"><p class="sous"><span data-t="au_rsn"></span></p><div data-rsn="A"></div></div>
+          <div class="col-eco"><p class="sous"><span data-sous="A"></span><button type="button" data-tous="A" hidden></button></p><div class="liste" data-liste="A"></div></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="variante gut" aria-labelledby="tB">
+    <div class="wrap">
+      <div class="etiquette"><h2 id="tB">B · Bande basse</h2><span class="hauteur" id="hB"></span>
+        <p>Le titre et le calendrier à gauche ; à droite, l'événement du RSN en large, puis un défilé de petites cartes de l'écosystème avec des flèches, comme la bande des dates limites de l'agenda.</p></div>
+      <div class="page"><div class="bande B" id="bandeB">
+        <div class="corps">
+          <div class="gauche">
+            <div>
+              <p class="eyebrow el" data-el="Elementor · Texte" data-t="eyebrow"></p>
+              <h3 class="h2 el" data-el="Elementor · Titre" data-t="titre"></h3>
+              <p class="intro el" data-el="Elementor · Texte" data-t="intro"></p>
+            </div>
+            <div class="cal el sc" data-el="Code court · calendrier" data-cal="B"></div>
+            <a class="lien el" data-el="Elementor · Lien" href="https://rsn.quebec/calendrier-evenements/" data-t="lien" data-href style="align-self:flex-start"></a>
+          </div>
+          <div class="droite el sc" data-el="Code court [rsn_veille_accueil] · contenu automatique">
+            <div data-rsn="B"></div>
+            <div class="defile-tete"><p class="sous" style="margin:0"><span data-sous="B"></span><button type="button" data-tous="B" hidden></button></p>
+              <div class="fleches"><button type="button" id="prec" aria-label="Précédents"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 3-5 5 5 5"/></svg></button><button type="button" id="suiv" aria-label="Suivants"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button></div></div>
+            <div class="defile" id="defile" data-liste="B"></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="notes gut">
+    <h3>Ce qui changerait sur le site</h3>
+    <ul>
+      <li><b>Hauteur.</b> La bande actuelle mesure environ 1 040 px sur un écran de 1 440 px (titre 336 px et cartes 700 px, en deux sections). Les hauteurs ci-dessus sont mesurées en direct dans cette page, à la largeur de ton écran.</li>
+      <li><b>Ce que ton collègue modifie dans Elementor</b> (bouton « Voir ce qui se modifie dans Elementor ») : la petite ligne au-dessus du titre, le titre, la phrase d'intro et le lien, comme aujourd'hui. Le contenu qui bouge chaque jour, calendrier, carte du RSN et liste, vient d'un code court de l'extension posé dans un widget « Code court », à la place du code court actuel <code>[rsn_events_cards]</code>.</li>
+      <li><b>Ce qu'il montre.</b> Les événements de l'agenda, en français ou en anglais selon la page : le prochain du RSN en carte (les deux prochains s'il y en a deux), puis les prochains de l'écosystème, un seul par organisateur pour ne pas laisser Digital Health Canada remplir la liste, sans les séries de plusieurs semaines déjà commencées.</li>
+      <li><b>Sans événement du RSN à venir,</b> la carte laisse place à une phrase et la liste de l'écosystème s'allonge. Les pastilles de catégorie actuelles, qui mènent aux archives de The Events Calendar, disparaissent : le filtre « Qui organise » de l'agenda les remplace.</li>
+    </ul>
+  </section>
+</main>
+
+<script id="donnees" type="application/json">__DATA__</script>
+<script>
+(function(){
+  const D = JSON.parse(document.getElementById('donnees').textContent);
+  const AUJ = D.aujourdhui;
+  const TX = {
+    fr:{eyebrow:'Calendrier', titre:'Prochains événements', intro:'Le RSN, ses partenaires et l’écosystème de la santé numérique.', lien:'Voir l’agenda de l’écosystème →',
+        au_rsn:'Au RSN', eco:'Dans l’écosystème', le:'Le %s', tous:'Tous', aucun:'Aucun événement ce jour-là.', aucun_rsn:'Pas d’événement du RSN à venir pour le moment. Les prochains seront annoncés ici.',
+        jours:['L','M','M','J','V','S','D'], mois:['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'],
+        mois_l:['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'],
+        formats:{'Présentiel':'Présentiel','Virtuel':'Virtuel','Hybride':'Hybride'}, rsn:'RSN', en_fr:'En anglais', mois_prec:'Mois précédent', mois_suiv:'Mois suivant', legende_rsn:'RSN', legende_eco:'Écosystème', hauteur:'%d px de haut ici', autres:['+ %d autre événement du RSN \u2192','+ %d autres événements du RSN \u2192'], exemple:'exemple'},
+    en:{eyebrow:'Calendar', titre:'Upcoming events', intro:'The RSN, its partners and Quebec’s digital health ecosystem.', lien:'View the ecosystem calendar →',
+        au_rsn:'At the RSN', eco:'In the ecosystem', le:'On %s', tous:'All', aucun:'No events that day.', aucun_rsn:'No upcoming RSN event for now. The next ones will be announced here.',
+        jours:['M','T','W','T','F','S','S'], mois:['Jan.','Feb.','Mar.','Apr.','May','June','July','Aug.','Sept.','Oct.','Nov.','Dec.'],
+        mois_l:['January','February','March','April','May','June','July','August','September','October','November','December'],
+        formats:{'Présentiel':'In person','Virtuel':'Virtual','Hybride':'Hybrid'}, rsn:'RSN', en_fr:'In French', mois_prec:'Previous month', mois_suiv:'Next month', legende_rsn:'RSN', legende_eco:'Ecosystem', hauteur:'%d px tall here', autres:['+ %d more RSN event \u2192','+ %d more RSN events \u2192'], exemple:'example'}
+  };
+  let L = 'fr';
+  const etat = { A:{mois:AUJ.slice(0,7), jour:''}, B:{mois:AUJ.slice(0,7), jour:''} };
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const d = s => { const [a,m,j] = s.split('-').map(Number); return {a,m,j}; };
+  const pad = n => String(n).padStart(2,'0');
+  const t = k => TX[L][k];
+  const items = () => D.items[L];
+  const fin = k => k.fin || k.debut;
+  const longue = k => (new Date(fin(k)) - new Date(k.debut)) / 864e5 > 7;
+  const enCours = k => k.debut < AUJ;
+  const estRSN = k => k.organise_par === 'rsn';
+  function quand(k){
+    const a = d(k.debut), b = d(fin(k)); const M = t('mois_l');
+    if (k.debut === fin(k)) return L === 'en' ? `${M[a.m-1]} ${a.j}, ${a.a}` : `${a.j === 1 ? '1er' : a.j} ${M[a.m-1]} ${a.a}`;
+    if (a.m === b.m) return L === 'en' ? `${M[a.m-1]} ${a.j}–${b.j}, ${a.a}` : `${a.j}–${b.j} ${M[a.m-1]} ${a.a}`;
+    return L === 'en' ? `${M[a.m-1]} ${a.j} to ${M[b.m-1]} ${b.j}` : `${a.j} ${M[a.m-1]} au ${b.j} ${M[b.m-1]}`;
+  }
+  const tuile = k => { const x = d(enCours(k) ? AUJ : k.debut); return `<div class="tuile"><b>${x.j}</b><span>${esc(t('mois')[x.m-1])}</span></div>`; };
+  const fmt = k => k.format ? esc(t('formats')[k.format] || k.format) : '';
+  const lang = k => (k.langue === 'fr' || k.langue === 'en') && k.langue !== L ? ` · ${L === 'en' ? 'In French' : 'En anglais'}` : '';
+  const touche = (k, jour) => jour && k.debut <= jour && fin(k) >= jour;
+  const dansJour = (k, jour) => k.debut === jour || (!longue(k) && touche(k, jour));
+
+  // Sélection de l'accueil : RSN d'abord (deux au plus), puis l'écosystème, un par organisateur, sans séries longues commencées.
+  function selection(nEco, jour){
+    const pris = new Set();
+    const rsn = items().filter(k => estRSN(k) && !(longue(k) && enCours(k)));
+    let eco = items().filter(k => !estRSN(k) && !(longue(k) && enCours(k)));
+    if (jour) eco = items().filter(k => !estRSN(k) && dansJour(k, jour));
+    else eco = eco.filter(k => { if (pris.has(k.organisateur)) return false; pris.add(k.organisateur); return true; }).slice(0, nEco);
+    return { rsn, eco };
+  }
+  function carteRSN(k, v, compacte){
+    const img = D.images[String(k.id)];
+    const meta = [k.ville, fmt(k)].filter(Boolean).join(' · ');
+    const ex = k.exemple ? `<span class="exemple">${esc(t('exemple'))}</span>` : '';
+    return `<a class="rsn${compacte ? ' compacte' : ''}" href="${esc(k.url)}" target="_blank" rel="noopener"><div class="im${img ? '' : ' sans'}"${img ? ` style="background-image:url('${img}')"` : ''}></div>
+      <div class="tx"><span class="pill">${esc(t('rsn'))}</span><span class="quand">${esc(quand(k))}${ex}</span><h3>${esc(k.titre)}</h3><span class="meta">${esc(meta)}</span></div></a>`;
+  }
+  function ligne(k, v, jour){
+    const meta = `${esc(k.organisateur)}${k.format ? ' · ' + fmt(k) : ''}${esc(lang(k))}`;
+    const sel = jour && dansJour(k, jour) ? ' sel' : '';
+    return v === 'B'
+      ? `<a class="mini${sel}" href="${esc(k.url)}" target="_blank" rel="noopener">${tuile(k)}<div><h4>${esc(k.titre)}</h4><div class="meta">${meta}</div></div></a>`
+      : `<a class="ligne${sel}" href="${esc(k.url)}" target="_blank" rel="noopener">${tuile(k)}<div><h4>${esc(k.titre)}</h4><div class="meta">${meta}</div></div></a>`;
+  }
+  function calendrier(v){
+    const e = etat[v]; const [a, m] = e.mois.split('-').map(Number);
+    const n = new Date(a, m, 0).getDate(); const debut = (new Date(a, m-1, 1).getDay() + 6) % 7;
+    const parJour = {};
+    items().forEach(k => { if (longue(k)) { if (k.debut.slice(0,7) === e.mois) (parJour[k.debut] ||= []).push(k); return; }
+      for (let j = 1; j <= n; j++) { const iso = `${e.mois}-${pad(j)}`; if (k.debut <= iso && fin(k) >= iso) (parJour[iso] ||= []).push(k); } });
+    let h = `<div class="cal-tete"><button type="button" data-cal-nav="-1" aria-label="${esc(t('mois_prec'))}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m10 3-5 5 5 5"/></svg></button><strong>${esc(t('mois_l')[m-1])} ${a}</strong><button type="button" data-cal-nav="1" aria-label="${esc(t('mois_suiv'))}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button></div><div class="grille">`;
+    h += t('jours').map(x => `<span class="jn">${x}</span>`).join('');
+    for (let i = 0; i < debut; i++) h += `<span class="jour hors"></span>`;
+    for (let j = 1; j <= n; j++) {
+      const iso = `${e.mois}-${pad(j)}`; const K = parJour[iso] || [];
+      const rsn = K.some(estRSN), eco = K.some(k => !estRSN(k));
+      const cls = ['jour', iso < AUJ ? 'passe' : '', iso === AUJ ? 'auj' : '', K.length ? 'a' : ''].filter(Boolean).join(' ');
+      const pts = K.length ? `<span class="pts">${rsn ? '<i class="r"></i>' : ''}${eco ? '<i></i>' : ''}</span>` : '';
+      h += K.length ? `<button type="button" class="${cls}" data-jour="${iso}" aria-pressed="${e.jour === iso}" aria-label="${j} ${esc(t('mois_l')[m-1])} : ${K.length}">${j}${pts}</button>` : `<span class="${cls}">${j}</span>`;
+    }
+    h += `</div><div class="legende"><span><i class="r"></i>${esc(t('legende_rsn'))}</span><span><i></i>${esc(t('legende_eco'))}</span></div>`;
+    return h;
+  }
+  function rendre(v){
+    const e = etat[v]; const nEco = v === 'A' ? 4 : 8;
+    const S = selection(nEco, e.jour);
+    document.querySelectorAll(`[data-cal="${v}"]`).forEach(n => n.innerHTML = calendrier(v));
+    const R = document.querySelector(`[data-rsn="${v}"]`);
+    const lienAgenda = L === 'en' ? 'https://rsn.quebec/en/events-calendar/' : 'https://rsn.quebec/calendrier-evenements/';
+    const reste = S.rsn.length - 2;
+    R.innerHTML = !S.rsn.length ? `<div class="rsn vide"><div class="tx"><span class="meta">${esc(t('aucun_rsn'))}</span></div></div>`
+      : S.rsn.length === 1 ? carteRSN(S.rsn[0], v, false)
+      : S.rsn.slice(0, 2).map(k => carteRSN(k, v, true)).join('') + (reste > 0 ? `<a class="plus-rsn" href="${lienAgenda}" target="_blank" rel="noopener">${esc(t('autres')[reste > 1 ? 1 : 0].replace('%d', reste))}</a>` : '');
+    const sous = document.querySelector(`[data-sous="${v}"]`); const bt = document.querySelector(`[data-tous="${v}"]`);
+    if (e.jour) { const x = d(e.jour); sous.textContent = t('le').replace('%s', L === 'en' ? `${t('mois_l')[x.m-1]} ${x.j}` : `${x.j} ${t('mois_l')[x.m-1]}`); bt.hidden = false; bt.textContent = t('tous'); }
+    else { sous.textContent = t('eco'); bt.hidden = true; }
+    const liste = document.querySelector(`[data-liste="${v}"]`);
+    liste.innerHTML = S.eco.length ? S.eco.map(k => ligne(k, v, e.jour)).join('') : `<div class="vide-jour">${esc(t('aucun'))}</div>`;
+    if (v === 'B') { liste.scrollLeft = 0; majFleches(); }
+    mesurer();
+  }
+  function textes(){
+    document.querySelectorAll('[data-t]').forEach(n => n.textContent = t(n.dataset.t));
+    document.querySelectorAll('[data-href]').forEach(n => n.href = L === 'en' ? 'https://rsn.quebec/en/events-calendar/' : 'https://rsn.quebec/calendrier-evenements/');
+    document.documentElement.lang = L;
+  }
+  function mesurer(){
+    ['A','B'].forEach(v => { const b = document.getElementById('bande' + v); if (b) document.getElementById('h' + v).textContent = t('hauteur').replace('%d', Math.round(b.getBoundingClientRect().height)); });
+  }
+  const defile = document.getElementById('defile');
+  function majFleches(){ document.getElementById('prec').disabled = defile.scrollLeft <= 2; document.getElementById('suiv').disabled = defile.scrollLeft + defile.clientWidth >= defile.scrollWidth - 2; }
+  document.getElementById('prec').addEventListener('click', () => defile.scrollBy({left: -Math.round(defile.clientWidth * .8)}));
+  document.getElementById('suiv').addEventListener('click', () => defile.scrollBy({left: Math.round(defile.clientWidth * .8)}));
+  defile.addEventListener('scroll', majFleches, {passive:true});
+  window.addEventListener('resize', () => { majFleches(); mesurer(); });
+
+  document.getElementById('racine').addEventListener('click', ev => {
+    const nav = ev.target.closest('[data-cal-nav]'), jour = ev.target.closest('[data-jour]'), tous = ev.target.closest('[data-tous]');
+    const v = (nav || jour || tous) ? ((nav || jour || tous).closest('.bande').id.slice(-1)) : null;
+    if (!v) return;
+    const e = etat[v];
+    if (nav) { const [a, m] = e.mois.split('-').map(Number); const x = new Date(a, m - 1 + Number(nav.dataset.calNav), 1); e.mois = `${x.getFullYear()}-${pad(x.getMonth() + 1)}`; e.jour = ''; }
+    if (jour) e.jour = e.jour === jour.dataset.jour ? '' : jour.dataset.jour;
+    if (tous) e.jour = '';
+    rendre(v);
+  });
+  const EX = {
+    fr:[{id:'ex1',titre:'Webinaire du RSN : données ouvertes en santé',debut:'2026-11-26',fin:'2026-11-26',organisateur:'RSN',organise_par:'rsn',format:'Virtuel',url:'#',ville:'',langue:'fr',exemple:true},
+        {id:'ex2',titre:'Midi-conférence du RSN : IA et soins de première ligne',debut:'2026-12-09',fin:'2026-12-09',organisateur:'RSN',organise_par:'rsn',format:'Présentiel',url:'#',ville:'Montréal',langue:'fr',exemple:true}],
+    en:[{id:'ex1',titre:'RSN webinar: open data in health',debut:'2026-11-26',fin:'2026-11-26',organisateur:'RSN',organise_par:'rsn',format:'Virtuel',url:'#',ville:'',langue:'en',exemple:true},
+        {id:'ex2',titre:'RSN lunch talk: AI and primary care',debut:'2026-12-09',fin:'2026-12-09',organisateur:'RSN',organise_par:'rsn',format:'Présentiel',url:'#',ville:'Montréal',langue:'en',exemple:true}]
+  };
+  const REEL = { fr: D.items.fr, en: D.items.en };
+  document.getElementById('b-ex').addEventListener('click', e => {
+    const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', on);
+    ['fr','en'].forEach(l => { D.items[l] = on ? REEL[l].concat(EX[l]).sort((a, b) => a.debut.localeCompare(b.debut)) : REEL[l]; });
+    rendre('A'); rendre('B');
+  });
+  const langue = l => { L = l; document.getElementById('b-fr').setAttribute('aria-pressed', l === 'fr'); document.getElementById('b-en').setAttribute('aria-pressed', l === 'en'); textes(); rendre('A'); rendre('B'); };
+  document.getElementById('b-fr').addEventListener('click', () => langue('fr'));
+  document.getElementById('b-en').addEventListener('click', () => langue('en'));
+  document.getElementById('b-el').addEventListener('click', e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', on); document.getElementById('racine').classList.toggle('voir-el', on); });
+  langue('fr');
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(mesurer);
+})();
+</script>

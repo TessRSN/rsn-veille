@@ -1,4 +1,4 @@
-# Parcours de vérification de bout en bout (version 0.4.0)
+# Parcours de vérification de bout en bout (version 0.5.0)
 
 Ce parcours enchaîne, dans l'ordre d'un vrai usage, toutes les listes de vérification manuelles :
 `verifier-admin.md` (administration), `verifier-public.md` (page publique, formulaire, REST et iCal) et
@@ -191,7 +191,7 @@ est vide pour la page Veille choisie.
     (la bande ne doit causer aucun défilement horizontal). Consigner tout écart dans le tableau des écarts.
     Vérifier aussi à 375 px (cartes empilées).
 12. Section **Ressources et cohabitation** de `verifier-public.md` : ressources seulement sur la page Veille
-    (chargées avec `?ver=0.4.0`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
+    (chargées avec `?ver=0.5.0`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
     si installé (la page anglaise a ses propres points, 24 à 32).
 13. Section **REST et iCal** : `/wp-json/rsn/v1/veille` (aucune clé retirée), `/veille.ics` (CRLF, en-têtes,
     validateur iCal, abonnement dans un agenda).
@@ -202,7 +202,7 @@ est vide pour la page Veille choisie.
     et il n'est pas à la une du RSN.
 15. **Purge à la mise à jour** : `wp option delete rsn_veille_version`, puis charger une page de wp-admin ; le transient
     `rsn_veille_json_fr` a disparu (`wp transient get rsn_veille_json_fr` ne rend rien) et
-    `wp option get rsn_veille_version` rend `0.4.0`. Un second chargement ne purge plus.
+    `wp option get rsn_veille_version` rend `0.5.0`. Un second chargement ne purge plus.
 16. **Bandeau continu** (version 0.3.0 ; exige le thème Vault, absent de wp-env : à faire sur rsn.quebec, sur la page
     ordinaire avec un bloc Code court, renommée « Événements et appels », fenêtre large) :
     - aucun écart blanc entre l'en-tête du thème (fil d'Ariane et titre) et l'intro du bandeau, ni entre l'intro, les
@@ -293,6 +293,57 @@ est vide pour la page Veille choisie.
 
 **Terminé quand** : toutes les cases de ces sections de `verifier-public.md` sont cochées, sauf celles du formulaire
 (étape 8), et chacun des points 4 à 32 ci-dessus donne le résultat attendu.
+
+## 7 bis. Bande de l'accueil (`[rsn_veille_accueil]`, version 0.5.0)
+
+Exige une page d'accueil statique (Réglages › Lecture). Sur wp-env, créer une page « Accueil » avec un bloc Code court
+contenant `[rsn_veille_accueil]` et la choisir comme page d'accueil ; sur rsn.quebec, c'est l'accueil français (page 152)
+et sa traduction anglaise (page 1147), dont le widget Code court de la section qui suit l'en-tête passe de
+`[rsn_events_cards limit="3"]` à `[rsn_veille_accueil]` (guide d'installation, section 6). Purger le cache après chaque
+changement de fiche (`wp transient delete rsn_veille_json_fr` et `rsn_veille_json_en`), puis LiteSpeed › Purger tout sur le site.
+
+1. **Rendu et hauteur** (hors connexion, fenêtre de 1 440 px) : trois colonnes, le calendrier du mois, « Au RSN » et
+   « Dans l'écosystème ». La bande est nettement plus basse qu'avant (environ 1 040 px pour l'ancienne bande ; mesurer
+   la section avec les outils du navigateur et la noter dans le tableau des écarts). `accueil.css` et `accueil.js`
+   sont chargés avec `?ver=0.5.0` (le CSS dans l'en-tête, le script en pied de page) sur l'accueil ; ni `veille.css` ni `veille.js`. Aucune erreur dans la
+   console, aucun défilement horizontal (`document.documentElement.scrollWidth === document.documentElement.clientWidth`).
+   **Charger l'accueil sans toucher la souris ni le clavier** : la bande doit se dessiner d'elle-même ; si elle reste vide,
+   exclure `accueil.js` du délai du JavaScript de LiteSpeed (LiteSpeed › Optimisation de page › Réglages JS).
+2. **Calendrier** : mois courant au départ, la flèche précédente désactivée ; la flèche suivante va jusqu'au dernier
+   mois qui a un événement, puis se désactive. Jours passés grisés, aujourd'hui entouré. Point jaune les jours qui ont
+   un événement du RSN, point marine ceux qui ont un événement de l'écosystème ; une série de plus de 7 jours ne
+   pointe que son premier jour.
+3. **Filtre par jour** : cliquer un jour pointé ; la colonne de droite devient « Le 4 novembre » (ou la date choisie)
+   avec le bouton « Tous » et **tous** les événements de ce jour, ceux du RSN compris (plus de quatre si on en crée autant,
+   deux d'un même organisateur compris) ; un jour qui n'a qu'un événement du RSN l'affiche, avec la pastille « RSN » sur sa ligne (dans l'ordre du début puis du titre). La liste par défaut, quand aucun événement de l'écosystème n'est à venir, dit « Aucun événement de l'écosystème à venir. ».
+   Recliquer le jour, ou « Tous », revient à la liste. Changer de mois défait le jour choisi.
+4. **Au RSN, quatre cas** (créer ou retirer des événements du RSN à venir, `rsn_veille_organisateur` = `RSN`, et purger) :
+   - **aucun** : la phrase « Pas d'événement du RSN à venir pour le moment. Les prochains seront annoncés ici. » ;
+   - **un** : une grande carte, image en haut (sans image, zone marine avec l'hexagone jaune) ;
+   - **deux** : deux cartes compactes l'une sous l'autre, image à gauche ;
+   - **trois ou plus** : deux cartes compactes puis « + 1 autre événement du RSN → » (« + 2 autres événements du RSN → » avec quatre), qui mène à l'agenda.
+   Une série du RSN de plus de 7 jours déjà commencée n'est pas comptée.
+5. **Dans l'écosystème** : au plus quatre événements qui ne sont pas du RSN, un seul par organisateur (le plus proche),
+   sans série de plus de 7 jours déjà commencée ; tuile de date (la date du jour pour un événement en cours), titre,
+   organisateur · format ; « En anglais » sur l'accueil français pour une fiche en anglais. Chaque titre mène à la page
+   de l'événement (nouvel onglet hors de rsn.quebec).
+6. **Accueil anglais** (WPML ; sur rsn.quebec seulement) : `/en/` montre la même bande en anglais : « At the RSN »,
+   « In the ecosystem », « Previous month » / « Next month » (étiquettes des flèches), « On %s » ordonné comme « On November 4 »,
+   dates (« November 4, 2026 »), formats traduits, « In French » sur une fiche en français, « + N more RSN events → » menant à
+   l'agenda anglais. Le JSON incorporé porte `"langue":"en"`.
+7. **Sans JavaScript** : un lien « Voir l'agenda de l'écosystème » remplace la bande.
+8. **Purge** : modifier une fiche du RSN ou lancer la collecte ; l'accueil (et sa traduction) montre le changement après
+   rechargement, sans purge manuelle de LiteSpeed. `wp option delete rsn_veille_version` puis une page de wp-admin purge aussi l'accueil.
+9. **Mobile** : à 375 px, une colonne (calendrier, puis « Au RSN », puis « Dans l'écosystème ») ; à 800 px, le calendrier
+   au-dessus sur toute la largeur et les deux autres colonnes côte à côte ; les flèches et les jours se touchent au doigt.
+10. **Code court ailleurs que sur l'accueil** : dans un widget Code court d'une autre page Elementor, la bande s'affiche
+    avec ses styles (ressources chargées au rendu, après le contenu). `add_filter('rsn_veille_charger_accueil', '__return_true')`
+    les charge en tête. Cette page n'est pas purgée par la collecte : la bande y suit les caches de LiteSpeed et d'Elementor.
+11. **Après minuit, sans purge** : afficher l'accueil le lendemain de la dernière purge, sans rien vider ; le jour entouré
+    dans le calendrier et les colonnes « Au RSN » et « Dans l'écosystème » sont ceux du jour (un événement fini la veille
+    n'y est plus), même si la page vient du cache.
+
+**Terminé quand** : les points 1 à 11 donnent le résultat attendu sur l'accueil français et, avec WPML, sur l'accueil anglais.
 
 ## 8. Formulaire « Proposer un événement »
 

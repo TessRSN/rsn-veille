@@ -88,6 +88,8 @@ function rsn_veille_bouchons_reinitialiser(): void {
         'reglages' => [], 'erreurs_reglages' => [], 'cron_lances' => 0,
         // Public : raccourcis, routes REST, règles de réécriture, variables de requête, page demandée.
         'raccourcis' => [], 'routes' => [], 'regles' => [], 'variables_requete' => [], 'objet_demande' => null,
+        // Page d'accueil du site demandée (`is_front_page`).
+        'accueil' => false,
         'regles_regenerees' => 0,
         // Courriel : messages remis à wp_mail (sujet, message, en-têtes, texte alternatif) et résultat à renvoyer.
         'courriels' => [], 'wp_mail_reussit' => true,
@@ -1053,6 +1055,10 @@ function do_shortcode(string $texte): string {
 
 function get_queried_object(): mixed {
     return $GLOBALS['rsn_veille_wp']['objet_demande'];
+}
+
+function is_front_page(): bool {
+    return (bool) $GLOBALS['rsn_veille_wp']['accueil'];
 }
 
 function is_singular(mixed $types = ''): bool {
