@@ -44,6 +44,8 @@ if (function_exists('add_action')) {
     \RSN\Veille\Admin\Menu::accrocher();
     // Métabox « Image de la fiche » de l'éditeur : image de la source et rappel de l'image mise en avant.
     \RSN\Veille\Admin\MetaboxImage::accrocher();
+    // Métabox « Détails de la fiche » : type, dates, lien, lieu… corrigés à la main et protégés de la collecte.
+    \RSN\Veille\Admin\MetaboxDetails::accrocher();
     // Page publique : raccourci [rsn_veille], ressources seulement si la page le contient, cache du JSON.
     \RSN\Veille\Public\Raccourci::accrocher();
     // Bande « Prochains événements » de l'accueil : raccourci [rsn_veille_accueil], ressources en tête sur l'accueil.
