@@ -271,7 +271,7 @@ final class RaccourciTest extends TestCase {
 
     public function test_textes_contiennent_les_nouvelles_cles(): void {
         $textes = Raccourci::textes();
-        foreach (['a_la_une', 'tout_le_rsn', 'evenement_rsn', 'nouveau', 'ferme_dans', 'ferme_demain', 'ferme_aujourdhui', 'date_limite_le', 'dates_limites', 'afficher', 'evenements', 'appels', 'evenement', 'partenaire', 'nb_evenements_et_appels', 'nb_elements', 'date_limite_puce', 'legende_date_limite', 's_abonner', 'aucun_element_filtres', 'tous', 'en_cours', 'en_cours_tuile', 'date_limite_a_venir', 'limites_precedentes', 'limites_suivantes', 'en_francais', 'date_longue', 'heure', 'premier_du_mois', 'du_au_meme_mois', 'du_au', 'en_anglais'] as $cle) {
+        foreach (['a_la_une', 'tout_le_rsn', 'evenement_rsn', 'nouveau', 'ferme_dans', 'ferme_demain', 'ferme_aujourdhui', 'date_limite_le', 'dates_limites', 'afficher', 'evenements', 'appels', 'evenement', 'partenaire', 'nb_evenements_et_appels', 'nb_elements', 'date_limite_puce', 'legende_date_limite', 's_abonner', 'aucun_element_filtres', 'tous', 'en_cours', 'en_cours_tuile', 'date_limite_a_venir', 'limites_precedentes', 'limites_suivantes', 'en_francais', 'date_longue', 'date_courte', 'heure', 'premier_du_mois', 'du_au_meme_mois', 'du_au', 'en_anglais'] as $cle) {
             $this->assertArrayHasKey($cle, $textes, $cle);
         }
         foreach (['ferme_dans', 'nb_elements'] as $pluriel) {

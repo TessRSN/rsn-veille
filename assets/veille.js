@@ -45,7 +45,7 @@ function animer(racine, noeudDonnees) {
   // Langue de la page (« fr » ou « en ») : un JSON incorporé plus ancien n'a pas ce champ, on retombe sur « fr ».
   const LANGUE = D.langue === 'en' ? 'en' : 'fr';
   // Gabarits de date en français, pour une page servie depuis un cache plus ancien que ce script (textes sans ces clés).
-  const DEFAUT = { date_longue: '%1$s %2$s %3$s', heure: '%1$s h %2$s', premier_du_mois: '1er', du_au_meme_mois: 'Du %1$s au %2$s %3$s %4$s', du_au: 'Du %1$s au %2$s', en_francais: 'En français' };
+  const DEFAUT = { date_longue: '%1$s %2$s %3$s', date_courte: '%1$s %2$s %3$s', heure: '%1$s h %2$s', premier_du_mois: '1er', du_au_meme_mois: 'Du %1$s au %2$s %3$s %4$s', du_au: 'Du %1$s au %2$s', en_francais: 'En français' };
   // Textes : « %d » reçoit le nombre, « %1$s », « %2$s »… la valeur de ce rang (l'ordre peut changer à la
   // traduction), un « %s » simple la valeur suivante ; pluriel : 2 et plus en français, tout sauf 1 en anglais
   // (comme plural=(n != 1) du .po anglais : 0 prend le pluriel).
@@ -61,7 +61,7 @@ function animer(racine, noeudDonnees) {
   const dateLongue = s => { if (!s) return ''; const x = d(s); return t('date_longue', premier(x.j), MOIS_LONG[x.m - 1], x.a); };
   // Nombre de jours calendaires de a à b (AAAA-MM-JJ), calculé en UTC : aucune heure locale en jeu.
   const jours = (a, b) => { const x = d(a), y = d(b); return Math.round((Date.UTC(y.a, y.m - 1, y.j) - Date.UTC(x.a, x.m - 1, x.j)) / 864e5); };
-  const dateCourte = s => { if (!s) return ''; const x = d(s); return `${x.j} ${MOIS[x.m - 1]} ${x.a}`; };
+  const dateCourte = s => { if (!s) return ''; const x = d(s); return t('date_courte', x.j, MOIS[x.m - 1], x.a); };
   const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   // Liens et images : http(s) seulement.
   const lien = u => /^https?:\/\//i.test(String(u || '')) ? esc(u) : '#';

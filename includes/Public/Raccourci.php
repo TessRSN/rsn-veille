@@ -173,6 +173,8 @@ final class Raccourci {
             'en_francais' => __('En français', 'rsn-veille'),
             /* translators: 1 : jour, 2 : mois (en toutes lettres), 3 : année (« 1er novembre 2026 »). */
             'date_longue' => __('%1$s %2$s %3$s', 'rsn-veille'),
+            /* translators: 1 : jour, 2 : mois abrégé, 3 : année (« 5 nov. 2026 »). */
+            'date_courte' => _x('%1$s %2$s %3$s', 'date courte', 'rsn-veille'),
             /* translators: 1 : heures, 2 : minutes (« 8 h 30 »). */
             'heure' => __('%1$s h %2$s', 'rsn-veille'),
             'plus_info' => __("Plus d'information", 'rsn-veille'),

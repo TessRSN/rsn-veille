@@ -203,6 +203,10 @@ msgstr "In French"
 msgid "%1$s %2$s %3$s"
 msgstr "%2$s %1$s, %3$s"
 
+msgctxt "date courte"
+msgid "%1$s %2$s %3$s"
+msgstr "%2$s %1$s, %3$s"
+
 msgid "%1$s h %2$s"
 msgstr "%1$s:%2$s"
 
