@@ -1,0 +1,637 @@
+# Traduction anglaise (Canada) des textes publics de l'extension RSN : veille de l'écosystème.
+# Source de rsn-veille-en_US.mo : recompiler après toute modification avec
+#   msgfmt --check --statistics -o languages/rsn-veille-en_US.mo languages/rsn-veille-en_US.po
+msgid ""
+msgstr ""
+"Project-Id-Version: rsn-veille 0.4.0\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: 2026-10-27 12:00-0400\n"
+"Last-Translator: Réseau santé numérique\n"
+"Language-Team: Réseau santé numérique\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Calendrier des événements du site"
+msgstr "Site events calendar"
+
+msgid "Calendrier iCal"
+msgstr "iCal calendar"
+
+msgid "Fil RSS, articles d’appels et de concours"
+msgstr "RSS feed, articles on calls and competitions"
+
+msgid "Fil RSS des événements"
+msgstr "Events RSS feed"
+
+msgid "Page des événements du site"
+msgstr "Site events page"
+
+msgid "Titre obligatoire"
+msgstr "Title required"
+
+msgid "Date de début obligatoire"
+msgstr "Start date required"
+
+msgid "Date de début invalide"
+msgstr "Start date invalid"
+
+msgid "Date de début trop ancienne (un an au plus)"
+msgstr "Start date too far in the past (one year at most)"
+
+msgid "Organisateur obligatoire"
+msgstr "Organizer required"
+
+msgid "Jeton de sécurité expiré : rechargez la page."
+msgstr "Security token expired: reload the page."
+
+msgid "Trop de propositions, réessayez plus tard."
+msgstr "Too many suggestions, try again later."
+
+msgid "L'envoi a échoué. Réessayez plus tard."
+msgstr "Sending failed. Try again later."
+
+msgid "Merci, cet événement est déjà dans la veille."
+msgstr "Thank you, this event is already listed."
+
+msgid "Image trop lourde (3 Mo au plus)."
+msgstr "Image too large (3 MB at most)."
+
+msgid "Image en JPEG, PNG ou WebP seulement."
+msgstr "JPEG, PNG or WebP images only."
+
+msgid "Image non reçue, réessayez."
+msgstr "Image not received, please try again."
+
+msgid "Image trop grande (8 000 pixels de côté au plus)."
+msgstr "Image too large (8,000 pixels per side at most)."
+
+msgid ""
+"Merci ! Votre proposition est dans la file d'approbation de l'équipe du "
+"RSN."
+msgstr "Thank you! Your suggestion is in the RSN team's approval queue."
+
+msgctxt "mois abrégé"
+msgid "janv."
+msgstr "Jan."
+
+msgctxt "mois abrégé"
+msgid "févr."
+msgstr "Feb."
+
+msgctxt "mois abrégé"
+msgid "mars"
+msgstr "Mar."
+
+msgctxt "mois abrégé"
+msgid "avr."
+msgstr "Apr."
+
+msgctxt "mois abrégé"
+msgid "mai"
+msgstr "May"
+
+msgctxt "mois abrégé"
+msgid "juin"
+msgstr "June"
+
+msgctxt "mois abrégé"
+msgid "juil."
+msgstr "July"
+
+msgctxt "mois abrégé"
+msgid "août"
+msgstr "Aug."
+
+msgctxt "mois abrégé"
+msgid "sept."
+msgstr "Sept."
+
+msgctxt "mois abrégé"
+msgid "oct."
+msgstr "Oct."
+
+msgctxt "mois abrégé"
+msgid "nov."
+msgstr "Nov."
+
+msgctxt "mois abrégé"
+msgid "déc."
+msgstr "Dec."
+
+msgid "janvier"
+msgstr "January"
+
+msgid "février"
+msgstr "February"
+
+msgid "mars"
+msgstr "March"
+
+msgid "avril"
+msgstr "April"
+
+msgid "mai"
+msgstr "May"
+
+msgid "juin"
+msgstr "June"
+
+msgid "juillet"
+msgstr "July"
+
+msgid "août"
+msgstr "August"
+
+msgid "septembre"
+msgstr "September"
+
+msgid "octobre"
+msgstr "October"
+
+msgid "novembre"
+msgstr "November"
+
+msgid "décembre"
+msgstr "December"
+
+msgctxt "lundi"
+msgid "L"
+msgstr "M"
+
+msgctxt "mardi"
+msgid "M"
+msgstr "T"
+
+msgctxt "mercredi"
+msgid "M"
+msgstr "W"
+
+msgctxt "jeudi"
+msgid "J"
+msgstr "T"
+
+msgctxt "vendredi"
+msgid "V"
+msgstr "F"
+
+msgctxt "samedi"
+msgid "S"
+msgstr "S"
+
+msgctxt "dimanche"
+msgid "D"
+msgstr "S"
+
+msgid "1er"
+msgstr "1"
+
+msgid "Du %1$s au %2$s %3$s %4$s"
+msgstr "%3$s %1$s–%2$s, %4$s"
+
+msgid "Du %1$s au %2$s"
+msgstr "%1$s to %2$s"
+
+msgid "En anglais"
+msgstr "In English"
+
+msgid "En français"
+msgstr "In French"
+
+msgid "%1$s %2$s %3$s"
+msgstr "%2$s %1$s, %3$s"
+
+msgid "%1$s h %2$s"
+msgstr "%1$s:%2$s"
+
+msgid "Plus d'information"
+msgstr "More information"
+
+msgid "date limite"
+msgstr "deadline"
+
+msgid "publié"
+msgstr "published"
+
+msgid "publié le %s"
+msgstr "published on %s"
+
+msgid "Appel"
+msgstr "Call"
+
+msgid "Consulter l'appel"
+msgstr "View the call"
+
+msgid "%d événement"
+msgstr "%d event"
+
+msgid "%d événements"
+msgstr "%d events"
+
+msgid "%d événement à venir"
+msgstr "%d upcoming event"
+
+msgid "%d événements à venir"
+msgstr "%d upcoming events"
+
+msgid "%d événement passé"
+msgstr "%d past event"
+
+msgid "%d événements passés"
+msgstr "%d past events"
+
+msgid "%d événement passé depuis %s"
+msgstr "%d past event since %s"
+
+msgid "%d événements passés depuis %s"
+msgstr "%d past events since %s"
+
+msgid "%d appel"
+msgstr "%d call"
+
+msgid "%d appels"
+msgstr "%d calls"
+
+msgid "Aucun événement ne correspond à ces filtres."
+msgstr "No events match these filters."
+
+msgid "Aucun événement ce jour-là."
+msgstr "No events on that day."
+
+msgid "Aucun appel en cours."
+msgstr "No open calls."
+
+msgid "Cliquer sur un jour pour voir ses événements"
+msgstr "Click a day to see its events"
+
+msgid "Tous les mois à venir"
+msgstr "All upcoming months"
+
+msgid "Plus tard"
+msgstr "Later"
+
+msgid "Événements passés"
+msgstr "Past events"
+
+msgid "Plus…"
+msgstr "More…"
+
+msgid "Moins"
+msgstr "Fewer"
+
+msgid "Tous"
+msgstr "All"
+
+msgid "RSN"
+msgstr "RSN"
+
+msgid "Partenaires"
+msgstr "Partners"
+
+msgid "Écosystème"
+msgstr "Ecosystem"
+
+msgid "Présentiel"
+msgstr "In person"
+
+msgid "Virtuel"
+msgstr "Virtual"
+
+msgid "Hybride"
+msgstr "Hybrid"
+
+msgid "Québec"
+msgstr "Quebec"
+
+msgid "En ligne"
+msgstr "Online"
+
+msgid "Hors Québec"
+msgstr "Outside Quebec"
+
+msgid "collecte du %s"
+msgstr "collected on %s"
+
+msgid "collecte du %1$s à %2$s"
+msgstr "collected on %1$s at %2$s"
+
+msgid "Envoi…"
+msgstr "Sending…"
+
+msgid "Vérifiez les champs signalés :"
+msgstr "Check the highlighted fields:"
+
+msgid "À la une du RSN"
+msgstr "Featured by the RSN"
+
+msgid "Tout ce que le RSN organise et finance →"
+msgstr "Everything the RSN organizes and funds →"
+
+msgid "Événement RSN"
+msgstr "RSN event"
+
+msgid "Nouveau"
+msgstr "New"
+
+msgid "Ferme dans %d jour"
+msgstr "Closes in %d day"
+
+msgid "Ferme dans %d jours"
+msgstr "Closes in %d days"
+
+msgid "Ferme demain"
+msgstr "Closes tomorrow"
+
+msgid "Ferme aujourd'hui"
+msgstr "Closes today"
+
+msgid "Date limite : %s"
+msgstr "Deadline: %s"
+
+msgid "Dates limites"
+msgstr "Deadlines"
+
+msgid "Afficher"
+msgstr "Show"
+
+msgid "Événements"
+msgstr "Events"
+
+msgid "Appels"
+msgstr "Calls"
+
+msgid "Événement"
+msgstr "Event"
+
+msgid "Partenaire · %s"
+msgstr "Partner · %s"
+
+msgid "%1$s et %2$s à venir"
+msgstr "%1$s and %2$s to come"
+
+msgid "%d élément"
+msgstr "%d item"
+
+msgid "%d éléments"
+msgstr "%d items"
+
+msgid "Date limite · "
+msgstr "Deadline · "
+
+msgid "Date limite d'un appel"
+msgstr "Call deadline"
+
+msgid "S'abonner au calendrier"
+msgstr "Subscribe to the calendar"
+
+msgid "Aucun événement ni appel ne correspond à ces filtres."
+msgstr "No events or calls match these filters."
+
+msgid "En cours"
+msgstr "Ongoing"
+
+msgid "en cours"
+msgstr "ongoing"
+
+msgid "Date limite à venir"
+msgstr "Deadline to come"
+
+msgid "Dates limites précédentes"
+msgstr "Previous deadlines"
+
+msgid "Dates limites suivantes"
+msgstr "Next deadlines"
+
+msgid "Veille de l'écosystème"
+msgstr "Ecosystem monitoring"
+
+msgid ""
+"Les événements du RSN, ceux de nos partenaires et tout ce qui bouge en "
+"santé numérique au Québec : réseaux thématiques, IVADO, Obvia, Mila, "
+"FRQ, Digital Health Canada. Les appels de financement et de candidatures "
+"y figurent avec leur date limite."
+msgstr ""
+"The RSN's events, those of our partners and everything happening in "
+"digital health in Quebec: thematic networks, IVADO, Obvia, Mila, FRQ, "
+"Digital Health Canada. Funding calls and calls for applications are "
+"listed with their deadlines."
+
+msgid "Proposer un événement"
+msgstr "Suggest an event"
+
+msgid ""
+"Votre proposition entre dans la file d'approbation de l'équipe du RSN. "
+"Elle sera publiée ici et, si elle s'y prête, reprise dans l'infolettre."
+msgstr ""
+"Your suggestion goes into the RSN team's approval queue. It will be "
+"published here and, if it fits, included in the newsletter."
+
+msgid "Titre"
+msgstr "Title"
+
+msgid "Ex. : Colloque sur la souveraineté numérique en santé"
+msgstr "E.g., Symposium on digital sovereignty in health"
+
+msgid "Date de début"
+msgstr "Start date"
+
+msgid "Date de fin (si plusieurs jours)"
+msgstr "End date (if more than one day)"
+
+msgid "Organisateur"
+msgstr "Organizer"
+
+msgid "Ex. : Obvia"
+msgstr "E.g., Obvia"
+
+msgid "Format"
+msgstr "Format"
+
+msgid "Lieu et ville"
+msgstr "Venue and city"
+
+msgid "Ex. : HEC Montréal, Montréal"
+msgstr "E.g., HEC Montréal, Montréal"
+
+msgid "Lien d'information"
+msgstr "Information link"
+
+msgid "Courte description (2 à 3 phrases)"
+msgstr "Short description (2 to 3 sentences)"
+
+msgid "Votre courriel (pour vous répondre)"
+msgstr "Your email (so we can reply)"
+
+msgid "Image (facultative : JPEG, PNG ou WebP, 3 Mo au plus)"
+msgstr "Image (optional: JPEG, PNG or WebP, 3 MB at most)"
+
+msgid "Site web (laisser vide)"
+msgstr "Website (leave blank)"
+
+msgid "Envoyer à l'équipe"
+msgstr "Send to the team"
+
+msgid "Annuler"
+msgstr "Cancel"
+
+msgid ""
+"Votre courriel sert seulement à vous répondre ; il n'est jamais publié."
+msgstr "Your email is used only to reply to you; it is never published."
+
+msgid "Rechercher"
+msgstr "Search"
+
+msgid "Rechercher un événement ou un appel"
+msgstr "Search for an event or a call"
+
+msgid "Qui organise"
+msgstr "Who organizes"
+
+msgid "Mois"
+msgstr "Month"
+
+msgid "Lieu"
+msgstr "Location"
+
+msgid "Thèmes"
+msgstr "Themes"
+
+msgid "Réinitialiser les filtres"
+msgstr "Reset filters"
+
+msgid "Affichage"
+msgstr "View"
+
+msgid "Liste"
+msgstr "List"
+
+msgid "Calendrier"
+msgstr "Calendar"
+
+msgid "Mois précédent"
+msgstr "Previous month"
+
+msgid "Aujourd'hui"
+msgstr "Today"
+
+msgid "Mois suivant"
+msgstr "Next month"
+
+msgid "Calendrier du mois, flèches gauche et droite pour changer de mois"
+msgstr "Month calendar, left and right arrow keys to change months"
+
+msgid "Événement du RSN"
+msgstr "RSN event"
+
+msgid "Glisser ou utiliser les flèches pour changer de mois"
+msgstr "Swipe or use the arrows to change months"
+
+msgid "Appels en cours"
+msgstr "Open calls"
+
+msgid ""
+"Appels à projets, concours et appels de candidatures repérés dans les "
+"flux du FRQ, du CRM, du RSN, de CARES et des Prix Hippocrate. La date "
+"limite est extraite du texte quand elle y figure."
+msgstr ""
+"Project calls, competitions and calls for applications found in the FRQ, "
+"CRM, RSN, CARES and Prix Hippocrate feeds. The deadline is extracted "
+"from the text when it appears there."
+
+msgid "Sources lues"
+msgstr "Sources read"
+
+msgid "Source"
+msgstr "Source"
+
+msgid "Ce qu'on lit"
+msgstr "What we read"
+
+msgid "Éléments"
+msgstr "Items"
+
+msgid ""
+"Les sources sans flux (CRES, Polytechnique, McGill, Le Point en santé, "
+"congrès PLS, LinkedIn) passent par le bouton Proposer ou par la saisie "
+"de l'équipe."
+msgstr ""
+"Sources without a feed (CRES, Polytechnique, McGill, Le Point en santé, "
+"PLS conference, LinkedIn) go through the Suggest button or are entered "
+"by the team."
+
+msgid "RSN : événements"
+msgstr "RSN: events"
+
+msgid "Digital Health Canada"
+msgstr "Digital Health Canada"
+
+msgid "RQRV : événements"
+msgstr "RQRV: events"
+
+msgid "Réseau québécois de recherche sur le sommeil"
+msgstr "Quebec Sleep Research Network"
+
+msgid "Obvia : événements"
+msgstr "Obvia: events"
+
+msgid "Mila : événements"
+msgstr "Mila: events"
+
+msgid "FRQ : événements"
+msgstr "FRQ: events"
+
+msgid "IVADO : événements"
+msgstr "IVADO: events"
+
+msgid "FRQ : appels"
+msgstr "FRQ: calls"
+
+msgid "CRM : appels"
+msgstr "CRM: calls"
+
+msgid "RSN : appels"
+msgstr "RSN: calls"
+
+msgid "CARES : concours"
+msgstr "CARES: competitions"
+
+msgid "Prix Hippocrate : appels de candidatures"
+msgstr "Prix Hippocrate: calls for applications"
+
+msgid "FRQ : nouvelles"
+msgstr "FRQ: news"
+
+msgid "IVADO : nouvelles"
+msgstr "IVADO: news"
+
+msgid "Mila : nouvelles"
+msgstr "Mila: news"
+
+msgid "INSPQ : nouvelles"
+msgstr "INSPQ: news"
+
+msgid "Unité de soutien SSA Québec"
+msgstr "Quebec SPOR SUPPORT Unit"
+
+msgid "Conseil de l’innovation du Québec"
+msgstr "Quebec Innovation Council"
+
+msgid "Génome Québec"
+msgstr "Genome Québec"
+
+msgid "RQRM : nouvelles"
+msgstr "RQRM: news"
+
+msgid "RQRD : nouvelles"
+msgstr "RQRD: news"
+
+msgid "CMDO : activités"
+msgstr "CMDO: activities"
+
+msgid "Acfas : nouvelles"
+msgstr "Acfas: news"
+
+msgid "Gouvernement du Québec : fil de presse"
+msgstr "Government of Quebec: newswire"

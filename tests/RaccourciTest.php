@@ -260,7 +260,7 @@ final class RaccourciTest extends TestCase {
 
     public function test_textes_contiennent_les_nouvelles_cles(): void {
         $textes = Raccourci::textes();
-        foreach (['a_la_une', 'tout_le_rsn', 'evenement_rsn', 'nouveau', 'ferme_dans', 'ferme_demain', 'ferme_aujourdhui', 'date_limite_le', 'dates_limites', 'afficher', 'evenements', 'appels', 'evenement', 'partenaire', 'nb_evenements_et_appels', 'nb_elements', 'date_limite_puce', 'legende_date_limite', 's_abonner', 'aucun_element_filtres', 'tous', 'en_cours', 'en_cours_tuile', 'date_limite_a_venir', 'limites_precedentes', 'limites_suivantes'] as $cle) {
+        foreach (['a_la_une', 'tout_le_rsn', 'evenement_rsn', 'nouveau', 'ferme_dans', 'ferme_demain', 'ferme_aujourdhui', 'date_limite_le', 'dates_limites', 'afficher', 'evenements', 'appels', 'evenement', 'partenaire', 'nb_evenements_et_appels', 'nb_elements', 'date_limite_puce', 'legende_date_limite', 's_abonner', 'aucun_element_filtres', 'tous', 'en_cours', 'en_cours_tuile', 'date_limite_a_venir', 'limites_precedentes', 'limites_suivantes', 'en_francais', 'date_longue', 'heure', 'premier_du_mois', 'du_au_meme_mois', 'du_au', 'en_anglais'] as $cle) {
             $this->assertArrayHasKey($cle, $textes, $cle);
         }
         foreach (['ferme_dans', 'nb_elements'] as $pluriel) {
@@ -280,6 +280,13 @@ final class RaccourciTest extends TestCase {
         $this->assertSame('en cours', $textes['en_cours_tuile']);
         $this->assertSame('Dates limites précédentes', $textes['limites_precedentes']);
         $this->assertSame('Dates limites suivantes', $textes['limites_suivantes']);
+        // Gabarits de date et d'heure : arguments positionnels pour que l'anglais puisse réordonner.
+        $this->assertSame('En français', $textes['en_francais']);
+        $this->assertSame('%1$s %2$s %3$s', $textes['date_longue']);
+        $this->assertSame('%1$s h %2$s', $textes['heure']);
+        $this->assertSame('1er', $textes['premier_du_mois']);
+        $this->assertSame('Du %1$s au %2$s %3$s %4$s', $textes['du_au_meme_mois']);
+        $this->assertSame('Du %1$s au %2$s', $textes['du_au']);
     }
 
     public function test_deux_raccourcis_dans_la_page_ont_des_noeuds_de_donnees_distincts(): void {

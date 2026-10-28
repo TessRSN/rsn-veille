@@ -42,6 +42,9 @@
  * `pieces_supprimees`, métas `_thumbnail_id` retirées). La vérification de référence est la section Formulaire de
  * `tests/manuel/verifier-public.md`.
  *
+ * Traductions : `load_plugin_textdomain` note ses appels (`domaines`) sans charger de fichier, `plugin_basename`
+ * rend « dossier/fichier.php ».
+ *
  * HTTP : `wp_remote_get` note ses appels (`requetes_http`) et rend `reponse_http` (200 vide par défaut) ;
  * `wp_remote_retrieve_response_code`, `_header` (nom insensible à la casse) et `_body`.
  *
@@ -83,6 +86,8 @@ function rsn_veille_bouchons_reinitialiser(): void {
         'courriels' => [], 'wp_mail_reussit' => true,
         // HTTP : appels à wp_remote_get (adresse et arguments) et réponse à rendre (null : 200 vide).
         'requetes_http' => [], 'reponse_http' => null,
+        // Traductions : appels à load_plugin_textdomain.
+        'domaines' => [],
     ];
     $GLOBALS['rsn_veille_wp']['roles'] = [
         'administrator' => new WP_Role('administrator', ['manage_options' => true, 'edit_posts' => true]),
@@ -943,6 +948,20 @@ function get_pages(array $arguments = []): array {
 }
 
 // --- Public : raccourcis, REST, réécriture (imitation de shortcodes.php, rest-api.php, rewrite.php) ---
+
+// Traductions : `load_plugin_textdomain` note l'appel (`domaines`) sans rien charger (les textes restent en français).
+if (!function_exists('load_plugin_textdomain')) {
+    function load_plugin_textdomain(string $domaine, string|false $obsolete = false, string|false $chemin = false): bool {
+        $GLOBALS['rsn_veille_wp']['domaines'][] = ['domaine' => $domaine, 'obsolete' => $obsolete, 'chemin' => $chemin];
+        return true;
+    }
+}
+// `plugin_basename` : « dossier-de-l-extension/fichier.php » (le dossier parent et le fichier).
+if (!function_exists('plugin_basename')) {
+    function plugin_basename(string $fichier): string {
+        return basename(dirname($fichier)) . '/' . basename($fichier);
+    }
+}
 
 if (!function_exists('_x')) {
     function _x(string $texte, string $contexte, string $domaine = 'default'): string {

@@ -11,7 +11,8 @@ if (!defined('ABSPATH')) {
  * Registre des sources de veille : liste par défaut (adresses de l'inventaire du 2026-10-25)
  * et application des réglages de l'équipe (activation, niveau).
  *
- * Classe pure : aucune fonction WordPress.
+ * Les noms passent par `__()` (domaine « rsn-veille ») : la table des sources de la page publique les lit
+ * dans la langue de la page. Les identifiants, les adresses et les organisateurs restent tels quels.
  */
 final class Sources {
     /** Niveaux qu'un réglage peut imposer. */
@@ -26,37 +27,37 @@ final class Sources {
         $sources = [
             // Événements : flux structurés (niveau A).
             // anti_cache : LiteSpeed met en cache les réponses REST du site ; la collecte ajoute « t= » à chaque requête.
-            self::entree('rsn', 'RSN : événements', self::url_rsn(), 'tec', 'A', 'sante_numerique', 'RSN', ['inclure_passes' => true, 'anti_cache' => true]),
-            self::entree('dhc', 'Digital Health Canada', 'https://digitalhealthcanada.com/wp-json/tribe/events/v1/events?per_page=50', 'tec', 'A', 'sante_numerique', 'Digital Health Canada', ['langue' => 'en']),
-            self::entree('rqrv', 'RQRV : événements', 'https://www.rqrv.com/wp-json/tribe/events/v1/events?per_page=50', 'tec', 'A', 'sante', 'RQRV'),
-            self::entree('sommeil', 'Réseau québécois de recherche sur le sommeil', 'https://reseausommeil.ca/events/feed/', 'rss', 'A', 'sante', 'Réseau québécois de recherche sur le sommeil', ['mode' => 'evenements']),
+            self::entree('rsn', __('RSN : événements', 'rsn-veille'), self::url_rsn(), 'tec', 'A', 'sante_numerique', 'RSN', ['inclure_passes' => true, 'anti_cache' => true]),
+            self::entree('dhc', __('Digital Health Canada', 'rsn-veille'), 'https://digitalhealthcanada.com/wp-json/tribe/events/v1/events?per_page=50', 'tec', 'A', 'sante_numerique', 'Digital Health Canada', ['langue' => 'en']),
+            self::entree('rqrv', __('RQRV : événements', 'rsn-veille'), 'https://www.rqrv.com/wp-json/tribe/events/v1/events?per_page=50', 'tec', 'A', 'sante', 'RQRV'),
+            self::entree('sommeil', __('Réseau québécois de recherche sur le sommeil', 'rsn-veille'), 'https://reseausommeil.ca/events/feed/', 'rss', 'A', 'sante', 'Réseau québécois de recherche sur le sommeil', ['mode' => 'evenements']),
 
             // Événements : pages HTML structurées (niveau C).
-            self::entree('obvia', 'Obvia : événements', 'https://www.obvia.ca/evenements', 'html_obvia', 'C', 'numerique', 'Obvia', ['base' => 'https://www.obvia.ca']),
-            self::entree('mila', 'Mila : événements', 'https://mila.quebec/fr/evenements', 'html_mila', 'C', 'numerique', 'Mila', ['base' => 'https://mila.quebec']),
-            self::entree('frq_evenements', 'FRQ : événements', 'https://frq.gouv.qc.ca/evenements/', 'html_frq', 'C', 'generaliste', 'Fonds de recherche du Québec', ['base' => 'https://frq.gouv.qc.ca']),
-            self::entree('ivado', 'IVADO : événements', 'https://ivado.ca/evenements/', 'html_ivado', 'C', 'numerique', 'IVADO', ['base' => 'https://ivado.ca', 'flux_evenements_url' => 'https://ivado.ca/evenements/feed/']),
+            self::entree('obvia', __('Obvia : événements', 'rsn-veille'), 'https://www.obvia.ca/evenements', 'html_obvia', 'C', 'numerique', 'Obvia', ['base' => 'https://www.obvia.ca']),
+            self::entree('mila', __('Mila : événements', 'rsn-veille'), 'https://mila.quebec/fr/evenements', 'html_mila', 'C', 'numerique', 'Mila', ['base' => 'https://mila.quebec']),
+            self::entree('frq_evenements', __('FRQ : événements', 'rsn-veille'), 'https://frq.gouv.qc.ca/evenements/', 'html_frq', 'C', 'generaliste', 'Fonds de recherche du Québec', ['base' => 'https://frq.gouv.qc.ca']),
+            self::entree('ivado', __('IVADO : événements', 'rsn-veille'), 'https://ivado.ca/evenements/', 'html_ivado', 'C', 'numerique', 'IVADO', ['base' => 'https://ivado.ca', 'flux_evenements_url' => 'https://ivado.ca/evenements/feed/']),
 
             // Appels : flux RSS filtrés par catégorie ou par titre (niveau B).
-            self::entree('frq_appels', 'FRQ : appels', 'https://frq.gouv.qc.ca/feed/', 'rss', 'B', 'sante_numerique', 'Fonds de recherche du Québec', ['mode' => 'appels', 'categories' => ['Appel']]),
-            self::entree('crm_appels', 'CRM : appels', 'https://www.crmath.ca/feed/', 'rss', 'B', 'numerique', 'CRM', ['mode' => 'appels', 'categories' => ['Appel', 'Concours ouvert']]),
-            self::entree('rsn_appels', 'RSN : appels', 'https://rsn.quebec/feed/', 'rss', 'B', 'sante_numerique', 'RSN', ['mode' => 'appels', 'categories' => ['Appels de financement']]),
-            self::entree('cares_appels', 'CARES : concours', 'https://reseaucares.ca/feed/', 'rss', 'B', 'sante', 'CARES', ['mode' => 'appels', 'categories' => ['Concours']]),
-            self::entree('hippocrate_appels', 'Prix Hippocrate : appels de candidatures', 'https://prixhippocrate.ca/feed/', 'rss', 'B', 'sante', 'Prix Hippocrate', ['mode' => 'appels', 'motif_titre' => 'appel|candidature']),
+            self::entree('frq_appels', __('FRQ : appels', 'rsn-veille'), 'https://frq.gouv.qc.ca/feed/', 'rss', 'B', 'sante_numerique', 'Fonds de recherche du Québec', ['mode' => 'appels', 'categories' => ['Appel']]),
+            self::entree('crm_appels', __('CRM : appels', 'rsn-veille'), 'https://www.crmath.ca/feed/', 'rss', 'B', 'numerique', 'CRM', ['mode' => 'appels', 'categories' => ['Appel', 'Concours ouvert']]),
+            self::entree('rsn_appels', __('RSN : appels', 'rsn-veille'), 'https://rsn.quebec/feed/', 'rss', 'B', 'sante_numerique', 'RSN', ['mode' => 'appels', 'categories' => ['Appels de financement']]),
+            self::entree('cares_appels', __('CARES : concours', 'rsn-veille'), 'https://reseaucares.ca/feed/', 'rss', 'B', 'sante', 'CARES', ['mode' => 'appels', 'categories' => ['Concours']]),
+            self::entree('hippocrate_appels', __('Prix Hippocrate : appels de candidatures', 'rsn-veille'), 'https://prixhippocrate.ca/feed/', 'rss', 'B', 'sante', 'Prix Hippocrate', ['mode' => 'appels', 'motif_titre' => 'appel|candidature']),
 
             // Nouvelles : radar de l'équipe seulement, jamais de fiches persistées (devis § 3.3).
-            self::nouvelles('frq', 'FRQ : nouvelles', 'https://frq.gouv.qc.ca/feed/', 'generaliste', 'Fonds de recherche du Québec'),
-            self::nouvelles('ivado_nouvelles', 'IVADO : nouvelles', 'https://ivado.ca/feed/', 'numerique', 'IVADO'),
-            self::nouvelles('mila_nouvelles', 'Mila : nouvelles', 'https://mila.quebec/fr/rss.xml', 'numerique', 'Mila'),
-            self::nouvelles('inspq', 'INSPQ : nouvelles', 'https://www.inspq.qc.ca/nouvelles/rss.xml', 'sante', 'INSPQ'),
-            self::nouvelles('ssa', 'Unité de soutien SSA Québec', 'https://ssaquebec.ca/feed/', 'sante', 'Unité de soutien SSA Québec'),
-            self::nouvelles('conseil_innovation', 'Conseil de l’innovation du Québec', 'https://conseilinnovation.quebec/feed/', 'generaliste', 'Conseil de l’innovation du Québec'),
-            self::nouvelles('genome', 'Génome Québec', 'https://genomequebec.com/feed/', 'sante', 'Génome Québec'),
-            self::nouvelles('rqrm', 'RQRM : nouvelles', 'https://www.rqrm.ca/feed/', 'sante', 'RQRM'),
-            self::nouvelles('rqrd', 'RQRD : nouvelles', 'https://qprn.ca/fr/feed/', 'sante', 'RQRD'),
-            self::nouvelles('cmdo', 'CMDO : activités', 'https://www.rrcmdo.ca/activites/feed/', 'sante', 'CMDO'),
-            self::nouvelles('acfas', 'Acfas : nouvelles', 'https://www.acfas.ca/rss/acfas.xml', 'generaliste', 'Acfas'),
-            self::nouvelles('quebec_ca', 'Gouvernement du Québec : fil de presse', 'https://www.quebec.ca/fil-de-presse.rss', 'generaliste', 'Gouvernement du Québec'),
+            self::nouvelles('frq', __('FRQ : nouvelles', 'rsn-veille'), 'https://frq.gouv.qc.ca/feed/', 'generaliste', 'Fonds de recherche du Québec'),
+            self::nouvelles('ivado_nouvelles', __('IVADO : nouvelles', 'rsn-veille'), 'https://ivado.ca/feed/', 'numerique', 'IVADO'),
+            self::nouvelles('mila_nouvelles', __('Mila : nouvelles', 'rsn-veille'), 'https://mila.quebec/fr/rss.xml', 'numerique', 'Mila'),
+            self::nouvelles('inspq', __('INSPQ : nouvelles', 'rsn-veille'), 'https://www.inspq.qc.ca/nouvelles/rss.xml', 'sante', 'INSPQ'),
+            self::nouvelles('ssa', __('Unité de soutien SSA Québec', 'rsn-veille'), 'https://ssaquebec.ca/feed/', 'sante', 'Unité de soutien SSA Québec'),
+            self::nouvelles('conseil_innovation', __('Conseil de l’innovation du Québec', 'rsn-veille'), 'https://conseilinnovation.quebec/feed/', 'generaliste', 'Conseil de l’innovation du Québec'),
+            self::nouvelles('genome', __('Génome Québec', 'rsn-veille'), 'https://genomequebec.com/feed/', 'sante', 'Génome Québec'),
+            self::nouvelles('rqrm', __('RQRM : nouvelles', 'rsn-veille'), 'https://www.rqrm.ca/feed/', 'sante', 'RQRM'),
+            self::nouvelles('rqrd', __('RQRD : nouvelles', 'rsn-veille'), 'https://qprn.ca/fr/feed/', 'sante', 'RQRD'),
+            self::nouvelles('cmdo', __('CMDO : activités', 'rsn-veille'), 'https://www.rrcmdo.ca/activites/feed/', 'sante', 'CMDO'),
+            self::nouvelles('acfas', __('Acfas : nouvelles', 'rsn-veille'), 'https://www.acfas.ca/rss/acfas.xml', 'generaliste', 'Acfas'),
+            self::nouvelles('quebec_ca', __('Gouvernement du Québec : fil de presse', 'rsn-veille'), 'https://www.quebec.ca/fil-de-presse.rss', 'generaliste', 'Gouvernement du Québec'),
         ];
         return array_column($sources, null, 'id');
     }
@@ -105,7 +106,7 @@ final class Sources {
         return 'https://rsn.quebec/wp-json/tribe/events/v1/events?per_page=50&start_date=2025-05-01&end_date=' . $fin;
     }
 
-    /** Une entrée du registre, avec les valeurs par défaut (français, active). */
+    /** Une entrée du registre, avec les valeurs par défaut (français, active). Le nom arrive déjà traduit. */
     private static function entree(string $id, string $nom, string $url, string $type, string $niveau, string $type_source, string $organisateur, array $extras = []): array {
         return array_merge([
             'id' => $id,
