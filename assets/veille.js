@@ -428,7 +428,7 @@ function animer(racine, noeudDonnees) {
     const cible = $('#vue-agenda');
     if (cible) cible.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   });
-  // Formulaire « Proposer un événement » : envoi en fetch vers admin-ajax.php (action rsn_veille_proposer,
+  // Formulaire « Proposer un événement ou un appel » : envoi en fetch vers admin-ajax.php (action rsn_veille_proposer,
   // jeton de window.rsnVeillePublic), erreurs sous les champs et en tête, remerciement à la place du formulaire.
   const CONFIG = window.rsnVeillePublic || {};
   let jeton = String(CONFIG.nonce || '');
@@ -480,7 +480,35 @@ function animer(racine, noeudDonnees) {
     }
     return r;
   }
+  // Bascule « Un événement » / « Un appel de financement ou de candidatures » (boutons à aria-pressed, champ caché `type`).
+  // Un appel remplace les dates de début et de fin, le format et le lieu par une date limite ; le titre du formulaire, les
+  // libellés « Organisateur » / « Organisme » et « Lien d'information » / « Lien de l'appel » et l'exemple du titre suivent
+  // (textes traduits de la page). Un champ masqué est désactivé (il n'est pas envoyé) et n'est jamais requis ; les champs
+  // `data-requis-pour` ne sont requis que pour leur type.
+  const boutonsType = form ? Array.from(form.querySelectorAll('[data-type]')) : [];
+  function choisirType(type) {
+    if (!form || !boutonsType.length) return;
+    type = type === 'appel' ? 'appel' : 'evenement';
+    const appel = type === 'appel';
+    effacerErreurs();
+    boutonsType.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.type === type)));
+    $('#p-type').value = type;
+    form.querySelectorAll('[data-pour]').forEach(el => {
+      const cache = el.dataset.pour !== type;
+      el.hidden = cache;
+      el.querySelectorAll('input, select, textarea').forEach(c => { c.disabled = cache; });
+    });
+    form.querySelectorAll('[data-requis-pour]').forEach(c => { c.required = c.dataset.requisPour === type && !c.disabled; });
+    const texte = (selecteur, cle) => { const n = $(selecteur); if (n) n.textContent = t(cle); };
+    texte('#dialogue h2', appel ? 'titre_proposer_appel' : 'titre_proposer_evenement');
+    texte('#lab-orga', appel ? 'libelle_organisme' : 'libelle_organisateur');
+    texte('#lab-url', appel ? 'libelle_lien_appel' : 'libelle_lien_info');
+    $('#p-titre').placeholder = t(appel ? 'placeholder_titre_appel' : 'placeholder_titre_evenement');
+  }
+  boutonsType.forEach(b => b.addEventListener('click', () => choisirType(b.dataset.type)));
   function ouvrirFormulaire() {
+    // À chaque ouverture le formulaire revient à « Un événement » ; un clic sur le bouton d'un formulaire déjà ouvert garde le choix en cours.
+    if ($('#dialogue').hidden || form.hidden) choisirType('evenement');
     $('#dialogue').hidden = false; form.hidden = false; $('#p-merci').hidden = true; $('#p-titre').focus();
   }
   on('#btn-proposer', 'click', ouvrirFormulaire);

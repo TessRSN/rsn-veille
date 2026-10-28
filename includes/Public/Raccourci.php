@@ -219,7 +219,15 @@ final class Raccourci {
             'collecte_du' => __('collecte du %s', 'rsn-veille'),
             /* translators: 1 : date de la collecte, 2 : heure (« 3 h 05 »). */
             'collecte_du_a' => __('collecte du %1$s à %2$s', 'rsn-veille'),
-            // Formulaire « Proposer un événement ».
+            // Formulaire « Proposer un événement ou un appel » : textes que la bascule échange.
+            'titre_proposer_evenement' => __('Proposer un événement', 'rsn-veille'),
+            'titre_proposer_appel' => __('Proposer un appel', 'rsn-veille'),
+            'libelle_organisateur' => __('Organisateur', 'rsn-veille'),
+            'libelle_organisme' => __('Organisme', 'rsn-veille'),
+            'libelle_lien_info' => __("Lien d'information", 'rsn-veille'),
+            'libelle_lien_appel' => __("Lien de l'appel", 'rsn-veille'),
+            'placeholder_titre_evenement' => __('Ex. : Colloque sur la souveraineté numérique en santé', 'rsn-veille'),
+            'placeholder_titre_appel' => __('Ex. : Appel à projets en santé numérique 2027', 'rsn-veille'),
             'envoi_en_cours' => __('Envoi…', 'rsn-veille'),
             'merci_proposition' => __("Merci ! Votre proposition est dans la file d'approbation de l'équipe du RSN.", 'rsn-veille'),
             'corriger_champs' => __('Vérifiez les champs signalés :', 'rsn-veille'),

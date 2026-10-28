@@ -108,6 +108,56 @@ final class RaccourciTest extends TestCase {
         $this->assertStringContainsString('<input type="hidden" name="langue" value="en">', $html);
     }
 
+    public function test_bouton_jaune_et_lien_du_panneau_proposent_un_evenement_ou_un_appel(): void {
+        $html = Raccourci::rendre([]);
+        $this->assertSame(1, preg_match('#<button class="btn jaune" id="btn-proposer" type="button">(.*?)<svg#s', $html, $m));
+        $this->assertSame('Proposer un événement ou un appel', trim($m[1]));
+        $this->assertStringContainsString('<button type="button" id="rsn-veille-panneau-proposer">Proposer un événement ou un appel</button>', $html);
+    }
+
+    public function test_formulaire_a_une_bascule_evenement_ou_appel(): void {
+        $html = Raccourci::rendre([]);
+
+        // Titre du formulaire, puis intro, puis « Vous proposez » avec deux boutons à bascule.
+        $this->assertStringContainsString('<h2>Proposer un événement</h2>', $html);
+        $this->assertStringContainsString('<span class="lab" id="lab-type">Vous proposez</span>', $html);
+        $this->assertStringContainsString('<div class="seg" role="group" aria-labelledby="lab-type">', $html);
+        $this->assertStringContainsString('<button type="button" id="p-type-evenement" data-type="evenement" aria-pressed="true">Un événement</button>', $html);
+        $this->assertStringContainsString('<button type="button" id="p-type-appel" data-type="appel" aria-pressed="false">Un appel de financement ou de candidatures</button>', $html);
+        $this->assertStringContainsString('<input type="hidden" name="type" id="p-type" value="evenement">', $html);
+        $this->assertLessThan(strpos($html, 'id="lab-type"'), strpos($html, "Votre proposition entre dans la file"));
+        $this->assertLessThan(strpos($html, 'class="champs"'), strpos($html, 'id="lab-type"'));
+
+        // Date limite : champ d'appel, masqué et désactivé par défaut, avec son aide.
+        $this->assertSame(1, preg_match('#<label data-pour="appel" hidden>.*?Date limite.*?<input id="p-limite" name="echeance" type="date" data-requis-pour="appel" disabled>.*?Dernier jour pour déposer\.#s', $html));
+        // Champs d'événement : marqués, le début requis seulement pour un événement.
+        foreach (['p-debut', 'p-fin', 'p-format', 'p-lieu'] as $id) {
+            $this->assertMatchesRegularExpression('#<label data-pour="evenement">[^<]*<(input|select) id="' . $id . '"#', $html, $id);
+        }
+        $this->assertStringContainsString('<input id="p-debut" name="debut" type="date" required data-requis-pour="evenement">', $html);
+        $this->assertStringContainsString('<input id="p-url" name="url" type="url" placeholder="https://" data-requis-pour="appel">', $html);
+        // Libellés que le script échange.
+        $this->assertStringContainsString('<span id="lab-orga">Organisateur</span>', $html);
+        $this->assertStringContainsString('<span id="lab-url">Lien d&#039;information</span>', $html);
+    }
+
+    public function test_textes_de_la_bascule_pour_le_script(): void {
+        $textes = Raccourci::textes();
+        $attendus = [
+            'titre_proposer_evenement' => 'Proposer un événement',
+            'titre_proposer_appel' => 'Proposer un appel',
+            'libelle_organisateur' => 'Organisateur',
+            'libelle_organisme' => 'Organisme',
+            'libelle_lien_info' => "Lien d'information",
+            'libelle_lien_appel' => "Lien de l'appel",
+            'placeholder_titre_evenement' => 'Ex. : Colloque sur la souveraineté numérique en santé',
+            'placeholder_titre_appel' => 'Ex. : Appel à projets en santé numérique 2027',
+        ];
+        foreach ($attendus as $cle => $valeur) {
+            $this->assertSame($valeur, $textes[$cle] ?? null, $cle);
+        }
+    }
+
     public function test_section_appels_sans_formulaire(): void {
         $html = Raccourci::rendre(['section' => 'appels']);
         $this->assertStringNotContainsString('form-proposition', $html);
@@ -243,7 +293,7 @@ final class RaccourciTest extends TestCase {
         $this->assertStringContainsString('<li>les événements et les appels du RSN.</li>', $html);
         $this->assertStringContainsString('proposez-nous l’événement.</p>', $html);
         $this->assertStringContainsString('<a href="#sources">Voir les sources lues ↓</a>', $html);
-        $this->assertStringContainsString('<button type="button" id="rsn-veille-panneau-proposer">Proposer un événement</button>', $html);
+        $this->assertStringContainsString('<button type="button" id="rsn-veille-panneau-proposer">Proposer un événement ou un appel</button>', $html);
         // La section des sources porte l'ancre.
         $this->assertStringContainsString('<section class="sources" id="sources">', $html);
         // Ordre : .tete, panneau, puis la fin du bandeau.

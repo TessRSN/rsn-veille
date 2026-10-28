@@ -50,7 +50,7 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
       <div class="act">
         <div class="boutons">
           <a class="btn clair" href="<?php echo esc_url($adresse_webcal, ['http', 'https', 'webcal']); ?>"><?php echo $agenda_ics; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?><?php echo esc_html__("S'abonner au calendrier", 'rsn-veille'); ?></a>
-          <button class="btn jaune" id="btn-proposer" type="button"><?php echo esc_html__('Proposer un événement', 'rsn-veille'); ?> <?php echo $fleche; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?></button>
+          <button class="btn jaune" id="btn-proposer" type="button"><?php echo esc_html__('Proposer un événement ou un appel', 'rsn-veille'); ?> <?php echo $fleche; // phpcs:ignore WordPress.Security.EscapeOutput -- SVG constant. ?></button>
         </div>
         <div class="autres"><span><?php echo esc_html__('Google Agenda :', 'rsn-veille'); ?></span> <a href="<?php echo esc_url($lien_google); ?>" target="_blank" rel="noopener"><?php echo esc_html(_x('ajouter', 'lien d\'ajout à Google Agenda', 'rsn-veille')); ?></a> <button type="button" class="copier" id="rsn-veille-copier" data-adresse="<?php echo esc_url($adresse_ics); ?>"><?php echo esc_html__('Copier l’adresse', 'rsn-veille'); ?></button> <span class="copie" id="rsn-veille-copie" role="status" hidden></span></div>
       </div>
@@ -62,7 +62,7 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
       <p><?php echo esc_html__('Chaque nuit, l’agenda lit les sites qui publient leurs événements de façon structurée :', 'rsn-veille'); ?></p>
       <ul><li><?php echo esc_html__('des calendriers en ligne et des flux RSS ;', 'rsn-veille'); ?></li><li><?php echo esc_html__('des pages d’événements bien organisées ;', 'rsn-veille'); ?></li><li><?php echo esc_html__('les événements et les appels du RSN.', 'rsn-veille'); ?></li></ul>
       <p><?php echo esc_html__('L’équipe du RSN vérifie ce qui est ambigu et ajoute à la main ce qui manque. Un organisme ne figure pas ici ? Son site ne publie souvent pas ses événements dans un format lisible automatiquement : proposez-nous l’événement.', 'rsn-veille'); ?></p>
-      <div class="liens"><a href="#sources"><?php echo esc_html__('Voir les sources lues ↓', 'rsn-veille'); ?></a><button type="button" id="rsn-veille-panneau-proposer"><?php echo esc_html__('Proposer un événement', 'rsn-veille'); ?></button></div>
+      <div class="liens"><a href="#sources"><?php echo esc_html__('Voir les sources lues ↓', 'rsn-veille'); ?></a><button type="button" id="rsn-veille-panneau-proposer"><?php echo esc_html__('Proposer un événement ou un appel', 'rsn-veille'); ?></button></div>
     </div>
 <?php endif; ?>
   </div>
@@ -85,14 +85,23 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
     <p><?php echo esc_html__("Votre proposition entre dans la file d'approbation de l'équipe du RSN. Elle sera publiée ici et, si elle s'y prête, reprise dans l'infolettre.", 'rsn-veille'); ?></p>
     <form id="form-proposition" method="post" enctype="multipart/form-data">
       <div class="erreurs" id="p-erreurs" role="alert" tabindex="-1" hidden></div>
+      <div class="choix">
+        <span class="lab" id="lab-type"><?php echo esc_html__('Vous proposez', 'rsn-veille'); ?></span>
+        <div class="seg" role="group" aria-labelledby="lab-type">
+          <button type="button" id="p-type-evenement" data-type="evenement" aria-pressed="true"><?php echo esc_html__('Un événement', 'rsn-veille'); ?></button>
+          <button type="button" id="p-type-appel" data-type="appel" aria-pressed="false"><?php echo esc_html__('Un appel de financement ou de candidatures', 'rsn-veille'); ?></button>
+        </div>
+        <input type="hidden" name="type" id="p-type" value="evenement">
+      </div>
       <div class="champs">
         <label class="large"><?php echo esc_html__('Titre', 'rsn-veille'); ?> <input id="p-titre" name="titre" required maxlength="200" placeholder="<?php echo esc_attr__('Ex. : Colloque sur la souveraineté numérique en santé', 'rsn-veille'); ?>"></label>
-        <label><?php echo esc_html__('Date de début', 'rsn-veille'); ?> <input id="p-debut" name="debut" type="date" required></label>
-        <label><?php echo esc_html__('Date de fin (si plusieurs jours)', 'rsn-veille'); ?> <input id="p-fin" name="fin" type="date"></label>
-        <label><?php echo esc_html__('Organisateur', 'rsn-veille'); ?> <input id="p-orga" name="organisateur" required maxlength="120" placeholder="<?php echo esc_attr__('Ex. : Obvia', 'rsn-veille'); ?>"></label>
-        <label><?php echo esc_html__('Format', 'rsn-veille'); ?> <select id="p-format" name="format"><option value="Présentiel"><?php echo esc_html__('Présentiel', 'rsn-veille'); ?></option><option value="Virtuel"><?php echo esc_html__('Virtuel', 'rsn-veille'); ?></option><option value="Hybride"><?php echo esc_html__('Hybride', 'rsn-veille'); ?></option></select></label>
-        <label><?php echo esc_html__('Lieu et ville', 'rsn-veille'); ?> <input id="p-lieu" name="lieu" maxlength="160" placeholder="<?php echo esc_attr__('Ex. : HEC Montréal, Montréal', 'rsn-veille'); ?>"></label>
-        <label><?php echo esc_html__("Lien d'information", 'rsn-veille'); ?> <input id="p-url" name="url" type="url" placeholder="https://"></label>
+        <label data-pour="evenement"><?php echo esc_html__('Date de début', 'rsn-veille'); ?> <input id="p-debut" name="debut" type="date" required data-requis-pour="evenement"></label>
+        <label data-pour="evenement"><?php echo esc_html__('Date de fin (si plusieurs jours)', 'rsn-veille'); ?> <input id="p-fin" name="fin" type="date"></label>
+        <label data-pour="appel" hidden><?php echo esc_html__('Date limite', 'rsn-veille'); ?> <input id="p-limite" name="echeance" type="date" data-requis-pour="appel" disabled><span class="aide"><?php echo esc_html__('Dernier jour pour déposer.', 'rsn-veille'); ?></span></label>
+        <label><span id="lab-orga"><?php echo esc_html__('Organisateur', 'rsn-veille'); ?></span> <input id="p-orga" name="organisateur" required maxlength="120" placeholder="<?php echo esc_attr__('Ex. : Obvia', 'rsn-veille'); ?>"></label>
+        <label data-pour="evenement"><?php echo esc_html__('Format', 'rsn-veille'); ?> <select id="p-format" name="format"><option value="Présentiel"><?php echo esc_html__('Présentiel', 'rsn-veille'); ?></option><option value="Virtuel"><?php echo esc_html__('Virtuel', 'rsn-veille'); ?></option><option value="Hybride"><?php echo esc_html__('Hybride', 'rsn-veille'); ?></option></select></label>
+        <label data-pour="evenement"><?php echo esc_html__('Lieu et ville', 'rsn-veille'); ?> <input id="p-lieu" name="lieu" maxlength="160" placeholder="<?php echo esc_attr__('Ex. : HEC Montréal, Montréal', 'rsn-veille'); ?>"></label>
+        <label><span id="lab-url"><?php echo esc_html__("Lien d'information", 'rsn-veille'); ?></span> <input id="p-url" name="url" type="url" placeholder="https://" data-requis-pour="appel"></label>
         <label class="large"><?php echo esc_html__('Courte description (2 à 3 phrases)', 'rsn-veille'); ?> <textarea id="p-resume" name="resume" rows="3" maxlength="1000"></textarea></label>
         <label><?php echo esc_html__('Votre courriel (pour vous répondre)', 'rsn-veille'); ?> <input id="p-courriel" name="courriel" type="email" autocomplete="email"></label>
         <label><?php echo esc_html__('Image (facultative : JPEG, PNG ou WebP, 3 Mo au plus)', 'rsn-veille'); ?> <input id="p-image" name="image" type="file" accept="image/jpeg,image/png,image/webp"></label>

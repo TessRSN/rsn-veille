@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Formulaire public « Proposer un événement » : action AJAX `rsn_veille_proposer`, ouverte sans
+ * Formulaire public « Proposer un événement ou un appel » : action AJAX `rsn_veille_proposer`, ouverte sans
  * connexion. La proposition devient une fiche à approuver (`pending`) de la file de wp-admin.
  *
  * Défenses : jeton `rsn_veille_proposer`, limite de 5 envois par heure et par adresse (hachée et
@@ -22,7 +22,8 @@ if (!defined('ABSPATH')) {
  * chargée), image vérifiée sur son contenu réel (JPEG, PNG ou WebP, 3 Mo au plus). Le courriel du
  * proposant reste dans la méta privée `rsn_veille_courriel_proposant`, jamais publiée. Une proposition
  * ne modifie jamais une fiche existante : un doublon (même date, même début de titre) est seulement
- * signalé.
+ * signalé. Le champ `type` (`evenement` par défaut, ou `appel`) change les champs demandés : un appel a une
+ * date limite et un lien obligatoires, et aucune date de début, de fin, de format ni de lieu.
  */
 final class Formulaire {
     public const ACTION = 'rsn_veille_proposer';
@@ -49,7 +50,7 @@ final class Formulaire {
     public const META_IMAGE_PROPOSEE = TypeContenu::PREFIXE . 'image_proposee';
 
     /** Champs texte lus dans la requête. */
-    private const CHAMPS = ['titre', 'debut', 'fin', 'organisateur', 'format', 'lieu', 'url', 'resume', 'courriel', 'site_web', 'langue'];
+    private const CHAMPS = ['type', 'echeance', 'titre', 'debut', 'fin', 'organisateur', 'format', 'lieu', 'url', 'resume', 'courriel', 'site_web', 'langue'];
 
     private const FORMATS = ['Présentiel', 'Virtuel', 'Hybride'];
 
@@ -87,13 +88,24 @@ final class Formulaire {
             return ['fiche' => null, 'erreurs' => [], 'courriel' => ''];
         }
 
+        $appel = $brut('type') === 'appel';
         $erreurs = [];
         $titre = $texte('titre');
         if ($titre === '') {
             $erreurs['titre'] = __('Titre obligatoire', 'rsn-veille');
         }
         $debut = $brut('debut');
-        if ($debut === '') {
+        $echeance = $brut('echeance');
+        if ($appel) {
+            // Un appel n'a ni début ni fin : la date limite est obligatoire, le jour de l'envoi sert de date de publication.
+            if ($echeance === '') {
+                $erreurs['echeance'] = __('Date limite obligatoire', 'rsn-veille');
+            } elseif (!self::date_valide($echeance)) {
+                $erreurs['echeance'] = __('Date limite invalide', 'rsn-veille');
+            } elseif ($echeance < $aujourdhui) {
+                $erreurs['echeance'] = __('La date limite est passée', 'rsn-veille');
+            }
+        } elseif ($debut === '') {
             $erreurs['debut'] = __('Date de début obligatoire', 'rsn-veille');
         } elseif (!self::date_valide($debut)) {
             $erreurs['debut'] = __('Date de début invalide', 'rsn-veille');
@@ -104,26 +116,39 @@ final class Formulaire {
         if ($organisateur === '') {
             $erreurs['organisateur'] = __('Organisateur obligatoire', 'rsn-veille');
         }
+        $url = self::url($brut('url'));
+        if ($appel && $url === '') {
+            $erreurs['url'] = __('Lien obligatoire', 'rsn-veille');
+        }
         $courriel = self::courriel($brut('courriel'));
         if ($erreurs !== []) {
             return ['fiche' => null, 'erreurs' => $erreurs, 'courriel' => $courriel];
         }
 
-        $fin = $brut('fin');
-        $format = in_array($brut('format'), self::FORMATS, true) ? $brut('format') : 'Présentiel';
-        $lieu = $texte('lieu');
         $resume = $texte('resume');
-
         $fiche = new Fiche();
-        $fiche->type = 'evenement';
+        if ($appel) {
+            $fiche->type = 'appel';
+            $fiche->debut = $aujourdhui;
+            $fiche->fin = $aujourdhui;
+            $fiche->echeance = $echeance;
+            $fiche->format = '';
+            $fiche->lieu = '';
+            $fiche->region = '';
+        } else {
+            $fin = $brut('fin');
+            $format = in_array($brut('format'), self::FORMATS, true) ? $brut('format') : 'Présentiel';
+            $lieu = $texte('lieu');
+            $fiche->type = 'evenement';
+            $fiche->debut = $debut;
+            $fiche->fin = self::date_valide($fin) && $fin >= $debut ? $fin : $debut;
+            $fiche->format = $format;
+            $fiche->lieu = $lieu;
+            $fiche->region = Fiche::deviner_region('', $lieu, $format);
+        }
         $fiche->titre = $titre;
-        $fiche->debut = $debut;
-        $fiche->fin = self::date_valide($fin) && $fin >= $debut ? $fin : $debut;
         $fiche->organisateur = $organisateur;
-        $fiche->format = $format;
-        $fiche->lieu = $lieu;
-        $fiche->region = Fiche::deviner_region('', $lieu, $format);
-        $fiche->url = self::url($brut('url'));
+        $fiche->url = $url;
         $fiche->resume = $resume;
         // Langue de la page où l'on a rempli le formulaire ; toute autre valeur vaut « fr ».
         $fiche->langue = $brut('langue') === 'en' ? 'en' : 'fr';

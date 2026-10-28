@@ -214,6 +214,19 @@
 .rsn-veille .erreurs p{margin:0;color:inherit;font-weight:600}
 .rsn-veille .erreurs ul{margin:6px 0 0;padding-left:18px}
 .rsn-veille .encadre .merci{margin-top:16px;font-size:16px;font-weight:600;color:var(--navy)}
+/* Choix « Un événement » / « Un appel » en tête du formulaire (maquette fiche-type-v1) : boutons à bascule, aria-pressed = fond marine. */
+.rsn-veille .choix{margin:18px 0 4px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.rsn-veille .choix .lab{font-size:13px;font-weight:600;color:var(--ink)}
+.rsn-veille .seg{display:inline-flex;background:#fff;border:1px solid var(--rule);border-radius:10px;padding:3px;gap:3px;flex-wrap:wrap}
+.rsn-veille.rsn-veille .seg button{font:600 14px/1.2 var(--sans);border:0;background:none;color:var(--body);padding:8px 14px;border-radius:7px;cursor:pointer;box-shadow:none;text-transform:none;letter-spacing:normal}
+.rsn-veille.rsn-veille .seg button:hover{background:var(--tint);color:var(--navy)}
+.rsn-veille.rsn-veille .seg button[aria-pressed="true"],.rsn-veille.rsn-veille .seg button[aria-pressed="true"]:hover{background:var(--navy);color:#fff}
+.rsn-veille.rsn-veille .seg button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.rsn-veille .champs .aide{font-size:12.5px;font-weight:400;color:var(--muted)}
+@media (max-width:560px){
+  .rsn-veille .seg{width:100%}
+  .rsn-veille.rsn-veille .seg button{flex:1 1 auto}
+}
 .rsn-veille.rsn-veille .btn[disabled]{opacity:.6;cursor:progress}
 .rsn-veille .vide{padding:22px 26px;border-radius:14px;background:var(--tint);color:var(--ink)}
 
