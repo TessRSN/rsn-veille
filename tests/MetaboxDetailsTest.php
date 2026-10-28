@@ -66,6 +66,43 @@ final class MetaboxDetailsTest extends TestCase {
 
     // --- nettoyer ---
 
+    /** Envoi que le navigateur ferait du HTML réel de l'encadré, sans rien toucher (radio cochée, options choisies). */
+    private static function envoi_depuis_html(string $html): array {
+        $doc = new DOMDocument();
+        libxml_use_internal_errors(true);
+        $doc->loadHTML('<?xml encoding="utf-8"?><form>' . $html . '</form>');
+        libxml_clear_errors();
+        $envoi = [];
+        $nom = static fn(DOMElement $e): ?string => preg_match('/^rsn_veille_details\[(\w+)\]$/', $e->getAttribute('name'), $m) === 1 ? $m[1] : null;
+        foreach ($doc->getElementsByTagName('input') as $e) {
+            $champ = $nom($e);
+            if ($champ === null || ($e->getAttribute('type') === 'radio' && !$e->hasAttribute('checked'))) {
+                continue;
+            }
+            $envoi[$champ] = $e->getAttribute('value');
+        }
+        foreach ($doc->getElementsByTagName('select') as $e) {
+            $champ = $nom($e);
+            if ($champ === null) {
+                continue;
+            }
+            $options = $e->getElementsByTagName('option');
+            $envoi[$champ] = $options->length > 0 ? $options->item(0)->getAttribute('value') : '';
+            foreach ($options as $o) {
+                if ($o->hasAttribute('selected')) {
+                    $envoi[$champ] = $o->getAttribute('value');
+                }
+            }
+        }
+        return $envoi;
+    }
+
+    /** Appel collecté dont la date limite n'est que la fin (échéance vide, fin différente du début). */
+    private static function appel_collecte(): Fiche {
+        return self::fiche(['type' => 'appel', 'debut' => '2026-10-15', 'fin' => '2026-11-30', 'echeance' => null, 'heure' => '', 'format' => '', 'lieu' => '', 'ville' => '', 'region' => '', 'source' => 'FRQ : appels', 'niveau' => 'B', 'cle_source' => 'frq_appels:x', 'cles_source' => ['frq_appels:x']]);
+    }
+
+
     public function test_rien_de_change_rien_a_ecrire_ni_a_proteger(): void {
         $f = self::fiche();
         $r = MetaboxDetails::nettoyer(self::envoi_identique($f), $f);
@@ -170,6 +207,57 @@ final class MetaboxDetailsTest extends TestCase {
         $f = self::fiche(['heure' => '9:05', 'url' => 'https://exemple.test/a`b', 'organisateur' => 'Mila  &amp; IVADO']);
         $r = MetaboxDetails::nettoyer(self::envoi_identique($f), $f);
         $this->assertSame([], $r['champs']);
+        $this->assertSame([], $r['erreurs']);
+    }
+
+    public function test_appel_collecte_enregistre_sans_rien_toucher_rien_n_est_ecrit(): void {
+        // I1 : la date limite préremplie depuis la fin n'est pas un changement ; ni la fin ni l'échéance ne bougent.
+        $f = self::appel_collecte();
+        $envoi = self::envoi_depuis_html(MetaboxDetails::html($f, MetaboxDetails::origine($f)));
+        $this->assertSame('2026-11-30', $envoi['echeance']);
+        $r = MetaboxDetails::nettoyer($envoi, $f);
+        $this->assertSame([], $r['champs']);
+        $this->assertSame([], $r['erreurs']);
+    }
+
+    public function test_appel_collecte_seul_l_organisateur_change_aucune_date_ecrite(): void {
+        $f = self::appel_collecte();
+        $envoi = ['organisateur' => 'Fonds de recherche du Québec'] + self::envoi_depuis_html(MetaboxDetails::html($f, ''));
+        $r = MetaboxDetails::nettoyer($envoi, $f);
+        $this->assertSame(['organisateur' => 'Fonds de recherche du Québec'], $r['champs']);
+    }
+
+    public function test_appel_collecte_date_limite_changee_fin_suit_le_debut(): void {
+        $f = self::appel_collecte();
+        $envoi = ['echeance' => '2026-12-15'] + self::envoi_depuis_html(MetaboxDetails::html($f, ''));
+        $r = MetaboxDetails::nettoyer($envoi, $f);
+        $this->assertSame('2026-12-15', $r['champs']['echeance']);
+        $this->assertSame('2026-10-15', $r['champs']['fin']);
+        $this->assertSame(['fin', 'echeance'], $r['champs']['champs_manuels']);
+    }
+
+    public function test_appel_collecte_publication_changee_la_date_limite_reprend_la_fin(): void {
+        $f = self::appel_collecte();
+        $envoi = ['publie' => '2026-10-20'] + self::envoi_depuis_html(MetaboxDetails::html($f, ''));
+        $r = MetaboxDetails::nettoyer($envoi, $f);
+        $this->assertSame('2026-10-20', $r['champs']['debut']);
+        $this->assertSame('2026-10-20', $r['champs']['fin']);
+        $this->assertSame('2026-11-30', $r['champs']['echeance']);
+    }
+
+    public function test_appel_vers_evenement_sans_debut_valide_reste_un_appel(): void {
+        // M1 : « Publié le » vide, donc pas de date de début ; le type n'est pas changé et l'avis le dit.
+        $f = self::fiche(['type' => 'appel', 'debut' => null, 'fin' => null, 'echeance' => '2026-12-01']);
+        $envoi = ['type' => 'evenement', 'debut' => '', 'publie' => '', 'fin' => ''] + self::envoi_identique($f);
+        $r = MetaboxDetails::nettoyer($envoi, $f);
+        $this->assertArrayNotHasKey('type', $r['champs']);
+        $this->assertArrayNotHasKey('debut', $r['champs']);
+        $this->assertCount(1, $r['erreurs']);
+        $this->assertStringContainsString('reste un appel', $r['erreurs'][0]);
+        // Avec une date de début valide, le passage se fait.
+        $r = MetaboxDetails::nettoyer(['debut' => '2026-11-05'] + $envoi, $f);
+        $this->assertSame('evenement', $r['champs']['type']);
+        $this->assertSame('2026-11-05', $r['champs']['debut']);
         $this->assertSame([], $r['erreurs']);
     }
 
@@ -401,9 +489,44 @@ final class MetaboxDetailsTest extends TestCase {
         $GLOBALS['rsn_veille_wp']['capacites'] = ['edit_post'];
         $id = self::fiche_enregistree();
         $revision = wp_insert_post(['post_type' => 'revision', 'post_title' => 'Révision', 'post_parent' => $id, 'post_status' => 'inherit']);
-        self::poster(['organisateur' => 'Autre']);
+        $avant = [$GLOBALS['rsn_veille_wp']['meta'], $GLOBALS['rsn_veille_wp']['posts']];
+        self::poster(['organisateur' => 'Autre', 'url' => 'https://exemple.test/autre']);
         MetaboxDetails::enregistrer_envoi($revision);
+        // Aucune écriture, ni sur la révision ni sur la fiche parente.
+        $this->assertEquals($avant, [$GLOBALS['rsn_veille_wp']['meta'], $GLOBALS['rsn_veille_wp']['posts']]);
+        $this->assertSame('Mila', self::meta($id, 'organisateur'));
         $this->assertSame('', self::meta($revision, 'organisateur'));
+    }
+
+    public function test_sauvegarde_automatique_wordpress_rien(): void {
+        // Révision de sauvegarde automatique (nom « <parent>-autosave-v1 »), ni écrite ni reportée sur la fiche.
+        $GLOBALS['rsn_veille_wp']['capacites'] = ['edit_post'];
+        $id = self::fiche_enregistree();
+        $auto = wp_insert_post(['post_type' => 'revision', 'post_title' => 'Auto', 'post_name' => $id . '-autosave-v1', 'post_parent' => $id, 'post_status' => 'inherit']);
+        $avant = $GLOBALS['rsn_veille_wp']['meta'];
+        self::poster(['organisateur' => 'Autre']);
+        MetaboxDetails::enregistrer_envoi($auto);
+        $this->assertEquals($avant, $GLOBALS['rsn_veille_wp']['meta']);
+    }
+
+    /**
+     * Requête de sauvegarde automatique (DOING_AUTOSAVE) sur la fiche elle-même : rien n'est écrit. Processus à part :
+     * la constante ne se retire pas.
+     *
+     * @runInSeparateProcess
+     * @preserveGlobalState disabled
+     */
+    public function test_doing_autosave_rien(): void {
+        require_once __DIR__ . '/bouchons-wordpress.php';
+        rsn_veille_bouchons_reinitialiser();
+        $GLOBALS['rsn_veille_wp']['capacites'] = ['edit_post'];
+        $id = self::fiche_enregistree();
+        $avant = $GLOBALS['rsn_veille_wp']['meta'];
+        define('DOING_AUTOSAVE', true);
+        self::poster(['organisateur' => 'Autre', 'debut' => '2026-12-01']);
+        MetaboxDetails::enregistrer_envoi($id);
+        $this->assertEquals($avant, $GLOBALS['rsn_veille_wp']['meta']);
+        $this->assertSame('Mila', self::meta($id, 'organisateur'));
     }
 
     public function test_correction_d_une_fiche_collectee(): void {

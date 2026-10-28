@@ -230,6 +230,14 @@ final class MetaboxDetails {
         $type = $lire('type');
         // Type hors liste : celui de la fiche (vide pour une fiche neuve, rien n'est alors écrit).
         $type = in_array($type, self::TYPES, true) ? $type : $actuelle->type;
+        // Une fiche ne devient un événement qu'avec une date de début valide (envoyée, sinon la sienne).
+        if ($type === 'evenement' && $actuelle->type !== 'evenement') {
+            $debut_envoye = $lire('debut');
+            if (!self::date_valide($debut_envoye ?? (string) $actuelle->debut)) {
+                $type = $actuelle->type;
+                $erreurs[] = __("Un événement doit avoir une date de début valide : sans elle, la fiche reste un appel.", 'rsn-veille');
+            }
+        }
         $valeurs['type'] = $type;
         $appel = $type === 'appel';
 
@@ -264,7 +272,12 @@ final class MetaboxDetails {
                 $valeurs['url'] = $propre;
             }
         }
+        // Date limite : celle que l'encadré montre pour un appel sans échéance (sa fin, `limite_appel`), renvoyée
+        // telle quelle, n'est pas un changement.
         $echeance = $lire('echeance');
+        if ($echeance !== null && $actuelle->echeance === null && $echeance === (string) $actuelle->limite_appel()) {
+            $echeance = null;
+        }
         if ($echeance === '') {
             $valeurs['echeance'] = null;
         } elseif ($echeance !== null && self::date_valide($echeance)) {
@@ -297,12 +310,19 @@ final class MetaboxDetails {
             $fin = $debut;
         }
         if ($appel) {
-            // Passage en appel : sans date limite, une fin distincte du début devient la date limite.
-            $limite = array_key_exists('echeance', $valeurs) ? $valeurs['echeance'] : $actuelle->echeance;
-            if ($limite === null && $fin !== null && $fin !== $debut) {
-                $valeurs['echeance'] = $fin;
+            // La fin d'un appel suit son début, mais seulement si le type passe à appel ou si le début ou la date
+            // limite changent : un appel collecté enregistré sans rien toucher garde sa fin (sa date limite réelle).
+            $limite_changee = array_key_exists('echeance', $valeurs) && $valeurs['echeance'] !== $actuelle->echeance;
+            if ($actuelle->type !== 'appel' || $debut !== $actuelle->debut || $limite_changee) {
+                // Sans date limite, une fin distincte du début devient la date limite.
+                $limite = array_key_exists('echeance', $valeurs) ? $valeurs['echeance'] : $actuelle->echeance;
+                if ($limite === null && $fin !== null && $fin !== $debut) {
+                    $valeurs['echeance'] = $fin;
+                }
+                $fin = $debut;
+            } else {
+                $fin = $actuelle->fin;
             }
-            $fin = $debut;
         }
         $valeurs['fin'] = $fin;
 
