@@ -1,0 +1,273 @@
+<title>Événement ou appel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Maquette 0.6.0 : deux écrans empilés, l'encadré de WordPress puis le formulaire de la page. Couleurs du site (thème clair seulement, comme rsn.quebec). */
+:root{
+  --navy:#003469; --ink:#101828; --body:rgba(16,24,40,.72); --muted:#6E7A84; --rule:#DCE1E8; --tint:#F5F7FA;
+  --yellow:#FFCC4E; --yellow-ink:#E3A800; --yellow-tint:#FFF4D1; --blue:#0061AF; --bg:#ffffff; --page:#EEF1F5;
+  --wp-bg:#F0F0F1; --wp-bar:#1D2327; --wp-side:#2C3338; --wp-rule:#C3C4C7; --wp-ink:#1D2327; --wp-blue:#2271B1; --wp-muted:#646970;
+  --serif:"DM Serif Display",Georgia,"Times New Roman",serif;
+  --sans:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --wp:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{background:var(--page);color:var(--ink);font:400 15px/1.55 var(--sans);margin:0}
+.page{max-width:1120px;margin:0 auto;padding-block:32px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:40px}
+header.intro h1{font:400 34px/1.15 var(--serif);color:var(--navy);margin:0 0 8px;text-wrap:balance}
+header.intro p{margin:0;max-width:70ch;color:var(--body)}
+.ecran{display:grid;gap:12px}
+.ecran>h2{font:700 13px/1.2 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--navy);margin:0;display:flex;gap:10px;align-items:center}
+.ecran>h2 span{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;font-size:12px;letter-spacing:0}
+.ecran>p.leg{margin:0;max-width:75ch;color:var(--body);font-size:14px}
+.cadre{border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.08),0 8px 24px rgba(16,24,40,.06);background:var(--bg)}
+
+/* --- Écran 1 : WordPress --- */
+.wp{font:13px/1.5 var(--wp);color:var(--wp-ink);background:var(--wp-bg)}
+.wp .barre{height:32px;background:var(--wp-bar);color:#c3c4c7;display:flex;align-items:center;gap:16px;padding:0 12px;font-size:13px}
+.wp .barre b{color:#fff;font-weight:600}
+.wp .corps{display:grid;grid-template-columns:160px minmax(0,1fr)}
+.wp nav{background:var(--wp-side);color:#f0f0f1;padding:8px 0;font-size:14px}
+.wp nav div{padding:7px 12px;color:#f0f0f1}
+.wp nav .actif{background:var(--wp-blue);color:#fff;font-weight:600}
+.wp nav .sous{padding:4px 12px 4px 22px;font-size:13px;color:#c3c4c7}
+.wp main{padding:18px 20px 28px;min-width:0}
+.wp h1{font:400 23px/1.3 var(--wp);margin:0 0 14px}
+.wp .grille{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:20px}
+.wp .titre{width:100%;font:400 20px/1.3 var(--wp);padding:6px 10px;border:1px solid var(--wp-rule);border-radius:4px;background:#fff;margin-bottom:12px}
+.wp .boite{background:#fff;border:1px solid var(--wp-rule);margin-bottom:16px}
+.wp .boite>h3{font:600 14px/1.4 var(--wp);margin:0;padding:9px 12px;border-bottom:1px solid var(--wp-rule);display:flex;justify-content:space-between}
+.wp .boite>h3 small{font-weight:400;color:var(--wp-muted)}
+.wp .boite .in{padding:12px}
+.wp .editeur{min-height:86px;color:var(--wp-muted);font-size:14px}
+.wp .neuf{outline:3px solid var(--yellow);outline-offset:-1px;position:relative}
+.wp .neuf::before{content:"Nouveau";position:absolute;top:-11px;right:12px;background:var(--yellow);color:var(--navy);font:700 11px/1 var(--sans);padding:5px 8px;border-radius:999px;letter-spacing:.03em}
+.wp .type{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid #f0f0f1}
+.wp .type b{margin-right:4px}
+.wp .type label{display:flex;gap:6px;align-items:center;font-size:14px;cursor:pointer}
+.wp .chps{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px 16px}
+.wp .chps label{display:flex;flex-direction:column;gap:4px;font-weight:600;min-width:0}
+.wp .chps label.large{grid-column:1/-1}
+.wp .chps input,.wp .chps select{font:400 14px/1.4 var(--wp);padding:5px 8px;border:1px solid #8c8f94;border-radius:4px;background:#fff;color:var(--wp-ink);min-width:0;width:100%}
+.wp .chps .aide{font-weight:400;color:var(--wp-muted);font-size:12px}
+.wp .verrou{display:inline-flex;gap:5px;align-items:center;font-weight:400;font-size:12px;color:#996800;background:#fcf9e8;border:1px solid #f0e6b5;border-radius:3px;padding:1px 6px;width:fit-content}
+.wp .note{margin:14px 0 0;padding:9px 12px;background:#f0f6fc;border-left:4px solid var(--wp-blue);font-size:13px;color:var(--wp-ink)}
+.wp .origine{margin-top:10px;color:var(--wp-muted);font-size:12px}
+.wp .pub .in{display:grid;gap:8px}
+.wp .pub .ligne{display:flex;justify-content:space-between;color:var(--wp-muted)}
+.wp .pub .ligne b{color:var(--wp-ink);font-weight:600}
+.wp .btnwp{justify-self:end;background:var(--wp-blue);color:#fff;border:0;border-radius:3px;padding:6px 12px;font:600 13px/1.4 var(--wp)}
+.wp .img{height:90px;background:var(--wp-bg);border:1px dashed var(--wp-rule);display:grid;place-items:center;color:var(--wp-muted)}
+
+/* --- Écran 2 : la page --- */
+.site{background:var(--bg)}
+.site .bandeau{background:var(--navy);color:#fff;padding:26px 28px 22px}
+.site .bandeau .fil{font-size:13px;color:rgba(255,255,255,.7);margin-bottom:6px}
+.site .bandeau h3{font:400 34px/1.1 var(--serif);margin:0 0 10px}
+.site .bandeau .tete{display:flex;flex-wrap:wrap;gap:16px 28px;justify-content:space-between;align-items:flex-start}
+.site .bandeau p{margin:0;max-width:60ch;color:rgba(255,255,255,.85);font-size:14.5px}
+.site .bandeau .act{display:flex;flex-wrap:wrap;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:9px;padding:10px 18px;border-radius:10px;font:600 14px/1.3 var(--sans);border:1px solid transparent;cursor:pointer}
+.btn.clair{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+.btn.jaune{background:var(--yellow);color:var(--navy)}
+.btn.jaune.vif{box-shadow:0 0 0 3px rgba(255,204,78,.45)}
+.btn.base{background:var(--yellow-tint);color:var(--ink)}
+.btn.sobre{background:var(--tint);color:var(--ink)}
+.site .contenu{padding:24px 28px 28px}
+.encadre{padding:24px 26px;border-radius:14px;background:var(--tint)}
+.encadre h4{font:400 24px/1.2 var(--serif);color:var(--navy);margin:0 0 6px}
+.encadre>p{margin:0;max-width:72ch;font-size:14.5px;color:var(--body)}
+.choix{margin:18px 0 4px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.choix .lab{font-size:13px;font-weight:600;color:var(--ink)}
+.seg{display:inline-flex;background:#fff;border:1px solid var(--rule);border-radius:10px;padding:3px;gap:3px;flex-wrap:wrap}
+.seg button{font:600 14px/1.2 var(--sans);border:0;background:none;color:var(--body);padding:8px 14px;border-radius:7px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--navy);color:#fff}
+.seg button:focus-visible,.btn:focus-visible,.wp input:focus-visible,.wp select:focus-visible,.champs :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.champs{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:14px}
+.champs label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:var(--ink);min-width:0}
+.champs label.large{grid-column:1/-1}
+.champs input,.champs select,.champs textarea{font:400 14.5px/1.4 var(--sans);padding:9px 11px;border:1px solid var(--rule);border-radius:8px;background:#fff;color:var(--ink);min-width:0;width:100%}
+.champs textarea{resize:vertical}
+.champs .aide{font-weight:400;color:var(--muted);font-size:12.5px}
+.boutons{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;margin-top:16px}
+.boutons .note{font-size:13px;color:var(--muted)}
+.exemple{font-size:12px;color:var(--muted);font-style:italic}
+
+/* Décisions à valider */
+.decisions{background:var(--bg);border-radius:12px;padding:22px 24px;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.decisions h2{font:400 24px/1.2 var(--serif);color:var(--navy);margin:0 0 10px}
+.decisions ol{margin:0;padding-left:20px;display:grid;gap:8px;max-width:80ch}
+.decisions li{color:var(--body)}
+.decisions li b{color:var(--ink)}
+
+@media (max-width:820px){
+  .wp .corps{grid-template-columns:1fr}
+  .wp nav{display:none}
+  .wp .grille{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .site .bandeau,.site .contenu{padding-left:18px;padding-right:18px}
+  .encadre{padding:20px 18px}
+  .seg{width:100%}
+  .seg button{flex:1 1 auto}
+}
+</style>
+
+<div class="page">
+  <header class="intro">
+    <h1>Événement ou appel : maquette de la 0.6.0</h1>
+    <p>Deux écrans à valider. Dans WordPress, un encadré « Détails de la fiche » permet de choisir le type et de corriger les dates et les autres détails. Sur la page, le formulaire laisse choisir entre un événement et un appel. Les deux sont cliquables : change le type pour voir les champs changer. Les contenus sont des exemples.</p>
+  </header>
+
+  <section class="ecran" aria-labelledby="e1">
+    <h2 id="e1"><span>1</span>Dans WordPress : modifier une fiche</h2>
+    <p class="leg">L'écran « Modifier la fiche de veille » qu'on ouvre depuis le lien « Modifier » de la file. L'encadré jaune est le seul ajout : le reste existe déjà.</p>
+    <div class="cadre wp" role="img" aria-label="Aperçu de l'écran de WordPress" style="display:block">
+      <div class="barre"><b>RSN – Réseau santé numérique</b><span>+ Créer</span></div>
+      <div class="corps">
+        <nav aria-hidden="true">
+          <div>Tableau de bord</div><div>Articles</div><div class="actif">Veille</div>
+          <div class="sous">File d'approbation</div><div class="sous">Radar</div><div class="sous">Infolettre</div><div class="sous">Réglages</div>
+          <div>Pages</div><div>Médias</div>
+        </nav>
+        <main>
+          <h1>Modifier la fiche de veille</h1>
+          <div class="grille">
+            <div>
+              <input class="titre" id="wp-titre" value="Concours de capsules vidéo destiné à la relève étudiante" aria-label="Titre">
+              <div class="boite"><h3>Texte</h3><div class="in editeur">Le FRQ invite les étudiantes et étudiants à présenter leur projet de recherche en santé dans une capsule vidéo de trois minutes…</div></div>
+
+              <div class="boite neuf" id="boite-details">
+                <h3>Détails de la fiche <small>Proposée par le public · à approuver</small></h3>
+                <div class="in">
+                  <div class="type" role="radiogroup" aria-labelledby="wp-type-lab">
+                    <b id="wp-type-lab">Type</b>
+                    <label><input type="radio" name="wp-type" id="wp-type-ev" value="evenement"> Événement</label>
+                    <label><input type="radio" name="wp-type" id="wp-type-ap" value="appel" checked> Appel</label>
+                  </div>
+                  <div class="chps">
+                    <label>Organisateur <input id="wp-orga" value="Fonds de recherche du Québec"></label>
+                    <label data-pour="appel">Date limite <input id="wp-limite" type="date" value="2026-11-30"><span class="verrou">🔒 corrigée à la main</span></label>
+                    <label data-pour="appel">Catégorie <input id="wp-cat" value="Concours" placeholder="Ex. : Appel de financement"><span class="aide">Vide : « Appel ».</span></label>
+                    <label data-pour="appel">Publié le <input id="wp-pub" type="date" value="2026-10-15"><span class="aide">Date de l'annonce.</span></label>
+                    <label data-pour="evenement" hidden>Date de début <input id="wp-debut" type="date" value="2026-10-15"></label>
+                    <label data-pour="evenement" hidden>Date de fin <input id="wp-fin" type="date" value="2026-10-15"></label>
+                    <label data-pour="evenement" hidden>Heure <input id="wp-heure" type="time" value=""></label>
+                    <label data-pour="evenement" hidden>Format <select id="wp-format"><option>Présentiel</option><option>Virtuel</option><option>Hybride</option></select></label>
+                    <label data-pour="evenement" hidden>Lieu <input id="wp-lieu" value=""></label>
+                    <label data-pour="evenement" hidden>Ville <input id="wp-ville" value=""></label>
+                    <label>Langue <select id="wp-langue"><option value="fr" selected>Français</option><option value="en">Anglais</option></select></label>
+                    <label class="large">Lien d'information <input id="wp-url" type="url" value="https://frq.gouv.qc.ca/appel-de-candidatures-concours-de-capsules-video/"></label>
+                  </div>
+                  <p class="note">Une date, une heure, un lien, un lieu ou une ville corrigés ici ne sont plus changés par la collecte de nuit (pastille 🔒). Le titre et le texte ne le sont jamais.</p>
+                  <p class="origine">Source : formulaire de la page · reçue le 28 octobre 2026</p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="boite pub"><h3>Publier</h3><div class="in">
+                <div class="ligne"><span>État</span><b>En attente de relecture</b></div>
+                <button class="btnwp" type="button" tabindex="-1">Mettre à jour</button>
+              </div></div>
+              <div class="boite"><h3>Image de la fiche</h3><div class="in"><div class="img">Aucune image</div></div></div>
+              <div class="boite"><h3>Thèmes</h3><div class="in" style="color:var(--wp-muted)">Relève, santé</div></div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </section>
+
+  <section class="ecran" aria-labelledby="e2">
+    <h2 id="e2"><span>2</span>Sur la page : proposer un événement ou un appel</h2>
+    <p class="leg">Le bouton jaune du bandeau devient « Proposer un événement ou un appel ». Le formulaire s'ouvre sur « Un événement », comme aujourd'hui. Le choix « Un appel » remplace les dates et le lieu par une date limite.</p>
+    <div class="cadre site">
+      <div class="bandeau">
+        <div class="fil">Accueil › Agenda de l'écosystème</div>
+        <div class="tete">
+          <div><h3>Agenda de l'écosystème</h3><p>Les événements du RSN, ceux de nos partenaires et tout ce qui bouge en santé numérique au Québec.</p></div>
+          <div class="act"><span class="btn clair">S'abonner au calendrier</span><span class="btn jaune vif">Proposer un événement ou un appel ↗</span></div>
+        </div>
+      </div>
+      <div class="contenu">
+        <form class="encadre" id="form" novalidate>
+          <h4 id="f-titre-form">Proposer un événement</h4>
+          <p id="f-intro">Votre proposition entre dans la file d'approbation de l'équipe du RSN. Elle sera publiée ici et, si elle s'y prête, reprise dans l'infolettre.</p>
+          <div class="choix">
+            <span class="lab" id="lab-type">Vous proposez</span>
+            <div class="seg" role="group" aria-labelledby="lab-type">
+              <button type="button" id="t-ev" aria-pressed="true">Un événement</button>
+              <button type="button" id="t-ap" aria-pressed="false">Un appel de financement ou de candidatures</button>
+            </div>
+          </div>
+          <div class="champs">
+            <label class="large">Titre <input id="p-titre" placeholder="Ex. : Colloque sur la souveraineté numérique en santé"></label>
+            <label data-pour="evenement">Date de début <input id="p-debut" type="date"></label>
+            <label data-pour="evenement">Date de fin (si plusieurs jours) <input id="p-fin" type="date"></label>
+            <label data-pour="appel" hidden>Date limite <input id="p-limite" type="date"><span class="aide">Dernier jour pour déposer.</span></label>
+            <label><span id="lab-orga">Organisateur</span> <input id="p-orga" placeholder="Ex. : Obvia"></label>
+            <label data-pour="evenement">Format <select id="p-format"><option>Présentiel</option><option>Virtuel</option><option>Hybride</option></select></label>
+            <label data-pour="evenement">Lieu et ville <input id="p-lieu" placeholder="Ex. : HEC Montréal, Montréal"></label>
+            <label><span id="lab-url">Lien d'information</span> <input id="p-url" type="url" placeholder="https://"></label>
+            <label class="large">Courte description (2 à 3 phrases) <textarea id="p-resume" rows="3"></textarea></label>
+            <label>Votre courriel (pour vous répondre) <input id="p-courriel" type="email"></label>
+            <label>Image (facultative : JPEG, PNG ou WebP, 3 Mo au plus) <input id="p-image" type="file"></label>
+          </div>
+          <div class="boutons">
+            <button class="btn base" type="submit">Envoyer à l'équipe</button>
+            <button class="btn sobre" type="button">Annuler</button>
+            <span class="note">Votre courriel sert seulement à vous répondre ; il n'est jamais publié.</span>
+          </div>
+          <p class="exemple" id="f-retour" role="status"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="decisions" aria-labelledby="d">
+    <h2 id="d">Ce que je propose de décider</h2>
+    <ol>
+      <li><b>Le type se change dans l'encadré.</b> Passer une fiche d'événement à appel garde ses dates : la fin devient la date limite si elle est différente du début. L'inverse marche aussi.</li>
+      <li><b>Les corrections à la main sont protégées.</b> Une date, une heure, un lien, un lieu ou une ville changés dans l'encadré ne bougent plus à la collecte suivante. Le type, l'organisateur, le format et la langue ne sont déjà jamais changés par la collecte.</li>
+      <li><b>Pour un appel proposé par le public, la date limite et le lien sont obligatoires.</b> Le jour de l'envoi sert de date de publication. La catégorie n'est pas demandée : l'équipe peut l'ajouter dans l'encadré, sinon la page affiche « Appel ».</li>
+      <li><b>Le bouton jaune s'appelle « Proposer un événement ou un appel »</b>, sur la page et dans le panneau « Comment ça marche ». En anglais : « Suggest an event or a call ».</li>
+      <li><b>L'encadré sert aussi à créer une fiche à la main</b> depuis « Ajouter » dans WordPress, pour un appel ou un événement que la veille ne lit pas.</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+(function(){
+  // Écran 1 : le type montre ses champs.
+  const radios = document.querySelectorAll('input[name="wp-type"]');
+  const boite = document.getElementById('boite-details');
+  function montrerWp(){
+    const t = document.querySelector('input[name="wp-type"]:checked').value;
+    boite.querySelectorAll('[data-pour]').forEach(el => { el.hidden = el.dataset.pour !== t; });
+  }
+  radios.forEach(r => r.addEventListener('change', montrerWp));
+  montrerWp();
+
+  // Écran 2 : le choix Événement ou Appel change les champs, le titre et les libellés.
+  const ev = document.getElementById('t-ev'), ap = document.getElementById('t-ap');
+  const form = document.getElementById('form');
+  function choisir(type){
+    ev.setAttribute('aria-pressed', String(type === 'evenement'));
+    ap.setAttribute('aria-pressed', String(type === 'appel'));
+    form.querySelectorAll('[data-pour]').forEach(el => { el.hidden = el.dataset.pour !== type; });
+    document.getElementById('f-titre-form').textContent = type === 'appel' ? 'Proposer un appel' : 'Proposer un événement';
+    document.getElementById('lab-orga').textContent = type === 'appel' ? 'Organisme' : 'Organisateur';
+    document.getElementById('lab-url').textContent = type === 'appel' ? "Lien de l'appel" : "Lien d'information";
+    document.getElementById('p-titre').placeholder = type === 'appel' ? 'Ex. : Appel à projets en santé numérique 2027' : 'Ex. : Colloque sur la souveraineté numérique en santé';
+    document.getElementById('f-retour').textContent = '';
+  }
+  ev.addEventListener('click', () => choisir('evenement'));
+  ap.addEventListener('click', () => choisir('appel'));
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    document.getElementById('f-retour').textContent = 'Maquette : rien n’est envoyé.';
+  });
+})();
+</script>
