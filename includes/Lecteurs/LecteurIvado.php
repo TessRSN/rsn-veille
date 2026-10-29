@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 /**
  * Lecteur du calendrier d'IVADO. La page ne donne que des identifiants et des dates (éléments
  * « calendarEvents ») : les fiches sont incomplètes (titre vide, URL courte « ?p=id ») et la collecte
- * les complète avec `completer()` après avoir résolu l'URL.
+ * les complète avec `completer()` après avoir résolu l'URL. En anglais, l'adresse courte est « /en/?p=id ».
  */
 final class LecteurIvado extends LecteurHtml {
     protected function extraire(\DOMXPath $xpath, array $source, Resultat $resultat): void {
@@ -32,11 +32,14 @@ final class LecteurIvado extends LecteurHtml {
                 : [$debut, $fin];
         }
 
+        // Adresse courte de l'événement : IVADO renvoie « ?p=id » sans « /en/ » vers la page française, même pour
+        // l'identifiant d'une traduction anglaise ; la version anglaise passe donc par « /en/?p=id ».
+        $courte = ($source['langue'] ?? '') === 'en' ? 'https://ivado.ca/en/?p=' : 'https://ivado.ca/?p=';
         $vus = [];
         $position = 0;
         foreach ($evenements as $id => [$debut, $fin]) {
             $fiche = $this->identite($source, (string) $id);
-            $fiche->url = 'https://ivado.ca/?p=' . $id;
+            $fiche->url = $courte . $id;
             $this->dates($fiche, [$debut, $fin]);
             $this->classer($fiche);
             $this->ajouter($resultat, $fiche, $vus, $position++);
