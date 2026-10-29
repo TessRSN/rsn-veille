@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## 0.6.2 (2026-10-29)
+
+Correction de la version anglaise des événements IVADO. Sur la page anglaise de l'agenda, « IA en santé 2026 » gardait son titre français au lieu de « AI for Health 2026 ».
+
+- **Cause** : le calendrier d'IVADO ne donne qu'un identifiant par événement ; la collecte en faisait l'adresse courte `https://ivado.ca/?p=id`, y compris pour l'identifiant de la traduction anglaise. Or IVADO renvoie cette adresse vers la page française (vérifié le 2026-10-29 sur cinq événements) : le titre et l'adresse français étaient enregistrés comme titre et adresse anglais, puis la page n'était plus relue.
+- **Correction** : la passe anglaise utilise `https://ivado.ca/en/?p=id`, qui mène à la page anglaise.
+- **Réparation des fiches existantes** : une fiche IVADO dont le titre anglais est identique au titre français voit sa page anglaise relue à la collecte suivante (dans le plafond de 25 pages et le budget de 20 secondes par nuit). Un événement dont le titre est vraiment le même dans les deux langues est relu chaque nuit, sans autre effet.
+- Tests : la collecte de test sert maintenant l'adresse courte sans « /en/ » vers la page française, comme le vrai site. Numéro de version 0.6.2.
+
 ## 0.6.1 (2026-10-28)
 
 Retouche du bandeau de l'Agenda de l'écosystème, à la demande de l'équipe après la mise en ligne de la 0.6.0 : le libellé « Proposer un événement ou un appel » allongeait le bouton jaune et faisait passer les deux boutons sous l'intro. Le bouton jaune dit maintenant **« Faire une proposition »** (« Make a suggestion » en anglais) et les boutons reviennent à droite de l'intro. Le lien du panneau « Comment ça marche » garde « Proposer un événement ou un appel ». Numéro de version 0.6.1.

@@ -397,7 +397,10 @@ final class CollecteTest extends TestCase {
         $this->assertArrayNotHasKey('orphelines_en', $ligne);
     }
 
-    /** IVADO : un événement le 6 novembre, 100 en français et 101 en anglais (WPML : identifiants distincts). */
+    /**
+     * IVADO : un événement le 6 novembre, 100 en français et 101 en anglais (WPML : identifiants distincts). Comme le
+     * vrai site, l'adresse courte sans « /en/ » d'un identifiant anglais mène à la page française.
+     */
     private function servir_ivado(array $en_plus = []): void {
         $this->servir($en_plus + [
             'https://ivado.ca/evenements/' => self::reponse('text/html', self::calendrier_ivado([100 => '2026-11-06'])),
@@ -405,7 +408,8 @@ final class CollecteTest extends TestCase {
             'https://ivado.ca/?p=100' => self::reponse('text/html', '<html><head><title>Atelier | IVADO</title></head></html>', 'https://ivado.ca/evenements/atelier/'),
             'https://ivado.ca/en/events/' => self::reponse('text/html', self::calendrier_ivado([101 => '2026-11-06', 102 => '2026-11-30'])),
             'https://ivado.ca/en/events/feed/' => self::reponse('application/rss+xml', self::flux(['https://ivado.ca/en/events/workshop/' => 'English summary'])),
-            'https://ivado.ca/?p=101' => self::reponse('text/html', '<html><head><title>Workshop | IVADO</title></head></html>', 'https://ivado.ca/en/events/workshop/'),
+            'https://ivado.ca/?p=101' => self::reponse('text/html', '<html><head><title>Atelier | IVADO</title></head></html>', 'https://ivado.ca/evenements/atelier/'),
+            'https://ivado.ca/en/?p=101' => self::reponse('text/html', '<html><head><title>Workshop | IVADO</title></head></html>', 'https://ivado.ca/en/events/workshop/'),
         ]);
     }
 
@@ -417,9 +421,10 @@ final class CollecteTest extends TestCase {
         $this->assertSame([1, 1, []], [$ligne['lus'], $ligne['crees'], $ligne['erreurs']]);
         $this->assertSame([1, 1], [$ligne['appariees_en'], $ligne['orphelines_en']]);
         $this->assertContains('https://ivado.ca/en/events/feed/', $this->demandes);
-        $this->assertContains('https://ivado.ca/?p=101', $this->demandes);
+        $this->assertContains('https://ivado.ca/en/?p=101', $this->demandes);
+        $this->assertNotContains('https://ivado.ca/?p=101', $this->demandes);
         // L'anglaise orpheline n'est pas résolue : aucune fiche connue à compléter.
-        $this->assertNotContains('https://ivado.ca/?p=102', $this->demandes);
+        $this->assertNotContains('https://ivado.ca/en/?p=102', $this->demandes);
         $atelier = $entrepot->trouver_par_cle_source('ivado:100');
         $this->assertSame(['Atelier', 'https://ivado.ca/evenements/atelier/', 'Résumé français'], [$atelier->titre, $atelier->url, $atelier->resume]);
         $this->assertSame(['Workshop', 'https://ivado.ca/en/events/workshop/', 'English summary'], [$atelier->titre_en, $atelier->url_en, $atelier->resume_en]);
@@ -433,13 +438,34 @@ final class CollecteTest extends TestCase {
         $this->assertSame('https://ivado.ca/en/events/workshop/', $entrepot->trouver_par_cle_source('ivado:100')->url_en);
     }
 
+    public function test_ivado_titre_anglais_copie_du_francais_relu_et_corrige(): void {
+        // Fiche enregistrée par la 0.6.1 : l'adresse courte sans « /en/ » avait donné le titre et l'adresse français.
+        $entrepot = new EntrepotMemoire();
+        $this->servir_ivado();
+        Collecte::collecter_source(Sources::par_defaut()['ivado'], new Depot($entrepot), new Pertinence());
+        $atelier = $entrepot->trouver_par_cle_source('ivado:100');
+        $entrepot->mettre_a_jour($atelier->id, ['titre_en' => 'Atelier', 'url_en' => 'https://ivado.ca/evenements/atelier/']);
+
+        $this->demandes = [];
+        $ligne = Collecte::collecter_source(Sources::par_defaut()['ivado'], new Depot($entrepot), new Pertinence());
+        $this->assertSame([1, []], [$ligne['appariees_en'], $ligne['erreurs']]);
+        $this->assertContains('https://ivado.ca/en/?p=101', $this->demandes);
+        $atelier = $entrepot->trouver_par_cle_source('ivado:100');
+        $this->assertSame(['Workshop', 'https://ivado.ca/en/events/workshop/'], [$atelier->titre_en, $atelier->url_en]);
+
+        // Corrigé : la page n'est plus relue aux collectes suivantes.
+        $this->demandes = [];
+        Collecte::collecter_source(Sources::par_defaut()['ivado'], new Depot($entrepot), new Pertinence());
+        $this->assertSame([], array_values(array_filter($this->demandes, static fn(string $u): bool => str_contains($u, '?p='))));
+    }
+
     public function test_ivado_page_anglaise_en_erreur_consignee(): void {
         $entrepot = new EntrepotMemoire();
-        $this->servir_ivado(['https://ivado.ca/?p=101' => self::reponse('', '', 'https://ivado.ca/?p=101', 503, 'Réponse HTTP 503')]);
+        $this->servir_ivado(['https://ivado.ca/en/?p=101' => self::reponse('', '', 'https://ivado.ca/en/?p=101', 503, 'Réponse HTTP 503')]);
         $ligne = Collecte::collecter_source(Sources::par_defaut()['ivado'], new Depot($entrepot), new Pertinence());
         $this->assertSame([1, 0], [$ligne['crees'], $ligne['appariees_en']]);
         $this->assertCount(1, $ligne['erreurs']);
-        $this->assertStringContainsString('?p=101', $ligne['erreurs'][0]);
+        $this->assertStringContainsString('/en/?p=101', $ligne['erreurs'][0]);
         $this->assertSame(['Atelier', ''], [$entrepot->trouver_par_cle_source('ivado:100')->titre, $entrepot->trouver_par_cle_source('ivado:100')->titre_en]);
     }
 
@@ -483,7 +509,7 @@ final class CollecteTest extends TestCase {
         $ligne = Collecte::collecter_source(Sources::par_defaut()['ivado'], new Depot($entrepot), new Pertinence());
         $this->assertSame(1, $ligne['crees']);
         $this->assertContains('https://ivado.ca/?p=100', $this->demandes);
-        $this->assertNotContains('https://ivado.ca/?p=101', $this->demandes);
+        $this->assertNotContains('https://ivado.ca/en/?p=101', $this->demandes);
         $this->assertSame([0, []], [$ligne['appariees_en'], $ligne['erreurs']]);
         $this->assertSame('', $entrepot->trouver_par_cle_source('ivado:100')->titre_en);
     }

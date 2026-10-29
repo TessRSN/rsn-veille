@@ -80,6 +80,15 @@ final class LecteursHtmlTest extends TestCase {
         $this->assertSame(['IA en santé 2026', 'https://ivado.ca/evenements/ia-en-sante-2026/'], [$f->titre, $f->url]);
     }
 
+    public function test_ivado_adresse_courte_anglaise_avec_en(): void {
+        // IVADO renvoie « ?p=id » sans « /en/ » vers la page française, même pour un identifiant anglais.
+        $r = (new LecteurIvado())->lire($this->fixture('ivado.html'), ['langue' => 'en'] + self::IVADO + ['flux_evenements' => $this->fixture('ivado_ev.xml')]);
+        $this->assertNotEmpty($r->fiches);
+        foreach ($r->fiches as $f) {
+            $this->assertStringStartsWith('https://ivado.ca/en/?p=', $f->url);
+        }
+    }
+
     public function test_ivado_regroupement_des_seances(): void {
         $r = (new LecteurIvado())->lire($this->fixture('ivado.html'), self::IVADO);
         $par_cle = [];

@@ -501,15 +501,16 @@ final class Collecte {
     }
 
     /**
-     * Vrai si la page de l'événement anglais d'IVADO doit être lue : la fiche connue n'a pas de titre anglais,
-     * ou l'anglaise donne une adresse finale différente de l'adresse anglaise enregistrée. L'adresse courte
-     * « ?p=id » que rend le calendrier n'est pas comparée : elle diffère toujours de l'adresse finale enregistrée.
+     * Vrai si la page de l'événement anglais d'IVADO doit être lue : la fiche connue n'a pas de titre anglais, ou son
+     * titre anglais est le titre français (la 0.6.1 lisait la page française par « ?p=id » sans « /en/ »), ou
+     * l'anglaise donne une adresse finale différente de l'adresse anglaise enregistrée. L'adresse courte
+     * « ?p=id » ou « /en/?p=id » que rend le calendrier n'est pas comparée : elle diffère toujours de l'adresse finale.
      */
     private static function page_anglaise_a_lire(Fiche $connue, Fiche $anglaise): bool {
-        if ($connue->titre_en === '') {
+        if ($connue->titre_en === '' || $connue->titre_en === $connue->titre) {
             return true;
         }
-        $courte = preg_match('~^https://ivado\.ca/\?p=\d+$~', $anglaise->url) === 1;
+        $courte = preg_match('~^https://ivado\.ca/(?:en/)?\?p=\d+$~', $anglaise->url) === 1;
         return !$courte && $connue->url_en !== $anglaise->url;
     }
 
