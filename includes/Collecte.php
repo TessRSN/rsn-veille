@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace RSN\Veille;
 
+use RSN\Veille\Lecteurs\Echeance;
 use RSN\Veille\Lecteurs\Lecteur;
 use RSN\Veille\Lecteurs\LecteurFrqEvenements;
 use RSN\Veille\Lecteurs\LecteurIcal;
@@ -35,6 +36,9 @@ final class Collecte {
     public const CROCHET_NUIT = 'rsn_veille_nuit';
     public const CROCHET_SOURCE = 'rsn_veille_source';
     public const VERROU = 'rsn_veille_collecte_en_cours';
+
+    /** Pages d'appels lues au plus par source et par collecte pour y chercher une date limite absente du flux. */
+    public const PAGES_APPELS_PAR_SOURCE = 8;
 
     /** Délais avant la première source et entre deux sources, en secondes. */
     private const DELAI_PREMIERE = 60;
@@ -382,6 +386,9 @@ final class Collecte {
                     array_push($ligne['erreurs'], ...$resolution['erreurs']);
                     $resolutions['reste'] -= self::tentatives($resolution);
                 } else {
+                    if ($type === 'rss' && ($source['mode'] ?? '') === 'appels') {
+                        self::chercher_echeances($resultat->fiches, $depot);
+                    }
                     // Fiche par fiche (comme integrer_resultat) : les compteurs restent justes après une exception.
                     foreach ($resultat->fiches as $fiche) {
                         self::integrer_fiche($fiche, $source, $depot, $pertinence, $compteurs);
@@ -556,6 +563,59 @@ final class Collecte {
     }
 
     /** Intègre une fiche (voir `integrer_resultat`) et incrémente le compteur correspondant. */
+    /**
+     * Appels d'un flux sans date limite dans leur texte (le FRQ ne publie dans son flux que « The post … appeared
+     * first ») : la page de l'appel est lue et sa zone principale (<main>, sinon <article>, sinon <body>, sans menus ni
+     * pied de page) passée à `Echeance::trouver`, avec la publication pour référence. Seulement les appels publiés il y
+     * a moins de 30 jours (les autres ne sont plus affichés sans date limite) et dont la fiche connue n'a pas déjà une
+     * échéance, au plus PAGES_APPELS_PAR_SOURCE par collecte. Une page illisible ne change rien et n'est pas une erreur :
+     * l'appel reste « date limite à venir », et sa page est retentée à la collecte suivante.
+     *
+     * @param Fiche[] $fiches
+     */
+    private static function chercher_echeances(array $fiches, Depot $depot): void {
+        $jour = \DateTimeImmutable::createFromFormat('!Y-m-d', \rsn_veille_aujourdhui());
+        $plancher = $jour === false ? '' : $jour->modify('-' . Fiche::JOURS_APPEL_SANS_LIMITE . ' days')->format('Y-m-d');
+        $reste = self::PAGES_APPELS_PAR_SOURCE;
+        foreach ($fiches as $fiche) {
+            if ($reste <= 0) {
+                return;
+            }
+            if ($fiche->echeance !== null || preg_match('~^https?://~i', $fiche->url) !== 1 || (string) $fiche->debut < $plancher) {
+                continue;
+            }
+            $connue = $depot->fiche_de_cle($fiche);
+            if ($connue !== null && ($connue->echeance ?? '') !== '') {
+                continue;
+            }
+            $reste--;
+            try {
+                $reponse = self::obtenir($fiche->url, ['accept' => 'html']);
+            } catch (\Throwable $e) {
+                continue;
+            }
+            if (($reponse['erreur'] ?? null) !== null || !Http::est_html($reponse)) {
+                continue;
+            }
+            $echeance = Echeance::trouver(self::texte_principal((string) $reponse['corps']), (string) $fiche->debut);
+            if ($echeance !== null && $echeance >= (string) $fiche->debut) {
+                $fiche->echeance = $echeance;
+                $fiche->fin = $echeance;
+            }
+        }
+    }
+
+    /** Texte de la zone principale d'une page : <main>, sinon <article>, sinon <body> ; sans scripts, menus ni pied. */
+    private static function texte_principal(string $html): string {
+        $html = (string) preg_replace('~<(script|style|nav|header|footer|aside|noscript)\b[^>]*>.*?</\1>~is', ' ', $html);
+        foreach (['main', 'article', 'body'] as $balise) {
+            if (preg_match('~<' . $balise . '\b[^>]*>(.*)</' . $balise . '>~is', $html, $m) === 1) {
+                return $m[1];
+            }
+        }
+        return $html;
+    }
+
     private static function integrer_fiche(Fiche $fiche, array $source, Depot $d, Pertinence $p, array &$compteurs): void {
         if (!$d->existe($fiche)) {
             $texte = $fiche->titre . ' ' . $fiche->resume;
