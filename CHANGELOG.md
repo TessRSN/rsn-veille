@@ -1,5 +1,17 @@
 # Journal des modifications
 
+## 0.7.0 (2026-11-02)
+
+Dates de l'agenda, à la demande de l'équipe : les fiches qui s'étalent dans le temps n'occupent plus le haut du mois en cours.
+
+### Agenda (`assets/veille.js`)
+- **Série de plus d'une semaine** (fin à plus de sept jours du début) : classée à sa dernière date, dans le mois de sa fin seulement (elle ne compte plus dans les mois qu'elle traverse). La période complète reste affichée (« Du 4 septembre au 18 décembre 2026 ») ; la tuile montre la fin (« →18 déc. »), avec « en cours » une fois commencée. Un événement de deux ou trois jours reste classé à son début.
+- **Appel sans date limite connue** : dans un dernier groupe, « Date limite à venir », après tous les mois (compté dans « Plus tard »), au lieu de la date du jour. Un appel avec date limite reste classé à sa date limite, comme avant.
+
+### Collecte
+- **Date limite lue sur la page de l'appel** : quand le flux d'un appel ne donne pas de date limite (le flux du FRQ ne contient que « The post … appeared first »), la collecte lit la page de l'appel et cherche la date limite dans sa zone principale (`<main>`, sinon `<article>`, sinon `<body>`, sans menus ni pied de page). Seulement pour les appels publiés il y a moins de 30 jours dont la fiche connue n'a pas déjà une date limite, au plus 8 pages par source et par nuit (`Collecte::PAGES_APPELS_PAR_SOURCE`). Une page illisible est retentée la nuit suivante, sans erreur au journal. Exemple : les Chaires de RISA du FRQ, date limite du 2 février 2027.
+- Tests : 4 nouveaux (date trouvée puis page plus relue, page en erreur, plafond et appels anciens, date hors de la zone principale ignorée). Numéro de version 0.7.0.
+
 ## 0.6.2 (2026-10-29)
 
 Correction de la version anglaise des événements IVADO. Sur la page anglaise de l'agenda, « IA en santé 2026 » gardait son titre français au lieu de « AI for Health 2026 ».

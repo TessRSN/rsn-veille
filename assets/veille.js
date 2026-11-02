@@ -76,6 +76,8 @@ function animer(racine, noeudDonnees) {
     const meme = !k.fin || k.fin === k.debut;
     // Série commencée et pas finie : la date de fin avec « en cours », pas un début déjà passé.
     if (enCours(k)) return `<div class="jour">→${b.j}<small>${esc(MOIS[b.m - 1])}<b>${esc(t('en_cours_tuile'))}</b></small></div>`;
+    // Série de plus d'une semaine pas encore commencée : classée à sa fin, la tuile montre cette fin.
+    if (longue(k)) return `<div class="jour">→${b.j}<small>${esc(MOIS[b.m - 1])}<b>${b.a}</b></small></div>`;
     if (meme) return `<div class="jour">${a.j}<small>${esc(MOIS[a.m - 1])}<b>${a.a}</b></small></div>`;
     if (a.m === b.m) return `<div class="jour">${a.j}–${b.j}<small>${esc(MOIS[a.m - 1])}<b>${a.a}</b></small></div>`;
     return `<div class="jour">${a.j}<small>${esc(MOIS[a.m - 1])}<b>${a.a}</b></small></div>`;
@@ -142,9 +144,12 @@ function animer(racine, noeudDonnees) {
   const limite = k => k.echeance && ISO.test(k.echeance) ? k.echeance : (k.fin && k.fin !== k.debut ? k.fin : '');
   // Événement commencé et pas fini : classé à la date du jour, pas à son début.
   const enCours = k => k.type === 'evenement' && !!k.fin && k.debut < AUJ && k.fin >= AUJ;
-  // Clé de tri et de regroupement par mois : la date limite d'un appel (sinon sa publication, ou aujourd'hui si elle
-  // est déjà passée), le début d'un événement (aujourd'hui s'il est en cours).
-  const cleTri = k => k.type === 'appel' ? (limite(k) || (k.debut < AUJ ? AUJ : k.debut)) : (enCours(k) ? AUJ : k.debut);
+  // Clé de tri et de regroupement par mois : la date limite d'un appel ; un appel sans date limite connue va dans le
+  // dernier groupe, « Date limite à venir » (SANS_LIMITE), au lieu d'occuper le haut du mois en cours. Un événement :
+  // la fin d'une série de plus d'une semaine (elle s'affiche à sa dernière date, avec sa période complète), sinon son
+  // début (aujourd'hui s'il est en cours).
+  const SANS_LIMITE = '9999-12-31';
+  const cleTri = k => k.type === 'appel' ? (limite(k) || SANS_LIMITE) : (longue(k) ? k.fin : enCours(k) ? AUJ : k.debut);
   // Clé de la bande « À la une » : la date limite d'un appel, le début d'un événement (sans égard à l'état « en cours »).
   const cleUne = k => k.type === 'appel' ? limite(k) : k.debut;
   // Un appel est passé quand sa date limite l'est ; sans date limite, le serveur décide (publié il y a moins de 30 jours).
@@ -171,7 +176,8 @@ function animer(racine, noeudDonnees) {
   // (leur clé de tri n'est jamais antérieure à aujourd'hui) ; il ne sert que de garde-fou.
   const moisClasse = k => (cleTri(k) < AUJ ? AUJ : cleTri(k)).slice(0, 7);
   // Un événement compte dans chaque mois qu'il traverse, un appel dans le mois de sa date limite.
-  const dansMois = (k, m) => k.type === 'appel' ? moisClasse(k) === m : k.debut.slice(0, 7) <= m && (k.fin || k.debut).slice(0, 7) >= m;
+  // Une série de plus d'une semaine ne compte que dans le mois de sa fin, là où elle est classée.
+  const dansMois = (k, m) => k.type === 'appel' || longue(k) ? moisClasse(k) === m : k.debut.slice(0, 7) <= m && (k.fin || k.debut).slice(0, 7) >= m;
   let vue = 'liste', calMois = AUJ.slice(0, 7), calJour = '';
 
   const parType = k => !filtres.type || k.type === filtres.type;
@@ -203,7 +209,8 @@ function animer(racine, noeudDonnees) {
     for (const [cle, G] of groupes) {
       const x = d(cle + '-01');
       const aside = [nbEv(G) && n('nb_evenements', nbEv(G)), nbAp(G) && n('nb_appels', nbAp(G))].filter(Boolean).map(esc).join(' · ');
-      html += `<section class="bloc"><div class="shead"><h2>${HEX}${cap(MOIS_LONG[x.m - 1])} ${x.a}</h2><span class="aside">${aside}</span></div><div class="frise">${G.map(k => k.type === 'appel' ? carteAppel(k) : carteEv(k, anciens)).join('')}</div></section>`;
+      const intitule = cle === SANS_LIMITE.slice(0, 7) ? esc(t('date_limite_a_venir')) : `${cap(MOIS_LONG[x.m - 1])} ${x.a}`;
+      html += `<section class="bloc"><div class="shead"><h2>${HEX}${intitule}</h2><span class="aside">${aside}</span></div><div class="frise">${G.map(k => k.type === 'appel' ? carteAppel(k) : carteEv(k, anciens)).join('')}</div></section>`;
     }
     $('#liste-agenda').innerHTML = L.length ? html : `<div class="vide">${esc(t('aucun_element_filtres'))}</div>`;
     if (anciens) {

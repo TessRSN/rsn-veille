@@ -514,6 +514,86 @@ final class CollecteTest extends TestCase {
         $this->assertSame('', $entrepot->trouver_par_cle_source('ivado:100')->titre_en);
     }
 
+    // --- Date limite lue sur la page d'un appel (0.7.0) ---
+
+    /** Flux d'appels du FRQ : un article par entrée (catégorie Appel), sans date limite dans le texte du flux. */
+    private static function flux_appels(array $articles): string {
+        $items = '';
+        foreach ($articles as $lien => [$titre, $date]) {
+            $items .= '<item><title>' . $titre . '</title><link>' . $lien . '</link><category>Appel</category>'
+                . '<description>The post ' . $titre . ' appeared first on Fonds de recherche du Québec.</description>'
+                . '<pubDate>' . $date . '</pubDate></item>';
+        }
+        return '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>FRQ</title>' . $items . '</channel></rss>';
+    }
+
+    private static function page_appel(string $texte): array {
+        return self::reponse('text/html', '<html><body><nav>Avant le 1er mars : menu</nav><main><h1>Appel</h1><p>' . $texte . '</p></main></body></html>');
+    }
+
+    public function test_appel_sans_date_limite_dans_le_flux_la_prend_sur_sa_page(): void {
+        $entrepot = new EntrepotMemoire();
+        $lien = 'https://frq.gouv.qc.ca/chaires-risa/';
+        $this->servir([
+            'https://frq.gouv.qc.ca/feed/' => self::reponse('application/rss+xml', self::flux_appels([$lien => ['Chaires de recherche en santé numérique', 'Tue, 20 Oct 2026 10:00:00 +0000']])),
+            $lien => self::page_appel('Date limite de dépôt de la demande : 2 février 2027. Début du financement : 1er août 2027.'),
+        ]);
+        $ligne = Collecte::collecter_source(Sources::par_defaut()['frq_appels'], new Depot($entrepot), new Pertinence());
+
+        $this->assertSame([1, []], [$ligne['crees'], $ligne['erreurs']]);
+        $this->assertContains($lien, $this->demandes);
+        $appel = $entrepot->lister('a_approuver')[0] ?? $entrepot->lister('publie')[0];
+        $this->assertSame(['2027-02-02', '2027-02-02'], [$appel->echeance, $appel->fin]);
+
+        // Date limite connue : la page n'est plus relue.
+        $this->demandes = [];
+        Collecte::collecter_source(Sources::par_defaut()['frq_appels'], new Depot($entrepot), new Pertinence());
+        $this->assertNotContains($lien, $this->demandes);
+    }
+
+    public function test_page_d_appel_en_erreur_sans_effet_sur_la_collecte(): void {
+        $entrepot = new EntrepotMemoire();
+        $lien = 'https://frq.gouv.qc.ca/chaires-risa/';
+        $this->servir(['https://frq.gouv.qc.ca/feed/' => self::reponse('application/rss+xml', self::flux_appels([$lien => ['Chaires de recherche en santé numérique', 'Tue, 20 Oct 2026 10:00:00 +0000']]))]);
+        $ligne = Collecte::collecter_source(Sources::par_defaut()['frq_appels'], new Depot($entrepot), new Pertinence());
+        $this->assertSame([1, []], [$ligne['crees'], $ligne['erreurs']]);
+        $appel = $entrepot->lister('a_approuver')[0] ?? $entrepot->lister('publie')[0];
+        $this->assertNull($appel->echeance);
+    }
+
+    public function test_page_d_appel_lue_seulement_dans_les_30_jours_et_au_plus_8_par_source(): void {
+        $articles = [];
+        $pages = [];
+        for ($i = 1; $i <= 10; $i++) {
+            $lien = 'https://frq.gouv.qc.ca/appel-' . $i . '/';
+            $articles[$lien] = ['Appel ' . $i . ' en santé numérique', 'Tue, 20 Oct 2026 10:00:00 +0000'];
+            $pages[$lien] = self::page_appel('Rien à signaler.');
+        }
+        // Publié il y a plus de 30 jours : il ne serait plus affiché, sa page n'est pas lue.
+        $ancien = 'https://frq.gouv.qc.ca/ancien/';
+        $articles[$ancien] = ['Ancien appel en santé numérique', 'Mon, 07 Sep 2026 10:00:00 +0000'];
+        $this->servir(['https://frq.gouv.qc.ca/feed/' => self::reponse('application/rss+xml', self::flux_appels($articles))] + $pages);
+        Collecte::collecter_source(Sources::par_defaut()['frq_appels'] + ['limite' => 20], new Depot(new EntrepotMemoire()), new Pertinence());
+
+        $lues = array_values(array_filter($this->demandes, static fn(string $u): bool => $u !== 'https://frq.gouv.qc.ca/feed/'));
+        $this->assertCount(Collecte::PAGES_APPELS_PAR_SOURCE, $lues);
+        $this->assertSame(8, Collecte::PAGES_APPELS_PAR_SOURCE);
+        $this->assertNotContains($ancien, $this->demandes);
+    }
+
+    public function test_date_limite_hors_du_contenu_principal_ignoree(): void {
+        // « Avant le 1er mars » est dans le menu (<nav>) : seule la zone principale de la page compte.
+        $entrepot = new EntrepotMemoire();
+        $lien = 'https://frq.gouv.qc.ca/chaires-risa/';
+        $this->servir([
+            'https://frq.gouv.qc.ca/feed/' => self::reponse('application/rss+xml', self::flux_appels([$lien => ['Chaires de recherche en santé numérique', 'Tue, 20 Oct 2026 10:00:00 +0000']])),
+            $lien => self::page_appel('Le programme est présenté ici.'),
+        ]);
+        Collecte::collecter_source(Sources::par_defaut()['frq_appels'], new Depot($entrepot), new Pertinence());
+        $appel = $entrepot->lister('a_approuver')[0] ?? $entrepot->lister('publie')[0];
+        $this->assertNull($appel->echeance);
+    }
+
     // --- Configuration ---
 
     public function test_lecteur_selon_le_type(): void {
