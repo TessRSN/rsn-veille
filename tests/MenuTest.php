@@ -93,7 +93,7 @@ final class MenuTest extends TestCase {
         $this->assertSame(wp_create_nonce('rsn_veille_file'), $config['nonce']);
         $this->assertSame('rsn_veille_changer_statut', $config['action']);
         $this->assertSame(wp_create_nonce('rsn_veille_radar'), $config['radar']['nonce']);
-        $this->assertSame(['garder' => 'rsn_veille_garder', 'ignorer' => 'rsn_veille_ignorer', 'retirer' => 'rsn_veille_retirer_gardee'], $config['radar']['actions']);
+        $this->assertSame(['garder' => 'rsn_veille_garder', 'ignorer' => 'rsn_veille_ignorer', 'retirer' => 'rsn_veille_retirer_gardee', 'retablir' => 'rsn_veille_retablir_ignoree'], $config['radar']['actions']);
         $this->assertSame(['copie', 'code', 'erreur', 'confirmer_vider'], array_keys($config['infolettre']['textes']));
     }
 

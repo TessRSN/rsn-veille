@@ -105,10 +105,11 @@
 })();
 
 /**
- * RSN Veille : radar des nouvelles. Les boutons (`data-act` : garder, ignorer, retirer) envoient
+ * RSN Veille : radar des nouvelles. Les boutons (`data-act` : garder, ignorer, retirer, retablir) envoient
  * l'adresse de la nouvelle en fetch vers admin-ajax.php ; le serveur reprend titre et résumé dans son
- * cache. Au succès, la ligne disparaît et le compteur suit ; en cas d'échec, le message s'affiche
- * dans la zone `role="status"`. Aucune dépendance.
+ * cache. Au succès, la ligne disparaît et les compteurs suivent ; en cas d'échec, le message s'affiche
+ * dans la zone `role="status"`. « Remettre dans le radar » (retablir) recharge la page quand la nouvelle
+ * est encore dans les flux, pour la montrer à sa place. Aucune dépendance.
  */
 (function () {
 	'use strict';
@@ -185,6 +186,24 @@
 					compteur.textContent = json.data.libelle;
 				}
 				retirerLigne(ligne);
+				// Section « Nouvelles ignorées » : son compteur suit ; vide, elle disparaît.
+				var ignorees = page.querySelector('[data-section="ignorees"]');
+				if (ignorees) {
+					if (!ignorees.querySelector('li[data-url]')) {
+						ignorees.parentNode.removeChild(ignorees);
+					} else if (json.data.libelle_ignorees && acte !== 'ignorer') {
+						ignorees.querySelector('[data-compteur-ignorees]').textContent = json.data.libelle_ignorees;
+					}
+				}
+				if (acte === 'retablir') {
+					annoncer(json.data.message || config.textes.retablie, false);
+					if (json.data.recharger) {
+						window.setTimeout(function () {
+							window.location.reload();
+						}, 700);
+					}
+					return;
+				}
 				annoncer(acte === 'garder' ? config.textes.gardee : (acte === 'ignorer' ? config.textes.ignoree : config.textes.retiree), false);
 			})
 			.catch(function (erreur) {

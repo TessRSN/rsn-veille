@@ -46,6 +46,13 @@ final class HttpTest extends \PHPUnit\Framework\TestCase {
 
     public function test_reponse_en_erreur_n_est_jamais_exploitable(): void {
         $refus = self::reponse('application/rss+xml', '<rss></rss>', 403, 'Réponse HTTP 403');
+        // Message d'erreur (0.8.0) : une page de vérification anti-robots est dite en clair, sans contournement.
+        $this->assertSame('Réponse HTTP 404', Http::message_erreur(404, '<html>Introuvable</html>'));
+        $this->assertSame('Réponse HTTP 403', Http::message_erreur(403, '<html>Accès refusé</html>'));
+        $verification = '<!DOCTYPE html><html><head><title>Just a moment...</title></head><body><script src="https://challenges.cloudflare.com/x"></script></body></html>';
+        $this->assertSame('Le site refuse les lectures automatiques (protection contre les robots, réponse HTTP 403).', Http::message_erreur(403, $verification));
+        $this->assertSame('Le site refuse les lectures automatiques (protection contre les robots, réponse HTTP 503).', Http::message_erreur(503, $verification));
+        $this->assertNull(Http::message_erreur(200, $verification));
         $this->assertFalse(Http::est_flux($refus));
         $this->assertFalse(Http::est_json(self::reponse('application/json', '{"a":1}', 500, 'Réponse HTTP 500')));
         $this->assertFalse(Http::est_ical(self::reponse('text/calendar', 'BEGIN:VCALENDAR', 404, 'Réponse HTTP 404')));
