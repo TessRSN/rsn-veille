@@ -79,40 +79,128 @@ final class PageRadarTest extends TestCase {
 
     // --- Rendu ---
 
-    private static function options(): array {
-        return ['url_action' => 'https://exemple.test/wp-admin/admin-post.php', 'nonce' => 'jeton-x'];
+    private static function options(array $en_plus = []): array {
+        return $en_plus + ['url_action' => 'https://exemple.test/wp-admin/admin-post.php', 'nonce' => 'jeton-x', 'url_page' => 'https://exemple.test/wp-admin/admin.php?page=rsn-veille-radar'];
     }
 
-    public function test_rendu_gardees_en_tete_puis_radar_par_source(): void {
-        $donnees = ['genere_le' => '2026-10-25 09:00', 'erreurs' => [], 'nouvelles' => [
-            self::nouvelle(1), self::nouvelle(2, ['source' => 'Autre source', 'statut_radar' => 'a_trier']), self::nouvelle(3),
+    private static function lot(): array {
+        return ['genere_le' => '2026-10-25 09:00', 'erreurs' => [], 'nouvelles' => [
+            self::nouvelle(1), self::nouvelle(2, ['source' => 'Autre source', 'statut_radar' => 'a_trier']), self::nouvelle(3), self::nouvelle(4),
         ]];
+    }
+
+    public function test_onglets_avec_compteurs_et_onglet_a_trier_par_defaut(): void {
         $gardees = [self::nouvelle(3) + ['gardee_le' => '2026-10-25 08:00']];
-        $html = PageRadar::page_html($donnees, $gardees, [], self::options());
-        $this->assertLessThan(strpos($html, 'Autre source'), strpos($html, 'data-section="gardees"'));
-        $this->assertLessThan(strpos($html, 'data-section="radar"'), strpos($html, 'data-section="gardees"'));
-        $this->assertStringContainsString('1 gardée', $html);
-        $this->assertStringContainsString('Retirer', $html);
-        $this->assertStringContainsString('Garder pour l&#039;infolettre', $html);
-        $this->assertStringContainsString('Ignorer', $html);
+        $html = PageRadar::page_html(self::lot(), $gardees, ['https://x.test/n4'], self::options());
+        // Trois onglets, comme la file d'approbation, avec leur nombre.
+        $this->assertStringContainsString('<nav class="nav-tab-wrapper"', $html);
+        $this->assertMatchesRegularExpression('~nav-tab nav-tab-active" aria-current="page" href="[^"]*onglet=a_trier[^"]*">À trier <span class="count" data-compteur="a_trier">\(2\)</span>~', $html);
+        $this->assertMatchesRegularExpression('~href="[^"]*onglet=gardees[^"]*">Gardées pour l&#039;infolettre <span class="count" data-compteur="gardees">\(1\)</span>~', $html);
+        $this->assertMatchesRegularExpression('~href="[^"]*onglet=ecartees[^"]*">Écartées <span class="count" data-compteur="ecartees">\(1\)</span>~', $html);
+        // Onglet « À trier » : les nouvelles ni gardées ni écartées, groupées par source.
+        $this->assertStringContainsString('data-section="radar"', $html);
+        $this->assertStringNotContainsString('data-section="gardees"', $html);
+        $this->assertStringNotContainsString('data-section="ecartees"', $html);
+        $this->assertStringContainsString('Titre 1', $html);
+        $this->assertStringContainsString('Autre source', $html);
+        $this->assertStringNotContainsString('Titre 3', $html);
+        $this->assertStringNotContainsString('Titre 4', $html);
+        $this->assertStringContainsString('Garder pour l&#039;infolettre</button>', $html);
+        $this->assertStringContainsString('data-act="ignorer">Écarter</button>', $html);
         $this->assertStringContainsString('Repérée', $html);
-        $this->assertStringContainsString('À trier', $html);
         $this->assertStringContainsString('20 octobre 2026', $html);
-        // Une nouvelle gardée n'est pas aussi dans le radar : « Titre 3 » en un seul <li> de radar exclu.
-        $radar = substr($html, (int) strpos($html, 'data-section="radar"'));
-        $this->assertStringNotContainsString('Titre 3', $radar);
         $this->assertSame(1, substr_count($html, 'role="status"'));
         $this->assertStringContainsString('rel="noopener noreferrer"', $html);
-        $this->assertStringContainsString('target="_blank"', $html);
         $this->assertStringContainsString('value="jeton-x"', $html);
     }
 
-    public function test_rendu_exclut_les_ignorees(): void {
-        $donnees = ['genere_le' => '', 'erreurs' => [], 'nouvelles' => [self::nouvelle(1), self::nouvelle(2)]];
-        $html = PageRadar::page_html($donnees, [], ['https://x.test/n1'], self::options());
+    public function test_onglet_gardees(): void {
+        $gardees = [self::nouvelle(3) + ['gardee_le' => '2026-10-25 08:00']];
+        $html = PageRadar::page_html(self::lot(), $gardees, [], self::options(['onglet' => 'gardees']));
+        $this->assertMatchesRegularExpression('~nav-tab nav-tab-active" aria-current="page" href="[^"]*onglet=gardees~', $html);
+        $this->assertStringContainsString('data-section="gardees"', $html);
+        $this->assertStringNotContainsString('data-section="radar"', $html);
+        $this->assertStringContainsString('Titre 3', $html);
         $this->assertStringNotContainsString('Titre 1', $html);
+        $this->assertStringContainsString('data-act="retirer"', $html);
+        $this->assertStringContainsString('gardée le 25 octobre 2026', $html);
+        $vide = PageRadar::page_html(self::lot(), [], [], self::options(['onglet' => 'gardees']));
+        $this->assertStringContainsString('Aucune nouvelle gardée', $vide);
+    }
+
+    public function test_onglet_ecartees_les_plus_recentes_d_abord(): void {
+        $details = [
+            'https://x.test/n1' => ['titre' => 'Titre 1', 'date' => '2026-10-20', 'source' => 'Source X', 'organisateur' => 'Organisme X', 'resume' => 'Résumé 1', 'ignoree_le' => '2026-11-09 10:00'],
+        ];
+        $html = PageRadar::page_html(self::lot(), [], ['https://x.test/n1', 'https://x.test/ancienne'], self::options(['onglet' => 'ecartees']), $details);
+        $this->assertMatchesRegularExpression('~data-compteur="ecartees">\(2\)~', $html);
+        $section = substr($html, (int) strpos($html, 'data-section="ecartees"'));
+        // La plus récemment écartée (fin de la liste) en premier ; sans détails, l'adresse sert de titre.
+        $this->assertLessThan(strpos($section, 'Titre 1'), strpos($section, 'https://x.test/ancienne'));
+        $this->assertStringContainsString('data-act="retablir"', $section);
+        $this->assertStringContainsString('Remettre dans le radar', $section);
+        $this->assertStringContainsString('écartée le 9 novembre 2026', $section);
+        // « Garder » seulement quand le titre est connu (sinon rien à garder).
+        $this->assertSame(1, substr_count($section, 'data-act="garder"'));
+        $this->assertStringNotContainsString('data-section="radar"', $html);
+        $vide = PageRadar::page_html(self::lot(), [], [], self::options(['onglet' => 'ecartees']));
+        $this->assertStringContainsString('Aucune nouvelle écartée', $vide);
+    }
+
+    public function test_onglet_inconnu_vaut_a_trier(): void {
+        $html = PageRadar::page_html(self::lot(), [], [], self::options(['onglet' => 'n-importe-quoi']));
+        $this->assertStringContainsString('data-section="radar"', $html);
+    }
+
+    public function test_dans_la_periode(): void {
+        $n = [self::nouvelle(1, ['date' => '2026-10-01']), self::nouvelle(2, ['date' => '2026-10-15']), self::nouvelle(3, ['date' => '2026-11-02']), self::nouvelle(4, ['date' => ''])];
+        $urls = static fn(array $l): array => array_column($l, 'url');
+        $this->assertSame(['https://x.test/n1', 'https://x.test/n2', 'https://x.test/n3', 'https://x.test/n4'], $urls(PageRadar::dans_la_periode($n, '', '')));
+        $this->assertSame(['https://x.test/n2', 'https://x.test/n3'], $urls(PageRadar::dans_la_periode($n, '2026-10-15', '')));
+        $this->assertSame(['https://x.test/n1', 'https://x.test/n2'], $urls(PageRadar::dans_la_periode($n, '', '2026-10-15')));
+        $this->assertSame(['https://x.test/n2'], $urls(PageRadar::dans_la_periode($n, '2026-10-10', '2026-10-31')));
+        // Bornes inversées : remises dans l'ordre. Date illisible : ignorée.
+        $this->assertSame(['https://x.test/n2'], $urls(PageRadar::dans_la_periode($n, '2026-10-31', '2026-10-10')));
+        $this->assertSame(['https://x.test/n1', 'https://x.test/n2'], $urls(PageRadar::dans_la_periode($n, 'hier', '2026-10-15')));
+    }
+
+    public function test_filtre_par_dates_sur_chaque_onglet(): void {
+        $donnees = ['genere_le' => '', 'erreurs' => [], 'nouvelles' => [
+            self::nouvelle(1, ['date' => '2026-10-01']), self::nouvelle(2, ['date' => '2026-10-15']), self::nouvelle(3, ['date' => '2026-11-02']),
+        ]];
+        $html = PageRadar::page_html($donnees, [], [], self::options(['du' => '2026-10-10', 'au' => '2026-10-31']));
+        // Le formulaire garde l'onglet et les dates ; les onglets gardent les dates ; les compteurs restent des totaux.
+        $this->assertStringContainsString('<input type="hidden" name="page" value="rsn-veille-radar">', $html);
+        $this->assertStringContainsString('<input type="hidden" name="onglet" value="a_trier">', $html);
+        $this->assertStringContainsString('name="du" value="2026-10-10"', $html);
+        $this->assertStringContainsString('name="au" value="2026-10-31"', $html);
+        $this->assertMatchesRegularExpression('~onglet=gardees&amp;du=2026-10-10&amp;au=2026-10-31~', $html);
+        $this->assertMatchesRegularExpression('~data-compteur="a_trier">\(3\)~', $html);
         $this->assertStringContainsString('Titre 2', $html);
-        $this->assertStringContainsString('0 gardée', $html);
+        $this->assertStringNotContainsString('Titre 1', $html);
+        $this->assertStringNotContainsString('Titre 3', $html);
+        $this->assertStringContainsString('1 nouvelle publiée du 10 au 31 octobre 2026', $html);
+        $this->assertStringContainsString('Tout afficher', $html);
+        // Gardées et écartées : même filtre, sur la date de publication.
+        $gardees = [self::nouvelle(1, ['date' => '2026-10-01']) + ['gardee_le' => '2026-11-01 08:00'], self::nouvelle(2, ['date' => '2026-10-15']) + ['gardee_le' => '2026-11-01 08:00']];
+        $html = PageRadar::page_html($donnees, $gardees, [], self::options(['onglet' => 'gardees', 'du' => '2026-10-10']));
+        $this->assertStringContainsString('Titre 2', $html);
+        $this->assertStringNotContainsString('Titre 1', $html);
+        $this->assertStringContainsString('1 nouvelle publiée depuis le 10 octobre 2026', $html);
+        $details = ['https://x.test/n1' => ['titre' => 'Titre 1', 'date' => '2026-10-01'], 'https://x.test/n2' => ['titre' => 'Titre 2', 'date' => '2026-10-15']];
+        $html = PageRadar::page_html($donnees, [], ['https://x.test/n1', 'https://x.test/n2'], self::options(['onglet' => 'ecartees', 'au' => '2026-10-05']), $details);
+        $this->assertStringContainsString('Titre 1', $html);
+        $this->assertStringNotContainsString('Titre 2', $html);
+        $this->assertStringContainsString("1 nouvelle publiée jusqu&#039;au 5 octobre 2026", $html);
+        // Sans filtre : ni résumé de période ni « Tout afficher ».
+        $sans = PageRadar::page_html($donnees, [], [], self::options());
+        $this->assertStringNotContainsString('Tout afficher', $sans);
+        $this->assertStringNotContainsString('nouvelle publiée', $sans);
+    }
+
+    public function test_filtre_sans_resultat(): void {
+        $html = PageRadar::page_html(self::lot(), [], [], self::options(['du' => '2027-01-01']));
+        $this->assertStringContainsString('Aucune nouvelle publiée depuis le 1er janvier 2027', $html);
     }
 
     public function test_rendu_echappe_tout(): void {
@@ -120,13 +208,16 @@ final class PageRadarTest extends TestCase {
             'titre' => '<script>alert(1)</script>', 'resume' => '"><img src=x onerror=alert(2)>', 'source' => '<b>Src</b>',
             'organisateur' => '<i>Org</i>', 'url' => 'https://x.test/a?b=1&c="><script>',
         ]);
-        $donnees = ['genere_le' => '<u>maintenant</u>', 'erreurs' => ['<script>erreur</script> : HTTP 403'], 'nouvelles' => [$mechante]];
-        $html = PageRadar::page_html($donnees, [$mechante + ['gardee_le' => 'x']], [], self::options());
-        $this->assertStringNotContainsString('<script', $html);
-        $this->assertStringNotContainsString('<img', $html);
-        $this->assertStringNotContainsString('<b>Src', $html);
-        $this->assertStringNotContainsString('<u>', $html);
-        $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $html);
+        $donnees = ['genere_le' => '<u>maintenant</u>', 'erreurs' => ['<script>erreur</script> : HTTP 403'], 'nouvelles' => [$mechante, self::nouvelle(2, ['titre' => '<b>gras</b>'])]];
+        $details = ['https://x.test/e?b="><script>' => ['titre' => '<script>alert(3)</script>', 'source' => '<b>Src</b>', 'ignoree_le' => '<i>']];
+        foreach (['a_trier', 'gardees', 'ecartees'] as $onglet) {
+            $html = PageRadar::page_html($donnees, [$mechante + ['gardee_le' => 'x']], ['https://x.test/e?b="><script>'], self::options(['onglet' => $onglet, 'du' => '"><script>', 'au' => '<b>']), $details);
+            $this->assertStringNotContainsString('<script', $html);
+            $this->assertStringNotContainsString('<img', $html);
+            $this->assertStringNotContainsString('<b>', $html);
+            $this->assertStringNotContainsString('<u>', $html);
+        }
+        $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', PageRadar::page_html($donnees, [$mechante + ['gardee_le' => 'x']], [], self::options(['onglet' => 'gardees'])));
     }
 
     public function test_rendu_adresse_non_http_jamais_affichee(): void {
@@ -188,7 +279,7 @@ final class PageRadarTest extends TestCase {
             'nonce' => self::jeton(), 'url' => 'https://x.test/n2', 'titre' => 'TITRE FORGÉ', 'resume' => 'FORGÉ',
         ]);
         $this->assertSame(200, $code);
-        $this->assertSame(['ok' => true, 'gardees' => 1, 'libelle' => '1 gardée', 'ignorees' => 0], array_intersect_key($reponse['data'], array_flip(['ok', 'gardees', 'libelle', 'ignorees'])));
+        $this->assertSame(['ok' => true, 'gardees' => 1, 'libelle' => '1 gardée', 'compteurs' => ['a_trier' => 1, 'gardees' => 1, 'ecartees' => 0]], $reponse['data']);
         $this->assertTrue($reponse['success']);
         $gardees = get_option('rsn_veille_nouvelles_gardees');
         $this->assertSame('Titre 2', $gardees[0]['titre']);
@@ -400,39 +491,6 @@ final class PageRadarTest extends TestCase {
         $this->assertSame(['https://x.test/a'], PageRadar::retablir(['https://x.test/a'], 'https://x.test/absente'));
     }
 
-    public function test_rendu_des_ignorees_les_plus_recentes_d_abord(): void {
-        $donnees = ['genere_le' => '', 'erreurs' => [], 'nouvelles' => [self::nouvelle(1), self::nouvelle(2), self::nouvelle(3)]];
-        $details = [
-            'https://x.test/n1' => ['titre' => 'Titre 1', 'date' => '2026-10-20', 'source' => 'Source X', 'organisateur' => 'Organisme X', 'resume' => 'Résumé 1', 'ignoree_le' => '2026-11-09 10:00'],
-        ];
-        $html = PageRadar::page_html($donnees, [], ['https://x.test/n1', 'https://x.test/ancienne'], self::options(), $details);
-        $this->assertStringContainsString('2 nouvelles ignorées', $html);
-        $section = substr($html, (int) strpos($html, 'data-section="ignorees"'));
-        // La plus récemment ignorée (fin de la liste) en premier ; sans détails, l'adresse sert de titre.
-        $this->assertLessThan(strpos($section, 'Titre 1'), strpos($section, 'https://x.test/ancienne'));
-        $this->assertStringContainsString('data-act="retablir"', $section);
-        $this->assertStringContainsString('Remettre dans le radar', $section);
-        $this->assertStringContainsString('ignorée le 9 novembre 2026', $section);
-        // « Garder » seulement quand le titre est connu (sinon rien à garder).
-        $this->assertSame(1, substr_count($section, 'data-act="garder"'));
-        // Dans le radar lui-même, l'ignorée n'apparaît toujours pas.
-        $radar = substr($html, (int) strpos($html, 'data-section="radar"'), (int) strpos($html, 'data-section="ignorees"') - (int) strpos($html, 'data-section="radar"'));
-        $this->assertStringNotContainsString('Titre 1', $radar);
-        $this->assertStringContainsString('Titre 2', $radar);
-    }
-
-    public function test_rendu_sans_ignoree_pas_de_section(): void {
-        $html = PageRadar::page_html(['genere_le' => '', 'erreurs' => [], 'nouvelles' => []], [], [], self::options());
-        $this->assertStringNotContainsString('data-section="ignorees"', $html);
-    }
-
-    public function test_rendu_des_ignorees_echappe(): void {
-        $details = ['https://x.test/a?b="><script>' => ['titre' => '<script>alert(1)</script>', 'source' => '<b>Src</b>', 'ignoree_le' => '<i>']];
-        $html = PageRadar::page_html(['nouvelles' => []], [], ['https://x.test/a?b="><script>'], self::options(), $details);
-        $this->assertStringNotContainsString('<script>alert(1)', $html);
-        $this->assertStringNotContainsString('<b>Src</b>', $html);
-    }
-
     public function test_ignorer_enregistre_les_details_du_cache(): void {
         self::cache([self::nouvelle(1)]);
         self::ajax('ajax_ignorer', ['nonce' => self::jeton(), 'url' => 'https://x.test/n1']);
@@ -447,7 +505,8 @@ final class PageRadarTest extends TestCase {
         self::ajax('ajax_ignorer', ['nonce' => self::jeton(), 'url' => 'https://x.test/n2']);
         [$reponse, $code] = self::ajax('ajax_retablir', ['nonce' => self::jeton(), 'url' => 'https://x.test/n1']);
         $this->assertSame(200, $code);
-        $this->assertSame([true, true, 1], [$reponse['data']['ok'], $reponse['data']['recharger'], $reponse['data']['ignorees']]);
+        $this->assertSame(['a_trier' => 1, 'gardees' => 0, 'ecartees' => 1], $reponse['data']['compteurs']);
+        $this->assertSame('Nouvelle remise dans le radar.', $reponse['data']['message']);
         $this->assertSame(['https://x.test/n2'], PageRadar::lire_ignorees());
         $this->assertSame(['https://x.test/n2'], array_keys(PageRadar::lire_details_ignorees()));
         // De nouveau visible dans le radar.
@@ -458,7 +517,7 @@ final class PageRadarTest extends TestCase {
     public function test_retablir_une_nouvelle_sortie_des_flux_le_dit(): void {
         update_option('rsn_veille_nouvelles_ignorees', ['https://x.test/vieille'], false);
         [$reponse] = self::ajax('ajax_retablir', ['nonce' => self::jeton(), 'url' => 'https://x.test/vieille']);
-        $this->assertSame([true, false], [$reponse['data']['ok'], $reponse['data']['recharger']]);
+        $this->assertTrue($reponse['data']['ok']);
         $this->assertStringContainsString("n'est plus dans les flux", $reponse['data']['message']);
         $this->assertSame([], PageRadar::lire_ignorees());
     }

@@ -122,10 +122,10 @@ final class Menu {
                 ],
                 'textes' => [
                     'erreur' => __("L'action a échoué. Réessayez ou rechargez la page.", 'rsn-veille'),
-                    'gardee' => __("Nouvelle gardée pour l'infolettre.", 'rsn-veille'),
-                    'ignoree' => __('Nouvelle ignorée. Elle reste dans « Nouvelles ignorées », au bas de la page.', 'rsn-veille'),
+                    'gardee' => __("Nouvelle gardée pour l'infolettre. Elle est dans l’onglet « Gardées pour l'infolettre ».", 'rsn-veille'),
+                    'ignoree' => __('Nouvelle écartée. Elle reste dans l’onglet « Écartées ».', 'rsn-veille'),
                     'retablie' => __('Nouvelle remise dans le radar.', 'rsn-veille'),
-                    'retiree' => __('Nouvelle retirée des gardées.', 'rsn-veille'),
+                    'retiree' => __('Nouvelle retirée des gardées. Si elle est encore dans les flux, elle revient dans « À trier ».', 'rsn-veille'),
                 ],
             ],
             // Page Infolettre : copie des blocs (collage enrichi ou code HTML) et confirmation du vidage.

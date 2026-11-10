@@ -223,18 +223,25 @@
 	font-weight: 600;
 }
 
-.rsn-veille-radar-ignorees {
-	margin-top: 28px;
+.rsn-veille-radar-filtre {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 8px;
+	margin: 14px 0 6px;
 }
 
-.rsn-veille-radar-ignorees > summary {
-	font-size: 1.3em;
+.rsn-veille-radar-filtre .button-link {
+	margin-left: 6px;
+}
+
+.rsn-veille-radar-periode {
+	margin: 0 0 10px;
 	font-weight: 600;
-	color: #1d2327;
 }
 
-.rsn-veille-radar-ignorees .description {
-	margin: 8px 0 12px;
+.rsn-veille-radar [data-section] > .description {
+	margin: 10px 0 12px;
 }
 
 .rsn-veille-radar-erreurs {

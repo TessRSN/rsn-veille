@@ -56,6 +56,9 @@ final class PageRadar {
     /** Champs conservés d'une nouvelle gardée, dans l'ordre. */
     private const CHAMPS_GARDEE = ['url', 'titre', 'date', 'source', 'organisateur', 'resume', 'gardee_le'];
 
+    /** Onglets de la page, dans l'ordre : nouvelles à trier, gardées pour l'infolettre, écartées (« ignorées » dans le code). */
+    public const ONGLETS = ['a_trier', 'gardees', 'ecartees'];
+
     /** Champs des détails d'une nouvelle ignorée (l'adresse est la clé). */
     private const CHAMPS_IGNOREE = ['titre', 'date', 'source', 'organisateur', 'resume', 'ignoree_le'];
 
@@ -89,9 +92,18 @@ final class PageRadar {
             self::donnees(),
             self::lire_gardees(),
             self::lire_ignorees(),
-            ['url_action' => admin_url('admin-post.php'), 'nonce' => wp_create_nonce(self::NONCE)],
+            [
+                'url_action' => admin_url('admin-post.php'), 'nonce' => wp_create_nonce(self::NONCE),
+                'url_page' => admin_url('admin.php?page=' . Menu::SLUG_RADAR),
+                'onglet' => self::parametre('onglet'), 'du' => self::parametre('du'), 'au' => self::parametre('au'),
+            ],
             self::details_a_afficher()
         );
+    }
+
+    /** Paramètre de l'adresse de la page (onglet, dates du filtre), en texte nettoyé. */
+    private static function parametre(string $nom): string {
+        return isset($_GET[$nom]) && is_string($_GET[$nom]) ? sanitize_text_field(wp_unslash($_GET[$nom])) : '';
     }
 
     /** admin-post.php : « Rafraîchir » vide le cache, puis retour à la page (la lecture se fait à l'affichage). */
@@ -347,8 +359,8 @@ final class PageRadar {
     }
 
     /**
-     * Remet une nouvelle ignorée dans le radar : son adresse sort des ignorées. `recharger` dit si elle est encore
-     * dans les flux (la page se recharge pour la montrer) ; sinon le message prévient qu'elle ne reparaîtra pas.
+     * Remet une nouvelle écartée dans le radar : son adresse sort des ignorées. Si elle n'est plus dans les flux,
+     * le message prévient qu'elle ne reparaîtra pas.
      */
     public static function ajax_retablir(): void {
         $url = self::url_de_la_requete();
@@ -356,12 +368,10 @@ final class PageRadar {
             return;
         }
         self::enregistrer_ignorees(self::retablir(self::lire_ignorees(), $url));
-        $dans_les_flux = self::chercher_en_cache($url) !== null;
         wp_send_json_success(self::reponse_gardees(self::lire_gardees()) + [
-            'recharger' => $dans_les_flux,
-            'message' => $dans_les_flux
+            'message' => self::chercher_en_cache($url) !== null
                 ? __('Nouvelle remise dans le radar.', 'rsn-veille')
-                : __("Nouvelle retirée des ignorées. Elle n'est plus dans les flux : elle ne reparaîtra pas dans le radar.", 'rsn-veille'),
+                : __("Nouvelle retirée des écartées. Elle n'est plus dans les flux : elle ne reparaîtra pas dans le radar.", 'rsn-veille'),
         ]);
     }
 
@@ -411,13 +421,43 @@ final class PageRadar {
             && filter_var($url, FILTER_VALIDATE_URL) !== false;
     }
 
-    /** @return array{ok: bool, gardees: int, libelle: string, ignorees: int, libelle_ignorees: string} */
+    /**
+     * Réponse d'une action : les compteurs des trois onglets (« à trier » d'après le cache du radar, jamais de réseau).
+     *
+     * @return array{ok: bool, gardees: int, libelle: string, compteurs: array{a_trier: int, gardees: int, ecartees: int}}
+     */
     private static function reponse_gardees(array $gardees): array {
-        $ignorees = count(self::lire_ignorees());
+        $ignorees = self::lire_ignorees();
         return [
             'ok' => true, 'gardees' => count($gardees), 'libelle' => self::libelle_gardees(count($gardees)),
-            'ignorees' => $ignorees, 'libelle_ignorees' => self::libelle_ignorees($ignorees),
+            'compteurs' => [
+                'a_trier' => count(self::visibles(self::nouvelles_en_cache(), $gardees, $ignorees)),
+                'gardees' => count($gardees),
+                'ecartees' => count($ignorees),
+            ],
         ];
+    }
+
+    /** @return array<int,array<string,mixed>> Nouvelles du radar d'après le cache (complet, sinon par source, sinon la copie de 24 h). */
+    private static function nouvelles_en_cache(): array {
+        $parties = [];
+        foreach (array_keys(self::sources_radar()) as $id) {
+            $partie = self::lire_cache_source($id);
+            if ($partie !== null) {
+                $parties[$id] = $partie;
+            }
+        }
+        $candidats = [
+            self::resultat_valide(get_transient(self::TRANSIENT)),
+            $parties !== [] ? self::assembler_parties($parties) : null,
+            self::resultat_valide(get_transient(self::TRANSIENT_DERNIER)),
+        ];
+        foreach ($candidats as $candidat) {
+            if (is_array($candidat) && is_array($candidat['nouvelles'] ?? null)) {
+                return array_values(array_filter($candidat['nouvelles'], static fn($n): bool => is_array($n) && self::url_valide((string) ($n['url'] ?? ''))));
+            }
+        }
+        return [];
     }
 
     // --- Logique pure ---
@@ -529,37 +569,87 @@ final class PageRadar {
         return array_values(array_filter($nouvelles, static fn($n): bool => is_array($n) && isset($n['url']) && !isset($exclues[$n['url']])));
     }
 
+    /**
+     * Nouvelles publiées entre deux dates (`date`, Y-m-d), bornes comprises. Une borne vide ou illisible ne filtre
+     * pas ; des bornes inversées sont remises dans l'ordre ; sans borne, tout est rendu (même les nouvelles sans date).
+     *
+     * @param array<int,array<string,mixed>> $nouvelles
+     * @return array<int,array<string,mixed>>
+     */
+    public static function dans_la_periode(array $nouvelles, string $du, string $au): array {
+        [$du, $au] = self::bornes($du, $au);
+        if ($du === '' && $au === '') {
+            return array_values($nouvelles);
+        }
+        return array_values(array_filter($nouvelles, static function ($n) use ($du, $au): bool {
+            $date = is_array($n) ? substr((string) ($n['date'] ?? ''), 0, 10) : '';
+            return $date !== '' && ($du === '' || $date >= $du) && ($au === '' || $date <= $au);
+        }));
+    }
+
+    /** Bornes du filtre nettoyées : dates Y-m-d valides (sinon vides), dans l'ordre. @return array{0: string, 1: string} */
+    public static function bornes(string $du, string $au): array {
+        $valide = static function (string $d): string {
+            return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $d, $m) === 1 && checkdate((int) $m[2], (int) $m[3], (int) $m[1]) ? $d : '';
+        };
+        [$du, $au] = [$valide($du), $valide($au)];
+        return $du !== '' && $au !== '' && $du > $au ? [$au, $du] : [$du, $au];
+    }
+
     // --- Rendu ---
 
     /**
-     * Page complète : barre (Rafraîchir, compteur), zone de message, gardées, radar par source, erreurs.
+     * Page complète : barre (Rafraîchir), onglets avec leur nombre (À trier, Gardées pour l'infolettre, Écartées),
+     * filtre par dates de publication, zone de message, liste de l'onglet, erreurs.
      *
      * @param array{nouvelles?: array<int,array<string,mixed>>, erreurs?: string[], genere_le?: string, en_cours?: bool} $donnees
      * @param array<int,mixed> $gardees
      * @param string[] $ignorees
-     * @param array{url_action?: string, nonce?: string} $options Adresse d'admin-post.php et jeton du bouton Rafraîchir.
-     * @param array<string,array<string,string>> $details_ignorees Détails des ignorées par adresse (`details_a_afficher`).
+     * @param array{url_action?: string, nonce?: string, url_page?: string, onglet?: string, du?: string, au?: string} $options
+     *        Adresse d'admin-post.php et jeton du bouton Rafraîchir ; adresse de la page ; onglet et dates du filtre.
+     * @param array<string,array<string,string>> $details_ignorees Détails des écartées par adresse (`details_a_afficher`).
      */
     public static function page_html(array $donnees, array $gardees, array $ignorees, array $options, array $details_ignorees = []): string {
         $gardees = array_values(array_filter($gardees, static fn($g): bool => is_array($g)));
+        $ignorees = array_values(array_filter($ignorees, 'is_string'));
         $visibles = self::visibles($donnees['nouvelles'] ?? [], $gardees, $ignorees);
-        return '<div class="wrap rsn-veille-admin rsn-veille-radar">'
+        $onglet = in_array($options['onglet'] ?? '', self::ONGLETS, true) ? (string) $options['onglet'] : 'a_trier';
+        [$du, $au] = self::bornes((string) ($options['du'] ?? ''), (string) ($options['au'] ?? ''));
+        $url_page = (string) ($options['url_page'] ?? '');
+
+        if ($onglet === 'gardees') {
+            $liste = self::dans_la_periode($gardees, $du, $au);
+            $corps = self::gardees_html($liste);
+        } elseif ($onglet === 'ecartees') {
+            // Les plus récemment écartées d'abord, chacune avec ses détails.
+            $ecartees = [];
+            foreach (array_reverse($ignorees) as $url) {
+                $ecartees[] = ['url' => $url] + (is_array($details_ignorees[$url] ?? null) ? $details_ignorees[$url] : []);
+            }
+            $liste = self::dans_la_periode($ecartees, $du, $au);
+            $corps = self::ecartees_html($liste);
+        } else {
+            $liste = self::dans_la_periode($visibles, $du, $au);
+            $corps = self::radar_html($liste);
+        }
+        // Une adresse refusée par le serveur n'est jamais affichée : elle ne compte pas non plus.
+        $affichees = count(array_filter($liste, static fn($n): bool => is_array($n) && self::url_valide((string) ($n['url'] ?? ''))));
+
+        return '<div class="wrap rsn-veille-admin rsn-veille-radar" data-onglet="' . esc_attr($onglet) . '">'
             . '<h1>' . esc_html__('Radar', 'rsn-veille') . '</h1>'
-            . '<p class="description">' . esc_html__("Les nouvelles des organisations de l'écosystème qui touchent la santé ou le numérique. Gardez celles qui iront dans l'infolettre, ignorez les autres.", 'rsn-veille') . '</p>'
-            . self::barre_html((string) ($donnees['genere_le'] ?? ''), count($gardees), $options)
+            . '<p class="description">' . esc_html__("Les nouvelles des organisations de l'écosystème qui touchent la santé ou le numérique. Gardez celles qui iront dans l'infolettre, écartez les autres.", 'rsn-veille') . '</p>'
+            . self::barre_html((string) ($donnees['genere_le'] ?? ''), $options)
             . (!empty($donnees['en_cours']) ? '<p class="rsn-veille-radar-en-cours">' . esc_html__("Rafraîchissement en cours par un autre utilisateur : certaines sources ne sont pas encore là. Rechargez la page dans une minute.", 'rsn-veille') . '</p>' : '')
+            . self::onglets_html($onglet, ['a_trier' => count($visibles), 'gardees' => count($gardees), 'ecartees' => count($ignorees)], $du, $au, $url_page)
+            . self::filtre_html($onglet, $du, $au, $affichees, $url_page)
             . '<div class="rsn-veille-message" role="status" aria-live="polite"></div>'
-            . '<h2>' . esc_html__("Gardées pour l'infolettre", 'rsn-veille') . '</h2>'
-            . self::gardees_html($gardees)
-            . '<h2>' . esc_html__('Nouvelles du radar', 'rsn-veille') . '</h2>'
-            . self::radar_html($visibles)
-            . self::ignorees_html($ignorees, $details_ignorees)
+            . $corps
             . self::erreurs_html($donnees['erreurs'] ?? [])
             . '</div>';
     }
 
     /** @param array{url_action?: string, nonce?: string} $options */
-    private static function barre_html(string $genere_le, int $nb_gardees, array $options): string {
+    private static function barre_html(string $genere_le, array $options): string {
         $mis_a_jour = Dates::date_heure($genere_le);
         return '<div class="rsn-veille-radar-barre">'
             . '<form method="post" action="' . esc_url((string) ($options['url_action'] ?? '')) . '">'
@@ -567,13 +657,87 @@ final class PageRadar {
             . '<input type="hidden" name="_wpnonce" value="' . esc_attr((string) ($options['nonce'] ?? '')) . '">'
             . '<button type="submit" class="button">' . esc_html__('Rafraîchir', 'rsn-veille') . '</button>'
             . '</form>'
-            . '<span class="rsn-veille-compteur" data-compteur-gardees>' . esc_html(self::libelle_gardees($nb_gardees)) . '</span>'
             . ($mis_a_jour !== '' ? '<span class="description">' . esc_html(sprintf(
                 /* translators: %s : date et heure de la dernière lecture des flux. */
                 __('Flux lus le %s', 'rsn-veille'),
                 $mis_a_jour
             )) . '</span>' : '')
             . '</div>';
+    }
+
+    /** Adresse de la page pour un onglet, avec les dates du filtre en cours. */
+    private static function url_onglet(string $url_page, string $onglet, string $du, string $au): string {
+        $parametres = array_filter(['onglet' => $onglet, 'du' => $du, 'au' => $au], static fn(string $v): bool => $v !== '');
+        return $url_page . (str_contains($url_page, '?') ? '&' : '?') . http_build_query($parametres, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /**
+     * Onglets, comme ceux de la file d'approbation : le nombre de chaque onglet est un total (le filtre par dates
+     * ne le change pas) et suit les actions (`data-compteur`).
+     *
+     * @param array{a_trier: int, gardees: int, ecartees: int} $compteurs
+     */
+    private static function onglets_html(string $actif, array $compteurs, string $du, string $au, string $url_page): string {
+        $libelles = [
+            'a_trier' => __('À trier', 'rsn-veille'),
+            'gardees' => __("Gardées pour l'infolettre", 'rsn-veille'),
+            'ecartees' => __('Écartées', 'rsn-veille'),
+        ];
+        $html = '<nav class="nav-tab-wrapper" aria-label="' . esc_attr__('Nouvelles du radar', 'rsn-veille') . '">';
+        foreach (self::ONGLETS as $onglet) {
+            $classe = 'nav-tab' . ($onglet === $actif ? ' nav-tab-active' : '');
+            $courant = $onglet === $actif ? ' aria-current="page"' : '';
+            $html .= '<a class="' . $classe . '"' . $courant . ' href="' . esc_url(self::url_onglet($url_page, $onglet, $du, $au)) . '">' . esc_html($libelles[$onglet])
+                . ' <span class="count" data-compteur="' . esc_attr($onglet) . '">(' . (int) ($compteurs[$onglet] ?? 0) . ')</span></a>';
+        }
+        return $html . '</nav>';
+    }
+
+    /**
+     * Filtre par dates de publication (formulaire GET : la page, l'onglet et les deux dates), puis, quand un filtre
+     * est actif, le nombre de nouvelles montrées et le lien « Tout afficher ».
+     */
+    private static function filtre_html(string $onglet, string $du, string $au, int $affichees, string $url_page): string {
+        $html = '<form class="rsn-veille-filtres rsn-veille-radar-filtre" method="get" action="">'
+            . '<input type="hidden" name="page" value="' . esc_attr(Menu::SLUG_RADAR) . '">'
+            . '<input type="hidden" name="onglet" value="' . esc_attr($onglet) . '">'
+            . '<label for="rsn-veille-radar-du">' . esc_html__('Publiées du', 'rsn-veille') . '</label> '
+            . '<input type="date" id="rsn-veille-radar-du" name="du" value="' . esc_attr($du) . '"> '
+            . '<label for="rsn-veille-radar-au">' . esc_html__('au', 'rsn-veille') . '</label> '
+            . '<input type="date" id="rsn-veille-radar-au" name="au" value="' . esc_attr($au) . '"> '
+            . '<button type="submit" class="button">' . esc_html__('Filtrer', 'rsn-veille') . '</button>';
+        if ($du !== '' || $au !== '') {
+            $html .= ' <a class="button-link" href="' . esc_url(self::url_onglet($url_page, $onglet, '', '')) . '">' . esc_html__('Tout afficher', 'rsn-veille') . '</a>';
+        }
+        $html .= '</form>';
+        if ($du === '' && $au === '') {
+            return $html;
+        }
+        return $html . '<p class="rsn-veille-radar-periode" data-periode>' . esc_html(self::resume_periode($affichees, $du, $au)) . '</p>';
+    }
+
+    /** « 3 nouvelles publiées du 10 au 31 octobre 2026 », « Aucune nouvelle publiée depuis le 1er janvier 2027 ». */
+    private static function resume_periode(int $n, string $du, string $au): string {
+        if ($du !== '' && $au !== '') {
+            // « Du 10 au 31 octobre 2026 » : minuscule initiale, la période suit le nombre.
+            $periode = Dates::periode($du, $au);
+            $periode = $du === $au
+                /* translators: %s : date. */
+                ? sprintf(__('le %s', 'rsn-veille'), $periode)
+                : mb_strtolower(mb_substr($periode, 0, 1)) . mb_substr($periode, 1);
+        } elseif ($du !== '') {
+            /* translators: %s : date de début du filtre. */
+            $periode = sprintf(__('depuis le %s', 'rsn-veille'), Dates::date_longue($du));
+        } else {
+            /* translators: %s : date de fin du filtre. */
+            $periode = sprintf(__("jusqu'au %s", 'rsn-veille'), Dates::date_longue($au));
+        }
+        if ($n === 0) {
+            /* translators: %s : période du filtre (« du 10 au 31 octobre 2026 », « depuis le … »). */
+            return sprintf(__('Aucune nouvelle publiée %s', 'rsn-veille'), $periode);
+        }
+        /* translators: 1 : nombre de nouvelles ; 2 : période du filtre. */
+        return sprintf(_n('%1$d nouvelle publiée %2$s', '%1$d nouvelles publiées %2$s', $n, 'rsn-veille'), $n, $periode);
     }
 
     /** @param array<int,array<string,mixed>> $gardees */
@@ -600,6 +764,9 @@ final class PageRadar {
             foreach ($nouvelles as $nouvelle) {
                 $lignes .= self::nouvelle_html($nouvelle, false);
             }
+            if ($lignes === '') {
+                continue;
+            }
             $html .= '<section class="rsn-veille-groupe"><h3>' . esc_html($source !== '' ? (string) $source : __('Source inconnue', 'rsn-veille')) . '</h3>'
                 . '<ul class="rsn-veille-radar-liste">' . $lignes . '</ul></section>';
         }
@@ -610,33 +777,24 @@ final class PageRadar {
     }
 
     /**
-     * Nouvelles ignorées, repliées, les plus récemment ignorées d'abord : pour les revoir, les remettre dans le
-     * radar ou les garder. Rien si aucune n'est ignorée.
+     * Nouvelles écartées, les plus récemment écartées d'abord : pour les revoir, les remettre dans le radar ou les
+     * garder.
      *
-     * @param string[] $ignorees
-     * @param array<string,array<string,string>> $details
+     * @param array<int,array<string,mixed>> $ecartees Chacune avec son adresse (`url`) et ses détails.
      */
-    private static function ignorees_html(array $ignorees, array $details): string {
+    private static function ecartees_html(array $ecartees): string {
         $lignes = '';
-        $nombre = 0;
-        foreach (array_reverse(array_values(array_filter($ignorees, 'is_string'))) as $url) {
-            $ligne = self::ignoree_html($url, is_array($details[$url] ?? null) ? $details[$url] : []);
-            if ($ligne !== '') {
-                $lignes .= $ligne;
-                $nombre++;
-            }
+        foreach ($ecartees as $ecartee) {
+            $lignes .= self::ignoree_html((string) ($ecartee['url'] ?? ''), $ecartee);
         }
-        if ($nombre === 0) {
-            return '';
-        }
-        return '<details class="rsn-veille-deroule rsn-veille-radar-ignorees" data-section="ignorees">'
-            . '<summary data-compteur-ignorees>' . esc_html(self::libelle_ignorees($nombre)) . '</summary>'
-            . '<p class="description">' . esc_html__("Une nouvelle ignorée ne reparaît plus dans le radar. Remettez-la dans le radar pour la trier de nouveau, ou gardez-la directement pour l'infolettre.", 'rsn-veille') . '</p>'
+        return '<div data-section="ecartees">'
+            . '<p class="description">' . esc_html__("Une nouvelle écartée ne reparaît plus dans « À trier ». Remettez-la dans le radar pour la trier de nouveau, ou gardez-la directement pour l'infolettre.", 'rsn-veille') . '</p>'
+            . '<p class="rsn-veille-vide"' . ($lignes !== '' ? ' hidden' : '') . '>' . esc_html__('Aucune nouvelle écartée.', 'rsn-veille') . '</p>'
             . '<ul class="rsn-veille-radar-liste">' . $lignes . '</ul>'
-            . '</details>';
+            . '</div>';
     }
 
-    /** Une nouvelle ignorée. Sans détails (ignorée avant la 0.8.0 et sortie des flux), l'adresse sert de titre. @param array<string,mixed> $detail */
+    /** Une nouvelle écartée. Sans détails (écartée avant la 0.8.0 et sortie des flux), l'adresse sert de titre. @param array<string,mixed> $detail */
     private static function ignoree_html(string $url, array $detail): string {
         if (!self::url_valide($url)) {
             return '';
@@ -650,8 +808,8 @@ final class PageRadar {
         }
         $quand = Dates::date_heure((string) ($detail['ignoree_le'] ?? ''));
         if ($quand !== '') {
-            /* translators: %s : date et heure à laquelle la nouvelle a été ignorée. */
-            $meta[] = esc_html(sprintf(__('ignorée le %s', 'rsn-veille'), $quand));
+            /* translators: %s : date et heure à laquelle la nouvelle a été écartée. */
+            $meta[] = esc_html(sprintf(__('écartée le %s', 'rsn-veille'), $quand));
         }
         $resume = Fiche::court((string) ($detail['resume'] ?? ''), self::LONGUEUR_EXTRAIT);
         return '<li class="rsn-veille-nouvelle" data-url="' . esc_attr($url) . '">'
@@ -704,7 +862,7 @@ final class PageRadar {
 
         $boutons = $gardee
             ? self::bouton_html('retirer', __('Retirer', 'rsn-veille'), false)
-            : self::bouton_html('garder', __("Garder pour l'infolettre", 'rsn-veille'), true) . ' ' . self::bouton_html('ignorer', __('Ignorer', 'rsn-veille'), false);
+            : self::bouton_html('garder', __("Garder pour l'infolettre", 'rsn-veille'), true) . ' ' . self::bouton_html('ignorer', __('Écarter', 'rsn-veille'), false);
 
         $resume = Fiche::court((string) ($n['resume'] ?? ''), self::LONGUEUR_EXTRAIT);
         return '<li class="rsn-veille-nouvelle" data-url="' . esc_attr($url) . '">'
@@ -736,12 +894,6 @@ final class PageRadar {
         /* translators: %d : nombre de sources dont le flux n'a pas pu être lu. */
         $titre = sprintf(_n('%d source en erreur', '%d sources en erreur', count($erreurs), 'rsn-veille'), count($erreurs));
         return '<details class="rsn-veille-deroule rsn-veille-radar-erreurs"><summary>' . esc_html($titre) . '</summary><ul>' . $items . '</ul></details>';
-    }
-
-    /** « 1 nouvelle ignorée », « 3 nouvelles ignorées ». */
-    private static function libelle_ignorees(int $n): string {
-        /* translators: %d : nombre de nouvelles ignorées dans le radar. */
-        return sprintf(_n('%d nouvelle ignorée', '%d nouvelles ignorées', $n, 'rsn-veille'), $n);
     }
 
     /** « 1 gardée », « 3 gardées ». */
