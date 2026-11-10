@@ -188,7 +188,8 @@ final class PageRadarTest extends TestCase {
             'nonce' => self::jeton(), 'url' => 'https://x.test/n2', 'titre' => 'TITRE FORGÉ', 'resume' => 'FORGÉ',
         ]);
         $this->assertSame(200, $code);
-        $this->assertSame(['success' => true, 'data' => ['ok' => true, 'gardees' => 1, 'libelle' => '1 gardée']], $reponse);
+        $this->assertSame(['ok' => true, 'gardees' => 1, 'libelle' => '1 gardée', 'ignorees' => 0], array_intersect_key($reponse['data'], array_flip(['ok', 'gardees', 'libelle', 'ignorees'])));
+        $this->assertTrue($reponse['success']);
         $gardees = get_option('rsn_veille_nouvelles_gardees');
         $this->assertSame('Titre 2', $gardees[0]['titre']);
         $this->assertSame('Résumé 2', $gardees[0]['resume']);
@@ -377,6 +378,111 @@ final class PageRadarTest extends TestCase {
         self::cache([self::nouvelle(1)]);
         PageRadar::vider_cache();
         $this->assertIsArray(get_transient('rsn_veille_radar_dernier'));
+    }
+
+    // --- Nouvelles ignorées : les revoir, les remettre dans le radar (0.8.0) ---
+
+    public function test_noter_ignoree_garde_les_details_et_suit_la_liste(): void {
+        $details = PageRadar::noter_ignoree([], self::nouvelle(1), '2026-11-10 09:00', ['https://x.test/n1']);
+        $this->assertSame(['https://x.test/n1'], array_keys($details));
+        $this->assertSame(['titre', 'date', 'source', 'organisateur', 'resume', 'ignoree_le'], array_keys($details['https://x.test/n1']));
+        $this->assertSame(['Titre 1', '2026-11-10 09:00'], [$details['https://x.test/n1']['titre'], $details['https://x.test/n1']['ignoree_le']]);
+        // Une adresse sortie de la liste des ignorées (borne des 500, remise) perd ses détails.
+        $details = PageRadar::noter_ignoree($details, self::nouvelle(2), '2026-11-10 09:05', ['https://x.test/n2']);
+        $this->assertSame(['https://x.test/n2'], array_keys($details));
+        // Détails illisibles tolérés ; nouvelle sans titre (plus dans les flux) : seulement la date.
+        $details = PageRadar::noter_ignoree(['x' => 'abîmé', 12 => []], ['url' => 'https://x.test/n3'], '2026-11-10 09:10', ['https://x.test/n3']);
+        $this->assertSame(['', '2026-11-10 09:10'], [$details['https://x.test/n3']['titre'], $details['https://x.test/n3']['ignoree_le']]);
+    }
+
+    public function test_retablir_retire_l_adresse(): void {
+        $this->assertSame(['https://x.test/b'], PageRadar::retablir(['https://x.test/a', 'https://x.test/b', 12], 'https://x.test/a'));
+        $this->assertSame(['https://x.test/a'], PageRadar::retablir(['https://x.test/a'], 'https://x.test/absente'));
+    }
+
+    public function test_rendu_des_ignorees_les_plus_recentes_d_abord(): void {
+        $donnees = ['genere_le' => '', 'erreurs' => [], 'nouvelles' => [self::nouvelle(1), self::nouvelle(2), self::nouvelle(3)]];
+        $details = [
+            'https://x.test/n1' => ['titre' => 'Titre 1', 'date' => '2026-10-20', 'source' => 'Source X', 'organisateur' => 'Organisme X', 'resume' => 'Résumé 1', 'ignoree_le' => '2026-11-09 10:00'],
+        ];
+        $html = PageRadar::page_html($donnees, [], ['https://x.test/n1', 'https://x.test/ancienne'], self::options(), $details);
+        $this->assertStringContainsString('2 nouvelles ignorées', $html);
+        $section = substr($html, (int) strpos($html, 'data-section="ignorees"'));
+        // La plus récemment ignorée (fin de la liste) en premier ; sans détails, l'adresse sert de titre.
+        $this->assertLessThan(strpos($section, 'Titre 1'), strpos($section, 'https://x.test/ancienne'));
+        $this->assertStringContainsString('data-act="retablir"', $section);
+        $this->assertStringContainsString('Remettre dans le radar', $section);
+        $this->assertStringContainsString('ignorée le 9 novembre 2026', $section);
+        // « Garder » seulement quand le titre est connu (sinon rien à garder).
+        $this->assertSame(1, substr_count($section, 'data-act="garder"'));
+        // Dans le radar lui-même, l'ignorée n'apparaît toujours pas.
+        $radar = substr($html, (int) strpos($html, 'data-section="radar"'), (int) strpos($html, 'data-section="ignorees"') - (int) strpos($html, 'data-section="radar"'));
+        $this->assertStringNotContainsString('Titre 1', $radar);
+        $this->assertStringContainsString('Titre 2', $radar);
+    }
+
+    public function test_rendu_sans_ignoree_pas_de_section(): void {
+        $html = PageRadar::page_html(['genere_le' => '', 'erreurs' => [], 'nouvelles' => []], [], [], self::options());
+        $this->assertStringNotContainsString('data-section="ignorees"', $html);
+    }
+
+    public function test_rendu_des_ignorees_echappe(): void {
+        $details = ['https://x.test/a?b="><script>' => ['titre' => '<script>alert(1)</script>', 'source' => '<b>Src</b>', 'ignoree_le' => '<i>']];
+        $html = PageRadar::page_html(['nouvelles' => []], [], ['https://x.test/a?b="><script>'], self::options(), $details);
+        $this->assertStringNotContainsString('<script>alert(1)', $html);
+        $this->assertStringNotContainsString('<b>Src</b>', $html);
+    }
+
+    public function test_ignorer_enregistre_les_details_du_cache(): void {
+        self::cache([self::nouvelle(1)]);
+        self::ajax('ajax_ignorer', ['nonce' => self::jeton(), 'url' => 'https://x.test/n1']);
+        $details = PageRadar::lire_details_ignorees();
+        $this->assertSame('Titre 1', $details['https://x.test/n1']['titre']);
+        $this->assertNotSame('', $details['https://x.test/n1']['ignoree_le']);
+    }
+
+    public function test_retablir_remet_dans_le_radar(): void {
+        self::cache([self::nouvelle(1), self::nouvelle(2)]);
+        self::ajax('ajax_ignorer', ['nonce' => self::jeton(), 'url' => 'https://x.test/n1']);
+        self::ajax('ajax_ignorer', ['nonce' => self::jeton(), 'url' => 'https://x.test/n2']);
+        [$reponse, $code] = self::ajax('ajax_retablir', ['nonce' => self::jeton(), 'url' => 'https://x.test/n1']);
+        $this->assertSame(200, $code);
+        $this->assertSame([true, true, 1], [$reponse['data']['ok'], $reponse['data']['recharger'], $reponse['data']['ignorees']]);
+        $this->assertSame(['https://x.test/n2'], PageRadar::lire_ignorees());
+        $this->assertSame(['https://x.test/n2'], array_keys(PageRadar::lire_details_ignorees()));
+        // De nouveau visible dans le radar.
+        $visibles = PageRadar::visibles([self::nouvelle(1), self::nouvelle(2)], [], PageRadar::lire_ignorees());
+        $this->assertSame(['https://x.test/n1'], array_column($visibles, 'url'));
+    }
+
+    public function test_retablir_une_nouvelle_sortie_des_flux_le_dit(): void {
+        update_option('rsn_veille_nouvelles_ignorees', ['https://x.test/vieille'], false);
+        [$reponse] = self::ajax('ajax_retablir', ['nonce' => self::jeton(), 'url' => 'https://x.test/vieille']);
+        $this->assertSame([true, false], [$reponse['data']['ok'], $reponse['data']['recharger']]);
+        $this->assertStringContainsString("n'est plus dans les flux", $reponse['data']['message']);
+        $this->assertSame([], PageRadar::lire_ignorees());
+    }
+
+    public function test_garder_une_ignoree_sortie_des_flux_prend_ses_details(): void {
+        update_option('rsn_veille_nouvelles_ignorees', ['https://x.test/n9'], false);
+        update_option('rsn_veille_nouvelles_ignorees_details', ['https://x.test/n9' => ['titre' => 'Titre 9', 'date' => '2026-09-01', 'source' => 'Source X', 'organisateur' => 'Organisme X', 'resume' => 'Résumé 9', 'ignoree_le' => '2026-09-02 10:00']], false);
+        [$reponse, $code] = self::ajax('ajax_garder', ['nonce' => self::jeton(), 'url' => 'https://x.test/n9']);
+        $this->assertSame(200, $code);
+        $gardees = PageRadar::lire_gardees();
+        $this->assertSame(['https://x.test/n9', 'Titre 9', 'Résumé 9'], [$gardees[0]['url'], $gardees[0]['titre'], $gardees[0]['resume']]);
+        // Gardée : elle sort des ignorées.
+        $this->assertSame([], PageRadar::lire_ignorees());
+        $this->assertSame([], PageRadar::lire_details_ignorees());
+    }
+
+    public function test_retablir_exige_jeton_et_droits(): void {
+        update_option('rsn_veille_nouvelles_ignorees', ['https://x.test/n1'], false);
+        [, $code] = self::ajax('ajax_retablir', ['nonce' => 'faux', 'url' => 'https://x.test/n1']);
+        $this->assertSame(403, $code);
+        $GLOBALS['rsn_veille_wp']['capacites'] = [];
+        [, $code] = self::ajax('ajax_retablir', ['nonce' => self::jeton(), 'url' => 'https://x.test/n1']);
+        $this->assertSame(403, $code);
+        $this->assertSame(['https://x.test/n1'], PageRadar::lire_ignorees());
     }
 
     public function test_options_illisibles_toleree(): void {

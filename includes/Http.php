@@ -72,19 +72,32 @@ final class Http {
             }
         }
 
-        $erreur = null;
-        if ($code >= 400 || $code === 0) {
-            /* translators: %d : code de la réponse HTTP. */
-            $erreur = sprintf(__('Réponse HTTP %d', 'rsn-veille'), $code);
-        }
-
+        $corps = (string) wp_remote_retrieve_body($reponse);
         return [
-            'corps' => (string) wp_remote_retrieve_body($reponse),
+            'corps' => $corps,
             'type' => (string) $type,
             'code' => $code,
             'url_finale' => $url_finale,
-            'erreur' => $erreur,
+            'erreur' => self::message_erreur($code, $corps),
         ];
+    }
+
+    /**
+     * Message d'erreur d'une réponse : null si le code est bon ; « Réponse HTTP n » pour un code 400 ou plus (ou 0).
+     * Quand le site répond par une page de vérification anti-robots (Cloudflare : « Just a moment… »), le message le
+     * dit en clair : la source ne peut pas être lue automatiquement, et l'extension ne contourne pas cette protection.
+     */
+    public static function message_erreur(int $code, string $corps): ?string {
+        if ($code < 400 && $code !== 0) {
+            return null;
+        }
+        if (in_array($code, [403, 429, 503], true)
+            && preg_match('~<title>\s*(?:Just a moment|Attention Required)|challenges\.cloudflare\.com|cf-chl-|cf_chl_~i', substr($corps, 0, 20000)) === 1) {
+            /* translators: %d : code de la réponse HTTP. */
+            return sprintf(__('Le site refuse les lectures automatiques (protection contre les robots, réponse HTTP %d).', 'rsn-veille'), $code);
+        }
+        /* translators: %d : code de la réponse HTTP. */
+        return sprintf(__('Réponse HTTP %d', 'rsn-veille'), $code);
     }
 
     /** Délai d'attente demandé par `$options['timeout']`, borné de 1 à 15 s ; 15 s si absent ou illisible. */

@@ -84,7 +84,7 @@ lancent par `npx wp-env run cli wp …`.
       « N appariées en anglais, M orphelines » au-dessus des erreurs, erreurs repliées sous
       « N erreurs », et le déroulé de chaque source replié en bas de page.
 - [ ] Les fichiers `admin.css` et `admin.js` ne sont chargés que sur les pages du menu Veille (onglet
-      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.7.0`.
+      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.8.0`.
 - [ ] Aucune erreur PHP dans `wp-content/debug.log` ni dans la console du navigateur.
 
 ## Réglages (tâche 12)
@@ -166,6 +166,14 @@ copie de 24 h (`rsn_veille_radar_dernier`). Un verrou de 2 min (`rsn_veille_rada
       réapparaît dans le radar (si elle est encore dans le flux).
 - [ ] **Ignorer** une nouvelle : elle disparaît ; après rechargement et après **Rafraîchir**, elle ne
       reparaît pas. `wp option get rsn_veille_nouvelles_ignorees --format=json` contient son adresse.
+- [ ] **Nouvelles ignorées** (0.8.0) : après rechargement, la section repliée « n nouvelles ignorées », sous le
+      radar, montre la nouvelle ignorée (date, titre, source, « ignorée le … »), la plus récente d'abord.
+      **Remettre dans le radar** : la ligne disparaît, la page se recharge et la nouvelle est de nouveau dans le
+      radar. **Garder pour l'infolettre** depuis les ignorées : elle passe dans les gardées et sort des ignorées.
+      `wp option get rsn_veille_nouvelles_ignorees_details --format=json` ne contient plus son adresse.
+- [ ] **Source protégée contre les robots** (0.8.0) : une source dont le site répond par une page de vérification
+      (INSPQ en novembre 2026) apparaît dans « sources en erreur » avec « Le site refuse les lectures
+      automatiques (protection contre les robots, réponse HTTP 403). ».
 - [ ] **Rafraîchir** : la page se recharge (lecture des flux de nouveau, un peu plus longue) et « Flux
       lus le … » indique la minute courante. `wp transient get rsn_veille_radar` existe ensuite.
 - [ ] **Verrou** : `wp transient set rsn_veille_radar_lecture 1 120` puis `wp transient delete rsn_veille_radar`

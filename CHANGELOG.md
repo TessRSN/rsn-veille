@@ -1,5 +1,21 @@
 # Journal des modifications
 
+## 0.8.0 (2026-11-10)
+
+Radar : retrouver les nouvelles ignorées. Erreurs : dire quand un site refuse les lectures automatiques.
+
+### Radar (`Admin\PageRadar`, `assets/admin.js`)
+- **Section « Nouvelles ignorées »**, repliée sous le radar, avec son compteur : les nouvelles ignorées, les plus récemment ignorées d'abord, avec leur date, leur titre, leur source et le moment où elles ont été ignorées.
+- **« Remettre dans le radar »** retire la nouvelle des ignorées ; si elle est encore dans les flux, la page se recharge et la nouvelle reparaît à sa place ; sinon le message prévient qu'elle ne reparaîtra pas. **« Garder pour l'infolettre »** la garde directement depuis les ignorées (même sortie des flux, grâce aux détails enregistrés).
+- Les détails (titre, date, source, organisme, résumé, moment) sont enregistrés à l'instant où l'on ignore, dans l'option `rsn_veille_nouvelles_ignorees_details` (par adresse, bornée aux 500 ignorées) ; la liste des adresses (`rsn_veille_nouvelles_ignorees`) ne change pas. Une nouvelle ignorée avant la 0.8.0 n'a que son adresse, complétée par le cache si elle est encore dans les flux.
+- Nouvelle action AJAX `rsn_veille_retablir_ignoree` (même jeton et même capacité que les autres). Garder une nouvelle la retire des ignorées.
+
+### Erreurs de lecture (`Http::message_erreur`)
+- Une réponse 403, 429 ou 503 qui est une page de vérification anti-robots (Cloudflare, « Just a moment… ») donne « Le site refuse les lectures automatiques (protection contre les robots, réponse HTTP 403). » au lieu de « Réponse HTTP 403 ». Cas de l'INSPQ depuis novembre 2026. L'extension ne contourne pas cette protection.
+
+### Livraison
+- Tests : 10 nouveaux (758 au total) ; faux DOM du Radar (remettre, garder depuis les ignorées, ignorer). Numéro de version 0.8.0.
+
 ## 0.7.0 (2026-11-02)
 
 Dates de l'agenda, à la demande de l'équipe : les fiches qui s'étalent dans le temps n'occupent plus le haut du mois en cours.

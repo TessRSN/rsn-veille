@@ -27,9 +27,12 @@ final class PageRadar {
     public const TRANSIENT = 'rsn_veille_radar';
     public const OPTION_GARDEES = 'rsn_veille_nouvelles_gardees';
     public const OPTION_IGNOREES = 'rsn_veille_nouvelles_ignorees';
+    /** Détails des nouvelles ignorées (adresse => titre, date, source…), pour les revoir et les remettre dans le radar. */
+    public const OPTION_DETAILS_IGNOREES = 'rsn_veille_nouvelles_ignorees_details';
     public const ACTION_GARDER = 'rsn_veille_garder';
     public const ACTION_IGNORER = 'rsn_veille_ignorer';
     public const ACTION_RETIRER = 'rsn_veille_retirer_gardee';
+    public const ACTION_RETABLIR = 'rsn_veille_retablir_ignoree';
     public const ACTION_RAFRAICHIR = 'rsn_veille_radar_rafraichir';
 
     /** Cache d'une source (`rsn_veille_radar_{id}`), écrit dès qu'elle est lue : une visite interrompue le garde. */
@@ -53,6 +56,9 @@ final class PageRadar {
     /** Champs conservés d'une nouvelle gardée, dans l'ordre. */
     private const CHAMPS_GARDEE = ['url', 'titre', 'date', 'source', 'organisateur', 'resume', 'gardee_le'];
 
+    /** Champs des détails d'une nouvelle ignorée (l'adresse est la clé). */
+    private const CHAMPS_IGNOREE = ['titre', 'date', 'source', 'organisateur', 'resume', 'ignoree_le'];
+
     /** Longueur de l'extrait affiché. */
     private const LONGUEUR_EXTRAIT = 220;
 
@@ -69,6 +75,7 @@ final class PageRadar {
         add_action('wp_ajax_' . self::ACTION_GARDER, [self::class, 'ajax_garder']);
         add_action('wp_ajax_' . self::ACTION_IGNORER, [self::class, 'ajax_ignorer']);
         add_action('wp_ajax_' . self::ACTION_RETIRER, [self::class, 'ajax_retirer']);
+        add_action('wp_ajax_' . self::ACTION_RETABLIR, [self::class, 'ajax_retablir']);
         add_action('admin_post_' . self::ACTION_RAFRAICHIR, [self::class, 'traiter_rafraichir']);
     }
 
@@ -82,7 +89,8 @@ final class PageRadar {
             self::donnees(),
             self::lire_gardees(),
             self::lire_ignorees(),
-            ['url_action' => admin_url('admin-post.php'), 'nonce' => wp_create_nonce(self::NONCE)]
+            ['url_action' => admin_url('admin-post.php'), 'nonce' => wp_create_nonce(self::NONCE)],
+            self::details_a_afficher()
         );
     }
 
@@ -262,6 +270,40 @@ final class PageRadar {
         return array_values(array_filter($ignorees, static fn($u): bool => is_string($u) && $u !== ''));
     }
 
+    /** @return array<string,array<string,string>> Détails des ignorées par adresse (option illisible : aucun). */
+    public static function lire_details_ignorees(): array {
+        $details = get_option(self::OPTION_DETAILS_IGNOREES, []);
+        if (!is_array($details)) {
+            return [];
+        }
+        $propres = [];
+        foreach ($details as $url => $detail) {
+            if (is_string($url) && $url !== '' && is_array($detail)) {
+                $propres[$url] = self::detail_propre($detail, '');
+            }
+        }
+        return $propres;
+    }
+
+    /**
+     * Détails à montrer : ceux enregistrés, complétés par le cache du radar pour une adresse ignorée avant la 0.8.0
+     * (sans détails) encore présente dans les flux. Jamais de réseau.
+     *
+     * @return array<string,array<string,string>>
+     */
+    private static function details_a_afficher(): array {
+        $details = self::lire_details_ignorees();
+        foreach (self::lire_ignorees() as $url) {
+            if (($details[$url]['titre'] ?? '') === '') {
+                $trouvee = self::chercher_en_cache($url);
+                if ($trouvee !== null) {
+                    $details[$url] = self::detail_propre($trouvee, (string) ($details[$url]['ignoree_le'] ?? ''));
+                }
+            }
+        }
+        return $details;
+    }
+
     // --- Actions AJAX ---
 
     /** Garde une nouvelle du radar pour l'infolettre (titre, date et résumé pris dans le cache, jamais de réseau). */
@@ -273,11 +315,20 @@ final class PageRadar {
         // Jamais de réseau ici : le cache courant, puis la copie de 24 h.
         $trouvee = self::chercher_en_cache($url);
         if ($trouvee === null) {
+            // Nouvelle ignorée puis sortie des flux : ses détails enregistrés suffisent pour la garder.
+            $detail = self::lire_details_ignorees()[$url] ?? null;
+            if ($detail !== null && $detail['titre'] !== '') {
+                $trouvee = ['url' => $url] + $detail;
+            }
+        }
+        if ($trouvee === null) {
             wp_send_json_error(['ok' => false, 'message' => __("Cette nouvelle n'est plus dans le radar : rafraîchissez la page.", 'rsn-veille')], 404);
             return;
         }
         $gardees = self::garder(self::lire_gardees(), $trouvee, wp_date('Y-m-d H:i'));
         update_option(self::OPTION_GARDEES, $gardees, false);
+        // Une nouvelle gardée n'est plus ignorée.
+        self::enregistrer_ignorees(self::retablir(self::lire_ignorees(), $url));
         wp_send_json_success(self::reponse_gardees($gardees));
     }
 
@@ -287,8 +338,37 @@ final class PageRadar {
         if ($url === null) {
             return;
         }
-        update_option(self::OPTION_IGNOREES, self::ignorer(self::lire_ignorees(), $url), false);
+        $ignorees = self::ignorer(self::lire_ignorees(), $url);
+        update_option(self::OPTION_IGNOREES, $ignorees, false);
+        // Titre, date et source pris dans le cache (jamais de réseau), pour la retrouver dans « Nouvelles ignorées ».
+        $nouvelle = (self::chercher_en_cache($url) ?? []) + ['url' => $url];
+        update_option(self::OPTION_DETAILS_IGNOREES, self::noter_ignoree(self::lire_details_ignorees(), $nouvelle, wp_date('Y-m-d H:i'), $ignorees), false);
         wp_send_json_success(self::reponse_gardees(self::lire_gardees()));
+    }
+
+    /**
+     * Remet une nouvelle ignorée dans le radar : son adresse sort des ignorées. `recharger` dit si elle est encore
+     * dans les flux (la page se recharge pour la montrer) ; sinon le message prévient qu'elle ne reparaîtra pas.
+     */
+    public static function ajax_retablir(): void {
+        $url = self::url_de_la_requete();
+        if ($url === null) {
+            return;
+        }
+        self::enregistrer_ignorees(self::retablir(self::lire_ignorees(), $url));
+        $dans_les_flux = self::chercher_en_cache($url) !== null;
+        wp_send_json_success(self::reponse_gardees(self::lire_gardees()) + [
+            'recharger' => $dans_les_flux,
+            'message' => $dans_les_flux
+                ? __('Nouvelle remise dans le radar.', 'rsn-veille')
+                : __("Nouvelle retirée des ignorées. Elle n'est plus dans les flux : elle ne reparaîtra pas dans le radar.", 'rsn-veille'),
+        ]);
+    }
+
+    /** Enregistre la liste des ignorées et retire les détails des adresses qui n'y sont plus. @param string[] $ignorees */
+    private static function enregistrer_ignorees(array $ignorees): void {
+        update_option(self::OPTION_IGNOREES, $ignorees, false);
+        update_option(self::OPTION_DETAILS_IGNOREES, array_intersect_key(self::lire_details_ignorees(), array_flip($ignorees)), false);
     }
 
     /** Retire une nouvelle des gardées. */
@@ -331,9 +411,13 @@ final class PageRadar {
             && filter_var($url, FILTER_VALIDATE_URL) !== false;
     }
 
-    /** @return array{ok: bool, gardees: int, libelle: string} */
+    /** @return array{ok: bool, gardees: int, libelle: string, ignorees: int, libelle_ignorees: string} */
     private static function reponse_gardees(array $gardees): array {
-        return ['ok' => true, 'gardees' => count($gardees), 'libelle' => self::libelle_gardees(count($gardees))];
+        $ignorees = count(self::lire_ignorees());
+        return [
+            'ok' => true, 'gardees' => count($gardees), 'libelle' => self::libelle_gardees(count($gardees)),
+            'ignorees' => $ignorees, 'libelle_ignorees' => self::libelle_ignorees($ignorees),
+        ];
     }
 
     // --- Logique pure ---
@@ -367,6 +451,56 @@ final class PageRadar {
     public static function ignorer(array $ignorees, string $url): array {
         $autres = array_filter($ignorees, static fn($u): bool => is_string($u) && $u !== $url);
         return array_slice(array_merge(array_values($autres), [$url]), -self::MAX_IGNOREES);
+    }
+
+    /**
+     * Retire une adresse des ignorées (elle peut reparaître dans le radar).
+     *
+     * @param array<int,mixed> $ignorees
+     * @return string[]
+     */
+    public static function retablir(array $ignorees, string $url): array {
+        return array_values(array_filter($ignorees, static fn($u): bool => is_string($u) && $u !== '' && $u !== $url));
+    }
+
+    /**
+     * Note les détails d'une nouvelle qu'on vient d'ignorer et ne garde que ceux des adresses encore ignorées
+     * ($ignorees : la liste à jour, bornée à 500).
+     *
+     * @param array<int|string,mixed> $details Détails déjà enregistrés, par adresse.
+     * @param array<string,mixed> $nouvelle Une nouvelle du radar (`url` exigée ; le reste peut manquer).
+     * @param string[] $ignorees
+     * @return array<string,array<string,string>>
+     */
+    public static function noter_ignoree(array $details, array $nouvelle, string $maintenant, array $ignorees): array {
+        $url = isset($nouvelle['url']) && is_string($nouvelle['url']) ? $nouvelle['url'] : '';
+        $propres = [];
+        foreach ($details as $adresse => $detail) {
+            if (is_string($adresse) && is_array($detail)) {
+                $propres[$adresse] = self::detail_propre($detail, '');
+            }
+        }
+        if ($url !== '') {
+            $propres[$url] = self::detail_propre($nouvelle, $maintenant);
+        }
+        return array_intersect_key($propres, array_flip(array_filter($ignorees, 'is_string')));
+    }
+
+    /**
+     * Détail d'une ignorée réduit à ses champs, en chaînes. $ignoree_le remplace la date si elle est donnée.
+     *
+     * @param array<string,mixed> $source
+     * @return array<string,string>
+     */
+    private static function detail_propre(array $source, string $ignoree_le): array {
+        $detail = [];
+        foreach (self::CHAMPS_IGNOREE as $champ) {
+            $detail[$champ] = isset($source[$champ]) && is_scalar($source[$champ]) ? (string) $source[$champ] : '';
+        }
+        if ($ignoree_le !== '') {
+            $detail['ignoree_le'] = $ignoree_le;
+        }
+        return $detail;
     }
 
     /**
@@ -404,8 +538,9 @@ final class PageRadar {
      * @param array<int,mixed> $gardees
      * @param string[] $ignorees
      * @param array{url_action?: string, nonce?: string} $options Adresse d'admin-post.php et jeton du bouton Rafraîchir.
+     * @param array<string,array<string,string>> $details_ignorees Détails des ignorées par adresse (`details_a_afficher`).
      */
-    public static function page_html(array $donnees, array $gardees, array $ignorees, array $options): string {
+    public static function page_html(array $donnees, array $gardees, array $ignorees, array $options, array $details_ignorees = []): string {
         $gardees = array_values(array_filter($gardees, static fn($g): bool => is_array($g)));
         $visibles = self::visibles($donnees['nouvelles'] ?? [], $gardees, $ignorees);
         return '<div class="wrap rsn-veille-admin rsn-veille-radar">'
@@ -418,6 +553,7 @@ final class PageRadar {
             . self::gardees_html($gardees)
             . '<h2>' . esc_html__('Nouvelles du radar', 'rsn-veille') . '</h2>'
             . self::radar_html($visibles)
+            . self::ignorees_html($ignorees, $details_ignorees)
             . self::erreurs_html($donnees['erreurs'] ?? [])
             . '</div>';
     }
@@ -471,6 +607,65 @@ final class PageRadar {
             . '<p class="rsn-veille-vide"' . ($html !== '' ? ' hidden' : '') . '>' . esc_html__('Aucune nouvelle à trier pour le moment.', 'rsn-veille') . '</p>'
             . $html
             . '</div>';
+    }
+
+    /**
+     * Nouvelles ignorées, repliées, les plus récemment ignorées d'abord : pour les revoir, les remettre dans le
+     * radar ou les garder. Rien si aucune n'est ignorée.
+     *
+     * @param string[] $ignorees
+     * @param array<string,array<string,string>> $details
+     */
+    private static function ignorees_html(array $ignorees, array $details): string {
+        $lignes = '';
+        $nombre = 0;
+        foreach (array_reverse(array_values(array_filter($ignorees, 'is_string'))) as $url) {
+            $ligne = self::ignoree_html($url, is_array($details[$url] ?? null) ? $details[$url] : []);
+            if ($ligne !== '') {
+                $lignes .= $ligne;
+                $nombre++;
+            }
+        }
+        if ($nombre === 0) {
+            return '';
+        }
+        return '<details class="rsn-veille-deroule rsn-veille-radar-ignorees" data-section="ignorees">'
+            . '<summary data-compteur-ignorees>' . esc_html(self::libelle_ignorees($nombre)) . '</summary>'
+            . '<p class="description">' . esc_html__("Une nouvelle ignorée ne reparaît plus dans le radar. Remettez-la dans le radar pour la trier de nouveau, ou gardez-la directement pour l'infolettre.", 'rsn-veille') . '</p>'
+            . '<ul class="rsn-veille-radar-liste">' . $lignes . '</ul>'
+            . '</details>';
+    }
+
+    /** Une nouvelle ignorée. Sans détails (ignorée avant la 0.8.0 et sortie des flux), l'adresse sert de titre. @param array<string,mixed> $detail */
+    private static function ignoree_html(string $url, array $detail): string {
+        if (!self::url_valide($url)) {
+            return '';
+        }
+        $titre = trim((string) ($detail['titre'] ?? ''));
+        $date = Dates::date_longue((string) ($detail['date'] ?? ''));
+        $meta = [];
+        $source = trim((string) ($detail['source'] ?? ''));
+        if ($source !== '') {
+            $meta[] = esc_html($source);
+        }
+        $quand = Dates::date_heure((string) ($detail['ignoree_le'] ?? ''));
+        if ($quand !== '') {
+            /* translators: %s : date et heure à laquelle la nouvelle a été ignorée. */
+            $meta[] = esc_html(sprintf(__('ignorée le %s', 'rsn-veille'), $quand));
+        }
+        $resume = Fiche::court((string) ($detail['resume'] ?? ''), self::LONGUEUR_EXTRAIT);
+        return '<li class="rsn-veille-nouvelle" data-url="' . esc_attr($url) . '">'
+            . '<div class="rsn-veille-nouvelle-tete">'
+            . ($date !== '' ? '<span class="rsn-veille-nouvelle-date">' . esc_html($date) . '</span> ' : '')
+            . '<strong><a href="' . esc_url($url) . '" target="_blank" rel="noopener noreferrer">' . esc_html($titre !== '' ? $titre : $url) . '</a></strong>'
+            . ($meta !== [] ? ' <span class="rsn-veille-nouvelle-meta">' . implode(' · ', $meta) . '</span>' : '')
+            . '</div>'
+            . ($resume !== '' ? '<p class="rsn-veille-extrait">' . esc_html($resume) . '</p>' : '')
+            . '<div class="rsn-veille-actions">'
+            . self::bouton_html('retablir', __('Remettre dans le radar', 'rsn-veille'), true)
+            . ($titre !== '' ? ' ' . self::bouton_html('garder', __("Garder pour l'infolettre", 'rsn-veille'), false) : '')
+            . '</div>'
+            . '</li>';
     }
 
     /**
@@ -541,6 +736,12 @@ final class PageRadar {
         /* translators: %d : nombre de sources dont le flux n'a pas pu être lu. */
         $titre = sprintf(_n('%d source en erreur', '%d sources en erreur', count($erreurs), 'rsn-veille'), count($erreurs));
         return '<details class="rsn-veille-deroule rsn-veille-radar-erreurs"><summary>' . esc_html($titre) . '</summary><ul>' . $items . '</ul></details>';
+    }
+
+    /** « 1 nouvelle ignorée », « 3 nouvelles ignorées ». */
+    private static function libelle_ignorees(int $n): string {
+        /* translators: %d : nombre de nouvelles ignorées dans le radar. */
+        return sprintf(_n('%d nouvelle ignorée', '%d nouvelles ignorées', $n, 'rsn-veille'), $n);
     }
 
     /** « 1 gardée », « 3 gardées ». */
