@@ -84,7 +84,7 @@ lancent par `npx wp-env run cli wp …`.
       « N appariées en anglais, M orphelines » au-dessus des erreurs, erreurs repliées sous
       « N erreurs », et le déroulé de chaque source replié en bas de page.
 - [ ] Les fichiers `admin.css` et `admin.js` ne sont chargés que sur les pages du menu Veille (onglet
-      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.8.0`.
+      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.9.0`.
 - [ ] Aucune erreur PHP dans `wp-content/debug.log` ni dans la console du navigateur.
 
 ## Réglages (tâche 12)
@@ -148,29 +148,31 @@ flux de nouvelles un à un (8 s au plus chacun), chaque source étant gardée un
 copie de 24 h (`rsn_veille_radar_dernier`). Un verrou de 2 min (`rsn_veille_radar_lecture`) évite que deux
 éditeurs relancent les flux ensemble.
 
-- [ ] La page s'ouvre sans erreur PHP. En haut : bouton **Rafraîchir**, « 0 gardées », « Flux lus le … » ;
-      section « Gardées pour l'infolettre » (message « Aucune nouvelle gardée pour l'instant. ») puis
-      « Nouvelles du radar », groupées par source, la plus récente d'abord.
+- [ ] La page s'ouvre sans erreur PHP. En haut : bouton **Rafraîchir**, « Flux lus le … », puis les trois
+      onglets (0.9.0) « À trier (n) », « Gardées pour l'infolettre (0) », « Écartées (0) » et le filtre
+      « Publiées du … au … ». L'onglet « À trier » montre les nouvelles groupées par source, la plus récente d'abord.
 - [ ] Chaque nouvelle montre la date, le titre (lien qui s'ouvre dans un nouvel onglet), « Repérée » ou
-      « À trier », un extrait, et les boutons **Garder pour l'infolettre** et **Ignorer**. Aucune nouvelle
+      « À trier », un extrait, et les boutons **Garder pour l'infolettre** et **Écarter**. Aucune nouvelle
       de plus de 60 jours. Une source généraliste (FRQ, Acfas) donne surtout des « À trier ».
 - [ ] Les sources en erreur (un 403, un flux devenu une page HTML) sont listées en bas, repliées, sous
       « N sources en erreur », sans casser les autres sources.
 - [ ] **Garder** deux nouvelles : chaque ligne disparaît du radar, le message « Nouvelle gardée pour
-      l'infolettre. » est annoncé (zone `role="status"`) et le compteur passe à « 1 gardée », « 2 gardées ».
-      Recharger : les deux sont en tête, la plus récemment gardée d'abord, avec « gardée le … » et un
-      bouton **Retirer** ; elles ne sont plus dans le radar.
+      l'infolettre. » est annoncé (zone `role="status"`) et le nombre de l'onglet « Gardées pour l'infolettre » passe à 1, puis 2.
+      Onglet « Gardées pour l'infolettre » : les deux y sont, la plus récemment gardée d'abord, avec
+      « gardée le … » et un bouton **Retirer** ; elles ne sont plus dans « À trier ».
       `wp option get rsn_veille_nouvelles_gardees --format=json` : champs `url, titre, date, source,
       organisateur, resume, gardee_le`.
 - [ ] **Retirer** une gardée : la ligne disparaît, le compteur baisse ; après rechargement la nouvelle
       réapparaît dans le radar (si elle est encore dans le flux).
-- [ ] **Ignorer** une nouvelle : elle disparaît ; après rechargement et après **Rafraîchir**, elle ne
+- [ ] **Écarter** une nouvelle (bouton « Ignorer » avant la 0.9.0) : elle disparaît ; après rechargement et après **Rafraîchir**, elle ne
       reparaît pas. `wp option get rsn_veille_nouvelles_ignorees --format=json` contient son adresse.
-- [ ] **Nouvelles ignorées** (0.8.0) : après rechargement, la section repliée « n nouvelles ignorées », sous le
-      radar, montre la nouvelle ignorée (date, titre, source, « ignorée le … »), la plus récente d'abord.
-      **Remettre dans le radar** : la ligne disparaît, la page se recharge et la nouvelle est de nouveau dans le
-      radar. **Garder pour l'infolettre** depuis les ignorées : elle passe dans les gardées et sort des ignorées.
-      `wp option get rsn_veille_nouvelles_ignorees_details --format=json` ne contient plus son adresse.
+- [ ] **Onglets** (0.9.0) : la page a trois onglets avec leur nombre, « À trier », « Gardées pour l'infolettre »
+      et « Écartées » ; la section repliée de la 0.8.0 n'existe plus. **Écarter** une nouvelle : elle quitte
+      « À trier », le nombre de « Écartées » monte d'un. Dans « Écartées », **Remettre dans le radar** : le
+      nombre de « À trier » remonte. Dans « Gardées », **Retirer** : le nombre baisse.
+- [ ] **Filtre par dates** (0.9.0) : « Publiées du 1er au 10 » puis **Filtrer** ne montre que les nouvelles de
+      l'onglet publiées entre ces dates, avec « n nouvelles publiées du … au … » ; changer d'onglet garde les
+      dates ; **Tout afficher** enlève le filtre. Les nombres des onglets ne changent pas avec le filtre.
 - [ ] **Source protégée contre les robots** (0.8.0) : une source dont le site répond par une page de vérification
       (INSPQ en novembre 2026) apparaît dans « sources en erreur » avec « Le site refuse les lectures
       automatiques (protection contre les robots, réponse HTTP 403). ».

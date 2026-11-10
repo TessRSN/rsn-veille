@@ -105,11 +105,11 @@
 })();
 
 /**
- * RSN Veille : radar des nouvelles. Les boutons (`data-act` : garder, ignorer, retirer, retablir) envoient
- * l'adresse de la nouvelle en fetch vers admin-ajax.php ; le serveur reprend titre et résumé dans son
- * cache. Au succès, la ligne disparaît et les compteurs suivent ; en cas d'échec, le message s'affiche
- * dans la zone `role="status"`. « Remettre dans le radar » (retablir) recharge la page quand la nouvelle
- * est encore dans les flux, pour la montrer à sa place. Aucune dépendance.
+ * RSN Veille : radar des nouvelles, en trois onglets (À trier, Gardées pour l'infolettre, Écartées). Les
+ * boutons (`data-act` : garder, ignorer, retirer, retablir) envoient l'adresse de la nouvelle en fetch vers
+ * admin-ajax.php ; le serveur reprend titre et résumé dans son cache. Au succès, la ligne quitte l'onglet et
+ * les nombres des onglets (`data-compteur`) suivent ; en cas d'échec, le message s'affiche dans la zone
+ * `role="status"`. Aucune dépendance.
  */
 (function () {
 	'use strict';
@@ -181,27 +181,22 @@
 					refus.serveur = true;
 					throw refus;
 				}
-				var compteur = page.querySelector('[data-compteur-gardees]');
-				if (compteur && json.data.libelle) {
-					compteur.textContent = json.data.libelle;
-				}
-				retirerLigne(ligne);
-				// Section « Nouvelles ignorées » : son compteur suit ; vide, elle disparaît.
-				var ignorees = page.querySelector('[data-section="ignorees"]');
-				if (ignorees) {
-					if (!ignorees.querySelector('li[data-url]')) {
-						ignorees.parentNode.removeChild(ignorees);
-					} else if (json.data.libelle_ignorees && acte !== 'ignorer') {
-						ignorees.querySelector('[data-compteur-ignorees]').textContent = json.data.libelle_ignorees;
+				// Nombres des onglets : ceux du serveur (totaux, sans égard au filtre par dates).
+				var compteurs = json.data.compteurs || {};
+				Object.keys(compteurs).forEach(function (onglet) {
+					var compteur = page.querySelector('[data-compteur="' + onglet + '"]');
+					if (compteur) {
+						compteur.textContent = '(' + compteurs[onglet] + ')';
 					}
+				});
+				retirerLigne(ligne);
+				// Le résumé du filtre par dates (« 3 nouvelles publiées du… ») ne vaut plus après une action.
+				var periode = page.querySelector('[data-periode]');
+				if (periode) {
+					periode.hidden = true;
 				}
 				if (acte === 'retablir') {
 					annoncer(json.data.message || config.textes.retablie, false);
-					if (json.data.recharger) {
-						window.setTimeout(function () {
-							window.location.reload();
-						}, 700);
-					}
 					return;
 				}
 				annoncer(acte === 'garder' ? config.textes.gardee : (acte === 'ignorer' ? config.textes.ignoree : config.textes.retiree), false);

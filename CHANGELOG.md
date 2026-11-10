@@ -1,5 +1,19 @@
 # Journal des modifications
 
+## 0.9.0 (2026-11-10)
+
+Radar en onglets et filtre par dates, à la demande de l'équipe après l'essai de la 0.8.0.
+
+### Radar (`Admin\PageRadar`, `assets/admin.js`)
+- **Trois onglets avec leur nombre**, comme la file d'approbation : « À trier » (les nouvelles du radar, groupées par source), « Gardées pour l'infolettre » et « Écartées » (les plus récemment écartées d'abord). L'onglet est dans l'adresse (`onglet=a_trier|gardees|ecartees`). La section repliée « Nouvelles ignorées » de la 0.8.0 devient l'onglet « Écartées ».
+- **Vocabulaire** : le bouton « Ignorer » devient « Écarter », comme dans la file d'approbation ; « écartée le … ». Les noms internes (options, actions AJAX) ne changent pas.
+- **Les nombres des onglets suivent les actions** sans recharger la page : chaque réponse rend les trois compteurs (`compteurs` ; « à trier » calculé depuis le cache du radar, jamais de réseau). « Remettre dans le radar » ne recharge plus la page.
+- **Filtre par dates de publication** : « Publiées du … au … » (deux champs de date, une seule borne possible) filtre l'onglet en cours ; les onglets gardent les dates ; « Tout afficher » enlève le filtre ; une ligne dit combien de nouvelles sont montrées (« 3 nouvelles publiées du 10 au 31 octobre 2026 »). Bornes inversées remises dans l'ordre, date illisible ignorée. Les nombres des onglets restent des totaux.
+- Le radar ne lit que les nouvelles des 60 derniers jours (8 par source) : le filtre porte sur ce que le radar contient, plus tout ce qui est gardé ou écarté.
+
+### Livraison
+- Tests : rendu réécrit pour les onglets et le filtre (760 tests) ; faux DOM des trois onglets (16 vérifications). Numéro de version 0.9.0.
+
 ## 0.8.0 (2026-11-10)
 
 Radar : retrouver les nouvelles ignorées. Erreurs : dire quand un site refuse les lectures automatiques.
