@@ -68,7 +68,7 @@ Quelle que soit la voie, l'activation lance les mêmes opérations (voir section
 
 ### Après la mise à jour de la 0.9.0 vers la 0.10.0
 
-Rien à régler. Sur l'agenda, une série récurrente (trois événements ou plus de même titre et de même organisateur, comme les « Office Hours Online » hebdomadaires de Digital Health Canada) tient en une seule fiche, à sa prochaine date, avec « Chaque semaine, du … au … » et ses autres dates en liens ; le calendrier du mois et le fichier iCal gardent chaque date. Les résumés ne montrent plus la formule des flux WordPress (« The post … appeared first on … ») : les appels du FRQ reprennent le début de leur texte à la collecte suivante, et les fiches déjà enregistrées avec cette seule formule n'ont plus de résumé.
+Rien à régler. Sur l'agenda, une série récurrente (trois événements ou plus de même titre et de même organisateur, comme les « Office Hours Online » hebdomadaires de Digital Health Canada) tient en une seule fiche, à sa prochaine date, avec « Chaque semaine, du … au … » et ses autres dates en liens ; le calendrier du mois et le fichier iCal gardent chaque date. Les résumés ne montrent plus la formule des flux WordPress (« The post … appeared first on … ») : les nouveaux appels du FRQ prennent le début de leur texte comme résumé ; les fiches déjà enregistrées avec cette seule formule n'ont plus de résumé (la collecte ne réécrit pas le résumé d'une fiche existante : l'équipe peut en écrire un dans l'éditeur de la fiche).
 
 ### Après la mise à jour de la 0.8.0 vers la 0.9.0
 

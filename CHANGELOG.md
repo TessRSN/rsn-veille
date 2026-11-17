@@ -11,7 +11,7 @@ Deux améliorations repérées au tour de santé du 10 novembre.
 
 ### Résumés : formule des flux retirée (`Fiche::sans_formule_de_flux`, `LecteurRss`)
 - WordPress termine les extraits de ses flux par « The post <titre> appeared first on <site>. » (« L'article … est apparu en premier sur … » en français) ; le flux du FRQ ne donne que cette formule. Elle est retirée à la lecture du flux, et le lecteur prend alors le texte suivant (`content:encoded`) comme résumé.
-- Les fiches déjà enregistrées avec cette formule (entière, ou coupée par l'extrait) sont nettoyées à la lecture : leur résumé est vide au lieu d'afficher la formule.
+- Les fiches déjà enregistrées avec cette formule (entière, ou coupée par l'extrait) sont nettoyées à la lecture : leur résumé est vide au lieu d'afficher la formule. La collecte ne réécrit pas le résumé d'une fiche existante ; seuls les nouveaux appels reçoivent le vrai texte.
 
 ### Livraison
 - Tests : 3 nouveaux (763 au total) ; rendu vérifié sur les données du site (faux DOM : liste complète, par mois, événements passés, anglais). Textes anglais au `.po`. Numéro de version 0.10.0.
