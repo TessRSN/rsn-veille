@@ -277,7 +277,25 @@ final class Fiche {
                 default => (string) $valeur,
             };
         }
+        // Résumé enregistré avant la 0.10.0 : la formule du flux (entière, ou coupée par l'extrait) n'est pas un résumé.
+        if ($fiche->resume !== '') {
+            $fiche->resume = self::sans_formule_de_flux($fiche->resume);
+            $amorce = 'The post ' . mb_substr($fiche->titre, 0, 20);
+            if ($fiche->titre !== '' && str_starts_with($fiche->resume, $amorce)) {
+                $fiche->resume = '';
+            }
+        }
         return $fiche;
+    }
+
+    /**
+     * Retire la formule que WordPress ajoute au bout des extraits d'un flux : « The post <titre> appeared first on
+     * <site>. » (ou, en français, « L'article <titre> est apparu en premier sur <site>. »). Le flux du FRQ ne donne
+     * que cette formule en description. Un texte qui parle d'un « post » sans cette tournure n'est pas touché.
+     */
+    public static function sans_formule_de_flux(string $texte): string {
+        $motif = '/\s*(?:The post\s.+?\sappeared first on\s[^.]+\.|L[’\']article\s.+?\sest apparu en premier sur\s[^.]+\.)\s*$/su';
+        return trim((string) preg_replace($motif, '', $texte));
     }
 
     /** Valeur booléenne tolérante : '0', '', 'false', false et 0 sont faux. */

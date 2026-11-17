@@ -264,6 +264,11 @@ final class Raccourci {
             'date_limite_a_venir' => __('Date limite à venir', 'rsn-veille'),
             'limites_precedentes' => __('Dates limites précédentes', 'rsn-veille'),
             'limites_suivantes' => __('Dates limites suivantes', 'rsn-veille'),
+            // Série récurrente regroupée en une fiche (même titre, même organisateur, trois dates ou plus).
+            'serie_hebdo' => __('Chaque semaine, du %1$s au %2$s', 'rsn-veille'),
+            'serie_dates' => [__('Série de %d date', 'rsn-veille'), __('Série de %d dates', 'rsn-veille')],
+            'serie_aussi' => __('Aussi :', 'rsn-veille'),
+            'serie_plus' => [__('et %d autre', 'rsn-veille'), __('et %d autres', 'rsn-veille')],
             // Abonnement au calendrier : retour du bouton « Copier l'adresse ».
             'adresse_copiee' => __('Adresse copiée', 'rsn-veille'),
         ];

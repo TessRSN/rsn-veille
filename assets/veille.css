@@ -254,6 +254,10 @@
 .rsn-veille .ev .infos{display:flex;flex-direction:column;gap:2px;font-size:14px;color:var(--ink);margin-top:3px}
 .rsn-veille .ev .infos span{display:flex;gap:8px;align-items:flex-start}
 .rsn-veille .ev .infos svg{width:15px;height:15px;flex:0 0 auto;margin-top:3px;color:var(--muted)}
+/* Série récurrente regroupée : ses autres dates, en liens. */
+.rsn-veille .ev .serie{margin-top:6px;font-size:13.5px;line-height:1.5;color:var(--body)}
+.rsn-veille .ev .serie b{color:var(--ink);font-weight:600}
+.rsn-veille.rsn-veille .ev .serie a{color:var(--navy);text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
 /* Fiches RSN : le corps (image + texte) forme un bloc sur fond gris très pâle, avec un trait jaune à gauche. */
 .rsn-veille .ev.rsn .corps{border-left:4px solid var(--yellow);border-radius:14px;overflow:hidden;background:#F6F8FA}
 .rsn-veille .ev.rsn .tx{padding:14px 18px 16px}

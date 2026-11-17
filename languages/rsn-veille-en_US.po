@@ -768,3 +768,21 @@ msgstr "The deadline has passed"
 
 msgid "Lien obligatoire"
 msgstr "Link required"
+
+msgid "Chaque semaine, du %1$s au %2$s"
+msgstr "Every week, from %1$s to %2$s"
+
+msgid "Série de %d date"
+msgstr "Series of %d date"
+
+msgid "Série de %d dates"
+msgstr "Series of %d dates"
+
+msgid "Aussi :"
+msgstr "Also:"
+
+msgid "et %d autre"
+msgstr "and %d more"
+
+msgid "et %d autres"
+msgstr "and %d more"

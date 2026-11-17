@@ -1,5 +1,21 @@
 # Journal des modifications
 
+## 0.10.0 (2026-11-17)
+
+Deux améliorations repérées au tour de santé du 10 novembre.
+
+### Agenda : séries récurrentes regroupées (`assets/veille.js`)
+- **Une série récurrente tient en une fiche** : trois événements ou plus de même titre et de même organisateur dans la liste (les « Office Hours Online » hebdomadaires de Digital Health Canada occupaient six fiches). La fiche est celle de la prochaine date ; une ligne dit « Chaque semaine, du … au … » (dates à sept jours d'intervalle) ou « Série de n dates », puis donne les autres dates en liens vers leur page (huit au plus, puis « et n autres »).
+- La série est reconnue sur toute la liste, avant le filtre par mois : en ne regardant qu'un mois, elle reste regroupée même s'il n'en contient que deux dates. Les compteurs (mois, « Afficher », « Qui organise », total) comptent une série pour un. Les événements passés sont regroupés de la même façon.
+- Le calendrier du mois, la bande de l'accueil et le fichier iCal ne changent pas : chaque date y reste.
+
+### Résumés : formule des flux retirée (`Fiche::sans_formule_de_flux`, `LecteurRss`)
+- WordPress termine les extraits de ses flux par « The post <titre> appeared first on <site>. » (« L'article … est apparu en premier sur … » en français) ; le flux du FRQ ne donne que cette formule. Elle est retirée à la lecture du flux, et le lecteur prend alors le texte suivant (`content:encoded`) comme résumé.
+- Les fiches déjà enregistrées avec cette formule (entière, ou coupée par l'extrait) sont nettoyées à la lecture : leur résumé est vide au lieu d'afficher la formule.
+
+### Livraison
+- Tests : 3 nouveaux (763 au total) ; rendu vérifié sur les données du site (faux DOM : liste complète, par mois, événements passés, anglais). Textes anglais au `.po`. Numéro de version 0.10.0.
+
 ## 0.9.0 (2026-11-10)
 
 Radar en onglets et filtre par dates, à la demande de l'équipe après l'essai de la 0.8.0.
