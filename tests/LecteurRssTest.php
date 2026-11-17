@@ -20,6 +20,22 @@ final class LecteurRssTest extends TestCase {
         $this->assertStringStartsWith('Le Réseau québécois', $f->resume);
     }
 
+    public function test_formule_du_flux_retiree_et_contenu_complet_pris_a_la_place(): void {
+        // Flux du FRQ : la description n'est que « The post … appeared first on … » ; le vrai texte est dans content:encoded.
+        $items = '<item><title>Chaires en santé numérique</title><link>https://frq.test/chaires/</link><category>Appel</category>'
+            . '<description>The post Chaires en santé numérique appeared first on Fonds de recherche du Québec.</description>'
+            . '<content:encoded><![CDATA[<p>Le FRQ lance un programme de chaires.</p><p>The post Chaires en santé numérique appeared first on Fonds de recherche du Québec.</p>]]></content:encoded>'
+            . '<pubDate>Tue, 20 Oct 2026 10:00:00 +0000</pubDate></item>'
+            . '<item><title>Autre appel</title><link>https://frq.test/autre/</link><category>Appel</category>'
+            . '<description>The post Autre appel appeared first on Fonds de recherche du Québec.</description>'
+            . '<pubDate>Tue, 20 Oct 2026 10:00:00 +0000</pubDate></item>'
+            . '<item><title>Troisième</title><link>https://frq.test/trois/</link><category>Appel</category>'
+            . '<description>Un vrai extrait. The post Troisième appeared first on Fonds de recherche du Québec.</description>'
+            . '<pubDate>Tue, 20 Oct 2026 10:00:00 +0000</pubDate></item>';
+        $r = (new LecteurRss())->lire($this->rss($items), ['id' => 'frq', 'nom' => 'FRQ', 'mode' => 'appels', 'categories' => ['Appel'], 'niveau' => 'B', 'organisateur' => 'FRQ']);
+        $this->assertSame(['Le FRQ lance un programme de chaires.', '', 'Un vrai extrait.'], array_map(static fn($f) => $f->resume, $r->fiches));
+    }
+
     public function test_frq_appels_par_categorie(): void {
         $r = (new LecteurRss())->lire(file_get_contents(FIXTURES . '/frq.xml'), ['id' => 'frq', 'nom' => 'FRQ', 'mode' => 'appels', 'categories' => ['Appel'], 'niveau' => 'B', 'type_source' => 'sante_numerique', 'organisateur' => 'Fonds de recherche du Québec']);
         $this->assertCount(5, $r->fiches);

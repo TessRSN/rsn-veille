@@ -172,4 +172,28 @@ final class FicheTest extends TestCase {
         $this->assertSame(['debut', 'url', '7'], Fiche::depuis_tableau($f->vers_tableau())->champs_manuels);
         $this->assertSame([], Fiche::depuis_tableau(['champs_manuels' => 'debut'])->champs_manuels);
     }
+
+    // --- Formule ajoutée par WordPress au bout des extraits d'un flux (0.10.0) ---
+
+    public function test_sans_formule_de_flux(): void {
+        $formule = 'The post Nouvelles Chaires de recherche (Chaires de RISA) appeared first on Fonds de recherche du Québec.';
+        $this->assertSame('', Fiche::sans_formule_de_flux($formule));
+        $this->assertSame('Le concours ouvre lundi.', Fiche::sans_formule_de_flux('Le concours ouvre lundi. ' . $formule));
+        $this->assertSame('Le concours ouvre lundi.', Fiche::sans_formule_de_flux("Le concours ouvre lundi. L’article Concours 2027 est apparu en premier sur Réseau X."));
+        // Un vrai texte qui parle d'un « post » n'est pas touché.
+        $this->assertSame('The post office will host the event.', Fiche::sans_formule_de_flux('The post office will host the event.'));
+        $this->assertSame('Résumé ordinaire.', Fiche::sans_formule_de_flux('Résumé ordinaire.'));
+        $this->assertSame('', Fiche::sans_formule_de_flux(''));
+    }
+
+    public function test_resume_enregistre_avec_la_formule_nettoye_a_la_lecture(): void {
+        // Fiche enregistrée avant la 0.10.0 : le résumé n'est que la formule, entière ou coupée par l'extrait.
+        $entiere = Fiche::depuis_tableau(['titre' => 'Chaires de RISA', 'resume' => 'The post Chaires de RISA appeared first on Fonds de recherche du Québec.']);
+        $this->assertSame('', $entiere->resume);
+        $coupee = Fiche::depuis_tableau(['titre' => 'Préannonce d’une Action concertée à venir sur un très long sujet', 'resume' => 'The post Préannonce d’une Action concertée à venir sur un très long…']);
+        $this->assertSame('', $coupee->resume);
+        // Un vrai résumé est gardé, même s'il commence par « The post ».
+        $vraie = Fiche::depuis_tableau(['titre' => 'Colloque', 'resume' => 'The post office will host the event.']);
+        $this->assertSame('The post office will host the event.', $vraie->resume);
+    }
 }

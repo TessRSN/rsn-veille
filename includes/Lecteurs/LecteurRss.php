@@ -41,7 +41,15 @@ final class LecteurRss implements Lecteur {
                 continue;
             }
             $date = $this->date($this->premier($item, [['published'], ['pubDate'], ['date', self::NS_DC], ['updated']]));
-            $description = $this->premier($item, [['description'], ['encoded', self::NS_CONTENU], ['summary'], ['content']]);
+            // Premier texte qui reste une fois retirée la formule du flux (« The post … appeared first on … ») : le flux
+            // du FRQ n'a que cette formule en description, le vrai texte est dans content:encoded.
+            $description = '';
+            foreach ([['description'], ['encoded', self::NS_CONTENU], ['summary'], ['content']] as $candidat) {
+                $description = Fiche::sans_formule_de_flux(Fiche::nettoyer_texte($this->texte($item, $candidat[0], $candidat[1] ?? null)));
+                if ($description !== '') {
+                    break;
+                }
+            }
             $categories = $this->categories($item);
 
             $fiche = new Fiche();

@@ -45,7 +45,7 @@ function animer(racine, noeudDonnees) {
   // Langue de la page (« fr » ou « en ») : un JSON incorporé plus ancien n'a pas ce champ, on retombe sur « fr ».
   const LANGUE = D.langue === 'en' ? 'en' : 'fr';
   // Gabarits de date en français, pour une page servie depuis un cache plus ancien que ce script (textes sans ces clés).
-  const DEFAUT = { date_longue: '%1$s %2$s %3$s', date_courte: '%1$s %2$s %3$s', heure: '%1$s h %2$s', premier_du_mois: '1er', du_au_meme_mois: 'Du %1$s au %2$s %3$s %4$s', du_au: 'Du %1$s au %2$s', en_francais: 'En français', adresse_copiee: 'Adresse copiée' };
+  const DEFAUT = { serie_hebdo: LANGUE === 'en' ? 'Every week, from %1$s to %2$s' : 'Chaque semaine, du %1$s au %2$s', serie_aussi: LANGUE === 'en' ? 'Also:' : 'Aussi :', date_longue: '%1$s %2$s %3$s', date_courte: '%1$s %2$s %3$s', heure: '%1$s h %2$s', premier_du_mois: '1er', du_au_meme_mois: 'Du %1$s au %2$s %3$s %4$s', du_au: 'Du %1$s au %2$s', en_francais: 'En français', adresse_copiee: 'Adresse copiée' };
   // Textes : « %d » reçoit le nombre, « %1$s », « %2$s »… la valeur de ce rang (l'ordre peut changer à la
   // traduction), un « %s » simple la valeur suivante ; pluriel : 2 et plus en français, tout sauf 1 en anglais
   // (comme plural=(n != 1) du .po anglais : 0 prend le pluriel).
@@ -114,11 +114,53 @@ function animer(racine, noeudDonnees) {
   // Attribut `lang` du texte d'une fiche dans l'autre langue que la page (lecteurs d'écran, césure, guillemets).
   const attrLangue = k => (k.langue === 'fr' || k.langue === 'en') && k.langue !== LANGUE ? ` lang="${esc(k.langue)}"` : '';
   // ligne compacte (événements passés, comme la section « Passés » de la page Événements)
+  // Série récurrente (0.10.0) : au moins SERIE_MIN événements de même titre et de même organisateur dans la liste
+  // affichée (un rendez-vous hebdomadaire, par exemple). La liste n'en montre qu'un, le premier dans son ordre (le
+  // prochain pour les événements à venir), avec les autres dates en liens. Le calendrier et le fichier iCal gardent
+  // chaque date.
+  const SERIE_MIN = 3;
+  const cleSerie = k => k.type === 'evenement' ? `${k.organisateur || ''}|${String(k.titre || '').trim().toLowerCase()}` : '';
+  // Clés des séries d'une liste : celles qui y comptent au moins SERIE_MIN événements.
+  function seriesDe(L) {
+    const comptes = new Map();
+    for (const k of L) { const c = cleSerie(k); if (c) comptes.set(c, (comptes.get(c) || 0) + 1); }
+    return new Set([...comptes].filter(([, nb]) => nb >= SERIE_MIN).map(([c]) => c));
+  }
+  // Regroupe les événements des séries $cles (par défaut celles de la liste) : une série reconnue sur tous les mois
+  // reste regroupée quand on n'en regarde qu'un, même s'il n'en contient que deux dates.
+  function regrouper(L, cles) {
+    cles = cles || seriesDe(L);
+    const membres = new Map();
+    for (const k of L) { const c = cleSerie(k); if (cles.has(c)) { if (!membres.has(c)) membres.set(c, []); membres.get(c).push(k); } }
+    const faites = new Set(); const sortie = [];
+    for (const k of L) {
+      const S = membres.get(cleSerie(k));
+      if (!S || S.length < 2) { sortie.push(k); continue; }
+      if (faites.has(S)) continue;
+      faites.add(S);
+      sortie.push(Object.assign({}, k, { serie: S.filter(x => x !== k) }));
+    }
+    return sortie;
+  }
+  // « Chaque semaine, du 12 nov. 2026 au 17 déc. 2026 » (ou « Série de 5 dates »), puis les autres dates en liens (8 au plus).
+  function ligneSerie(k) {
+    if (!k.serie || !k.serie.length) return '';
+    const autres = k.serie.slice().sort((a, b) => a.debut.localeCompare(b.debut));
+    const dates = autres.map(x => x.debut).concat(k.debut).sort();
+    const hebdo = dates.every((x, i) => i === 0 || jours(dates[i - 1], x) === 7);
+    const titre = hebdo ? t('serie_hebdo', dateCourte(dates[0]), dateCourte(dates[dates.length - 1]))
+      : (Array.isArray(T.serie_dates) ? n('serie_dates', dates.length) : `${dates.length} dates`);
+    const MAX = 8;
+    const liens = autres.slice(0, MAX).map(x => `<a href="${lien(x.url)}" target="_blank" rel="noopener">${esc(dateCourte(x.debut))}</a>`).join(', ');
+    const reste = autres.length > MAX ? ' ' + esc(Array.isArray(T.serie_plus) ? n('serie_plus', autres.length - MAX) : `+ ${autres.length - MAX}`) : '';
+    return `<div class="serie"><b>${esc(titre)}</b> · ${esc(t('serie_aussi'))} ${liens}${reste}</div>`;
+  }
   function ligneEv(k) {
     return `<div class="ev${classeRSN(k)}">${HEX}${blocJour(k)}<div class="corps"><div class="tx"${attrLangue(k)}>
       ${pastilles(k)}
       <h3><a href="${lien(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
       <div class="meta"><b>${esc(k.organisateur)}</b>${lieuTexte(k) ? ' · ' + esc(lieuTexte(k)) : ''}</div>
+      ${ligneSerie(k)}
       <div class="pied"><a class="plus" href="${lien(k.url)}" target="_blank" rel="noopener">${esc(t('plus_info'))}</a></div>
     </div></div></div>`;
   }
@@ -133,6 +175,7 @@ function animer(racine, noeudDonnees) {
         ${pastilles(k)}
         <h3><a href="${lien(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
         <div class="infos"><span>${ICO_DATE}${periode(k)}</span>${lieu ? `<span>${ICO_LIEU}${esc(lieu)}</span>` : ''}</div>
+        ${ligneSerie(k)}
         ${k.resume ? `<p>${esc(k.resume)}</p>` : ''}
         <div class="pied"><a class="plus" href="${lien(k.url)}" target="_blank" rel="noopener">${esc(t('plus_info'))}</a>${k.prix ? `<span class="fmt">${esc(k.prix)}</span>` : ''}</div>
       </div></div></div>`;
@@ -199,9 +242,11 @@ function animer(racine, noeudDonnees) {
     if (vue === 'calendrier') { rendreCalendrier(); rendreRubs(); rendreMois(); return; }
     const anciens = filtres.mois === 'passes';
     let L = filtrer(anciens ? passes() : aVenir());
+    const series = seriesDe(L);
     if (filtres.mois === 'plus-tard') { const apres = decalerMois(moisSuivants()[NB_MOIS - 1], 1); L = L.filter(k => cleTri(k).slice(0, 7) >= apres); }
     else if (filtres.mois && !anciens) L = L.filter(k => dansMois(k, filtres.mois));
     L.sort((a, b) => anciens ? cleTri(b).localeCompare(cleTri(a)) : cleTri(a).localeCompare(cleTri(b)));
+    L = regrouper(L, series);
     const groupes = new Map();
     for (const k of L) { const cle = (anciens ? cleTri(k).slice(0, 7) : moisClasse(k)); if (!groupes.has(cle)) groupes.set(cle, []); groupes.get(cle).push(k); }
     const nbEv = G => G.filter(k => k.type === 'evenement').length, nbAp = G => G.filter(k => k.type === 'appel').length;
@@ -230,18 +275,20 @@ function animer(racine, noeudDonnees) {
   function moisSuivants() { const mois = []; const c = d(AUJ); for (let i = 0; i < NB_MOIS; i++) { mois.push(`${c.a}-${pad(c.m)}`); c.m++; if (c.m > 12) { c.m = 1; c.a++; } } return mois; }
   function rendreMois() {
     const E = filtrer(aVenir()); const mois = moisSuivants(); const apres = decalerMois(mois[mois.length - 1], 1);
-    const nb = m => E.filter(k => dansMois(k, m)).length;
+    // Une série regroupée compte pour un, comme dans la liste.
+    const series = seriesDe(E);
+    const nb = m => regrouper(E.filter(k => dansMois(k, m)), series).length;
     const actif = vue === 'calendrier' ? calMois : filtres.mois;
-    let html = `<button type="button" class="rub" data-mois="" aria-pressed="${actif === ''}">${HEX}<span class="t">${esc(t('tous_les_mois'))}</span><span class="n">${E.length}</span></button>`;
+    let html = `<button type="button" class="rub" data-mois="" aria-pressed="${actif === ''}">${HEX}<span class="t">${esc(t('tous_les_mois'))}</span><span class="n">${regrouper(E, series).length}</span></button>`;
     let annee = d(AUJ).a;
     for (const m of mois) {
       const x = d(m + '-01');
       if (x.a !== annee) { annee = x.a; html += `<div class="annee">${x.a}</div>`; }
       html += `<button type="button" class="rub" data-mois="${m}" aria-pressed="${actif === m}">${HEX}<span class="t">${cap(MOIS_LONG[x.m - 1])}</span><span class="n">${nb(m)}</span></button>`;
     }
-    const nTard = E.filter(k => cleTri(k).slice(0, 7) >= apres).length;
+    const nTard = regrouper(E.filter(k => cleTri(k).slice(0, 7) >= apres), series).length;
     html += `<button type="button" class="rub" data-mois="plus-tard" aria-pressed="${actif === 'plus-tard'}">${HEX}<span class="t">${esc(t('plus_tard'))}</span><span class="n">${nTard}</span></button>`;
-    html += `<button type="button" class="rub" data-mois="passes" aria-pressed="${actif === 'passes'}">${HEX}<span class="t">${esc(t('evenements_passes'))}</span><span class="n">${filtrer(passes()).length}</span></button>`;
+    html += `<button type="button" class="rub" data-mois="passes" aria-pressed="${actif === 'passes'}">${HEX}<span class="t">${esc(t('evenements_passes'))}</span><span class="n">${regrouper(filtrer(passes())).length}</span></button>`;
     $('#f-mois').innerHTML = html;
   }
   // Rubriques « Afficher » et « Qui organise » (spec 4.4) : les compteurs portent sur la vue courante (à venir ou
@@ -250,11 +297,11 @@ function animer(racine, noeudDonnees) {
   function rendreRubs() {
     const base = filtres.mois === 'passes' ? passes() : aVenir();
     if ($('#f-type')) {
-      const L = base.filter(parQui);
+      const L = regrouper(base.filter(parQui));
       $('#f-type').innerHTML = rub('type', '', t('tous'), L.length) + rub('type', 'evenement', t('evenements'), L.filter(k => k.type === 'evenement').length) + rub('type', 'appel', t('appels'), L.filter(k => k.type === 'appel').length);
     }
     if ($('#f-qui')) {
-      const L = base.filter(parType);
+      const L = regrouper(base.filter(parType));
       $('#f-qui').innerHTML = rub('qui', '', t('tous'), L.length) + ['rsn', 'partenaires', 'ecosysteme'].map(v => rub('qui', v, libelle('qui', v), L.filter(k => qui(k) === v).length)).join('');
     }
   }
