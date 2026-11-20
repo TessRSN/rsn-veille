@@ -459,8 +459,29 @@
 	box-shadow: inset 4px 0 0 #e07b39;
 }
 
+/* « Santé + numérique » : a priori pour le RSN. Pastille et bouton « Garder » verts, pour les repérer dans le tableau. */
 .rsn-veille-radar-statut[data-statut="reperee"] {
+	padding: 1px 8px;
+	border-radius: 10px;
+	background: #dff3e4;
+	color: #0b5a23;
+	font-size: 12px;
 	font-weight: 600;
+	line-height: 1.6;
+	white-space: nowrap;
+}
+
+.rsn-veille-admin .button.button-primary.rsn-veille-bouton-pertinent {
+	border-color: #0f6b2c;
+	background: #15803d;
+	color: #fff;
+}
+
+.rsn-veille-admin .button.button-primary.rsn-veille-bouton-pertinent:hover,
+.rsn-veille-admin .button.button-primary.rsn-veille-bouton-pertinent:focus {
+	border-color: #0b5a23;
+	background: #0f6b2c;
+	color: #fff;
 }
 
 .rsn-veille-radar-filtre {

@@ -186,6 +186,44 @@ final class PageInfolettreTest extends TestCase {
 
     // --- Vider les gardées, accès, programmes ---
 
+    // --- Ce que l'équipe tient hors de l'infolettre, ce qui est archivé (0.15.0) ---
+
+    public function test_fiche_tenue_hors_de_l_infolettre(): void {
+        $items = [
+            self::evenement(['id' => 11, 'titre' => 'Colloque gardé']),
+            self::evenement(['id' => 12, 'titre' => 'Midi écarté de l’infolettre', 'debut' => '2026-11-20']),
+            ['id' => 21, 'type' => 'appel', 'titre' => 'Appel gardé', 'debut' => '2026-10-20', 'echeance' => '2026-12-01', 'url' => 'https://frq.test/a', 'resume' => ''],
+            ['id' => 22, 'type' => 'appel', 'titre' => 'Appel hors infolettre', 'debut' => '2026-10-20', 'echeance' => '2026-12-05', 'url' => 'https://frq.test/b', 'resume' => ''],
+            // Événement déjà passé : il n'aurait pas été repris de toute façon, il ne compte pas dans la note.
+            self::evenement(['id' => 13, 'titre' => 'Passé', 'debut' => '2026-10-01']),
+        ];
+        $html = PageInfolettre::page_html($items, [], [], ['hors_infolettre' => [12, 22, 13, 999]] + self::OPTIONS);
+        $this->assertStringContainsString('Colloque gardé', $html);
+        $this->assertStringNotContainsString('Midi écarté', $html);
+        $this->assertStringContainsString('Appel gardé', $html);
+        $this->assertStringNotContainsString('Appel hors infolettre', $html);
+        $this->assertStringContainsString('<p class="description rsn-veille-infolettre-note">1 événement publié est tenu hors de l&#039;infolettre (File d&#039;approbation › Publiées).</p>', $html);
+        $this->assertStringContainsString('1 appel publié est tenu hors de l&#039;infolettre', $html);
+        // Sans choix de l'équipe : tout y est, aucune note.
+        $html = PageInfolettre::page_html($items, [], [], self::OPTIONS);
+        $this->assertStringContainsString('Midi écarté', $html);
+        $this->assertStringContainsString('Appel hors infolettre', $html);
+        $this->assertStringNotContainsString('rsn-veille-infolettre-note', $html);
+        // Option illisible : ignorée.
+        $this->assertStringContainsString('Midi écarté', PageInfolettre::page_html($items, [], [], ['hors_infolettre' => 'x'] + self::OPTIONS));
+    }
+
+    public function test_nouvelle_gardee_trop_vieille_hors_de_l_infolettre(): void {
+        $vieille = ['url' => 'https://inspq.test/vieille', 'titre' => 'Vieille nouvelle', 'date' => '2026-08-01', 'gardee_le' => '2026-08-02 09:00'] + self::gardee();
+        $remise = ['url' => 'https://inspq.test/remise', 'titre' => 'Remise par l’équipe', 'date' => '2026-08-01', 'conservee' => '1'] + self::gardee();
+        $html = PageInfolettre::page_html([], [self::gardee(), $vieille, $remise], [], self::OPTIONS);
+        $this->assertStringContainsString('Une nouvelle', $html);
+        $this->assertStringContainsString('Remise par l’équipe', $html);
+        $this->assertStringNotContainsString('Vieille nouvelle', $html);
+        $this->assertStringContainsString('1 nouvelle gardée, publiée depuis plus de 60 jours, est archivée (Radar › Archivées).', $html);
+        $this->assertStringNotContainsString('archivée', PageInfolettre::page_html([], [self::gardee()], [], self::OPTIONS));
+    }
+
     public function test_vider_gardees_vide_l_option(): void {
         update_option(PageRadar::OPTION_GARDEES, [self::gardee()], false);
         $this->assertCount(1, PageRadar::lire_gardees());

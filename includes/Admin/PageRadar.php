@@ -33,6 +33,7 @@ final class PageRadar {
     public const ACTION_IGNORER = 'rsn_veille_ignorer';
     public const ACTION_RETIRER = 'rsn_veille_retirer_gardee';
     public const ACTION_RETABLIR = 'rsn_veille_retablir_ignoree';
+    public const ACTION_CONSERVER = 'rsn_veille_conserver_gardee';
     public const ACTION_RAFRAICHIR = 'rsn_veille_radar_rafraichir';
 
     /** Cache d'une source (`rsn_veille_radar_{id}`), écrit dès qu'elle est lue : une visite interrompue le garde. */
@@ -57,7 +58,13 @@ final class PageRadar {
     private const CHAMPS_GARDEE = ['url', 'titre', 'date', 'source', 'organisateur', 'resume', 'gardee_le'];
 
     /** Onglets de la page, dans l'ordre : nouvelles à trier, gardées pour l'infolettre, écartées (« ignorées » dans le code). */
-    public const ONGLETS = ['a_trier', 'gardees', 'ecartees'];
+    public const ONGLETS = ['a_trier', 'gardees', 'archivees', 'ecartees'];
+
+    /**
+     * Une nouvelle gardée publiée depuis plus de tant de jours est archivée : elle quitte « Gardées pour
+     * l'infolettre » et l'infolettre, sauf si l'équipe la remet. Même durée que la rétention du radar.
+     */
+    public const JOURS_ARCHIVE = Nouvelles::RETENTION_JOURS;
 
     /** Champs des détails d'une nouvelle ignorée (l'adresse est la clé). */
     private const CHAMPS_IGNOREE = ['titre', 'date', 'source', 'organisateur', 'resume', 'ignoree_le'];
@@ -79,6 +86,7 @@ final class PageRadar {
         add_action('wp_ajax_' . self::ACTION_IGNORER, [self::class, 'ajax_ignorer']);
         add_action('wp_ajax_' . self::ACTION_RETIRER, [self::class, 'ajax_retirer']);
         add_action('wp_ajax_' . self::ACTION_RETABLIR, [self::class, 'ajax_retablir']);
+        add_action('wp_ajax_' . self::ACTION_CONSERVER, [self::class, 'ajax_conserver']);
         add_action('admin_post_' . self::ACTION_RAFRAICHIR, [self::class, 'traiter_rafraichir']);
     }
 
@@ -96,7 +104,7 @@ final class PageRadar {
                 'url_action' => admin_url('admin-post.php'), 'nonce' => wp_create_nonce(self::NONCE),
                 'url_page' => admin_url('admin.php?page=' . Menu::SLUG_RADAR),
                 'onglet' => self::parametre('onglet'), 'du' => self::parametre('du'), 'au' => self::parametre('au'),
-                'source' => self::parametre('source'),
+                'source' => self::parametre('source'), 'aujourdhui' => \rsn_veille_aujourdhui(),
             ],
             self::details_a_afficher()
         );
@@ -399,6 +407,17 @@ final class PageRadar {
         wp_send_json_success(self::reponse_gardees($gardees));
     }
 
+    /** Remet une nouvelle archivée dans l'infolettre : elle y reste malgré son âge, jusqu'à ce qu'on la retire. */
+    public static function ajax_conserver(): void {
+        $url = self::url_de_la_requete();
+        if ($url === null) {
+            return;
+        }
+        $gardees = self::conserver(self::lire_gardees(), $url);
+        update_option(self::OPTION_GARDEES, $gardees, false);
+        wp_send_json_success(self::reponse_gardees($gardees));
+    }
+
     /**
      * Jeton `rsn_veille_radar` (champ `nonce`), capacité `rsn_veille_gerer` et adresse http(s) exigés.
      * Sinon la réponse d'erreur est envoyée (403 jeton ou droits, 400 adresse) et le résultat est null.
@@ -429,17 +448,19 @@ final class PageRadar {
     }
 
     /**
-     * Réponse d'une action : les compteurs des trois onglets (« à trier » d'après le cache du radar, jamais de réseau).
+     * Réponse d'une action : les compteurs des quatre onglets (« à trier » d'après le cache du radar, jamais de réseau).
      *
-     * @return array{ok: bool, gardees: int, libelle: string, compteurs: array{a_trier: int, gardees: int, ecartees: int}}
+     * @return array{ok: bool, gardees: int, libelle: string, compteurs: array{a_trier: int, gardees: int, archivees: int, ecartees: int}}
      */
     private static function reponse_gardees(array $gardees): array {
         $ignorees = self::lire_ignorees();
+        $actives = count(self::gardees_actives($gardees, \rsn_veille_aujourdhui()));
         return [
-            'ok' => true, 'gardees' => count($gardees), 'libelle' => self::libelle_gardees(count($gardees)),
+            'ok' => true, 'gardees' => $actives, 'libelle' => self::libelle_gardees($actives),
             'compteurs' => [
                 'a_trier' => count(self::visibles(self::nouvelles_en_cache(), $gardees, $ignorees)),
-                'gardees' => count($gardees),
+                'gardees' => $actives,
+                'archivees' => count($gardees) - $actives,
                 'ecartees' => count($ignorees),
             ],
         ];
@@ -468,6 +489,67 @@ final class PageRadar {
     }
 
     // --- Logique pure ---
+
+    /**
+     * Nouvelle gardée trop vieille pour l'infolettre : publiée (à défaut, gardée) depuis plus de `JOURS_ARCHIVE`
+     * jours, et que l'équipe n'a pas remise (`conservee`). Sans aucune date, elle n'est jamais archivée.
+     *
+     * @param array<string,mixed> $gardee
+     */
+    public static function est_archivee(array $gardee, string $aujourdhui): bool {
+        if (!empty($gardee['conservee'])) {
+            return false;
+        }
+        $date = '';
+        foreach (['date', 'gardee_le'] as $champ) {
+            $valeur = is_string($gardee[$champ] ?? null) ? substr($gardee[$champ], 0, 10) : '';
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $valeur) === 1) {
+                $date = $valeur;
+                break;
+            }
+        }
+        $jour = \DateTimeImmutable::createFromFormat('!Y-m-d', $aujourdhui);
+        if ($date === '' || $jour === false) {
+            return false;
+        }
+        return $date < $jour->modify('-' . self::JOURS_ARCHIVE . ' days')->format('Y-m-d');
+    }
+
+    /**
+     * Nouvelles gardées qui vont dans l'infolettre (ni archivées, ni illisibles), dans l'ordre reçu.
+     *
+     * @param array<int,mixed> $gardees
+     * @return array<int,array<string,mixed>>
+     */
+    public static function gardees_actives(array $gardees, string $aujourdhui): array {
+        return array_values(array_filter($gardees, static fn($g): bool => is_array($g) && !self::est_archivee($g, $aujourdhui)));
+    }
+
+    /**
+     * Nouvelles gardées archivées (trop vieilles pour l'infolettre), dans l'ordre reçu.
+     *
+     * @param array<int,mixed> $gardees
+     * @return array<int,array<string,mixed>>
+     */
+    public static function gardees_archivees(array $gardees, string $aujourdhui): array {
+        return array_values(array_filter($gardees, static fn($g): bool => is_array($g) && self::est_archivee($g, $aujourdhui)));
+    }
+
+    /**
+     * Marque une nouvelle gardée comme conservée : elle reste dans l'infolettre malgré son âge. Adresse inconnue :
+     * rien ne change.
+     *
+     * @param array<int,mixed> $gardees
+     * @return array<int,mixed>
+     */
+    public static function conserver(array $gardees, string $url): array {
+        foreach ($gardees as $i => $gardee) {
+            if (is_array($gardee) && ($gardee['url'] ?? null) === $url) {
+                $gardees[$i]['conservee'] = '1';
+            }
+        }
+        return array_values($gardees);
+    }
 
     /**
      * Ajoute une nouvelle en tête des gardées (sans doublon d'adresse), 200 au plus : les plus
@@ -684,10 +766,15 @@ final class PageRadar {
         [$du, $au] = self::bornes((string) ($options['du'] ?? ''), (string) ($options['au'] ?? ''));
         $source = is_string($options['source'] ?? null) ? trim($options['source']) : '';
         $url_page = (string) ($options['url_page'] ?? '');
+        $aujourdhui = is_string($options['aujourdhui'] ?? null) && $options['aujourdhui'] !== '' ? $options['aujourdhui'] : \rsn_veille_aujourdhui();
+        $actives = self::gardees_actives($gardees, $aujourdhui);
+        $archivees = self::gardees_archivees($gardees, $aujourdhui);
 
         if ($onglet === 'gardees') {
-            // Les plus récemment gardées d'abord (ordre de l'enregistrement).
-            $toutes = $gardees;
+            // Les plus récemment gardées d'abord (ordre de l'enregistrement) ; les trop vieilles sont archivées.
+            $toutes = $actives;
+        } elseif ($onglet === 'archivees') {
+            $toutes = $archivees;
         } elseif ($onglet === 'ecartees') {
             // Les plus récemment écartées d'abord, chacune avec ses détails.
             $toutes = [];
@@ -710,7 +797,7 @@ final class PageRadar {
             . self::barre_html((string) ($donnees['genere_le'] ?? ''), $options)
             . self::alertes_html(is_array($donnees['alertes'] ?? null) ? $donnees['alertes'] : [])
             . (!empty($donnees['en_cours']) ? '<p class="rsn-veille-radar-en-cours">' . esc_html__("Rafraîchissement en cours par un autre utilisateur : certaines sources ne sont pas encore là. Rechargez la page dans une minute.", 'rsn-veille') . '</p>' : '')
-            . self::onglets_html($onglet, ['a_trier' => count($visibles), 'gardees' => count($gardees), 'ecartees' => count($ignorees)], $du, $au, $url_page, $source)
+            . self::onglets_html($onglet, ['a_trier' => count($visibles), 'gardees' => count($actives), 'archivees' => count($archivees), 'ecartees' => count($ignorees)], $du, $au, $url_page, $source)
             . self::filtre_html($onglet, $du, $au, $affichees, $url_page, $source, $sources)
             . '<div class="rsn-veille-message" role="status" aria-live="polite"></div>'
             . $corps
@@ -745,12 +832,13 @@ final class PageRadar {
      * Onglets, comme ceux de la file d'approbation : le nombre de chaque onglet est un total (le filtre ne le change
      * pas) et suit les actions (`data-compteur`).
      *
-     * @param array{a_trier: int, gardees: int, ecartees: int} $compteurs
+     * @param array{a_trier: int, gardees: int, archivees: int, ecartees: int} $compteurs
      */
     private static function onglets_html(string $actif, array $compteurs, string $du, string $au, string $url_page, string $source = ''): string {
         $libelles = [
             'a_trier' => __('À trier', 'rsn-veille'),
             'gardees' => __("Gardées pour l'infolettre", 'rsn-veille'),
+            'archivees' => __('Archivées', 'rsn-veille'),
             'ecartees' => __('Écartées', 'rsn-veille'),
         ];
         $html = '<nav class="nav-tab-wrapper" aria-label="' . esc_attr__('Nouvelles du radar', 'rsn-veille') . '">';
@@ -848,6 +936,9 @@ final class PageRadar {
     private static function tableau_html(string $onglet, array $nouvelles): string {
         [$section, $reperes, $vide, $intro] = match ($onglet) {
             'gardees' => ['gardees', __('Gardée le', 'rsn-veille'), __("Aucune nouvelle gardée pour l'instant.", 'rsn-veille'), ''],
+            'archivees' => ['archivees', __('Gardée le', 'rsn-veille'), __('Aucune nouvelle archivée.', 'rsn-veille'),
+                /* translators: %d : nombre de jours après lequel une nouvelle gardée est archivée. */
+                sprintf(__("Nouvelles gardées publiées depuis plus de %d jours : elles ne sont plus dans l'infolettre. Remettez-en une si elle doit encore y paraître, ou retirez-la.", 'rsn-veille'), self::JOURS_ARCHIVE)],
             'ecartees' => ['ecartees', __('Écartée le', 'rsn-veille'), __('Aucune nouvelle écartée.', 'rsn-veille'),
                 __("Une nouvelle écartée ne reparaît plus dans « À trier ». Remettez-la dans le radar pour la trier de nouveau, ou gardez-la directement pour l'infolettre.", 'rsn-veille')],
             default => ['radar', __('Repères', 'rsn-veille'), __('Aucune nouvelle à trier pour le moment.', 'rsn-veille'), ''],
@@ -890,6 +981,9 @@ final class PageRadar {
         if ($onglet === 'gardees') {
             $reperes = esc_html(Dates::date_heure((string) ($n['gardee_le'] ?? '')));
             $boutons = self::bouton_html('retirer', __('Retirer', 'rsn-veille'), false);
+        } elseif ($onglet === 'archivees') {
+            $reperes = esc_html(Dates::date_heure((string) ($n['gardee_le'] ?? '')));
+            $boutons = self::bouton_html('conserver', __("Remettre dans l'infolettre", 'rsn-veille'), true) . ' ' . self::bouton_html('retirer', __('Retirer', 'rsn-veille'), false);
         } elseif ($onglet === 'ecartees') {
             $reperes = esc_html(Dates::date_heure((string) ($n['ignoree_le'] ?? '')));
             $boutons = self::bouton_html('retablir', __('Remettre dans le radar', 'rsn-veille'), true)
@@ -902,7 +996,10 @@ final class PageRadar {
                 $reperes .= ' <span class="rsn-veille-deja-paru" title="' . esc_attr__("Cet encadré revient d'un numéro à l'autre de l'infolettre : rien de neuf, sans doute.", 'rsn-veille') . '">'
                     . esc_html(sprintf(_n('Déjà paru dans %d autre numéro', 'Déjà paru dans %d autres numéros', $deja_paru, 'rsn-veille'), $deja_paru)) . '</span>';
             }
-            $boutons = self::bouton_html('garder', __("Garder pour l'infolettre", 'rsn-veille'), true) . ' ' . self::bouton_html('ignorer', __('Écarter', 'rsn-veille'), false);
+            // « Santé + numérique » : a priori pour le RSN, son bouton « Garder » est vert pour le repérer.
+            $pertinente = ($n['statut_radar'] ?? '') === 'reperee';
+            $boutons = self::bouton_html('garder', __("Garder pour l'infolettre", 'rsn-veille'), true, $pertinente ? 'rsn-veille-bouton-pertinent' : '')
+                . ' ' . self::bouton_html('ignorer', __('Écarter', 'rsn-veille'), false);
         }
 
         return '<tr class="rsn-veille-nouvelle" data-url="' . esc_attr($url) . '"' . ($deja_paru > 0 ? ' data-deja-paru="' . $deja_paru . '"' : '') . '>'
@@ -934,8 +1031,8 @@ final class PageRadar {
             . esc_html($libelle) . '</span>';
     }
 
-    private static function bouton_html(string $acte, string $libelle, bool $principal): string {
-        return '<button type="button" class="button' . ($principal ? ' button-primary' : '') . ' rsn-veille-radar-action" data-act="' . esc_attr($acte) . '">'
+    private static function bouton_html(string $acte, string $libelle, bool $principal, string $classe = ''): string {
+        return '<button type="button" class="button' . ($principal ? ' button-primary' : '') . ' rsn-veille-radar-action' . ($classe !== '' ? ' ' . esc_attr($classe) : '') . '" data-act="' . esc_attr($acte) . '">'
             . esc_html($libelle) . '</button>';
     }
 

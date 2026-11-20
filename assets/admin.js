@@ -155,8 +155,8 @@
 })();
 
 /**
- * RSN Veille : radar des nouvelles, en trois onglets (À trier, Gardées pour l'infolettre, Écartées). Les
- * boutons (`data-act` : garder, ignorer, retirer, retablir) envoient l'adresse de la nouvelle en fetch vers
+ * RSN Veille : radar des nouvelles, en quatre onglets (À trier, Gardées pour l'infolettre, Archivées, Écartées).
+ * Les boutons (`data-act` : garder, ignorer, retirer, retablir, conserver) envoient l'adresse de la nouvelle en fetch vers
  * admin-ajax.php ; le serveur reprend titre et résumé dans son cache. Au succès, la ligne quitte le tableau et
  * les nombres des onglets (`data-compteur`) suivent ; en cas d'échec, le message s'affiche dans la zone
  * `role="status"`. Aucune dépendance.
@@ -247,6 +247,10 @@
 				}
 				if (acte === 'retablir') {
 					annoncer(json.data.message || config.textes.retablie, false);
+					return;
+				}
+				if (acte === 'conserver') {
+					annoncer(config.textes.conservee, false);
 					return;
 				}
 				annoncer(acte === 'garder' ? config.textes.gardee : (acte === 'ignorer' ? config.textes.ignoree : config.textes.retiree), false);
