@@ -66,6 +66,10 @@ Le dépôt est **privé** (`TessRSN/rsn-veille`) et la branche de livraison est 
 
 Quelle que soit la voie, l'activation lance les mêmes opérations (voir section 9).
 
+### Après la mise à jour de la 0.13.0 vers la 0.14.0
+
+Rien à régler. **Veille › Radar** est maintenant rangé comme la file d'approbation : un tableau, une ligne par nouvelle, **les plus récentes en haut, toutes sources mêlées**. La source est dans sa colonne, à côté des repères (« Santé + numérique », « Déjà paru dans n autres numéros »). Pour ne voir qu'un organisme, le menu **« Toutes les sources »** du filtre, à côté des dates. Les onglets « Gardées pour l'infolettre » et « Écartées » ont le même tableau, avec la date à laquelle la nouvelle a été gardée ou écartée. Les nouvelles déjà gardées ou écartées ne bougent pas.
+
 ### Après la mise à jour de la 0.12.0 vers la 0.13.0
 
 Rien à régler. Dans la file d'approbation, onglet « À approuver », une fiche qui ressemble à une fiche déjà publiée porte l'étiquette orange **« Peut-être déjà dans l'agenda »** (la même couleur que « Déjà paru » au Radar), avec un lien vers la fiche publiée et ses dates : comparer, puis écarter le doublon ou publier si ce sont deux choses différentes. Si elle ressemble à une autre fiche en attente, l'étiquette dit « Ressemble à une autre fiche en attente » et mène à sa ligne. Rien n'est fusionné ni écarté tout seul. Un événement de l'agenda d'une infolettre annoncé dans plusieurs numéros affiche « Annoncé dans n numéros » dans la colonne Source, après la prochaine collecte.

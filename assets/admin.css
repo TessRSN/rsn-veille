@@ -312,32 +312,58 @@
 	font-weight: 600;
 }
 
-.rsn-veille-radar-liste {
-	margin: 0 0 12px;
-	max-width: 960px;
+/* Tableau du Radar : comme celui de la file d'approbation, une ligne par nouvelle, la source dans sa colonne. */
+.rsn-veille-radar-tableau td,
+.rsn-veille-radar-tableau th {
+	vertical-align: top;
 }
 
-.rsn-veille-nouvelle {
-	margin: 0;
-	padding: 10px 0;
-	border-bottom: 1px solid #dcdcde;
+.rsn-veille-radar-tableau[hidden] {
+	display: none;
 }
 
 .rsn-veille-nouvelle[aria-busy="true"] {
 	opacity: 0.6;
 }
 
-.rsn-veille-nouvelle-date,
-.rsn-veille-nouvelle-meta {
+.rsn-veille-radar-tableau .rsn-veille-nouvelle-date {
+	width: 11%;
+	color: #50575e;
+	white-space: nowrap;
+}
+
+.rsn-veille-radar-tableau .rsn-veille-nouvelle-titre {
+	width: 41%;
+}
+
+.rsn-veille-radar-tableau .rsn-veille-nouvelle-source {
+	width: 17%;
+}
+
+.rsn-veille-radar-tableau .rsn-veille-nouvelle-reperes {
+	width: 14%;
 	color: #50575e;
 }
 
-.rsn-veille-nouvelle .rsn-veille-extrait {
-	margin: 4px 0 6px;
+.rsn-veille-radar-tableau .rsn-veille-extrait {
+	margin: 4px 0 0;
+	color: #50575e;
 }
 
-.rsn-veille-nouvelle .rsn-veille-actions {
+/* Les deux boutons se mettent l'un sous l'autre quand la colonne est étroite : la place va au titre et à l'extrait. */
+.rsn-veille-radar-tableau .rsn-veille-actions {
+	width: 17%;
 	white-space: normal;
+}
+
+.rsn-veille-radar-tableau .rsn-veille-actions .button {
+	margin: 0 4px 4px 0;
+}
+
+/* Les deux étiquettes de la colonne Repères, l'une sous l'autre. */
+.rsn-veille-radar-tableau .rsn-veille-nouvelle-reperes > span {
+	display: inline-block;
+	margin: 0 0 4px;
 }
 
 /* Encadré d'une infolettre qui revient d'un numéro à l'autre : étiquette orange et liseré, repérables d'un coup d'œil. */
@@ -347,9 +373,8 @@
 	border: 1px solid #e07b39;
 }
 
-.rsn-veille-nouvelle[data-deja-paru] {
-	padding-left: 10px;
-	border-left: 4px solid #e07b39;
+.rsn-veille-radar-tableau tr[data-deja-paru] > td:first-child {
+	box-shadow: inset 4px 0 0 #e07b39;
 }
 
 .rsn-veille-radar-statut[data-statut="reperee"] {

@@ -74,8 +74,8 @@ lancent par `npx wp-env run cli wp …`.
       automatique », une fiche ajoutée à la main « Saisie par l'équipe ». Au-dessus du tableau : « 1 proposition du
       public à traiter » ; le lien et le filtre « Propositions du public » ne montrent qu'elle ; changer d'onglet
       garde le filtre.
-- [ ] **Infolettre découpée** (0.12.0) : Veille > Radar > Rafraîchir. Le groupe « Unité de soutien SSA Québec :
-      infolettre » liste les encadrés des derniers numéros (titre, lien propre à chacun, extrait), pas un bloc par
+- [ ] **Infolettre découpée** (0.12.0) : Veille > Radar > Rafraîchir. La source « Unité de soutien SSA Québec :
+      infolettre » (filtre par source, 0.14.0) liste les encadrés des derniers numéros (titre, lien propre à chacun, extrait), pas un bloc par
       numéro. « Boîte à outils SSA », « Formations gratuites », « Grand public » et « Bulletin de veille SSA » portent
       l'étiquette orange « Déjà paru dans n autres numéros » et un liseré orange ; les articles du mois, non. Écarter
       une « Déjà paru » : elle passe dans « Écartées » et ne revient pas après Rafraîchir. Après une collecte
@@ -112,7 +112,7 @@ lancent par `npx wp-env run cli wp …`.
       « N appariées en anglais, M orphelines » au-dessus des erreurs, erreurs repliées sous
       « N erreurs », et le déroulé de chaque source replié en bas de page.
 - [ ] Les fichiers `admin.css` et `admin.js` ne sont chargés que sur les pages du menu Veille (onglet
-      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.13.0`.
+      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.14.0`.
 - [ ] Aucune erreur PHP dans `wp-content/debug.log` ni dans la console du navigateur.
 
 ## Réglages (tâche 12)
@@ -178,8 +178,19 @@ copie de 24 h (`rsn_veille_radar_dernier`). Un verrou de 2 min (`rsn_veille_rada
 
 - [ ] La page s'ouvre sans erreur PHP. En haut : bouton **Rafraîchir**, « Flux lus le … », puis les trois
       onglets (0.9.0) « À trier (n) », « Gardées pour l'infolettre (0) », « Écartées (0) » et le filtre
-      « Publiées du … au … ». L'onglet « À trier » montre les nouvelles groupées par source, la plus récente d'abord.
-- [ ] Chaque nouvelle montre la date, le titre (lien qui s'ouvre dans un nouvel onglet), ce qu'elle touche
+      « Publiées du … au … ». L'onglet « À trier » est un tableau (0.14.0 ; des groupes par source avant) : une
+      ligne par nouvelle, de la plus récente à la plus ancienne, toutes sources mêlées.
+- [ ] **Tableau** (0.14.0) : colonnes « Publiée le », « Nouvelle » (titre et extrait), « Source », « Repères »,
+      « Actions ». Deux nouvelles du même jour et de sources différentes se suivent ; aucune ligne plus récente
+      sous une plus ancienne ; une nouvelle sans date est à la fin. Une « Déjà paru » garde son liseré orange à
+      gauche. Dans « Gardées pour l'infolettre » et « Écartées », la quatrième colonne s'appelle « Gardée le » et
+      « Écartée le ». Garder ou écarter la dernière ligne d'un onglet : le tableau disparaît, « Aucune nouvelle… »
+      paraît.
+- [ ] **Filtre par source** (0.14.0) : le menu « Toutes les sources » liste les sources de l'onglet en ordre
+      alphabétique. En choisir une puis **Filtrer** : seules ses nouvelles restent, « n nouvelles de « … » » et
+      « Tout afficher » paraissent ; les nombres des onglets ne changent pas ; changer d'onglet garde la source ;
+      avec des dates en plus : « n nouvelles publiées du … au …, de « … » ».
+- [ ] Chaque ligne montre la date, le titre (lien qui s'ouvre dans un nouvel onglet), la source, ce qu'elle touche
       (0.12.0 : « Santé + numérique » en gras, « Santé seulement » ou « Numérique seulement » ; « Repérée » et
       « À trier » avant), un extrait, et les boutons **Garder pour l'infolettre** et **Écarter**. Aucune nouvelle
       de plus de 60 jours. Une source généraliste (FRQ, Acfas) donne surtout des « … seulement ».
@@ -188,7 +199,7 @@ copie de 24 h (`rsn_veille_radar_dernier`). Un verrou de 2 min (`rsn_veille_rada
 - [ ] **Garder** deux nouvelles : chaque ligne disparaît du radar, le message « Nouvelle gardée pour
       l'infolettre. » est annoncé (zone `role="status"`) et le nombre de l'onglet « Gardées pour l'infolettre » passe à 1, puis 2.
       Onglet « Gardées pour l'infolettre » : les deux y sont, la plus récemment gardée d'abord, avec
-      « gardée le … » et un bouton **Retirer** ; elles ne sont plus dans « À trier ».
+      sa date dans la colonne « Gardée le » et un bouton **Retirer** ; elles ne sont plus dans « À trier ».
       `wp option get rsn_veille_nouvelles_gardees --format=json` : champs `url, titre, date, source,
       organisateur, resume, gardee_le`.
 - [ ] **Retirer** une gardée : la ligne disparaît, le compteur baisse ; après rechargement la nouvelle
