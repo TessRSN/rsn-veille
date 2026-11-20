@@ -1,5 +1,22 @@
 # Journal des modifications
 
+## 0.13.0 (2026-11-20)
+
+File d'approbation : les mêmes repères que le Radar, à la demande de l'équipe. La file ne disait pas si une fiche à approuver était déjà dans l'agenda sous un autre titre.
+
+### « Peut-être déjà dans l'agenda » (`Ressemblance`, `Admin\PageFile`)
+- Dans l'onglet « À approuver », une fiche qui **ressemble à une fiche déjà publiée** porte l'étiquette orange du Radar, un liseré orange, et un lien vers la fiche publiée avec ses dates, pour comparer avant de publier ou d'écarter. Exemple réel : « Forum de l'industrie de la santé de Québec » (agenda de l'infolettre de l'Unité SSA) et « 20e Forum de l'industrie de la santé de Québec (FISQ) », déjà publié.
+- Sinon, si elle ressemble à **une autre fiche en attente** (une proposition du public que la collecte a aussi trouvée) : « Ressemble à une autre fiche en attente », avec un lien vers sa ligne, dans les deux sens.
+- Règle : même type ; pour deux événements, des dates qui se recoupent et un titre proche ou la même adresse ; pour deux appels sans dates limites contraires, un titre proche ou la même adresse. Titre proche : au moins 80 % des mots du titre le plus court sont dans l'autre (sans mots vides, numéros d'édition ni années) ; un titre de deux mots doit être le même de part et d'autre ; deux organisateurs nommés et sans rapport demandent quatre mots communs. L'adresse du numéro d'une infolettre, une page d'accueil ou une page portée par trois fiches ou plus ne prouvent rien.
+- Comparaison avec les fiches publiées **encore d'actualité** seulement (événements à venir ou en cours, appels en cours) : le concours de l'an passé n'est pas « déjà dans l'agenda », et la file ne charge jamais toute la base.
+- Ce n'est qu'un signalement : **rien n'est fusionné ni écarté** automatiquement. Le dédoublonnage de la collecte ne change pas.
+
+### « Annoncé dans n numéros » (`Lecteurs\LecteurInfolettre`, `Collecte::mentions`)
+- Un événement tiré de l'agenda d'une infolettre et annoncé dans plusieurs numéros le dit dans la colonne Source. Deux envois du même numéro comptent pour un. Le compte est refait à chaque collecte réussie (option `rsn_veille_mentions`) ; celui d'une source désactivée n'est plus montré.
+
+### Livraison
+- Tests : 16 nouveaux (822 au total) ; règle essayée sur les 93 fiches publiées du site (aucune fausse alerte ; elle retrouve la préannonce et le lancement du même programme du FRQ, publiés tous les deux) ; relecture indépendante (appels échus, titres courts, organisateurs différents, coût sur une grosse file : corrigés avant la livraison). Numéro de version 0.13.0.
+
 ## 0.12.0 (2026-11-20)
 
 Infolettres Mailchimp : celle de l'Unité de soutien SSA Québec est lue et découpée, au lieu d'arriver en un seul bloc. Deux avertissements demandés par l'équipe : ce qui revient d'un numéro à l'autre, et une source dont le gabarit change.

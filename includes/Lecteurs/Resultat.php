@@ -26,4 +26,10 @@ final class Resultat {
      * @var string[]
      */
     public array $alertes = [];
+    /**
+     * Pour une infolettre : nombre de numéros qui annoncent chaque événement rendu, par clé de source.
+     *
+     * @var array<string,int>
+     */
+    public array $mentions = [];
 }

@@ -329,7 +329,7 @@ final class Fiche {
     }
 
     /** Minuscules, sans accents, toute ponctuation (traits d'union compris) réduite à une espace. */
-    private static function plier(string $texte): string {
+    public static function plier(string $texte): string {
         $texte = preg_replace('/[^a-z0-9]+/', ' ', self::simplifier($texte)) ?? '';
         return trim($texte);
     }

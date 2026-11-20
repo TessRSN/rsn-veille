@@ -148,6 +148,34 @@ final class DecoupageMailchimp {
         return $lignes;
     }
 
+    /**
+     * Numéro d'édition de chaque envoi : deux envois dont le contenu est presque le même (au moins 80 % d'éléments
+     * communs sur l'ensemble des deux) sont le même numéro, envoyé deux fois. Un envoi sans élément est seul.
+     *
+     * @param array<int,string[]> $elements Ce qui identifie le contenu de chaque envoi (adresses des encadrés, lignes d'agenda).
+     * @return array<int,int>
+     */
+    public static function editions(array $elements): array {
+        $editions = [];
+        $modeles = [];
+        foreach ($elements as $i => $liste) {
+            $liste = array_unique($liste);
+            $editions[$i] = count($modeles);
+            foreach ($modeles as $numero => $modele) {
+                $communes = count(array_intersect($liste, $modele));
+                $toutes = count($liste) + count($modele) - $communes;
+                if ($liste !== [] && $communes * 5 >= $toutes * 4) {
+                    $editions[$i] = $numero;
+                    break;
+                }
+            }
+            if ($editions[$i] === count($modeles)) {
+                $modeles[] = $liste;
+            }
+        }
+        return $editions;
+    }
+
     /** « 20 novembre 2026 », « 1er mai 2026 » ; vide si la date n'est pas `Y-m-d`. */
     public static function date_en_clair(string $date): string {
         if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $m) !== 1 || !checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {

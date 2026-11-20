@@ -32,6 +32,8 @@ final class Collecte {
     public const OPTION_REGLAGES = 'rsn_veille_reglages';
     public const OPTION_FILE = 'rsn_veille_file';
     public const OPTION_DERNIERE = 'rsn_veille_derniere_collecte';
+    /** Par source d'infolettre : nombre de numéros qui annoncent chaque événement (clé de source ⇒ nombre). Non chargée automatiquement. */
+    public const OPTION_MENTIONS = 'rsn_veille_mentions';
     /** Dernière version de l'extension dont les caches publics ont été purgés (voir `purger_si_nouvelle_version`). */
     public const OPTION_VERSION = 'rsn_veille_version';
     public const CROCHET_NUIT = 'rsn_veille_nuit';
@@ -379,6 +381,10 @@ final class Collecte {
                 }
                 // Une source lisible qui ne rend rien (gabarit changé ?) ne compte pas comme collecte réussie.
                 $reussie = $resultat->fiches !== [] || $resultat->ignores > 0;
+                if ($reussie) {
+                    // Une lecture qui ne rend rien (flux illisible) garde les mentions de la précédente.
+                    self::garder_mentions($id, $resultat->mentions);
+                }
 
                 // Pages d'événements IVADO : plafond et budget partagés par les deux langues.
                 $resolutions = ['debut' => self::horloge(), 'reste' => ResolutionIvado::MAX];
@@ -731,6 +737,41 @@ final class Collecte {
         if (wp_next_scheduled(self::CROCHET_SOURCE) === false) {
             wp_schedule_single_event(time() + $delai, self::CROCHET_SOURCE);
         }
+    }
+
+    /**
+     * Garde, pour la file d'approbation, le nombre de numéros d'une infolettre qui annoncent chaque événement lu à cette
+     * collecte (celles des autres sources restent). Rien n'est écrit pour une source qui n'en donne pas et n'en avait pas.
+     *
+     * @param array<string,int> $mentions Par clé de source.
+     */
+    private static function garder_mentions(string $id_source, array $mentions): void {
+        $toutes = get_option(self::OPTION_MENTIONS, []);
+        $toutes = is_array($toutes) ? $toutes : [];
+        if ($mentions === [] && !isset($toutes[$id_source])) {
+            return;
+        }
+        if ($mentions === []) {
+            unset($toutes[$id_source]);
+        } else {
+            $toutes[$id_source] = $mentions;
+        }
+        update_option(self::OPTION_MENTIONS, $toutes, false);
+    }
+
+    /** @return array<string,int> Nombre de numéros qui annoncent un événement d'infolettre, par clé de source (sources actives). */
+    public static function mentions(): array {
+        $toutes = get_option(self::OPTION_MENTIONS, []);
+        $mentions = [];
+        // Seulement les sources actives : une source désactivée ne laisse pas ses comptes dans la file.
+        foreach (array_intersect_key(is_array($toutes) ? $toutes : [], self::sources()) as $par_cle) {
+            foreach (is_array($par_cle) ? $par_cle : [] as $cle => $nombre) {
+                if (is_int($nombre) && $nombre > 0) {
+                    $mentions[(string) $cle] = $nombre;
+                }
+            }
+        }
+        return $mentions;
     }
 
     /** @return array<string,mixed> Ligne de journal aux compteurs à zéro, datée de maintenant (heure du site). */

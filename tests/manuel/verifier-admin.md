@@ -82,6 +82,14 @@ lancent par `npx wp-env run cli wp …`.
       (Réglages), la file « À approuver » montre les événements à venir de « À l'agenda », source « Unité de soutien
       SSA Québec : agenda (infolettre) », organisateur vide (sauf les webinaires de l'Unité), résumé « Annoncé dans
       l'infolettre du … » ; une seconde collecte n'en crée aucun (Journal : « Inchangés »).
+- [ ] **Peut-être déjà dans l'agenda** (0.13.0) : proposer par le formulaire de la page un événement déjà publié,
+      le même jour, avec un titre un peu différent (un mot en plus, « 2e » devant). Dans la file « À approuver », sa
+      ligne a un liseré orange et, sous le titre, l'étiquette orange « Peut-être déjà dans l'agenda », le titre de la
+      fiche publiée en lien (il ouvre sa page de modification) et ses dates. Une proposition sans rapport n'a rien.
+      Proposer deux fois le même événement inédit : chaque ligne dit « Ressemble à une autre fiche en attente » et
+      mène à l'autre. Les onglets « Publiées » et « Écartées » ne montrent jamais l'étiquette. Après une collecte, un
+      événement de l'agenda de l'infolettre annoncé dans plusieurs numéros affiche « Annoncé dans n numéros » dans la
+      colonne Source.
 - [ ] **Gabarit à vérifier** (0.12.0) : après au moins trois collectes d'une source (Journal), simuler une lecture
       vide : `wp eval 'RSN\Veille\Journal::consigner("obvia", ["date" => wp_date("Y-m-d H:i"), "lus" => 0, "ignores" => 0, "erreurs" => []]);'`.
       Le Journal montre en tête l'encadré jaune « Gabarit à vérifier » avec « Obvia : événements : Rien lu, alors que
@@ -104,7 +112,7 @@ lancent par `npx wp-env run cli wp …`.
       « N appariées en anglais, M orphelines » au-dessus des erreurs, erreurs repliées sous
       « N erreurs », et le déroulé de chaque source replié en bas de page.
 - [ ] Les fichiers `admin.css` et `admin.js` ne sont chargés que sur les pages du menu Veille (onglet
-      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.12.0`.
+      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.13.0`.
 - [ ] Aucune erreur PHP dans `wp-content/debug.log` ni dans la console du navigateur.
 
 ## Réglages (tâche 12)

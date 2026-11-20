@@ -9,6 +9,7 @@ use RSN\Veille\EntrepotWordPress;
 use RSN\Veille\Fiche;
 use RSN\Veille\Journal;
 use RSN\Veille\Public\Formulaire;
+use RSN\Veille\Ressemblance;
 use RSN\Veille\TypeContenu;
 
 if (!defined('ABSPATH')) {
@@ -78,8 +79,27 @@ final class PageFile {
             'origine' => $origine,
             'courriels' => $courriels,
             'sources_a_verifier' => self::sources_a_verifier(Journal::alertes(Journal::tout()), Collecte::sources()),
+            // Mêmes repères que le Radar : ce qui est peut-être déjà publié, ce qu'une infolettre annonce plusieurs fois.
+            'ressemblances' => $onglet === 'a_approuver' ? self::ressemblances($entrepot, $fiches, rsn_veille_aujourdhui()) : [],
+            'mentions' => Collecte::mentions(),
             'url_journal' => admin_url('admin.php?page=' . Menu::SLUG_JOURNAL),
         ]);
+    }
+
+    /**
+     * Fiche ressemblante de chaque fiche en attente (`Ressemblance::pour_la_file`), parmi les fiches publiées encore
+     * d'actualité (événements à venir ou en cours, appels en cours : jamais toute la base) et les autres fiches en attente.
+     *
+     * @param Fiche[] $en_attente
+     * @return array<int,Fiche>
+     */
+    public static function ressemblances(Entrepot $e, array $en_attente, string $aujourdhui): array {
+        if ($en_attente === []) {
+            return [];
+        }
+        $jour = \DateTimeImmutable::createFromFormat('!Y-m-d', $aujourdhui);
+        $limite_appels = $jour !== false ? $jour->modify('-' . Fiche::JOURS_APPEL_SANS_LIMITE . ' days')->format('Y-m-d') : $aujourdhui;
+        return Ressemblance::pour_la_file($en_attente, $e->lister_pour_page($aujourdhui, $aujourdhui, $limite_appels), $aujourdhui);
     }
 
     /**
@@ -294,7 +314,9 @@ final class PageFile {
      *        `compteurs` : nombres par onglet de l'entrepôt (`Entrepot::compter`), sinon comptés sur $fiches ;
      *        `plafond_atteint` : l'onglet ne montre que les `PLAFOND` fiches les plus récentes ;
      *        `peut_ajouter` : bouton « Ajouter une fiche » (vrai par défaut) ;
-     *        `sources_a_verifier`, `url_journal` : rappel des sources dont le gabarit a peut-être changé.
+     *        `sources_a_verifier`, `url_journal` : rappel des sources dont le gabarit a peut-être changé ;
+     *        `ressemblances` (fiche ressemblante par identifiant, `Ressemblance::pour_la_file`) et `mentions`
+     *        (`Collecte::mentions`) : étiquettes « Peut-être déjà dans l'agenda » et « Annoncé dans n numéros ».
      */
     public static function page_html(array $fiches, string $onglet, string $type, string $source, string $url_page, array $options): string {
         $compteurs = is_array($options['compteurs'] ?? null) ? $options['compteurs'] : self::compteurs($fiches);
@@ -332,12 +354,19 @@ final class PageFile {
      */
     public static function ligne_html(Fiche $f, array $options): string {
         $id = (int) $f->id;
-        return '<tr id="rsn-veille-fiche-' . $id . '" data-id="' . $id . '" data-statut="' . esc_attr($f->statut) . '" data-origine="' . esc_attr($f->origine()) . '">'
-            . '<td class="rsn-veille-titre">' . self::titre_html($f, (string) ($options['url_admin'] ?? ''), self::est_onglet_d_arrivee((string) ($options['onglet'] ?? '')) && self::est_nouvelle($f, rsn_veille_aujourdhui())) . '</td>'
+        $url_admin = (string) ($options['url_admin'] ?? '');
+        // Fiche ressemblante (déjà publiée, ou autre fiche en attente) : seulement dans la file à approuver.
+        $pareille = ($options['onglet'] ?? '') === 'a_approuver' && is_array($options['ressemblances'] ?? null) ? ($options['ressemblances'][$id] ?? null) : null;
+        $pareille = $pareille instanceof Fiche ? $pareille : null;
+        return '<tr id="rsn-veille-fiche-' . $id . '" data-id="' . $id . '" data-statut="' . esc_attr($f->statut) . '" data-origine="' . esc_attr($f->origine()) . '"'
+            . ($pareille !== null ? ' data-ressemble="' . ($pareille->statut === 'publie' ? 'publie' : 'a_approuver') . '"' : '') . '>'
+            . '<td class="rsn-veille-titre">' . self::titre_html($f, $url_admin, self::est_onglet_d_arrivee((string) ($options['onglet'] ?? '')) && self::est_nouvelle($f, rsn_veille_aujourdhui()))
+            . ($pareille !== null ? self::ressemblance_html($pareille, $url_admin, in_array((int) $pareille->id, is_array($options['affichees'] ?? null) ? $options['affichees'] : [], true)) : '') . '</td>'
             . '<td>' . esc_html(self::libelle_type($f->type)) . '</td>'
             . '<td>' . self::dates_html($f) . '</td>'
             . '<td>' . esc_html($f->organisateur) . '</td>'
-            . '<td>' . self::source_html($f, is_array($options['courriels'] ?? null) ? (string) ($options['courriels'][$id] ?? '') : '') . '</td>'
+            . '<td>' . self::source_html($f, is_array($options['courriels'] ?? null) ? (string) ($options['courriels'][$id] ?? '') : '')
+            . self::mentions_html($f, is_array($options['mentions'] ?? null) ? $options['mentions'] : []) . '</td>'
             . '<td class="rsn-veille-extrait">' . esc_html(Fiche::court($f->resume, self::LONGUEUR_EXTRAIT)) . '</td>'
             . '<td class="rsn-veille-actions">' . self::boutons_html($f) . '</td>'
             . '</tr>';
@@ -354,8 +383,9 @@ final class PageFile {
             $entete .= '<th scope="col">' . esc_html($colonne) . '</th>';
         }
         $lignes = '';
+        $affichees = array_map(static fn(Fiche $f): int => (int) $f->id, $fiches);
         foreach ($fiches as $fiche) {
-            $lignes .= self::ligne_html($fiche, $options + ['onglet' => $onglet]);
+            $lignes .= self::ligne_html($fiche, ['onglet' => $onglet, 'affichees' => $affichees] + $options);
         }
         if ($lignes === '') {
             $lignes = '<tr class="rsn-veille-vide"><td colspan="' . count($colonnes) . '">' . esc_html__('Aucune fiche.', 'rsn-veille') . '</td></tr>';
@@ -437,6 +467,44 @@ final class PageFile {
             $html .= '<div class="rsn-veille-liens">' . implode(' | ', $liens) . '</div>';
         }
         return $html;
+    }
+
+    /**
+     * Sous le titre : la fiche qui annonce sans doute la même chose (`Ressemblance`), avec l'étiquette orange du Radar.
+     * Publiée : « Peut-être déjà dans l'agenda », lien vers sa page de modification. En attente : lien vers sa ligne
+     * (`$affichee` : elle est dans le tableau).
+     */
+    private static function ressemblance_html(Fiche $pareille, string $url_admin, bool $affichee): string {
+        $publiee = $pareille->statut === 'publie';
+        $libelle = $publiee ? __("Peut-être déjà dans l'agenda", 'rsn-veille') : __('Ressemble à une autre fiche en attente', 'rsn-veille');
+        $titre = esc_html($pareille->titre !== '' ? $pareille->titre : __('(sans titre)', 'rsn-veille'));
+        if (!$publiee) {
+            // Le lien mène à sa ligne, si elle est dans le tableau (un filtre peut la cacher).
+            $titre = $affichee ? '<a href="#rsn-veille-fiche-' . (int) $pareille->id . '">' . $titre . '</a>' : $titre;
+        } elseif ($url_admin !== '') {
+            $titre = '<a href="' . esc_url($url_admin . 'post.php?post=' . (int) $pareille->id . '&action=edit') . '">' . $titre . '</a>';
+        }
+        $quand = $pareille->type === 'appel' ? Dates::date_longue($pareille->echeance) : Dates::periode($pareille->debut, $pareille->fin);
+        return '<p class="rsn-veille-ressemble"><span class="rsn-veille-deja-paru">' . esc_html($libelle) . '</span> '
+            . $titre . ($quand !== '' ? ' <span class="rsn-veille-ressemble-date">' . esc_html($quand) . '</span>' : '') . '</p>';
+    }
+
+    /**
+     * Événement tiré de l'agenda d'une infolettre : « Annoncé dans n numéros » quand plusieurs numéros l'annoncent.
+     *
+     * @param array<string,mixed> $mentions Nombre de numéros par clé de source (`Collecte::mentions`).
+     */
+    private static function mentions_html(Fiche $f, array $mentions): string {
+        $nombre = 0;
+        foreach ($f->cles_source as $cle) {
+            $nombre = max($nombre, is_int($mentions[$cle] ?? null) ? $mentions[$cle] : 0);
+        }
+        if ($nombre < 2) {
+            return '';
+        }
+        /* translators: %d : nombre de numéros de l'infolettre qui annoncent l'événement. */
+        return '<br><span class="rsn-veille-mentions" title="' . esc_attr__("Nombre de numéros de l'infolettre qui annoncent cet événement.", 'rsn-veille') . '">'
+            . esc_html(sprintf(_n('Annoncé dans %d numéro', 'Annoncé dans %d numéros', $nombre, 'rsn-veille'), $nombre)) . '</span>';
     }
 
     private static function dates_html(Fiche $f): string {

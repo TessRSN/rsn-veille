@@ -97,6 +97,34 @@
 	box-shadow: inset 4px 0 0 #FFCC4E;
 }
 
+/* Fiche qui ressemble à une autre (déjà publiée ou en attente) : liseré et étiquette orange, comme « Déjà paru » au Radar. */
+.rsn-veille-file tr[data-ressemble] > td:first-child {
+	box-shadow: inset 4px 0 0 #e07b39;
+}
+
+.rsn-veille-ressemble {
+	margin: 6px 0 0;
+	line-height: 1.7;
+}
+
+.rsn-veille-ressemble-date {
+	color: #50575e;
+	white-space: nowrap;
+}
+
+/* Événement qu'une infolettre annonce dans plusieurs numéros. */
+.rsn-veille-mentions {
+	display: inline-block;
+	margin-top: 4px;
+	padding: 1px 8px;
+	border: 1px solid #c3c4c7;
+	border-radius: 10px;
+	background: #f6f7f7;
+	color: #3c434a;
+	font-size: 12px;
+	white-space: nowrap;
+}
+
 .rsn-veille-rappel-propositions {
 	margin: 10px 0;
 	padding: 8px 12px;
