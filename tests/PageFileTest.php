@@ -438,6 +438,82 @@ final class PageFileTest extends TestCase {
         $this->assertStringNotContainsString('plus récentes sont affichées', PageFile::page_html([], 'ecarte', '', '', 'https://exemple.test/', self::OPTIONS));
     }
 
+    // --- Origine des fiches : proposition du public, collecte automatique, saisie par l'équipe (0.11.0) ---
+
+    private static function trois_origines(): array {
+        return [
+            self::fiche(['id' => 1, 'titre' => 'Colloque proposé', 'source' => 'proposition', 'niveau' => 'M']),
+            self::fiche(['id' => 2, 'titre' => 'Midi collecté']),
+            self::fiche(['id' => 3, 'titre' => 'Saisie maison', 'source' => 'manuel', 'niveau' => 'M']),
+            self::fiche(['id' => 4, 'titre' => 'Importé de l’infolettre', 'source' => 'infolettre', 'niveau' => 'M']),
+        ];
+    }
+
+    public function test_origine_d_une_fiche(): void {
+        $this->assertSame(['proposition', 'collecte', 'equipe', 'equipe'], array_map(static fn(Fiche $f): string => $f->origine(), self::trois_origines()));
+        $this->assertSame('equipe', self::fiche(['source' => '', 'niveau' => ''])->origine());
+    }
+
+    public function test_la_file_distingue_les_propositions_du_public(): void {
+        $url = 'https://exemple.test/wp-admin/admin.php?page=rsn-veille';
+        $html = PageFile::page_html(self::trois_origines(), 'a_approuver', '', '', $url, self::OPTIONS + ['courriels' => [1 => 'marie@exemple.ca', 2 => 'intrus@exemple.ca']]);
+        // Une ligne par fiche, avec son origine en pastille.
+        preg_match_all('~<tr id="rsn-veille-fiche-(\d+)"[^>]*data-origine="([a-z]+)"~', $html, $m);
+        $this->assertEquals(['1' => 'proposition', '2' => 'collecte', '3' => 'equipe', '4' => 'equipe'], array_combine($m[1], $m[2]));
+        $ligne = static function (int $id) use ($html): string {
+            preg_match('~<tr id="rsn-veille-fiche-' . $id . '".*?</tr>~s', $html, $l);
+            return $l[0] ?? '';
+        };
+        $proposition = $ligne(1);
+        $this->assertStringContainsString('class="rsn-veille-origine" data-origine="proposition"', $proposition);
+        $this->assertStringContainsString('Proposition du public', $proposition);
+        $this->assertStringContainsString('Formulaire de la page', $proposition);
+        // Le courriel du proposant, pour lui répondre : seulement sur sa proposition.
+        $this->assertStringContainsString('<a href="mailto:marie@exemple.ca">marie@exemple.ca</a>', $proposition);
+        $this->assertStringNotContainsString('intrus@exemple.ca', $html);
+        $collecte = $ligne(2);
+        $this->assertStringContainsString('Collecte automatique', $collecte);
+        $this->assertStringContainsString('Mila : événements', $collecte);
+        $this->assertStringContainsString("Saisie par l&#039;équipe", $html);
+        // Rappel au-dessus du tableau, avec un lien vers les seules propositions.
+        $this->assertStringContainsString('1 proposition du public à traiter', $html);
+        $this->assertMatchesRegularExpression('~href="[^"]*statut=a_approuver&amp;origine=proposition"~', $html);
+    }
+
+    public function test_filtre_par_origine(): void {
+        $fiches = self::trois_origines();
+        $this->assertSame([1], self::ids(PageFile::filtrer($fiches, 'a_approuver', '', '', 'proposition')));
+        $this->assertSame([2], self::ids(PageFile::filtrer($fiches, 'a_approuver', '', '', 'collecte')));
+        $this->assertEqualsCanonicalizing([3, 4], self::ids(PageFile::filtrer($fiches, 'a_approuver', '', '', 'equipe')));
+        $this->assertCount(4, PageFile::filtrer($fiches, 'a_approuver', '', '', ''));
+        $this->assertCount(4, PageFile::filtrer($fiches, 'a_approuver', '', '', 'inconnue'));
+
+        $url = 'https://exemple.test/wp-admin/admin.php?page=rsn-veille';
+        $html = PageFile::page_html($fiches, 'a_approuver', '', '', $url, self::OPTIONS + ['origine' => 'proposition']);
+        $this->assertStringContainsString('Colloque proposé', $html);
+        $this->assertStringNotContainsString('Midi collecté', $html);
+        // Le filtre est dans le formulaire, choisi, et les onglets le gardent.
+        $this->assertMatchesRegularExpression('~<select id="rsn-veille-origine" name="origine">.*<option value="proposition" selected~s', $html);
+        $this->assertMatchesRegularExpression('~statut=publie&amp;origine=proposition~', $html);
+        // Filtré sur les propositions : pas de rappel en double.
+        $this->assertStringNotContainsString('à traiter', $html);
+    }
+
+    public function test_pas_de_rappel_sans_proposition_ni_hors_de_la_file_a_approuver(): void {
+        $url = 'https://exemple.test/wp-admin/admin.php?page=rsn-veille';
+        $this->assertStringNotContainsString('à traiter', PageFile::page_html([self::fiche()], 'a_approuver', '', '', $url, self::OPTIONS));
+        $publiee = self::fiche(['id' => 1, 'source' => 'proposition', 'niveau' => 'M', 'statut' => 'publie']);
+        $this->assertStringNotContainsString('à traiter', PageFile::page_html([$publiee], 'publie', '', '', $url, self::OPTIONS));
+    }
+
+    public function test_courriel_du_proposant_echappe(): void {
+        $url = 'https://exemple.test/wp-admin/admin.php?page=rsn-veille';
+        $f = self::fiche(['id' => 1, 'source' => 'proposition', 'niveau' => 'M']);
+        $html = PageFile::page_html([$f], 'a_approuver', '', '', $url, self::OPTIONS + ['courriels' => [1 => '"><script>alert(1)</script>']]);
+        $this->assertStringNotContainsString('<script>', $html);
+        $this->assertStringNotContainsString('mailto:', $html);
+    }
+
     // --- Image d'une proposition écartée ---
 
     /**

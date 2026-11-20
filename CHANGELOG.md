@@ -1,5 +1,18 @@
 # Journal des modifications
 
+## 0.11.0 (2026-11-20)
+
+File d'approbation : distinguer ce qu'une personne a proposé de ce que la collecte a trouvé, à la demande de l'équipe.
+
+### File d'approbation (`Admin\PageFile`, `Fiche::origine`)
+- **Origine de chaque fiche**, en pastille au début de la colonne Source : « Proposition du public » (formulaire de la page), « Collecte automatique » (lue à une source) ou « Saisie par l'équipe » (ajoutée à la main ou importée : niveau M). La ligne d'une proposition porte un trait jaune à gauche.
+- **Proposition du public** : la source affiche « Formulaire de la page » au lieu de « proposition niveau M », et le courriel de la personne en lien `mailto:` pour lui répondre. Le courriel reste une méta privée, lue seulement pour cette page.
+- **Filtre par origine** (« Toutes les origines », « Propositions du public », « Collecte automatique », « Saisie par l'équipe »), gardé d'un onglet à l'autre (`origine=` dans l'adresse).
+- **Rappel** au-dessus de la file « À approuver » : « n propositions du public à traiter », avec un lien qui ne montre qu'elles.
+
+### Livraison
+- Tests : 5 nouveaux (768 au total). Numéro de version 0.11.0.
+
 ## 0.10.0 (2026-11-17)
 
 Deux améliorations repérées au tour de santé du 10 novembre.
