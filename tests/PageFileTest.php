@@ -253,6 +253,43 @@ final class PageFileTest extends TestCase {
         $this->assertSame(['a_approuver' => 0, 'publie' => 0, 'archive' => 5, 'ecarte' => 1, 'a_verifier' => 0], PageFile::compteurs_de($e, '2026-12-02'));
     }
 
+    public function test_variations_des_nombres_des_onglets(): void {
+        $jour = '2026-10-27';
+        $attente = self::fiche();
+        $publiee = self::fiche(['statut' => 'publie']);
+        $this->assertSame(['a_approuver'], PageFile::onglets_de($attente, $jour));
+        $this->assertSame(['publie', 'a_verifier'], PageFile::onglets_de(self::fiche(['statut' => 'publie', 'absent_depuis' => '2026-10-20']), $jour));
+        $this->assertSame(['archive'], PageFile::onglets_de(self::fiche(['statut' => 'publie', 'debut' => '2026-10-01']), $jour));
+        $this->assertSame(['a_approuver' => -1, 'publie' => 1], PageFile::variations($attente, $publiee, $jour));
+        $this->assertSame(['a_approuver' => -1, 'ecarte' => 1], PageFile::variations($attente, self::fiche(['statut' => 'ecarte']), $jour));
+        // Écartée puis republiée alors qu'elle est passée : elle arrive dans « Archivées ».
+        $this->assertSame(['ecarte' => -1, 'archive' => 1], PageFile::variations(self::fiche(['statut' => 'ecarte', 'debut' => '2026-10-01']), self::fiche(['statut' => 'publie', 'debut' => '2026-10-01']), $jour));
+        // Rien ne change (« Garder publiée » sans drapeau d'absence), fiche inconnue.
+        $this->assertSame([], PageFile::variations($publiee, $publiee, $jour));
+        $this->assertSame([], PageFile::variations(null, null, $jour));
+    }
+
+    public function test_la_page_lit_une_seule_fois_la_file_et_les_publiees(): void {
+        $GLOBALS['rsn_veille_wp']['capacites'] = ['rsn_veille_gerer'];
+        self::fiche_wordpress();
+        foreach (['a_approuver', 'publie', 'archive'] as $onglet) {
+            $_GET = ['statut' => $onglet];
+            $GLOBALS['rsn_veille_wp']['requetes'] = [];
+            ob_start();
+            PageFile::afficher();
+            $html = (string) ob_get_clean();
+            $this->assertStringContainsString('data-compteur="a_approuver">(1)<', $html);
+            $entieres = array_values(array_filter($GLOBALS['rsn_veille_wp']['requetes'], static fn(array $r): bool => ($r['posts_per_page'] ?? 0) === -1));
+            $en_attente = array_filter($entieres, static fn(array $r): bool => ($r['post_status'] ?? []) === ['pending']);
+            $this->assertCount(1, $en_attente, $onglet . ' : la file en attente est lue une fois');
+            // Les autres lectures entières sont celles des fiches publiées bornées par leurs dates.
+            foreach (array_diff_key($entieres, $en_attente) as $requete) {
+                $this->assertNotEmpty($requete['meta_query'] ?? [], $onglet);
+            }
+        }
+        $_GET = [];
+    }
+
     public function test_une_fiche_publiee_d_un_autre_type_reste_trouvable_dans_les_archivees(): void {
         $e = new EntrepotMemoire();
         $f = self::fiche(['statut' => 'publie', 'type' => 'nouvelle', 'titre' => 'Fiche d’un autre type']);
@@ -478,7 +515,8 @@ final class PageFileTest extends TestCase {
         $this->assertSame(0, $f->absences);
         $this->assertNull($f->absent_depuis);
         $this->assertTrue($f->manuel);
-        $this->assertSame(['a_approuver' => 0, 'publie' => 1, 'archive' => 0, 'ecarte' => 0, 'a_verifier' => 0], $r['compteurs']);
+        // Publiée et absente de sa source : gardée, elle quitte « À vérifier » et reste dans « Publiées ».
+        $this->assertSame(['a_verifier' => -1], $r['variations']);
     }
 
     public function test_ecarter_pose_manuel_sans_toucher_aux_absences(): void {
@@ -490,7 +528,7 @@ final class PageFileTest extends TestCase {
         $this->assertTrue($f->manuel);
         $this->assertSame(2, $f->absences);
         $this->assertSame('2026-10-20', $f->absent_depuis);
-        $this->assertSame(['a_approuver' => 0, 'publie' => 0, 'archive' => 0, 'ecarte' => 1, 'a_verifier' => 0], $r['compteurs']);
+        $this->assertSame(['publie' => -1, 'a_verifier' => -1, 'ecarte' => 1], $r['variations']);
     }
 
     public function test_changer_statut_purge_la_page_veille(): void {
@@ -540,7 +578,7 @@ final class PageFileTest extends TestCase {
         $this->assertSame(200, $code);
         $this->assertTrue($reponse['success']);
         $this->assertSame('publie', $reponse['data']['statut']);
-        $this->assertSame(1, $reponse['data']['compteurs']['publie']);
+        $this->assertSame(['a_approuver' => -1, 'publie' => 1], $reponse['data']['variations']);
         $this->assertSame('publish', get_post_status($id));
         $this->assertTrue((new EntrepotWordPress())->obtenir($id)->manuel);
     }
@@ -609,13 +647,10 @@ final class PageFileTest extends TestCase {
         $GLOBALS['rsn_veille_wp']['requetes'] = [];
 
         $r = PageFile::changer_statut($e, $id, 'ecarte');
-        $this->assertSame(['a_approuver' => 0, 'publie' => 3, 'archive' => 0, 'ecarte' => 1, 'a_verifier' => 0], $r['compteurs']);
-        // Les seules lectures entières : la file en attente, et les fiches publiées bornées par leurs dates
-        // (celles de la page publique). Jamais tout l'historique des publiées ou des écartées.
+        $this->assertSame(['a_approuver' => -1, 'ecarte' => 1], $r['variations']);
+        // Une action ne relit ni la file ni les fiches publiées : elle rend des variations, pas un recomptage.
         foreach ($GLOBALS['rsn_veille_wp']['requetes'] as $requete) {
-            if (($requete['posts_per_page'] ?? 0) === -1) {
-                $this->assertTrue(($requete['post_status'] ?? []) === ['pending'] || !empty($requete['meta_query']), 'aucune requête sans borne : ' . json_encode($requete));
-            }
+            $this->assertFalse(($requete['posts_per_page'] ?? 0) === -1, 'aucune requête sans borne');
         }
     }
 

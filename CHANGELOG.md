@@ -24,7 +24,10 @@ Ménage de l'administration, d'après les remarques de l'équipe après une prem
 - Une proposition du public en attente ou un gabarit à vérifier fait partir le courriel même sans nouvelle fiche (sujet « n points à regarder »). Une source en panne seule ne le fait pas partir.
 
 ### Livraison
-- Rendu de la file essayé sur les 93 fiches publiées du site au 20 novembre 2026 (49 d'actualité, 44 archivées) et du Radar sur les vrais flux. Aucune fiche ni aucune option existante n'est modifiée par la mise à jour. Numéro de version 0.15.0.
+- Tests : 27 nouveaux (853 au total). Rendu de la file essayé sur les 93 fiches publiées du site au 20 novembre 2026 (49 d'actualité, 44 archivées) et du Radar sur les vrais flux ; boutons essayés sur ces rendus avec un serveur simulé.
+- Relecture indépendante, corrigée avant la livraison : le choix « Pas dans l'infolettre » est appliqué avant le dédoublonnage (`Donnees::elements`), pour qu'il tienne quand un événement du RSN remplace la fiche et qu'un doublon voulu dans l'infolettre y garde l'événement ; une action de la file rend des variations des nombres d'onglets au lieu de relire la file ; le courriel ne compte plus comme « en attente » une fiche déjà dépassée ; une vieille nouvelle gardée depuis « Écartées » n'est pas archivée d'office ; « Garder publiée » ne fait plus disparaître la ligne dans « Archivées ».
+- Limite connue : « Archivées » cherche les fiches dépassées parmi les 200 dernières fiches publiées ; au-delà, les plus anciennes ne sont plus listées (elles restent dans la base).
+- Aucune fiche ni aucune option existante n'est modifiée par la mise à jour. Numéro de version 0.15.0.
 
 ## 0.14.0 (2026-11-20)
 

@@ -413,7 +413,13 @@ final class PageRadar {
         if ($url === null) {
             return;
         }
-        $gardees = self::conserver(self::lire_gardees(), $url);
+        $gardees = self::lire_gardees();
+        if (!in_array($url, array_column($gardees, 'url'), true)) {
+            // Retirée entre-temps (autre onglet, autre personne) : rien à remettre.
+            wp_send_json_error(['ok' => false, 'message' => __("Cette nouvelle n'est plus gardée : rechargez la page.", 'rsn-veille')], 404);
+            return;
+        }
+        $gardees = self::conserver($gardees, $url);
         update_option(self::OPTION_GARDEES, $gardees, false);
         wp_send_json_success(self::reponse_gardees($gardees));
     }
@@ -567,6 +573,11 @@ final class PageRadar {
             }
         }
         $entree = array_replace(array_flip(self::CHAMPS_GARDEE), $entree);
+        // Gardée alors qu'elle est déjà trop vieille (reprise depuis « Écartées ») : l'équipe la veut dans
+        // l'infolettre, elle n'est donc pas archivée d'office.
+        if (self::est_archivee($entree, substr($maintenant, 0, 10))) {
+            $entree['conservee'] = '1';
+        }
         $autres = array_filter($gardees, static fn($g): bool => is_array($g) && isset($g['url']) && is_string($g['url']) && $g['url'] !== $entree['url']);
         return array_slice(array_merge([$entree], array_values($autres)), 0, self::MAX_GARDEES);
     }

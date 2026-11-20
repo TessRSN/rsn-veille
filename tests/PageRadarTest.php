@@ -235,6 +235,18 @@ final class PageRadarTest extends TestCase {
         $this->assertSame($gardees, PageRadar::conserver($gardees, 'https://x.test/inconnue'));
     }
 
+    public function test_garder_une_vieille_nouvelle_ne_l_archive_pas_d_office(): void {
+        // Reprise depuis « Écartées » : publiée en août, gardée en décembre. L'équipe la veut dans l'infolettre.
+        $gardees = PageRadar::garder([], self::nouvelle(1, ['date' => '2026-08-01']), '2026-12-20 10:00');
+        $this->assertSame('1', $gardees[0]['conservee']);
+        $this->assertSame(['https://x.test/n1'], array_column(PageRadar::gardees_actives($gardees, '2026-12-20'), 'url'));
+        $this->assertSame([], PageRadar::gardees_archivees($gardees, '2027-06-01'));
+        // Nouvelle récente : pas de drapeau, elle sera archivée à son heure.
+        $gardees = PageRadar::garder([], self::nouvelle(2, ['date' => '2026-12-10']), '2026-12-20 10:00');
+        $this->assertArrayNotHasKey('conservee', $gardees[0]);
+        $this->assertSame(['https://x.test/n2'], array_column(PageRadar::gardees_archivees($gardees, '2027-06-01'), 'url'));
+    }
+
     public function test_onglet_archivees(): void {
         $recente = self::nouvelle(1, ['date' => '2026-12-10']) + ['gardee_le' => '2026-12-11 08:00'];
         $vieille = self::nouvelle(2, ['date' => '2026-09-01', 'source' => 'Autre source']) + ['gardee_le' => '2026-09-02 08:00'];
@@ -607,9 +619,12 @@ final class PageRadarTest extends TestCase {
         $this->assertSame(200, $code);
         $this->assertSame(['a_trier' => 0, 'gardees' => 2, 'archivees' => 0, 'ecartees' => 0], $reponse['data']['compteurs']);
         $this->assertSame('1', PageRadar::lire_gardees()[1]['conservee']);
-        // Jeton exigé.
+        // Jeton exigé ; une nouvelle qui n'est plus gardée ne peut pas être remise.
         [, $code] = self::ajax('ajax_conserver', ['nonce' => 'faux', 'url' => 'https://x.test/n2']);
         $this->assertSame(403, $code);
+        [$reponse, $code] = self::ajax('ajax_conserver', ['nonce' => self::jeton(), 'url' => 'https://x.test/inconnue']);
+        $this->assertSame([404, false], [$code, $reponse['success']]);
+        $this->assertStringContainsString("n'est plus gardée", $reponse['data']['message']);
         $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-10-25';
     }
 

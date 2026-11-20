@@ -14,12 +14,16 @@
 	}
 	var onglet = tableau.getAttribute('data-onglet');
 
-	function majCompteurs(compteurs) {
-		Object.keys(compteurs || {}).forEach(function (cle) {
+	/** Applique aux nombres des onglets ce que l'action a changé (`variations` : -1 ou +1 par onglet). */
+	function majCompteurs(variations) {
+		Object.keys(variations || {}).forEach(function (cle) {
 			var element = document.querySelector('[data-compteur="' + cle + '"]');
-			if (element) {
-				element.textContent = '(' + compteurs[cle] + ')';
+			var variation = parseInt(variations[cle], 10);
+			if (!element || isNaN(variation)) {
+				return;
 			}
+			var nombre = parseInt(element.textContent.replace(/[^0-9]/g, ''), 10);
+			element.textContent = '(' + Math.max(0, (isNaN(nombre) ? 0 : nombre) + variation) + ')';
 		});
 	}
 
@@ -49,10 +53,12 @@
 
 	/**
 	 * La fiche reste dans l'onglet courant seulement si son statut y correspond (une fiche gardée sort de
-	 * « À vérifier » ; dans « Archivées », toute action fait sortir la fiche).
+	 * « À vérifier »). Dans « Archivées », une fiche écartée part ; une fiche publiée qu'on vient de garder
+	 * (« Garder publiée ») y reste, puisqu'elle est toujours publiée et dépassée.
 	 */
 	function appliquer(ligne, statut) {
-		if (onglet === 'a_verifier' || onglet === 'archive' || statut !== onglet) {
+		var reste = onglet === 'archive' ? statut === 'publie' : statut === onglet;
+		if (onglet === 'a_verifier' || !reste) {
 			ligne.parentNode.removeChild(ligne);
 			videSiNecessaire();
 			return;
@@ -143,7 +149,7 @@
 		occuper(ligne, true);
 		envoyer(donnees)
 			.then(function (data) {
-				majCompteurs(data.compteurs);
+				majCompteurs(data.variations);
 				appliquer(ligne, data.statut);
 			})
 			.catch(function (erreur) {

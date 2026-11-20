@@ -191,13 +191,14 @@ final class PageInfolettreTest extends TestCase {
     public function test_fiche_tenue_hors_de_l_infolettre(): void {
         $items = [
             self::evenement(['id' => 11, 'titre' => 'Colloque gardé']),
-            self::evenement(['id' => 12, 'titre' => 'Midi écarté de l’infolettre', 'debut' => '2026-11-20']),
+            self::evenement(['id' => 12, 'titre' => 'Midi écarté de l’infolettre', 'debut' => '2026-11-20', 'hors_infolettre' => true]),
             ['id' => 21, 'type' => 'appel', 'titre' => 'Appel gardé', 'debut' => '2026-10-20', 'echeance' => '2026-12-01', 'url' => 'https://frq.test/a', 'resume' => ''],
-            ['id' => 22, 'type' => 'appel', 'titre' => 'Appel hors infolettre', 'debut' => '2026-10-20', 'echeance' => '2026-12-05', 'url' => 'https://frq.test/b', 'resume' => ''],
+            ['id' => 22, 'type' => 'appel', 'titre' => 'Appel hors infolettre', 'debut' => '2026-10-20', 'echeance' => '2026-12-05', 'url' => 'https://frq.test/b', 'resume' => '', 'hors_infolettre' => true],
             // Événement déjà passé : il n'aurait pas été repris de toute façon, il ne compte pas dans la note.
-            self::evenement(['id' => 13, 'titre' => 'Passé', 'debut' => '2026-10-01']),
+            self::evenement(['id' => 13, 'titre' => 'Passé', 'debut' => '2026-10-01', 'hors_infolettre' => true]),
         ];
-        $html = PageInfolettre::page_html($items, [], [], ['hors_infolettre' => [12, 22, 13, 999]] + self::OPTIONS);
+        // La marque `hors_infolettre` est posée par `Donnees` d'après le choix fait dans la file.
+        $html = PageInfolettre::page_html($items, [], [], self::OPTIONS);
         $this->assertStringContainsString('Colloque gardé', $html);
         $this->assertStringNotContainsString('Midi écarté', $html);
         $this->assertStringContainsString('Appel gardé', $html);
@@ -205,12 +206,28 @@ final class PageInfolettreTest extends TestCase {
         $this->assertStringContainsString('<p class="description rsn-veille-infolettre-note">1 événement publié est tenu hors de l&#039;infolettre (File d&#039;approbation › Publiées).</p>', $html);
         $this->assertStringContainsString('1 appel publié est tenu hors de l&#039;infolettre', $html);
         // Sans choix de l'équipe : tout y est, aucune note.
-        $html = PageInfolettre::page_html($items, [], [], self::OPTIONS);
+        $sans = array_map(static fn(array $i): array => array_diff_key($i, ['hors_infolettre' => true]), $items);
+        $html = PageInfolettre::page_html($sans, [], [], self::OPTIONS);
         $this->assertStringContainsString('Midi écarté', $html);
         $this->assertStringContainsString('Appel hors infolettre', $html);
         $this->assertStringNotContainsString('rsn-veille-infolettre-note', $html);
-        // Option illisible : ignorée.
-        $this->assertStringContainsString('Midi écarté', PageInfolettre::page_html($items, [], [], ['hors_infolettre' => 'x'] + self::OPTIONS));
+    }
+
+    public function test_afficher_applique_le_choix_de_la_file(): void {
+        $GLOBALS['rsn_veille_wp']['capacites'] = [Menu::CAPACITE];
+        $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-10-26';
+        $e = new EntrepotWordPress();
+        $base = ['type' => 'evenement', 'statut' => 'publie', 'debut' => '2026-11-12', 'organisateur' => 'Mila', 'source' => 'Mila : événements', 'niveau' => 'C', 'url' => 'https://mila.test/'];
+        $dedans = $e->creer(Fiche::depuis_tableau(['titre' => 'Colloque gardé', 'cle_source' => 'mila:1', 'cles_source' => ['mila:1']] + $base));
+        $hors = $e->creer(Fiche::depuis_tableau(['titre' => 'Midi tenu hors', 'cle_source' => 'mila:2', 'cles_source' => ['mila:2'], 'debut' => '2026-11-20'] + $base));
+        update_option(\RSN\Veille\Admin\PageFile::OPTION_HORS_INFOLETTRE, [$hors]);
+        ob_start();
+        PageInfolettre::afficher();
+        $html = (string) ob_get_clean();
+        $this->assertStringContainsString('Colloque gardé', $html);
+        $this->assertStringNotContainsString('Midi tenu hors', $html);
+        $this->assertStringContainsString('1 événement publié est tenu hors de l&#039;infolettre', $html);
+        $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-10-25';
     }
 
     public function test_nouvelle_gardee_trop_vieille_hors_de_l_infolettre(): void {

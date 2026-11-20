@@ -236,12 +236,13 @@ final class Courriel {
      * requête réseau). Rend [points, importants] : `importants` est vrai quand une proposition du public attend ou
      * qu'un gabarit a peut-être changé, ce qui justifie un courriel même sans nouvelle fiche.
      *
+     * @param Fiche[] $en_file Fiches à approuver qui attendent encore une décision (les dépassées n'y sont pas).
      * @return array{0: string[], 1: bool}
      */
-    private static function etat_a_regarder(Entrepot $entrepot, string $aujourdhui): array {
+    private static function etat_a_regarder(Entrepot $entrepot, array $en_file): array {
         $propositions = [];
-        foreach ($entrepot->lister('a_approuver') as $fiche) {
-            if ($fiche->est_proposition() && !$fiche->est_passee($aujourdhui)) {
+        foreach ($en_file as $fiche) {
+            if ($fiche->est_proposition()) {
                 $propositions[] = $fiche->titre !== '' ? $fiche->titre : __('(sans titre)', 'rsn-veille');
             }
         }
@@ -406,11 +407,13 @@ final class Courriel {
             static fn(Fiche $f): bool => $f->type !== 'appel' || $f->appel_en_cours($aujourdhui)
         ));
         // Seules les fiches à approuver de la semaine comptent ; les plus anciennes sont résumées en une ligne.
-        $en_attente = $entrepot->lister_crees_depuis($limite, 'a_approuver');
-        $anterieure = max(0, $entrepot->compter()['a_approuver'] - count($en_attente));
+        // Une fiche en attente déjà dépassée (onglet « Archivées » de la file) n'attend plus de décision.
+        $en_file = array_values(array_filter($entrepot->lister('a_approuver'), static fn(Fiche $f): bool => !$f->est_passee($aujourdhui)));
+        $en_attente = array_values(array_filter($entrepot->lister_crees_depuis($limite, 'a_approuver'), static fn(Fiche $f): bool => !$f->est_passee($aujourdhui)));
+        $anterieure = max(0, count($en_file) - count($en_attente));
         // Erreurs, gabarits, propositions : dits en tête du courriel. Seuls, ils ne le font partir que s'ils demandent
         // une décision (proposition du public, gabarit à vérifier) : une source en panne chaque semaine ne suffit pas.
-        [$points, $importants] = self::etat_a_regarder($entrepot, $aujourdhui);
+        [$points, $importants] = self::etat_a_regarder($entrepot, $en_file);
         if ($publiees === [] && $en_attente === [] && !$importants) {
             $points = [];
         }

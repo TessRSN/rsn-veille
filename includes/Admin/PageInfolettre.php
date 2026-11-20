@@ -63,7 +63,9 @@ final class PageInfolettre {
         $aujourdhui = \rsn_veille_aujourdhui();
         // Même source que la page publique : fiches publiées et événements du RSN dédoublonnés, sans les champs d'équipe.
         // L'infolettre est française : toujours `fr`, quelle que soit la langue de l'administration.
-        $donnees = Donnees::construire($aujourdhui, new EntrepotWordPress(), EvenementsRsn::lire(langue: 'fr'), false, 'fr');
+        // Les fiches tenues hors de l'infolettre sont marquées avant le dédoublonnage (`Donnees::elements`).
+        $hors = PageFile::lire_hors_infolettre();
+        $donnees = Donnees::construire($aujourdhui, new EntrepotWordPress(), EvenementsRsn::lire(langue: 'fr'), false, 'fr', $hors);
         // Sortie entièrement échappée par les méthodes de rendu.
         echo self::page_html($donnees['items'], PageRadar::lire_gardees(), self::programmes_rsn(), [
             'aujourdhui' => $aujourdhui,
@@ -73,7 +75,6 @@ final class PageInfolettre {
             'url_action' => admin_url('admin-post.php'),
             'nonce' => wp_create_nonce(self::NONCE),
             'vide' => isset($_GET['vide']) && $_GET['vide'] === '1',
-            'hors_infolettre' => PageFile::lire_hors_infolettre(),
         ]);
     }
 
@@ -178,10 +179,11 @@ final class PageInfolettre {
      * @param array<int,mixed> $items Fiches de `Donnees` (événements et appels publiés).
      * @param array<int,mixed> $gardees Nouvelles gardées.
      * @param array<int,mixed> $programmes Programmes du RSN ouverts, au format appel.
-     * @param array{aujourdhui?: string, nombre?: int, jusqu_au?: ?string, url_page?: string, url_action?: string, nonce?: string, vide?: bool, hors_infolettre?: int[]} $options
-     *        `hors_infolettre` : fiches publiées que l'équipe ne veut pas dans l'infolettre (file d'approbation,
-     *        « Publier seulement » ou « Retirer de l'infolettre »). Une nouvelle gardée trop vieille
-     *        (`PageRadar::est_archivee`) n'y va plus non plus.
+     * @param array{aujourdhui?: string, nombre?: int, jusqu_au?: ?string, url_page?: string, url_action?: string, nonce?: string, vide?: bool} $options
+     *
+     * Un élément marqué `hors_infolettre` par `Donnees` (fiche que l'équipe ne veut pas dans l'infolettre : « Publier
+     * seulement » ou « Retirer de l'infolettre » dans la file) n'est pas repris. Une nouvelle gardée trop vieille
+     * (`PageRadar::est_archivee`) non plus.
      */
     public static function page_html(array $items, array $gardees, array $programmes, array $options): string {
         $aujourdhui = (string) ($options['aujourdhui'] ?? \rsn_veille_aujourdhui());
@@ -190,9 +192,9 @@ final class PageInfolettre {
         $toutes_gardees = array_values(array_filter($gardees, static fn($g): bool => is_array($g)));
         $gardees = PageRadar::gardees_actives($toutes_gardees, $aujourdhui);
         $nb_archivees = count($toutes_gardees) - count($gardees);
-        // Fiches que l'équipe tient hors de l'infolettre : retirées avant le choix des blocs.
-        $hors = array_flip(array_filter(is_array($options['hors_infolettre'] ?? null) ? $options['hors_infolettre'] : [], 'is_int'));
-        $dedans = static fn($i): bool => is_array($i) && !(is_numeric($i['id'] ?? null) && isset($hors[(int) $i['id']]));
+        // Fiches que l'équipe tient hors de l'infolettre (marque de `Donnees`, qui tient compte des doublons) :
+        // retirées avant le choix des blocs.
+        $dedans = static fn($i): bool => is_array($i) && empty($i['hors_infolettre']);
         $du_type = static fn(string $type): array => array_values(array_filter($items, static fn($i): bool => is_array($i) && ($i['type'] ?? '') === $type));
         $appels = array_values(array_filter($du_type('appel'), $dedans));
         $evenements = array_values(array_filter($du_type('evenement'), $dedans));

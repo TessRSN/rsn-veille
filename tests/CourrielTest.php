@@ -399,6 +399,26 @@ final class CourrielTest extends TestCase {
         $this->assertStringContainsString('À REGARDER (1)', (string) $c['texte']);
     }
 
+    public function test_une_fiche_en_attente_depassee_n_attend_plus(): void {
+        self::regler();
+        $e = new EntrepotWordPress();
+        $base = ['type' => 'evenement', 'statut' => 'a_approuver', 'organisateur' => 'Obvia', 'source' => 'obvia', 'niveau' => 'A'];
+        // Arrivée cette semaine mais déjà passée : dans « Archivées », elle n'est pas une nouveauté à approuver.
+        $e->creer(Fiche::depuis_tableau($base + ['titre' => 'Atelier d’hier', 'debut' => '2026-10-20', 'cree_le' => '2026-10-24', 'cle_source' => 'o:1', 'cles_source' => ['o:1']]));
+        // Anciennes et passées : elles n'attendent plus dans la file.
+        $e->creer(Fiche::depuis_tableau($base + ['titre' => 'Colloque de septembre', 'debut' => '2026-09-10', 'cree_le' => '2026-09-01', 'cle_source' => 'o:2', 'cles_source' => ['o:2']]));
+        $this->assertSame('rien', Courriel::tenter()['statut']);
+        // Une fiche de la semaine encore à venir, et une ancienne encore à venir.
+        $e->creer(Fiche::depuis_tableau($base + ['titre' => 'Webinaire à venir', 'debut' => '2026-11-20', 'cree_le' => '2026-10-24', 'cle_source' => 'o:3', 'cles_source' => ['o:3']]));
+        $e->creer(Fiche::depuis_tableau($base + ['titre' => 'Forum de décembre', 'debut' => '2026-12-05', 'cree_le' => '2026-09-01', 'cle_source' => 'o:4', 'cles_source' => ['o:4']]));
+        Courriel::accrocher();
+        $this->assertSame(['statut' => 'envoye', 'nb' => 1, 'destinataires' => ['equipe@exemple.test', 'tess@exemple.test']], Courriel::tenter());
+        $message = self::courriels()[0]['message'];
+        $this->assertStringContainsString('Webinaire à venir', $message);
+        $this->assertStringNotContainsString('Atelier d’hier', $message);
+        $this->assertStringContainsString('1 fiche attend toujours dans la file.', $message);
+    }
+
     public function test_erreurs_et_gabarits_du_journal_dans_le_courriel(): void {
         self::regler();
         $ids = array_keys(Collecte::sources());
