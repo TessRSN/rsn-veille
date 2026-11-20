@@ -154,7 +154,7 @@ final class Nouvelles {
             $cartes[$i] = DecoupageMailchimp::cartes($numero['html']);
             $comptes[] = ['titre' => $numero['titre'], 'n' => count($cartes[$i])];
         }
-        $editions = self::editions(array_map(static fn(array $liste): array => array_column($liste, 'url'), $cartes));
+        $editions = DecoupageMailchimp::editions(array_map(static fn(array $liste): array => array_column($liste, 'url'), $cartes));
         $parus = [];
         foreach ($cartes as $i => $liste) {
             foreach ($liste as $carte) {
@@ -204,34 +204,6 @@ final class Nouvelles {
             $partie['alertes'] = [$alerte];
         }
         return $partie;
-    }
-
-    /**
-     * Numéro d'édition de chaque envoi : deux envois dont les encadrés sont presque les mêmes (au moins 80 % d'adresses
-     * communes sur l'ensemble des deux) sont le même numéro, envoyé deux fois. Un envoi sans encadré est seul.
-     *
-     * @param array<int,string[]> $adresses Adresses des encadrés de chaque envoi.
-     * @return array<int,int>
-     */
-    private static function editions(array $adresses): array {
-        $editions = [];
-        $modeles = [];
-        foreach ($adresses as $i => $liste) {
-            $liste = array_unique($liste);
-            $editions[$i] = count($modeles);
-            foreach ($modeles as $numero => $modele) {
-                $communes = count(array_intersect($liste, $modele));
-                $toutes = count($liste) + count($modele) - $communes;
-                if ($liste !== [] && $communes * 5 >= $toutes * 4) {
-                    $editions[$i] = $numero;
-                    break;
-                }
-            }
-            if ($editions[$i] === count($modeles)) {
-                $modeles[] = $liste;
-            }
-        }
-        return $editions;
     }
 
     /**

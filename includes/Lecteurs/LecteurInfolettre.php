@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 /**
  * Lecteur du bloc « À l'agenda » d'une infolettre Mailchimp (flux d'archive, dix derniers envois) : chaque ligne datée
  * devient un événement. Le même événement annoncé dans plusieurs numéros ne donne qu'une fiche (clé : date de début et
- * titre) ; un événement terminé est compté dans `ignores`.
+ * titre), et `mentions` dit dans combien de numéros il est annoncé ; un événement terminé est compté dans `ignores`.
  *
  * Une ligne d'agenda ne dit pas qui organise : l'organisateur n'est rempli que si le lien mène chez l'éditeur de
  * l'infolettre (`hotes_organisateur` de la source), sinon il reste vide et l'équipe le complète avant de publier.
@@ -28,14 +28,30 @@ final class LecteurInfolettre implements Lecteur {
 
         $aujourdhui = \rsn_veille_aujourdhui();
         $id = (string) ($source['id'] ?? '');
-        $vues = [];
         $comptes = [];
-        foreach ($numeros as $numero) {
-            $lignes = DecoupageMailchimp::agenda($numero['html'], $numero['date'] !== '' ? $numero['date'] : $aujourdhui);
+        $agendas = [];
+        $contenus = [];
+        foreach ($numeros as $i => $numero) {
+            $agendas[$i] = [];
+            foreach (DecoupageMailchimp::agenda($numero['html'], $numero['date'] !== '' ? $numero['date'] : $aujourdhui) as $ligne) {
+                $agendas[$i][$id . ':' . Fiche::cle_dedoublonnage_de($ligne['debut'], $ligne['titre'])] ??= $ligne;
+            }
             // Tous les envois comptent : `rupture` reconnaît un envoi spécial (sans agenda) à son titre différent.
-            $comptes[] = ['titre' => $numero['titre'], 'n' => count($lignes)];
-            foreach ($lignes as $ligne) {
-                $cle = $id . ':' . Fiche::cle_dedoublonnage_de($ligne['debut'], $ligne['titre']);
+            $comptes[] = ['titre' => $numero['titre'], 'n' => count($agendas[$i])];
+            // Contenu de l'envoi (encadrés et agenda) : deux envois du même numéro ne comptent que pour une annonce.
+            $contenus[$i] = array_merge(array_column(DecoupageMailchimp::cartes($numero['html']), 'url'), array_keys($agendas[$i]));
+        }
+        $editions = DecoupageMailchimp::editions($contenus);
+        $annonces = [];
+        foreach ($agendas as $i => $lignes) {
+            foreach ($lignes as $cle => $ligne) {
+                $annonces[$cle][$editions[$i]] = true;
+            }
+        }
+
+        $vues = [];
+        foreach ($agendas as $i => $lignes) {
+            foreach ($lignes as $cle => $ligne) {
                 if (isset($vues[$cle])) {
                     continue;
                 }
@@ -44,7 +60,8 @@ final class LecteurInfolettre implements Lecteur {
                     $resultat->ignores++;
                     continue;
                 }
-                $resultat->fiches[] = $this->fiche($ligne, $numero, $source, $cle);
+                $resultat->fiches[] = $this->fiche($ligne, $numeros[$i], $source, $cle);
+                $resultat->mentions[$cle] = count($annonces[$cle]);
             }
         }
 

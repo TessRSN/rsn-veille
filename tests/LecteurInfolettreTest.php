@@ -81,6 +81,49 @@ final class LecteurInfolettreTest extends TestCase {
         $this->assertCount(5, array_unique(array_map(static fn($f): string => $f->cle_source, $r->fiches)));
     }
 
+    public function test_mentions_nombre_de_numeros_qui_annoncent_l_evenement(): void {
+        $r = (new LecteurInfolettre())->lire(self::flux(), self::SOURCE);
+        $par_titre = [];
+        foreach ($r->fiches as $fiche) {
+            $par_titre[$fiche->titre] = $r->mentions[$fiche->cle_source] ?? null;
+        }
+        // Le forum est annoncé en novembre et en octobre ; les autres, dans le seul numéro de novembre.
+        $this->assertSame(2, $par_titre['Forum de l\'industrie de la santé']);
+        $this->assertSame(1, $par_titre['Webinaire PAS']);
+        $this->assertCount(5, $r->mentions);
+
+        // Deux envois du même numéro (mêmes encadrés, même agenda) comptent pour un.
+        $numero = GabaritMailchimp::numero_de([['A', 'https://ssa.test/a'], ['B', 'https://ssa.test/b']], ['<a href="https://z.test/z">Colloque Z</a> &gt; 15 décembre à Québec']);
+        $autre = GabaritMailchimp::numero_de([['C', 'https://ssa.test/c'], ['D', 'https://ssa.test/d']], ['<a href="https://z.test/z">Colloque Z</a> &gt; 15 décembre à Québec', '<a href="https://y.test/y">Atelier Y</a> &gt; 30 novembre à Laval']);
+        $r = (new LecteurInfolettre())->lire(GabaritMailchimp::flux([
+            ['Infolettre - Novembre 2026', 'https://mailchi.mp/x/nov-b', 'Fri, 20 Nov 2026 15:00:00 +0000', $numero],
+            ['Infolettre - Novembre 2026', 'https://mailchi.mp/x/nov-a', 'Fri, 13 Nov 2026 15:00:00 +0000', $numero],
+            ['Infolettre - Octobre 2026', 'https://mailchi.mp/x/oct', 'Wed, 28 Oct 2026 12:00:00 +0000', $autre],
+        ]), self::SOURCE);
+        $this->assertSame([2, 1], array_values($r->mentions));
+    }
+
+    public function test_la_collecte_garde_les_mentions_par_source(): void {
+        self::servir(self::flux());
+        $entrepot = new EntrepotMemoire();
+        Collecte::collecter_source(self::SOURCE, new Depot($entrepot), new Pertinence());
+        $mentions = Collecte::mentions();
+        $this->assertCount(5, $mentions);
+        $forum = array_values(array_filter($entrepot->lister(''), static fn($f): bool => str_starts_with($f->titre, 'Forum')))[0];
+        $this->assertSame(2, $mentions[$forum->cle_source]);
+        // Une autre source garde les siennes ; la collecte suivante de celle-ci remplace les siennes.
+        update_option(Collecte::OPTION_MENTIONS, get_option(Collecte::OPTION_MENTIONS) + ['autre' => ['autre:x' => 4, 'autre:y' => 'illisible']], false);
+        self::servir(GabaritMailchimp::flux([['Infolettre - Décembre 2026', 'https://mailchi.mp/x/dec', 'Sat, 21 Nov 2026 12:00:00 +0000', GabaritMailchimp::numero_de([['A', 'https://ssa.test/a']], ['<a href="https://z.test/z">Autre chose</a> &gt; 15 décembre à Québec'])]]));
+        Collecte::collecter_source(self::SOURCE, new Depot($entrepot), new Pertinence());
+        $mentions = Collecte::mentions();
+        $this->assertSame(4, $mentions['autre:x']);
+        $this->assertArrayNotHasKey('autre:y', $mentions);
+        $this->assertCount(2, $mentions);
+        // Option illisible : rien, sans erreur.
+        update_option(Collecte::OPTION_MENTIONS, 'x', false);
+        $this->assertSame([], Collecte::mentions());
+    }
+
     public function test_flux_illisible(): void {
         $r = (new LecteurInfolettre())->lire('<rss><channel></channel></rss>', self::SOURCE);
         $this->assertSame([], $r->fiches);
