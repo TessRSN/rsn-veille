@@ -24,6 +24,19 @@ final class DecoupageMailchimp {
         'août' => 8, 'aout' => 8, 'septembre' => 9, 'octobre' => 10, 'novembre' => 11, 'décembre' => 12, 'decembre' => 12,
     ];
 
+    /** Abréviations courantes des mois (« 24 nov. »), avec ou sans point. */
+    private const MOIS_ABREGES = [
+        'janv' => 1, 'févr' => 2, 'fevr' => 2, 'fév' => 2, 'fev' => 2, 'avr' => 4, 'juil' => 7, 'sept' => 9, 'oct' => 10,
+        'nov' => 11, 'déc' => 12, 'dec' => 12,
+    ];
+
+    /** Encadrés : balises de gras examinées au plus pour trouver le titre, et longueur maximale de ce titre. */
+    private const GRAS_MAX = 20;
+    private const TITRE_GRAS_MAX = 200;
+
+    /** Liens examinés au plus dans un encadré ou une ligne pour trouver une adresse http(s). */
+    private const LIENS_MAX = 20;
+
     /** Paramètres de suivi publicitaire retirés des liens (les préfixes `utm_` et `gad_` le sont aussi). */
     private const SUIVI = ['gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'mc_cid', 'mc_eid', '_hsenc', '_hsmi'];
 
@@ -187,7 +200,8 @@ final class DecoupageMailchimp {
      */
     public static function nettoyer_url(string $url, bool $deballer = true): string {
         $url = trim(html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-        if (preg_match('~^https?://[^\s<>"]+$~i', $url) !== 1) {
+        // Une barre oblique inverse est lue comme « / » par les navigateurs mais pas par parse_url : refusée.
+        if (preg_match('~^https?://[^\s<>"\\\\]+$~i', $url) !== 1) {
             return '';
         }
         $parties = parse_url($url);
@@ -255,26 +269,47 @@ final class DecoupageMailchimp {
         return substr($bloc, $m[0][1] + strlen($m[0][0]));
     }
 
+    /** Première adresse http(s) valable parmi les premiers liens du morceau ; vide s'il n'y en a pas. */
     private static function premier_lien(string $html): string {
-        if (preg_match_all('~<a\b[^>]*\bhref="([^"]+)"~i', $html, $liens) > 0) {
-            foreach ($liens[1] as $lien) {
-                $url = self::nettoyer_url($lien);
-                if ($url !== '') {
-                    return $url;
-                }
+        $position = 0;
+        for ($essai = 0; $essai < self::LIENS_MAX; $essai++) {
+            if (preg_match('~<a\b[^>]*\bhref="([^"]+)"~i', $html, $lien, PREG_OFFSET_CAPTURE, $position) !== 1) {
+                break;
+            }
+            $position = $lien[0][1] + strlen($lien[0][0]);
+            $url = self::nettoyer_url($lien[1][0]);
+            if ($url !== '') {
+                return $url;
             }
         }
         return '';
     }
 
-    /** Premier texte en gras de plus de trois caractères ; vide s'il n'y en a pas. */
+    /**
+     * Premier texte en gras de plus de trois caractères ; vide s'il n'y en a pas. Recherche linéaire (pas d'expression
+     * à retour arrière) et bornée aux premières balises : un HTML rempli de balises jamais fermées ne coûte ni temps
+     * ni mémoire.
+     */
     private static function titre_en_gras(string $zone): string {
-        if (preg_match_all('~<(strong|b)\b[^>]*>(.*?)</\1>~is', $zone, $gras) > 0) {
-            foreach ($gras[2] as $candidat) {
-                $titre = trim(Fiche::nettoyer_texte($candidat), " \t:|-–");
-                if (mb_strlen($titre) > 3) {
-                    return $titre;
-                }
+        $sans_fermeture = [];
+        $position = 0;
+        for ($essai = 0; $essai < self::GRAS_MAX; $essai++) {
+            if (preg_match('~<(strong|b)\b[^>]*>~i', $zone, $ouverture, PREG_OFFSET_CAPTURE, $position) !== 1) {
+                break;
+            }
+            $position = $ouverture[0][1] + strlen($ouverture[0][0]);
+            $balise = strtolower($ouverture[1][0]);
+            if (isset($sans_fermeture[$balise])) {
+                continue;
+            }
+            $fin = stripos($zone, '</' . $balise . '>', $position);
+            if ($fin === false) {
+                $sans_fermeture[$balise] = true;
+                continue;
+            }
+            $titre = trim(Fiche::nettoyer_texte(substr($zone, $position, $fin - $position)), " \t:|-–");
+            if (mb_strlen($titre) > 3) {
+                return Fiche::court($titre, self::TITRE_GRAS_MAX);
             }
         }
         return '';
@@ -282,8 +317,10 @@ final class DecoupageMailchimp {
 
     /** Résumé sans le libellé du lien qui le termine (« Lire la suite », « Pour en savoir plus »…), s'il est court. */
     private static function sans_bouton_final(string $resume, string $zone): string {
-        if (preg_match_all('~<a\b[^>]*>(.*?)</a>~is', $zone, $liens) > 0) {
-            $libelle = Fiche::nettoyer_texte((string) end($liens[1]));
+        $debut = strripos($zone, '<a ');
+        $fin = $debut === false ? false : stripos($zone, '</a>', $debut);
+        if ($debut !== false && $fin !== false) {
+            $libelle = Fiche::nettoyer_texte(substr($zone, $debut, $fin - $debut));
             if ($libelle !== '' && mb_strlen($libelle) <= 40 && $libelle !== $resume && str_ends_with($resume, $libelle)) {
                 $resume = rtrim(mb_substr($resume, 0, mb_strlen($resume) - mb_strlen($libelle)), " \t>|:-–");
             }
@@ -294,69 +331,108 @@ final class DecoupageMailchimp {
     /** @return array{titre: string, url: string, debut: string, fin: string, lieu: string}|null */
     private static function ligne_agenda(string $morceau, string $date_numero): ?array {
         $texte = Fiche::nettoyer_texte($morceau);
-        $coupe = mb_strrpos($texte, '>');
-        $gauche = $coupe === false ? '' : mb_substr($texte, 0, $coupe);
-        $droite = $coupe === false ? $texte : mb_substr($texte, $coupe + 1);
-        $date = self::date_dans($droite, $date_numero);
+        // « titre > date lieu » : la coupe est le dernier « > » suivi d'une date (un « > » de trop peut suivre la date).
+        $coupes = [];
+        $position = -1;
+        while (($position = mb_strpos($texte, '>', $position + 1)) !== false) {
+            $coupes[] = $position;
+        }
+        foreach (array_reverse($coupes) as $coupe) {
+            $date = self::date_dans(mb_substr($texte, $coupe + 1), $date_numero);
+            if ($date !== null) {
+                return self::ligne(mb_substr($texte, 0, $coupe), $date['avant'] . ' ' . $date['apres'], $date, $morceau);
+            }
+        }
+        // Sans « > » : le titre est ce qui précède la date (« Webinaire le 27 novembre en ligne »).
+        $date = self::date_dans($texte, $date_numero);
         if ($date === null) {
             return null;
         }
-        // Sans « > » : le titre est ce qui précède la date.
-        $titre = trim($coupe === false ? $date['avant'] : $gauche, " \t:|,;-–");
+        $titre = preg_replace('/\s+(?:dès\s+le|le|les|du)$/iu', '', rtrim($date['avant'], " \t:|,;>-–")) ?? '';
+        return self::ligne($titre, $date['apres'], $date, $morceau);
+    }
+
+    /**
+     * @param array{debut: string, fin: string} $date
+     * @return array{titre: string, url: string, debut: string, fin: string, lieu: string}|null Null si le titre manque.
+     */
+    private static function ligne(string $titre, string $lieu, array $date, string $morceau): ?array {
+        $titre = trim($titre, " \t:|,;>-–");
         if (mb_strlen($titre) < 4) {
             return null;
         }
-        $lieu = trim(($coupe === false ? '' : $date['avant'] . ' ') . $date['apres'], " \t:|,;.-–");
+        $lieu = trim(preg_replace('/\s+/u', ' ', $lieu) ?? '', " \t:|,;.>-–");
         return ['titre' => $titre, 'url' => self::premier_lien($morceau), 'debut' => $date['debut'], 'fin' => $date['fin'], 'lieu' => $lieu];
     }
 
     /**
-     * Première date d'un texte : « 24 novembre », « 1er mai », « 24 et 25 novembre », « 26 au 28 octobre »,
-     * « 30 novembre au 2 décembre », avec ou sans année.
+     * Première date d'un texte : « 24 novembre », « 1er mai », « 24 nov. », « 24 et 25 novembre », « 24, 25 et
+     * 26 novembre », « 26 au 28 octobre », « 30 novembre au 2 décembre », « 30 décembre au 2 janvier 2027 », avec ou
+     * sans année.
      *
      * @return array{debut: string, fin: string, avant: string, apres: string}|null
      */
     private static function date_dans(string $texte, string $date_numero): ?array {
-        $mois = implode('|', array_keys(self::MOIS));
+        // Les noms entiers d'abord : « novembre » ne doit pas être lu « nov » suivi de « embre ».
+        $mois = implode('|', array_keys(self::MOIS)) . '|(?:' . implode('|', array_keys(self::MOIS_ABREGES)) . ')\.?';
         $jour = '(\d{1,2})(?:er)?';
-        $motifs = [
-            // Deux mois : 30 novembre au 2 décembre.
-            '~(?<![\d/])' . $jour . '\s+(' . $mois . ')\s+(?:au|et)\s+' . $jour . '\s+(' . $mois . ')(?:\s+(\d{4}))?(?![\p{L}\d])~iu',
-            // Un mois : 24 novembre, 24 et 25 novembre, 26 au 28 octobre.
-            '~(?<![\d/])' . $jour . '(?:\s*(?:au|et|-|–)\s*' . $jour . ')?\s+(' . $mois . ')(?:\s+(\d{4}))?(?![\p{L}\d])~iu',
-        ];
-        foreach ($motifs as $rang => $motif) {
-            if (preg_match($motif, $texte, $m, PREG_OFFSET_CAPTURE) !== 1) {
-                continue;
+        $annee = '(?:\s+(\d{4}))?(?![\p{L}\d])';
+        // Deux mois : 30 novembre au 2 décembre, 30 décembre 2026 au 2 janvier 2027.
+        if (preg_match('~(?<![\d/])' . $jour . '\s+(' . $mois . ')' . '(?:\s+(\d{4}))?' . '\s*(?:au|et|-|–)\s*' . $jour . '\s+(' . $mois . ')' . $annee . '~iu', $texte, $m, PREG_OFFSET_CAPTURE) === 1) {
+            $m1 = self::numero_du_mois($m[2][0]);
+            $m2 = self::numero_du_mois($m[5][0]);
+            [$j1, $j2, $a1, $a2] = [(int) $m[1][0], (int) $m[4][0], (string) ($m[3][0] ?? ''), (string) ($m[6][0] ?? '')];
+            if ($a1 === '' && $a2 !== '') {
+                // L'année écrite est celle de la fin : le début la précède (décembre de l'année d'avant pour une fin en janvier).
+                $a1 = (string) ((int) $a2 - ([$m1, $j1] > [$m2, $j2] ? 1 : 0));
             }
-            if ($rang === 0) {
-                [$j1, $m1, $j2, $m2, $annee] = [(int) $m[1][0], $m[2][0], (int) $m[3][0], $m[4][0], $m[5][0] ?? ''];
-            } else {
-                [$j1, $j2, $m1, $annee] = [(int) $m[1][0], (int) ($m[2][0] ?? 0), $m[3][0], $m[4][0] ?? ''];
-                $m2 = $m1;
-                $j2 = $j2 > 0 ? $j2 : $j1;
+            $debut = self::jour_du_mois($j1, $m1, $a1, $date_numero);
+            if ($debut !== null) {
+                $an = (int) substr($debut, 0, 4);
+                $fin = self::jour_du_mois($j2, $m2, $a2 !== '' ? $a2 : (string) $an, $date_numero);
+                if ($fin !== null && $fin < $debut && $a2 === '') {
+                    // Série à cheval sur deux années : 29 décembre au 2 janvier.
+                    $fin = self::jour_du_mois($j2, $m2, (string) ($an + 1), $date_numero);
+                }
+                if ($fin !== null && $fin >= $debut) {
+                    return self::date_trouvee($debut, $fin, $texte, $m[0][1], strlen($m[0][0]));
+                }
             }
-            $debut = self::jour_du_mois($j1, self::MOIS[mb_strtolower($m1)], (string) $annee, $date_numero);
-            if ($debut === null) {
-                continue;
+        }
+        // Un mois : 24 novembre, 24 et 25 novembre, 24, 25 et 26 novembre, 26 au 28 octobre.
+        $jours = '((?:\d{1,2}(?:er)?\s*,\s*)+\d{1,2}(?:er)?\s+et\s+\d{1,2}(?:er)?|\d{1,2}(?:er)?(?:\s*(?:au|et|-|–)\s*\d{1,2}(?:er)?)?)';
+        if (preg_match_all('~(?<![\d/])' . $jours . '\s+(' . $mois . ')' . $annee . '~iu', $texte, $trouvees, PREG_OFFSET_CAPTURE | PREG_SET_ORDER) > 0) {
+            foreach ($trouvees as $m) {
+                preg_match_all('/\d{1,2}/', $m[1][0], $nombres);
+                $numero = self::numero_du_mois($m[2][0]);
+                $debut = self::jour_du_mois((int) $nombres[0][0], $numero, (string) ($m[3][0] ?? ''), $date_numero);
+                if ($debut === null) {
+                    continue;
+                }
+                $fin = self::jour_du_mois((int) end($nombres[0]), $numero, substr($debut, 0, 4), $date_numero);
+                // Fin avant le début dans le même mois : une coquille, on garde le premier jour.
+                return self::date_trouvee($debut, $fin !== null && $fin >= $debut ? $fin : $debut, $texte, $m[0][1], strlen($m[0][0]));
             }
-            $fin = self::jour_du_mois($j2, self::MOIS[mb_strtolower($m2)], substr($debut, 0, 4), $date_numero);
-            if ($fin !== null && $fin < $debut) {
-                // Série à cheval sur deux années : 29 décembre au 2 janvier.
-                $fin = self::jour_du_mois($j2, self::MOIS[mb_strtolower($m2)], (string) ((int) substr($debut, 0, 4) + 1), $date_numero);
-            }
-            return [
-                'debut' => $debut,
-                'fin' => $fin ?? $debut,
-                'avant' => trim(substr($texte, 0, $m[0][1])),
-                'apres' => trim(substr($texte, $m[0][1] + strlen($m[0][0]))),
-            ];
         }
         return null;
     }
 
+    /** @return array{debut: string, fin: string, avant: string, apres: string} */
+    private static function date_trouvee(string $debut, string $fin, string $texte, int $position, int $longueur): array {
+        return ['debut' => $debut, 'fin' => $fin, 'avant' => trim(substr($texte, 0, $position)), 'apres' => trim(substr($texte, $position + $longueur))];
+    }
+
+    /** Numéro d'un mois écrit en entier ou en abrégé (« nov. »). */
+    private static function numero_du_mois(string $mois): int {
+        $mois = rtrim(mb_strtolower($mois), '.');
+        return self::MOIS[$mois] ?? self::MOIS_ABREGES[$mois] ?? 0;
+    }
+
     /** Date `Y-m-d` ; sans année, celle de l'envoi, ou la suivante si le jour est passé depuis plus de trois mois. */
     private static function jour_du_mois(int $jour, int $mois, string $annee, string $date_numero): ?string {
+        if ($mois < 1) {
+            return null;
+        }
         if ($annee !== '') {
             return checkdate($mois, $jour, (int) $annee) ? sprintf('%04d-%02d-%02d', (int) $annee, $mois, $jour) : null;
         }

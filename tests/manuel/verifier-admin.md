@@ -74,6 +74,20 @@ lancent par `npx wp-env run cli wp …`.
       automatique », une fiche ajoutée à la main « Saisie par l'équipe ». Au-dessus du tableau : « 1 proposition du
       public à traiter » ; le lien et le filtre « Propositions du public » ne montrent qu'elle ; changer d'onglet
       garde le filtre.
+- [ ] **Infolettre découpée** (0.12.0) : Veille > Radar > Rafraîchir. Le groupe « Unité de soutien SSA Québec :
+      infolettre » liste les encadrés des derniers numéros (titre, lien propre à chacun, extrait), pas un bloc par
+      numéro. « Boîte à outils SSA », « Formations gratuites », « Grand public » et « Bulletin de veille SSA » portent
+      l'étiquette orange « Déjà paru dans n autres numéros » et un liseré orange ; les articles du mois, non. Écarter
+      une « Déjà paru » : elle passe dans « Écartées » et ne revient pas après Rafraîchir. Après une collecte
+      (Réglages), la file « À approuver » montre les événements à venir de « À l'agenda », source « Unité de soutien
+      SSA Québec : agenda (infolettre) », organisateur vide (sauf les webinaires de l'Unité), résumé « Annoncé dans
+      l'infolettre du … » ; une seconde collecte n'en crée aucun (Journal : « Inchangés »).
+- [ ] **Gabarit à vérifier** (0.12.0) : après au moins trois collectes d'une source (Journal), simuler une lecture
+      vide : `wp eval 'RSN\Veille\Journal::consigner("obvia", ["date" => wp_date("Y-m-d H:i"), "lus" => 0, "ignores" => 0, "erreurs" => []]);'`.
+      Le Journal montre en tête l'encadré jaune « Gabarit à vérifier » avec « Obvia : événements : Rien lu, alors que
+      la source donne d'habitude environ n éléments… » et l'étiquette dans la ligne d'Obvia ; la file « À approuver »
+      rappelle « 1 source à vérifier (gabarit peut-être changé) : Obvia : événements » avec « Voir le journal ».
+      Relancer la collecte d'Obvia : la nouvelle ligne n'a plus d'alerte, l'encadré et le rappel disparaissent.
 - [ ] **Ajouter une fiche** (0.6.0) : le bouton en tête de la file d'approbation (à droite du titre) ouvre un
       éditeur vide avec l'encadré (type « Événement » par défaut) ; avec un titre et une date de début, **Publier**
       crée la fiche : `rsn_veille_source` vaut `manuel`, `rsn_veille_niveau` `M`, `rsn_veille_cle_source`
@@ -90,7 +104,7 @@ lancent par `npx wp-env run cli wp …`.
       « N appariées en anglais, M orphelines » au-dessus des erreurs, erreurs repliées sous
       « N erreurs », et le déroulé de chaque source replié en bas de page.
 - [ ] Les fichiers `admin.css` et `admin.js` ne sont chargés que sur les pages du menu Veille (onglet
-      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.11.0`.
+      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.12.0`.
 - [ ] Aucune erreur PHP dans `wp-content/debug.log` ni dans la console du navigateur.
 
 ## Réglages (tâche 12)
@@ -148,7 +162,7 @@ lancent par `npx wp-env run cli wp …`.
 
 ## Radar (tâche 15)
 
-Page Veille > Radar (`/wp-admin/admin.php?page=rsn-veille-radar`). Le premier affichage lit les 12
+Page Veille > Radar (`/wp-admin/admin.php?page=rsn-veille-radar`). Le premier affichage lit les 13
 flux de nouvelles un à un (8 s au plus chacun), chaque source étant gardée une heure dès qu'elle est lue
 (transients `rsn_veille_radar_{id}`), puis le résultat complet l'est aussi (`rsn_veille_radar`) avec une
 copie de 24 h (`rsn_veille_radar_dernier`). Un verrou de 2 min (`rsn_veille_radar_lecture`) évite que deux

@@ -87,6 +87,69 @@ final class DecoupageMailchimpTest extends TestCase {
         $this->assertSame([['Symposium A', '2026-10-26', '2026-10-27'], ['Forum B', '2027-11-16', '2027-11-16']], array_map(static fn(array $l): array => [$l['titre'], $l['debut'], $l['fin']], $lignes));
     }
 
+    /** @return array<int,string> « début→fin | titre | lieu » de chaque ligne lue. */
+    private static function lignes(array $lignes_html, string $date_numero): array {
+        return array_map(
+            static fn(array $l): string => $l['debut'] . '→' . $l['fin'] . ' | ' . $l['titre'] . ' | ' . $l['lieu'],
+            DecoupageMailchimp::agenda(GabaritMailchimp::numero([GabaritMailchimp::agenda($lignes_html)]), $date_numero)
+        );
+    }
+
+    public function test_agenda_series_a_cheval_et_annee_ecrite(): void {
+        $this->assertSame([
+            // L'année écrite est celle de la fin : le début est l'année d'avant.
+            '2026-12-30→2027-01-02 | Colloque A | à Québec',
+            '2026-12-30→2027-01-02 | Colloque B | à Québec',
+            // Sans année : décembre de l'envoi, janvier suivant.
+            '2026-12-29→2027-01-02 | Colloque C | à Lévis',
+            '2026-11-30→2026-12-02 | Colloque D | à Laval',
+            '2027-03-30→2027-04-01 | Colloque E | à Gatineau',
+        ], self::lignes([
+            '<a href="https://a.test/a">Colloque A</a> &gt; 30 décembre au 2 janvier 2027 à Québec',
+            '<a href="https://a.test/b">Colloque B</a> &gt; 30 décembre 2026 au 2 janvier 2027 à Québec',
+            '<a href="https://a.test/c">Colloque C</a> &gt; 29 décembre au 2 janvier à Lévis',
+            '<a href="https://a.test/d">Colloque D</a> &gt; 30 novembre au 2 décembre à Laval',
+            '<a href="https://a.test/e">Colloque E</a> &gt; 30 mars au 1er avril 2027 à Gatineau',
+        ], '2026-12-10'));
+    }
+
+    public function test_agenda_tournures_diverses(): void {
+        $this->assertSame([
+            // Trois jours énumérés : du premier au dernier.
+            '2026-11-24→2026-11-26 | Forum F | à Québec',
+            // Coquille (fin avant le début dans le même mois) : un seul jour, jamais une année de plus.
+            '2026-12-03→2026-12-03 | Atelier G | à Montréal',
+            // Un « > » de trop après la date : la ligne n'est pas perdue.
+            '2026-11-24→2026-11-24 | Webinaire H | Inscription',
+            // Mois abrégé.
+            '2026-11-24→2026-11-24 | Webinaire I | en ligne',
+            '2026-12-01→2026-12-03 | Congrès J | à Sherbrooke',
+            // Sans « > » : le titre s'arrête avant « le ».
+            '2026-11-27→2026-11-27 | Webinaire K | en ligne',
+        ], self::lignes([
+            '<a href="https://a.test/f">Forum F</a> &gt; 24, 25 et 26 novembre à Québec',
+            '<a href="https://a.test/g">Atelier G</a> &gt; 3 au 1 décembre à Montréal',
+            '<a href="https://a.test/h">Webinaire H</a> &gt; 24 novembre &gt; Inscription',
+            '<a href="https://a.test/i">Webinaire I</a> &gt; 24 nov. en ligne',
+            '<a href="https://a.test/j">Congrès J</a> &gt; 1er au 3 déc. à Sherbrooke',
+            '<a href="https://a.test/k">Webinaire K</a> le 27 novembre en ligne',
+        ], '2026-11-20'));
+        // Un numéro de salle ou une date impossible ne font pas une date.
+        $this->assertSame([], self::lignes(['<a href="https://a.test/x">Atelier</a> &gt; 31 novembre à Québec', '<a href="https://a.test/y">Atelier</a> &gt; salle 24 à Québec'], '2026-11-20'));
+    }
+
+    public function test_html_hostile_reste_rapide(): void {
+        // Des milliers de balises de gras jamais fermées : le titre se cherche sans retour arrière.
+        $piege = '<table class="mcnImageCardBlock"><tr><td class="mcnTextContent">' . str_repeat('<b>x ', 60000) . '<a href="https://ssa.test/p">Lire</a> ' . str_repeat('<strong>y ', 60000) . '</td></tr></table>';
+        $debut = microtime(true);
+        $cartes = DecoupageMailchimp::cartes(GabaritMailchimp::numero([$piege, GabaritMailchimp::carte('Normal', 'Texte.', 'https://ssa.test/n')]));
+        $this->assertLessThan(1.0, microtime(true) - $debut);
+        $this->assertSame(['https://ssa.test/p', 'https://ssa.test/n'], array_column($cartes, 'url'));
+        $this->assertLessThanOrEqual(200, mb_strlen($cartes[0]['titre']));
+        // Une barre oblique inverse dans l'hôte tromperait la lecture du domaine : adresse refusée.
+        $this->assertSame('', DecoupageMailchimp::nettoyer_url('https://evil.test\\.ssaquebec.ca/'));
+    }
+
     public function test_numeros_du_flux(): void {
         $flux = GabaritMailchimp::flux([
             ['Infolettre - Novembre 2026', 'https://mailchi.mp/x/nov', 'Fri, 20 Nov 2026 15:00:00 +0000', GabaritMailchimp::numero([GabaritMailchimp::carte('A', 'a', 'https://ssa.test/a')])],

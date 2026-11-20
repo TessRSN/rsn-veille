@@ -626,7 +626,10 @@ final class Collecte {
     }
 
     private static function integrer_fiche(Fiche $fiche, array $source, Depot $d, Pertinence $p, array &$compteurs): void {
-        if (!$d->existe($fiche)) {
+        // `sans_doublon_par_url` : l'adresse des fiches de la source n'est pas propre à chaque événement (agenda d'une
+        // infolettre) ; seuls la clé de source et le couple date-titre repèrent alors un doublon.
+        $par_url = empty($source['sans_doublon_par_url']);
+        if (!$d->existe($fiche, $par_url)) {
             $texte = $fiche->titre . ' ' . $fiche->resume;
             $fiche->statut = $p->statut((string) ($source['type_source'] ?? ''), $texte);
             $fiche->themes = $p->themes($texte);
@@ -636,7 +639,7 @@ final class Collecte {
             }
         }
         $noms = ['cree' => 'crees', 'fusionne' => 'fusionnes', 'mis_a_jour' => 'mis_a_jour', 'inchange' => 'inchanges'];
-        $compteurs[$noms[$d->integrer($fiche)]]++;
+        $compteurs[$noms[$d->integrer($fiche, $par_url)]]++;
         if ($d->annuler_si_necessaire($fiche)) {
             $compteurs['annules']++;
         }

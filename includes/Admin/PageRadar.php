@@ -68,7 +68,7 @@ final class PageRadar {
     /** Longueur maximale d'une adresse acceptée. */
     private const LONGUEUR_URL = 2048;
 
-    /** Temps d'exécution demandé quand les flux sont relus (douze sources, 8 s au plus chacune). */
+    /** Temps d'exécution demandé quand les flux sont relus (treize sources, 8 s au plus chacune). */
     private const LIMITE_EXECUTION = 150;
 
     // --- WordPress : crochets, page, actions ---

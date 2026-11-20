@@ -16,8 +16,8 @@ use RSN\Veille\Sources;
 final class LecteurInfolettreTest extends TestCase {
     private const SOURCE = [
         'id' => 'ssa_agenda', 'nom' => 'SSA : agenda de l’infolettre', 'url' => 'https://us16.campaign-archive.com/feed?u=a&id=b',
-        'type' => 'infolettre_mailchimp', 'niveau' => 'C', 'type_source' => 'infolettre', 'organisateur' => 'Unité SSA',
-        'langue' => 'fr', 'actif' => true, 'sans_absences' => true, 'hotes_organisateur' => ['ssa.test'],
+        'type' => 'infolettre_mailchimp', 'niveau' => 'B', 'type_source' => 'infolettre', 'organisateur' => 'Unité SSA',
+        'langue' => 'fr', 'actif' => true, 'sans_absences' => true, 'sans_doublon_par_url' => true, 'hotes_organisateur' => ['ssa.test'],
     ];
 
     protected function setUp(): void {
@@ -73,7 +73,7 @@ final class LecteurInfolettreTest extends TestCase {
         $this->assertSame(['https://mailchi.mp/x/nov', '2027-01-12', 'Montréal', 'fr'], [$journee->url, $journee->debut, $journee->ville, $journee->langue]);
         // L'organisateur n'est connu que si le lien mène chez l'éditeur de l'infolettre.
         $this->assertSame(['', 'Unité SSA', ''], [$labos->organisateur, $pas->organisateur, $forum->organisateur]);
-        $this->assertSame(['SSA : agenda de l’infolettre', 'C', ''], [$labos->source, $labos->niveau, $labos->lieu]);
+        $this->assertSame(['SSA : agenda de l’infolettre', 'B', ''], [$labos->source, $labos->niveau, $labos->lieu]);
         $this->assertSame('Annoncé dans l’infolettre du 20 novembre 2026 (Unité SSA) : en ligne.', $labos->resume);
         $this->assertStringEndsWith('(Unité SSA) : à Whitehorse et en ligne en anglais.', $yukon->resume);
         $this->assertStringStartsWith('ssa_agenda:2026-11-24|', $forum->cle_source);
@@ -130,6 +130,75 @@ final class LecteurInfolettreTest extends TestCase {
         }
     }
 
+    private static function servir(string $flux): void {
+        Collecte::$obtenir_pour_tests = static fn(string $url, array $options = []): array => ['corps' => $flux, 'type' => 'application/rss+xml', 'code' => 200, 'url_finale' => $url, 'erreur' => null];
+    }
+
+    public function test_lignes_sans_lien_ou_au_lien_commun_restent_des_fiches_distinctes(): void {
+        // Trois lignes sans lien (elles reçoivent l'adresse du numéro) et deux qui pointent vers la même page générale.
+        self::servir(GabaritMailchimp::flux([['Infolettre - Décembre 2026', 'https://mailchi.mp/x/dec', 'Sat, 21 Nov 2026 12:00:00 +0000', GabaritMailchimp::numero_de([['A', 'https://ssa.test/a']], [
+            'Journée A &gt; 12 décembre à Québec',
+            'Journée B &gt; 15 décembre à Montréal',
+            'Journée C &gt; 20 janvier à Laval',
+            '<a href="https://ssa.test/formations/">Formation D</a> &gt; 2 décembre en ligne',
+            '<a href="https://ssa.test/formations/">Formation E</a> &gt; 9 décembre en ligne',
+        ])]]));
+        $entrepot = new EntrepotMemoire();
+        $ligne = Collecte::collecter_source(self::SOURCE, new Depot($entrepot), new Pertinence());
+        $this->assertSame([5, 0, 0], [$ligne['crees'], $ligne['fusionnes'], $ligne['mis_a_jour']]);
+        $attendu = ['Formation D' => '2026-12-02', 'Formation E' => '2026-12-09', 'Journée A' => '2026-12-12', 'Journée B' => '2026-12-15', 'Journée C' => '2027-01-20'];
+        $lire = static function () use ($entrepot): array {
+            $dates = [];
+            foreach ($entrepot->lister('') as $fiche) {
+                $dates[$fiche->titre] = $fiche->debut;
+            }
+            ksort($dates);
+            return $dates;
+        };
+        $this->assertSame($attendu, $lire());
+        // La collecte suivante ne déplace rien.
+        $seconde = Collecte::collecter_source(self::SOURCE, new Depot($entrepot), new Pertinence());
+        $this->assertSame([0, 0, 0, 5], [$seconde['crees'], $seconde['fusionnes'], $seconde['mis_a_jour'], $seconde['inchanges']]);
+        $this->assertSame($attendu, $lire());
+    }
+
+    public function test_une_mention_ne_reecrit_jamais_une_fiche_d_une_autre_source(): void {
+        $entrepot = new EntrepotMemoire();
+        foreach (['B', 'M', 'C', 'A'] as $rang => $niveau) {
+            $entrepot->creer(\RSN\Veille\Fiche::depuis_tableau([
+                'type' => 'evenement', 'titre' => 'Forum ' . $niveau . ' de la santé', 'debut' => '2026-12-0' . ($rang + 1), 'fin' => '2026-12-0' . ($rang + 1),
+                'url' => 'https://organisateur.test/forum-' . $niveau, 'ville' => 'Québec', 'organisateur' => 'Organisateur', 'source' => 'Source ' . $niveau, 'niveau' => $niveau,
+                'statut' => 'publie', 'cle_source' => 'x:' . $niveau, 'cles_source' => ['x:' . $niveau],
+            ]));
+        }
+        $lignes = [];
+        foreach (['B', 'M', 'C', 'A'] as $rang => $niveau) {
+            // Même jour et même titre (fusion), mais une fin, un lien et une ville différents.
+            $lignes[] = '<a href="https://lnkd.in/p/' . $niveau . '">Forum ' . $niveau . ' de la santé</a> &gt; ' . ($rang + 1) . ' au ' . ($rang + 3) . ' décembre à Lévis';
+        }
+        self::servir(GabaritMailchimp::flux([['Infolettre - Décembre 2026', 'https://mailchi.mp/x/dec', 'Sat, 21 Nov 2026 12:00:00 +0000', GabaritMailchimp::numero_de([['A', 'https://ssa.test/a']], $lignes)]]));
+        $ligne = Collecte::collecter_source(self::SOURCE, new Depot($entrepot), new Pertinence());
+        $this->assertSame([0, 4], [$ligne['crees'], $ligne['fusionnes']]);
+        $this->assertCount(4, $entrepot->lister(''));
+        foreach ($entrepot->lister('') as $fiche) {
+            $n = $fiche->niveau;
+            $this->assertSame(['publie', $fiche->debut, 'https://organisateur.test/forum-' . $n, 'Québec', 'Source ' . $n, 'Organisateur'], [$fiche->statut, $fiche->fin, $fiche->url, $fiche->ville, $fiche->source, $fiche->organisateur], $n);
+            $this->assertCount(2, $fiche->cles_source, $n);
+        }
+        // Même adresse qu'une fiche connue, mais autre événement : jamais fusionné par l'adresse.
+        self::servir(GabaritMailchimp::flux([['Infolettre - Décembre 2026', 'https://mailchi.mp/x/dec', 'Sat, 21 Nov 2026 12:00:00 +0000', GabaritMailchimp::numero_de([['A', 'https://ssa.test/a']], ['<a href="https://organisateur.test/forum-A">Tout autre chose</a> &gt; 18 décembre à Lévis'])]]));
+        $ligne = Collecte::collecter_source(self::SOURCE, new Depot($entrepot), new Pertinence());
+        $this->assertSame([1, 0], [$ligne['crees'], $ligne['fusionnes']]);
+        $this->assertCount(1, $entrepot->lister('a_approuver'));
+    }
+
+    public function test_alerte_quand_tout_le_gabarit_change(): void {
+        // Le dernier numéro n'a plus aucun bloc reconnu, mais se présente comme les autres : l'agenda est signalé aussi.
+        $r = (new LecteurInfolettre())->lire(self::flux([['Infolettre - Décembre 2026', 'https://mailchi.mp/x/dec', 'Sat, 21 Nov 2026 12:00:00 +0000', '<div class="neuf"><h2>À l\'agenda</h2><p>Forum &gt; 3 décembre</p></div>']]), self::SOURCE);
+        $this->assertCount(1, $r->alertes);
+        $this->assertStringContainsString('« Infolettre - Décembre 2026 »', $r->alertes[0]);
+    }
+
     public function test_alerte_du_lecteur_consignee_dans_la_ligne(): void {
         $flux = self::flux([['Infolettre - Décembre 2026', 'https://mailchi.mp/x/dec', 'Sat, 21 Nov 2026 12:00:00 +0000', GabaritMailchimp::numero_de([['Article', 'https://ssa.test/dec']])]]);
         Collecte::$obtenir_pour_tests = static fn(string $url, array $options = []): array => ['corps' => $flux, 'type' => 'application/rss+xml', 'code' => 200, 'url_finale' => $url, 'erreur' => null];
@@ -140,7 +209,8 @@ final class LecteurInfolettreTest extends TestCase {
     public function test_sources_du_registre(): void {
         $sources = Sources::par_defaut();
         $agenda = $sources['ssa_agenda'];
-        $this->assertSame(['infolettre_mailchimp', 'C', 'infolettre', true], [$agenda['type'], $agenda['niveau'], $agenda['type_source'], $agenda['sans_absences']]);
+        // Niveau B, le moins fiable : une mention ne l'emporte jamais sur une autre source.
+        $this->assertSame(['infolettre_mailchimp', 'B', 'infolettre', true, true], [$agenda['type'], $agenda['niveau'], $agenda['type_source'], $agenda['sans_absences'], $agenda['sans_doublon_par_url']]);
         $this->assertArrayNotHasKey('categorie_nouvelles', $agenda);
         $this->assertInstanceOf(LecteurInfolettre::class, Collecte::lecteur_pour($agenda));
         $radar = $sources['ssa_infolettre'];

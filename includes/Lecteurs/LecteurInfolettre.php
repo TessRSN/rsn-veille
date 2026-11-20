@@ -32,10 +32,8 @@ final class LecteurInfolettre implements Lecteur {
         $comptes = [];
         foreach ($numeros as $numero) {
             $lignes = DecoupageMailchimp::agenda($numero['html'], $numero['date'] !== '' ? $numero['date'] : $aujourdhui);
-            // Seuls les numéros ordinaires (avec encadrés) font l'habitude : un envoi spécial n'a pas d'agenda.
-            if ($lignes !== [] || DecoupageMailchimp::cartes($numero['html']) !== []) {
-                $comptes[] = ['titre' => $numero['titre'], 'n' => count($lignes)];
-            }
+            // Tous les envois comptent : `rupture` reconnaît un envoi spécial (sans agenda) à son titre différent.
+            $comptes[] = ['titre' => $numero['titre'], 'n' => count($lignes)];
             foreach ($lignes as $ligne) {
                 $cle = $id . ':' . Fiche::cle_dedoublonnage_de($ligne['debut'], $ligne['titre']);
                 if (isset($vues[$cle])) {

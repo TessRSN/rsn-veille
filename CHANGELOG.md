@@ -1,5 +1,34 @@
 # Journal des modifications
 
+## 0.12.0 (2026-11-20)
+
+Infolettres Mailchimp : celle de l'Unité de soutien SSA Québec est lue et découpée, au lieu d'arriver en un seul bloc. Deux avertissements demandés par l'équipe : ce qui revient d'un numéro à l'autre, et une source dont le gabarit change.
+
+### Découpage d'une infolettre (`Lecteurs\DecoupageMailchimp`)
+- Le flux d'archive de Mailchimp donne les dix derniers envois avec leur HTML complet. Chaque numéro est découpé d'après le gabarit standard de Mailchimp : ses **encadrés avec image** (titre en gras, lien, texte) et les lignes de son bloc **« À l'agenda »** (« titre > 24 et 25 novembre à Québec »).
+- Étude des 20 envois publics de l'Unité (février à novembre 2026) : les 16 numéros ordinaires ont le même gabarit (10 à 20 encadrés, un bloc d'agenda) ; 4 envois spéciaux en ont un autre.
+- Liens nettoyés : enveloppe « Safe Links » d'Outlook dépliée, paramètres de suivi retirés (`utm_*`, `gclid`, `gad_*`, `fbclid`, identifiant d'abonné de Mailchimp, identifiant de partage de YouTube).
+- Dates d'agenda : « 24 novembre », « 1er mai », « 24 nov. », « 24 et 25 novembre », « 24, 25 et 26 novembre », « 26 au 28 octobre », « 30 novembre au 2 décembre », « 30 décembre au 2 janvier 2027 », avec ou sans année (sans année : celle de l'envoi, ou la suivante si le jour est passé depuis plus de trois mois). Une ligne sans date lisible est laissée.
+
+### Radar : chaque encadré est une nouvelle (`Nouvelles::lire_infolettre`, `Admin\PageRadar`)
+- Nouvelle source « Unité de soutien SSA Québec : infolettre ». Chaque encadré devient une nouvelle, datée du dernier numéro où il paraît, avec son propre lien. Un envoi sans encadré (envoi spécial) reste une seule nouvelle. Le fil du site de l'Unité reste lu à part ; une adresse déjà vue n'est pas répétée.
+- **« Déjà paru dans n autres numéros »** : étiquette orange et liseré sur un encadré qui revient d'un numéro à l'autre (« Boîte à outils SSA », « Formations gratuites »…). Deux envois du même numéro (mêmes encadrés, à une semaine d'écart) comptent pour un seul. Une nouvelle écartée ne revient pas aux numéros suivants.
+- **« Gabarit à vérifier »** en tête du Radar si le dernier numéro ne donne plus d'encadré (ou moins du tiers de l'habitude) alors qu'il porte un titre comme les autres, ou si aucun numéro du flux n'en donne. Le numéro reste lisible en une seule nouvelle.
+
+### Agenda de l'infolettre : événements à approuver (`Lecteurs\LecteurInfolettre`)
+- Nouvelle source collectée la nuit, « Unité de soutien SSA Québec : agenda (infolettre) » : chaque ligne datée et à venir du bloc « À l'agenda » devient un événement **toujours « à approuver »** (jamais publié d'office). Le même événement annoncé dans plusieurs numéros ne donne qu'une fiche. S'il est déjà connu d'une autre source (même jour, même titre), la mention s'y rattache **sans rien réécrire** : la source est de niveau B, le moins fiable, et ne fait que combler un lien ou une image manquants. L'adresse ne sert jamais à repérer un doublon (`sans_doublon_par_url`), parce que plusieurs lignes peuvent partager celle du numéro ou d'une page générale.
+- Format, ville, région et langue sont déduits de la mention (« en ligne », « à Québec et en ligne », « en anglais »). L'organisateur n'est rempli que si le lien mène chez l'éditeur de l'infolettre ; sinon il reste vide, à compléter dans « Détails de la fiche ». Le résumé dit d'où vient l'annonce (« Annoncé dans l'infolettre du 20 novembre 2026 (…) : à Québec. »).
+- Un événement qui sort de l'agenda n'est pas signalé « absent de sa source » : une infolettre n'annonce un événement qu'un temps.
+- Page publique : un événement sans organisateur n'affiche plus de séparateur orphelin ; la table des sources montre l'archive publique de l'infolettre.
+
+### Gabarit d'une source à vérifier (`Journal::alerte_gabarit`, `Admin\PageJournal`, `Admin\PageFile`)
+- Pour **toutes les sources collectées** : une lecture sans erreur qui ne rend plus rien, alors que la source donne d'habitude au moins trois éléments (ou moins du tiers pour une source d'au moins neuf), reçoit une alerte. L'habitude est la médiane des lectures saines des deux dernières semaines ; une source qui reste vide deux semaines est tenue pour vide et l'alerte s'éteint.
+- Affichage : étiquette « Gabarit à vérifier » dans la ligne de la source et encadré en tête du **Journal** ; rappel au-dessus de la file **« À approuver »** (« n sources à vérifier », lien vers le journal).
+- Pour l'agenda de l'infolettre, l'alerte porte sur le dernier numéro : il n'a plus de ligne d'agenda alors que les précédents en ont.
+
+### Livraison
+- Tests : 36 nouveaux (804 au total) ; découpage vérifié sur le vrai flux et les 20 envois publics ; relecture indépendante (fusions à tort, dates à cheval sur deux années, HTML hostile : corrigés avant la livraison). Textes anglais au `.po` (noms des deux sources, libellé de la table des sources). Numéro de version 0.12.0.
+
 ## 0.11.0 (2026-11-20)
 
 File d'approbation : distinguer ce qu'une personne a proposé de ce que la collecte a trouvé, à la demande de l'équipe.

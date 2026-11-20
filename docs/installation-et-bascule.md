@@ -1,6 +1,6 @@
 # Installation et bascule sur rsn.quebec
 
-Ce guide dit comment installer l'extension **RSN : veille de l'écosystème** (version 0.11.0) sur le site, quoi régler le premier jour, comment faire passer la page Veille à la place de la page Événements, et que faire quand quelque chose ne va pas. Rien n'est fait sur le site tant que la personne qui porte le projet ne l'a pas décidé : les étapes de la bascule se font une à une, avec un accord à chaque étape.
+Ce guide dit comment installer l'extension **RSN : veille de l'écosystème** (version 0.12.0) sur le site, quoi régler le premier jour, comment faire passer la page Veille à la place de la page Événements, et que faire quand quelque chose ne va pas. Rien n'est fait sur le site tant que la personne qui porte le projet ne l'a pas décidé : les étapes de la bascule se font une à une, avec un accord à chaque étape.
 
 ## 1. Prérequis
 
@@ -41,7 +41,7 @@ Sans cron du serveur (c'est-à-dire sans `DISABLE_WP_CRON`), l'extension fonctio
 À partir du dépôt, sur un poste avec Git (après avoir amené la branche voulue, par exemple `main`) :
 
 ```
-git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.11.0.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
+git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.12.0.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
 ```
 
 Le zip contient `rsn-veille.php`, `uninstall.php`, `includes/`, `assets/` et `languages/` (la traduction anglaise de la page en dépend) (et les documents de racine), sans tests, sans documents de conception et sans `vendor/`. Dans wp-admin : **Extensions › Ajouter › Téléverser une extension**, choisir le zip, installer, puis activer.
@@ -65,6 +65,14 @@ Le dépôt est **privé** (`TessRSN/rsn-veille`) et la branche de livraison est 
 **Premier essai : le zip** (voie 1), pour installer, régler et valider la page en brouillon sans rien d'autre à configurer. **Pour suivre les corrections** pendant les premières semaines : **WP Pusher** (voie 2), avec les mises à jour manuelles (un clic après chaque correction relue) plutôt qu'automatiques. Si WP Pusher est écarté pour son coût, Git Updater fait le même travail avec la même méthode.
 
 Quelle que soit la voie, l'activation lance les mêmes opérations (voir section 9).
+
+### Après la mise à jour de la 0.11.0 vers la 0.12.0
+
+Rien à régler. L'infolettre de l'Unité de soutien SSA Québec (Mailchimp) est maintenant lue et découpée.
+
+- **Veille › Radar** : une nouvelle source, « Unité de soutien SSA Québec : infolettre », où chaque encadré d'un numéro est une nouvelle. À la première ouverture, une trentaine de nouvelles arrivent d'un coup (les numéros des 60 derniers jours), puis une douzaine par mois. Celles qui portent l'étiquette orange **« Déjà paru dans n autres numéros »** reviennent à chaque numéro (boîte à outils, formations…) : une fois écartées, elles ne reparaissent plus.
+- **File d'approbation**, après la collecte de la nuit suivante (ou « Lancer la collecte maintenant ») : les événements du bloc « À l'agenda » arrivent **à approuver**, source « Unité de soutien SSA Québec : agenda (infolettre) ». Avant de publier, ouvrir « Modifier » et compléter l'**organisateur** dans « Détails de la fiche » (l'infolettre ne le dit pas), et l'heure si elle compte. Un événement déjà publié depuis une autre source n'est ni doublé ni modifié par sa mention dans l'infolettre.
+- **Gabarit à vérifier** : si une source collectée ne rend plus rien alors qu'elle donnait des éléments, ou si le dernier numéro de l'infolettre n'a plus ses encadrés ou son agenda, une alerte jaune le dit en tête du Journal (et du Radar pour l'infolettre), et la file « À approuver » le rappelle. Ouvrir la page de la source : si elle est présentée autrement, sa lecture est à adapter (le signaler) ; si elle n'annonce simplement plus rien, il n'y a rien à faire.
 
 ### Après la mise à jour de la 0.10.0 vers la 0.11.0
 
@@ -148,7 +156,7 @@ Après l'activation, le menu **Veille** apparaît dans wp-admin (sous « Comment
 2. **Collecte et page publique › Heure de la collecte quotidienne** : 03:00 (heure de Montréal) par défaut. La changer replanifie la collecte.
 3. **Courriel hebdomadaire** : laisser **décoché** au début. Quand les fiches sont en place, cocher « Envoyer le courriel hebdomadaire de la veille », saisir les destinataires (une adresse par ligne), choisir le jour (l'envoi part à 8 h, heure de Montréal), enregistrer, puis cliquer **Envoyer un essai maintenant**. Si `wp_mail` ne livre pas les courriels du site, installer une extension SMTP avant de compter sur cette fonction.
 4. **Sources, Pertinence** : les valeurs par défaut sont celles du devis (niveaux, mots-clés santé et numérique, thèmes). Rien à changer pour commencer.
-5. **Lancer la collecte** : Veille › Réglages › **Lancer la collecte maintenant**. Les 13 sources collectées sont traitées une à une, à chaque passage de WP-Cron (environ 5 minutes par source avec le cron du serveur, donc environ une heure en tout). Suivre l'avancement dans **Veille › Journal** (une ligne par source ; les erreurs sont repliées sous « N erreurs »). Les 12 flux de nouvelles ne font pas partie de la collecte : le Radar les lit à la demande.
+5. **Lancer la collecte** : Veille › Réglages › **Lancer la collecte maintenant**. Les 14 sources collectées sont traitées une à une, à chaque passage de WP-Cron (environ 5 minutes par source avec le cron du serveur, donc environ une heure en tout). Suivre l'avancement dans **Veille › Journal** (une ligne par source ; les erreurs sont repliées sous « N erreurs »). Les 12 flux de nouvelles ne font pas partie de la collecte : le Radar les lit à la demande.
 6. **Importer les infolettres** : une fois la collecte des événements du RSN terminée, Veille › Réglages › **Importer des événements**, choisir le fichier `docs/maquette/evenements-infolettres-2025-2026.json` (24 événements recopiés des infolettres ; le fichier n'est pas dans le zip, ni ce guide : ils sont dans le dépôt GitHub privé `TessRSN/rsn-veille`, dossier `docs/` (`docs/maquette/` pour ce fichier), accessible avec un compte ayant accès au dépôt ; le télécharger de là avant l'import). Le message d'importation donne le nombre de fiches créées, fusionnées et inchangées ; un second import du même fichier ne crée rien.
 7. **Page Veille** : après avoir créé la page (section 4), la choisir dans Réglages › Collecte et page publique › **Page Veille**. Ainsi, à chaque changement de fiche, l'extension purge le cache LiteSpeed de cette page et son cache de rendu Elementor.
 8. **File d'approbation** : ouvrir Veille › File d'approbation, onglet « À approuver », et publier ou écarter les fiches que les règles de confiance n'ont pas publiées d'office.
@@ -259,7 +267,7 @@ Depuis la 0.5.0, la bande « Prochains événements » de l'accueil est le code 
 
 **Caches et ressources.**
 - Les données viennent du cache JSON de la page Veille (par langue, une heure au plus). La collecte de nuit, toute modification de fiche et la mise à jour de l'extension purgent aussi LiteSpeed et le cache Elementor de la page d'accueil et de ses traductions WPML. La page d'accueil est celle du réglage WordPress « Page d'accueil » (`page_on_front`) ; si ce réglage n'est pas une page statique, il n'y a rien à purger de ce côté. Si l'accueil est servi par un cache un jour plus tard, le script de la bande recalcule le jour entouré et les colonnes selon la date du jour (celle de Montréal, lue dans le navigateur).
-- `accueil.css` et `accueil.js` (`?ver=0.11.0`) se chargent sur la page d'accueil et sur toute page dont le contenu contient `[rsn_veille_accueil]` : le CSS dans l'en-tête, le script en pied de page. **Un code court posé dans un widget d'une autre page Elementor que l'accueil** n'a ses ressources qu'au rendu : elles arrivent après le contenu. Cette page n'est pas purgée par la collecte : la bande y suit les caches de LiteSpeed et d'Elementor (une purge manuelle la met à jour). Le filtre `rsn_veille_charger_accueil` force le chargement en tête d'une page : `add_filter('rsn_veille_charger_accueil', '__return_true')`.
+- `accueil.css` et `accueil.js` (`?ver=0.12.0`) se chargent sur la page d'accueil et sur toute page dont le contenu contient `[rsn_veille_accueil]` : le CSS dans l'en-tête, le script en pied de page. **Un code court posé dans un widget d'une autre page Elementor que l'accueil** n'a ses ressources qu'au rendu : elles arrivent après le contenu. Cette page n'est pas purgée par la collecte : la bande y suit les caches de LiteSpeed et d'Elementor (une purge manuelle la met à jour). Le filtre `rsn_veille_charger_accueil` force le chargement en tête d'une page : `add_filter('rsn_veille_charger_accueil', '__return_true')`.
 
 **Retour en arrière.** Dans Elementor, remettre `[rsn_events_cards limit="3"]` dans le widget Code court de la page 152 et de la page 1147 (et rétablir les marges de 100 px et de 50 px si elles ont été changées), puis purger LiteSpeed. L'extension peut rester active : tant que `[rsn_veille_accueil]` n'est dans aucune page, elle est sans effet visible : ses ressources se chargent sur l'accueil et l'accueil est purgé dès la mise à jour, mais rien ne s'y dessine de nouveau.
 
@@ -277,7 +285,7 @@ Depuis la 0.5.0, la bande « Prochains événements » de l'accueil est le code 
 | Le menu **Veille** est absent juste après une mise à jour | L'extension donne la capacité aux rôles pendant `admin_init`, après la construction du menu | Recharger la page une fois ; le menu apparaît (les activations normales n'ont pas ce délai) |
 | Les styles de la veille sont écrasés (boutons, titres, majuscules, fonds) | Le kit Elementor ou UiCore impose ses règles | Mettre le raccourci dans un widget **Code court** (pas un widget Texte) ; si un style fuit encore, noter l'élément et son thème de style et le signaler pour un correctif du CSS de l'extension |
 | Le formulaire répond « Trop de propositions » | Limite de débit : 5 envois par heure et par adresse, 30 par heure pour tout le site | Attendre une heure, ou vider les transients `rsn_veille_debit_*` |
-| La page Radar s'ouvre lentement | La première ouverture lit les 12 flux (8 s au plus chacun) puis garde le résultat une heure | Attendre ; le bouton « Rafraîchir » relit les flux |
+| La page Radar s'ouvre lentement | La première ouverture lit les 13 flux (8 s au plus chacun) puis garde le résultat une heure | Attendre ; le bouton « Rafraîchir » relit les flux |
 
 ## 8. Confidentialité et sécurité
 
@@ -303,6 +311,6 @@ Depuis la 0.5.0, la bande « Prochains événements » de l'accueil est le code 
   ```
   Faire ce nettoyage **avant** de supprimer l'extension ; après coup, il faudrait la réinstaller le temps du nettoyage.
 
-## 10. Limites connues de la version 0.11.0
+## 10. Limites connues de la version 0.12.0
 
 Voir la section « Limites connues » du `LISEZMOI.md`.

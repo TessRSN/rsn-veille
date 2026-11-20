@@ -56,10 +56,13 @@ final class Sources {
 
             // Infolettres Mailchimp (flux d'archive : dix derniers envois). Le bloc « À l'agenda » de chaque numéro donne des
             // événements, toujours à approuver (type_source « infolettre ») ; ses encadrés vont au Radar (plus bas).
+            // Niveau B, le moins fiable : une mention complète une fiche connue d'une autre source, sans jamais la réécrire.
+            // sans_doublon_par_url : plusieurs lignes peuvent partager une adresse (celle du numéro, une page générale).
             // sans_absences : un événement qui sort de l'agenda n'est pas annulé. url_publique : page d'archive montrée dans
             // la table des sources. hotes_organisateur : liens qui mènent chez l'éditeur, seuls cas où l'organisateur est connu.
-            self::entree('ssa_agenda', __('Unité de soutien SSA Québec : agenda (infolettre)', 'rsn-veille'), self::INFOLETTRE_SSA, 'infolettre_mailchimp', 'C', 'infolettre', 'Unité de soutien SSA Québec', [
+            self::entree('ssa_agenda', __('Unité de soutien SSA Québec : agenda (infolettre)', 'rsn-veille'), self::INFOLETTRE_SSA, 'infolettre_mailchimp', 'B', 'infolettre', 'Unité de soutien SSA Québec', [
                 'sans_absences' => true,
+                'sans_doublon_par_url' => true,
                 'url_publique' => 'https://us16.campaign-archive.com/home/?u=fd0647c2aa2f94eddd88a461a&id=83efb57620',
                 'hotes_organisateur' => ['ssaquebec.ca', 'ssa.illuxi.com'],
             ]),
