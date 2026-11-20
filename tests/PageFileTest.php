@@ -49,14 +49,17 @@ final class PageFileTest extends TestCase {
     // --- ligne_html ---
 
     public function test_boutons_selon_le_statut(): void {
-        $this->assertSame(['Publier' => 'publie', 'Écarter' => 'ecarte'], self::boutons(PageFile::ligne_html(self::fiche(), self::OPTIONS)));
-        $this->assertSame(['Retirer' => 'ecarte'], self::boutons(PageFile::ligne_html(self::fiche(['statut' => 'publie']), self::OPTIONS)));
+        $this->assertSame(['Publier + infolettre' => 'publie', 'Publier seulement' => 'publie', 'Écarter' => 'ecarte'], self::boutons(PageFile::ligne_html(self::fiche(), self::OPTIONS)));
+        $this->assertSame(['Retirer de la page' => 'ecarte'], self::boutons(PageFile::ligne_html(self::fiche(['statut' => 'publie']), self::OPTIONS)));
         $this->assertSame(['Publier' => 'publie'], self::boutons(PageFile::ligne_html(self::fiche(['statut' => 'ecarte']), self::OPTIONS)));
+        // En attente mais déjà passée (onglet « Archivées ») : il ne reste qu'à l'écarter.
+        $this->assertSame(['Écarter' => 'ecarte'], self::boutons(PageFile::ligne_html(self::fiche(['debut' => '2026-10-01']), self::OPTIONS)));
     }
 
     public function test_publier_est_le_bouton_principal(): void {
         $html = PageFile::ligne_html(self::fiche(), self::OPTIONS);
-        $this->assertMatchesRegularExpression('/<button type="button" class="button button-primary rsn-veille-action" data-statut="publie">Publier/', $html);
+        $this->assertStringContainsString('<button type="button" class="button button-primary rsn-veille-action" data-statut="publie" data-infolettre="1">Publier + infolettre</button>', $html);
+        $this->assertStringContainsString('<button type="button" class="button rsn-veille-action" data-statut="publie" data-infolettre="0">Publier seulement</button>', $html);
         $this->assertMatchesRegularExpression('/<button type="button" class="button rsn-veille-action" data-statut="ecarte">Écarter/', $html);
     }
 
@@ -70,11 +73,13 @@ final class PageFileTest extends TestCase {
     public function test_contenu_de_la_ligne(): void {
         $html = PageFile::ligne_html(self::fiche(), self::OPTIONS);
         $this->assertStringContainsString('Midi-conférence en santé numérique', $html);
-        $this->assertStringContainsString('Événement', $html);
+        $this->assertStringContainsString('<span class="rsn-veille-type" data-type="evenement"><span class="dashicons dashicons-calendar-alt" aria-hidden="true"></span> Événement</span>', $html);
         $this->assertStringContainsString('12 novembre 2026, 12 h', $html);
         $this->assertStringContainsString('Mila', $html);
         $this->assertStringContainsString('Mila : événements', $html);
-        $this->assertMatchesRegularExpression('/<abbr[^>]*title="Page web structurée"[^>]*>C<\/abbr>/', $html);
+        // Le niveau en clair, plus de lettre seule à deviner.
+        $this->assertMatchesRegularExpression('/<span class="rsn-veille-niveau" title="Page du site[^"]*">niveau C : page web lue<\/span>/', $html);
+        $this->assertStringNotContainsString('<abbr', $html);
         $this->assertStringContainsString('Une présentation sur l’IA en santé.', $html);
         $this->assertStringContainsString('href="https://mila.quebec/fr/evenements/midi"', $html);
         $this->assertStringContainsString('rel="noopener noreferrer"', $html);
@@ -112,7 +117,7 @@ final class PageFileTest extends TestCase {
         $avec = PageFile::ligne_html(self::fiche(['statut' => 'publie', 'absent_depuis' => '2026-11-03']), self::OPTIONS);
         $this->assertStringContainsString('Absent de la source depuis le 3 novembre 2026', $avec);
         // Une fiche absente peut être gardée (drapeau levé) ou retirée.
-        $this->assertSame(['Garder publiée' => 'publie', 'Retirer' => 'ecarte'], self::boutons($avec));
+        $this->assertSame(['Garder publiée' => 'publie', 'Retirer de la page' => 'ecarte'], self::boutons($avec));
     }
 
     // --- filtrer ---
@@ -136,8 +141,9 @@ final class PageFileTest extends TestCase {
         return array_map(static fn(Fiche $f): int => $f->id, $fiches);
     }
 
-    public function test_publiees_gardent_le_tri_par_date_d_evenement(): void {
-        $this->assertSame([5, 4], self::ids(PageFile::filtrer(self::lot(), 'publie', '', '')));
+    public function test_publiees_de_la_plus_proche_a_la_plus_lointaine(): void {
+        // Les deux fiches publiées du lot sont passées (1er octobre et 1er septembre) : plus dans « Publiées ».
+        $this->assertSame([], self::ids(PageFile::filtrer(self::lot(), 'publie', '', '')));
         // Même avec un jour d'arrivée, une fiche publiée suit sa date d'événement.
         $lot = [
             self::fiche(['id' => 1, 'debut' => '2026-12-01', 'statut' => 'publie', 'cree_le' => '2026-10-27']),
@@ -146,27 +152,214 @@ final class PageFileTest extends TestCase {
         $this->assertSame([2, 1], self::ids(PageFile::filtrer($lot, 'publie', '', '')));
     }
 
-    public function test_publiees_et_ecartees_sans_debut_suivent_la_date_limite_puis_sans_date_en_dernier(): void {
-        foreach (['publie' => [3, 1, 2, 4], 'ecarte' => [2, 1, 3, 4]] as $statut => $attendu) {
+    public function test_un_appel_est_range_a_sa_date_limite_jamais_a_sa_date_de_publication(): void {
+        foreach (['a_approuver' => [3, 1, 2, 4, 5], 'publie' => [3, 1, 2, 4, 5], 'ecarte' => [2, 1, 3, 4, 5]] as $statut => $attendu) {
             $lot = [
+                self::fiche(['id' => 5, 'debut' => '2026-10-20', 'echeance' => null, 'type' => 'appel', 'statut' => $statut]),
                 self::fiche(['id' => 4, 'debut' => null, 'echeance' => null, 'statut' => $statut]),
-                self::fiche(['id' => 3, 'debut' => null, 'echeance' => '2026-11-10', 'statut' => $statut]),
+                // Appel publié le 1er octobre, à remettre le 10 novembre : c'est le 10 novembre qui compte.
+                self::fiche(['id' => 3, 'debut' => '2026-10-01', 'echeance' => '2026-11-10', 'type' => 'appel', 'statut' => $statut]),
                 self::fiche(['id' => 2, 'debut' => '2026-12-01', 'statut' => $statut]),
                 self::fiche(['id' => 1, 'debut' => '2026-11-20', 'statut' => $statut]),
             ];
-            // Sans début, la date limite sert de date ; sans aucune date, en dernier (même pour les écartées).
+            // Sans date qui compte (appel sans date limite, événement sans début) : à la fin, par identifiant.
             $this->assertSame($attendu, self::ids(PageFile::filtrer($lot, $statut, '', '')), $statut);
         }
     }
 
-    public function test_a_approuver_trie_par_arrivee_decroissante(): void {
+    public function test_a_approuver_trie_par_date_de_l_evenement_plus_par_arrivee(): void {
         $lot = [
             self::fiche(['id' => 1, 'debut' => '2026-11-01', 'statut' => 'a_approuver', 'cree_le' => '2026-10-20']),
             self::fiche(['id' => 2, 'debut' => '2026-11-02', 'statut' => 'a_approuver', 'cree_le' => '2026-10-27']),
             self::fiche(['id' => 3, 'debut' => '2026-12-30', 'statut' => 'a_approuver', 'cree_le' => '2026-10-27']),
             self::fiche(['id' => 4, 'debut' => '2026-10-30', 'statut' => 'a_approuver', 'cree_le' => null]),
         ];
-        $this->assertSame([3, 2, 1, 4], self::ids(PageFile::filtrer($lot, 'a_approuver', '', '')));
+        $this->assertSame([4, 1, 2, 3], self::ids(PageFile::filtrer($lot, 'a_approuver', '', '')));
+    }
+
+    // --- Archivées : ce qui est dépassé quitte « À approuver » et « Publiées » (0.15.0) ---
+
+    public function test_fiche_date_utile_et_depassee(): void {
+        $jour = '2026-10-27';
+        $this->assertSame('2026-11-12', self::fiche()->date_utile());
+        $this->assertSame('2026-11-10', self::fiche(['type' => 'appel', 'debut' => '2026-10-01', 'echeance' => '2026-11-10'])->date_utile());
+        $this->assertSame('', self::fiche(['type' => 'appel', 'debut' => '2026-10-01'])->date_utile());
+        $this->assertSame('', self::fiche(['debut' => null])->date_utile());
+        // Événement : passé quand sa fin (sinon son début) est avant aujourd'hui ; le jour même, il ne l'est pas.
+        $this->assertFalse(self::fiche(['debut' => '2026-10-27'])->est_passee($jour));
+        $this->assertTrue(self::fiche(['debut' => '2026-10-26'])->est_passee($jour));
+        $this->assertFalse(self::fiche(['debut' => '2026-09-04', 'fin' => '2026-12-18'])->est_passee($jour));
+        $this->assertFalse(self::fiche(['debut' => null])->est_passee($jour));
+        // Appel : date limite passée, ou sans date limite et publié il y a plus de 30 jours.
+        $this->assertTrue(self::fiche(['type' => 'appel', 'debut' => '2026-10-01', 'echeance' => '2026-10-26'])->est_passee($jour));
+        $this->assertFalse(self::fiche(['type' => 'appel', 'debut' => '2026-06-01', 'echeance' => '2026-10-27'])->est_passee($jour));
+        $this->assertFalse(self::fiche(['type' => 'appel', 'debut' => '2026-10-20'])->est_passee($jour));
+        $this->assertTrue(self::fiche(['type' => 'appel', 'debut' => '2026-08-01'])->est_passee($jour));
+        $this->assertFalse(self::fiche(['type' => 'nouvelle', 'debut' => '2026-01-01'])->est_passee($jour));
+    }
+
+    public function test_onglet_archivees(): void {
+        $lot = [
+            self::fiche(['id' => 1, 'titre' => 'Colloque passé', 'debut' => '2026-10-01', 'statut' => 'publie']),
+            self::fiche(['id' => 2, 'titre' => 'Appel échu', 'type' => 'appel', 'debut' => '2026-09-01', 'echeance' => '2026-10-15', 'statut' => 'publie']),
+            self::fiche(['id' => 3, 'titre' => 'Jamais approuvé', 'debut' => '2026-10-20', 'statut' => 'a_approuver']),
+            self::fiche(['id' => 4, 'titre' => 'Midi à venir', 'debut' => '2026-11-12', 'statut' => 'publie']),
+            self::fiche(['id' => 5, 'titre' => 'En attente à venir', 'debut' => '2026-11-15', 'statut' => 'a_approuver']),
+            self::fiche(['id' => 6, 'titre' => 'Écartée passée', 'debut' => '2026-10-02', 'statut' => 'ecarte']),
+        ];
+        // De la plus récemment dépassée à la plus ancienne ; les écartées restent dans leur onglet.
+        $this->assertSame([3, 2, 1], self::ids(PageFile::filtrer($lot, 'archive', '', '')));
+        $this->assertSame([4], self::ids(PageFile::filtrer($lot, 'publie', '', '')));
+        $this->assertSame([5], self::ids(PageFile::filtrer($lot, 'a_approuver', '', '')));
+        $this->assertSame([6], self::ids(PageFile::filtrer($lot, 'ecarte', '', '')));
+        $this->assertSame(['a_approuver' => 1, 'publie' => 1, 'archive' => 3, 'ecarte' => 1, 'a_verifier' => 0], PageFile::compteurs($lot));
+        // Le lendemain du midi, il est archivé à son tour.
+        $this->assertSame([4, 3, 2, 1], self::ids(PageFile::filtrer($lot, 'archive', '', '', '', '2026-11-13')));
+
+        $html = PageFile::page_html($lot, 'archive', '', '', 'https://exemple.test/wp-admin/admin.php?page=rsn-veille', self::OPTIONS);
+        $this->assertMatchesRegularExpression('/nav-tab nav-tab-active"[^>]*>Archivées <span class="count" data-compteur="archive">\(3\)<\/span>/', $html);
+        $this->assertStringContainsString('href="https://exemple.test/wp-admin/admin.php?page=rsn-veille&amp;statut=archive"', $html);
+        $this->assertStringContainsString('Événements passés et appels dont la date limite est dépassée', $html);
+        $this->assertStringContainsString('Colloque passé', $html);
+        $this->assertStringNotContainsString('Midi à venir', $html);
+        $this->assertStringContainsString('<span class="rsn-veille-jamais-publiee">Jamais publiée</span>', $html);
+        $this->assertSame(1, substr_count($html, 'Jamais publiée'));
+        // Onglets dans l'ordre : À approuver, Publiées, Archivées, Écartées, À vérifier.
+        preg_match_all('/data-compteur="([a-z_]+)"/', $html, $m);
+        $this->assertSame(['a_approuver', 'publie', 'archive', 'ecarte', 'a_verifier'], $m[1]);
+    }
+
+    public function test_fiches_chargees_pour_publiees_et_archivees(): void {
+        $e = new EntrepotMemoire();
+        $creer = static function (array $champs) use ($e): int {
+            $f = self::fiche($champs);
+            $f->id = null;
+            return $e->creer($f);
+        };
+        $venir = $creer(['statut' => 'publie', 'debut' => '2026-11-12']);
+        $passee = $creer(['statut' => 'publie', 'debut' => '2026-06-01']);
+        $appel = $creer(['statut' => 'publie', 'type' => 'appel', 'debut' => '2026-09-01', 'echeance' => '2026-12-01']);
+        $attente_passee = $creer(['statut' => 'a_approuver', 'debut' => '2026-10-01']);
+        $attente = $creer(['statut' => 'a_approuver', 'debut' => '2026-11-30']);
+        $creer(['statut' => 'ecarte', 'debut' => '2026-06-01']);
+
+        $page = static fn(string $onglet, string $type = ''): array => self::ids(PageFile::filtrer(PageFile::fiches_de_l_onglet($e, $onglet, $type, '2026-10-27')[0], $onglet, $type, '', '', '2026-10-27'));
+        $this->assertSame([$venir, $appel], $page('publie'));
+        $this->assertSame([$appel], $page('publie', 'appel'));
+        $this->assertSame([$attente_passee, $passee], $page('archive'));
+        $this->assertSame([$attente], $page('a_approuver'));
+        $this->assertSame(['a_approuver' => 1, 'publie' => 2, 'archive' => 2, 'ecarte' => 1, 'a_verifier' => 0], PageFile::compteurs_de($e, '2026-10-27'));
+        // Le 2 décembre : tout ce qui était publié ou en attente est dépassé.
+        $this->assertSame(['a_approuver' => 0, 'publie' => 0, 'archive' => 5, 'ecarte' => 1, 'a_verifier' => 0], PageFile::compteurs_de($e, '2026-12-02'));
+    }
+
+    // --- Type bien visible et niveaux expliqués (0.15.0) ---
+
+    public function test_pastille_de_type_et_legende_des_niveaux(): void {
+        $appel = PageFile::ligne_html(self::fiche(['type' => 'appel', 'echeance' => '2026-11-30', 'niveau' => 'B']), self::OPTIONS);
+        $this->assertStringContainsString('<span class="rsn-veille-type" data-type="appel"><span class="dashicons dashicons-megaphone" aria-hidden="true"></span> Appel</span>', $appel);
+        $this->assertStringContainsString('>niveau B : flux RSS ou infolettre</span>', $appel);
+        // Niveau inconnu : la lettre seule, sans explication inventée.
+        $this->assertStringContainsString('<span class="rsn-veille-niveau">niveau Z</span>', PageFile::ligne_html(self::fiche(['niveau' => 'Z']), self::OPTIONS));
+
+        $html = PageFile::page_html(self::lot(), 'a_approuver', '', '', 'https://exemple.test/wp-admin/admin.php?page=rsn-veille', self::OPTIONS);
+        $this->assertStringContainsString('<details class="rsn-veille-deroule rsn-veille-legende"><summary>Que veulent dire les niveaux ?</summary>', $html);
+        foreach (['Niveau A, flux structuré', 'Niveau C, page web lue', 'Niveau M, saisie à la main', 'Niveau B, flux RSS ou infolettre'] as $niveau) {
+            $this->assertStringContainsString('<li><strong>' . $niveau . '</strong> : ', $html);
+        }
+        // Après le tableau.
+        $this->assertGreaterThan(strpos($html, '</table>'), strpos($html, 'rsn-veille-legende'));
+    }
+
+    // --- Infolettre du RSN : dire ce qui y va (0.15.0) ---
+
+    public function test_regler_infolettre(): void {
+        $this->assertSame([4, 9], PageFile::regler_infolettre([4], 9, false));
+        $this->assertSame([4, 9], PageFile::regler_infolettre([4, 9], 9, false));
+        $this->assertSame([4], PageFile::regler_infolettre([4, 9], 9, true));
+        $this->assertSame([7], PageFile::regler_infolettre(['x', -2, null, '7', 7], 3, true));
+        $this->assertSame([], PageFile::regler_infolettre([], 0, false));
+        // Bornée aux 500 derniers.
+        $longue = PageFile::regler_infolettre(range(1, 500), 900, false);
+        $this->assertCount(500, $longue);
+        $this->assertSame([2, 900], [$longue[0], $longue[499]]);
+        update_option(PageFile::OPTION_HORS_INFOLETTRE, 'illisible');
+        $this->assertSame([], PageFile::lire_hors_infolettre());
+        update_option(PageFile::OPTION_HORS_INFOLETTRE, ['12', 'x', 12, 0]);
+        $this->assertSame([12], PageFile::lire_hors_infolettre());
+    }
+
+    public function test_colonne_infolettre_dans_publiees_seulement(): void {
+        $lot = [self::fiche(['id' => 1, 'statut' => 'publie']), self::fiche(['id' => 2, 'statut' => 'publie', 'titre' => 'Sans infolettre'])];
+        $html = PageFile::page_html($lot, 'publie', '', '', 'https://exemple.test/wp-admin/admin.php?page=rsn-veille', self::OPTIONS + ['hors_infolettre' => [2]]);
+        $this->assertStringContainsString('<th scope="col">Infolettre du RSN</th><th scope="col">Actions</th>', $html);
+        $this->assertMatchesRegularExpression('~id="rsn-veille-fiche-1".*?<td class="rsn-veille-infolettre-cellule"><span class="rsn-veille-pastille-infolettre" data-dans="1"[^>]*>Dans l&#039;infolettre</span><br><button type="button" class="button-link rsn-veille-action-infolettre" data-dans="0">Retirer de l&#039;infolettre</button></td>~s', $html);
+        $this->assertMatchesRegularExpression('~id="rsn-veille-fiche-2".*?<span class="rsn-veille-pastille-infolettre" data-dans="0"[^>]*>Pas dans l&#039;infolettre</span><br><button type="button" class="button-link rsn-veille-action-infolettre" data-dans="1">Mettre dans l&#039;infolettre</button>~s', $html);
+        // Ailleurs, pas de colonne : le choix se fait aux boutons « Publier ».
+        foreach (['a_approuver', 'archive', 'ecarte', 'a_verifier'] as $onglet) {
+            $this->assertStringNotContainsString('Infolettre du RSN', PageFile::page_html(self::lot(), $onglet, '', '', 'https://exemple.test/', self::OPTIONS), $onglet);
+        }
+    }
+
+    public function test_ajax_publier_seulement_tient_la_fiche_hors_de_l_infolettre(): void {
+        $GLOBALS['rsn_veille_wp']['capacites'] = ['rsn_veille_gerer'];
+        $nonce = wp_create_nonce('rsn_veille_file');
+        $id = self::fiche_wordpress();
+        [$reponse] = self::ajax(['id' => (string) $id, 'statut' => 'publie', 'infolettre' => '0', 'nonce' => $nonce]);
+        $this->assertTrue($reponse['success']);
+        $this->assertSame([$id], PageFile::lire_hors_infolettre());
+        // « Publier + infolettre » l'y remet ; sans le champ, rien ne change ; écarter ne touche pas au choix.
+        self::ajax(['id' => (string) $id, 'statut' => 'publie', 'infolettre' => '1', 'nonce' => $nonce]);
+        $this->assertSame([], PageFile::lire_hors_infolettre());
+        self::ajax(['id' => (string) $id, 'statut' => 'publie', 'infolettre' => '0', 'nonce' => $nonce]);
+        self::ajax(['id' => (string) $id, 'statut' => 'publie', 'nonce' => $nonce]);
+        self::ajax(['id' => (string) $id, 'statut' => 'ecarte', 'infolettre' => '1', 'nonce' => $nonce]);
+        $this->assertSame([$id], PageFile::lire_hors_infolettre());
+        // Un statut refusé ne règle rien.
+        update_option(PageFile::OPTION_HORS_INFOLETTRE, []);
+        self::ajax(['id' => '999999', 'statut' => 'publie', 'infolettre' => '0', 'nonce' => $nonce]);
+        $this->assertSame([], PageFile::lire_hors_infolettre());
+    }
+
+    /** Lance l'action AJAX de l'infolettre et rend [réponse, statut HTTP]. */
+    private static function ajax_infolettre(array $donnees): array {
+        $_POST = $_REQUEST = $donnees;
+        try {
+            PageFile::ajax_infolettre();
+        } catch (RsnVeilleArretRequete $arret) {
+            return [$arret->reponse, $arret->statut_http];
+        }
+        throw new RuntimeException('Aucune réponse JSON');
+    }
+
+    public function test_ajax_infolettre(): void {
+        $id = self::fiche_wordpress();
+        $nonce = wp_create_nonce('rsn_veille_file');
+        // Sans capacité, ou sans jeton : refusé, rien n'est écrit.
+        [$reponse, $code] = self::ajax_infolettre(['id' => (string) $id, 'dans' => '0', 'nonce' => $nonce]);
+        $this->assertSame([403, false], [$code, $reponse['success']]);
+        $GLOBALS['rsn_veille_wp']['capacites'] = ['rsn_veille_gerer'];
+        [, $code] = self::ajax_infolettre(['id' => (string) $id, 'dans' => '0', 'nonce' => 'faux']);
+        $this->assertSame(403, $code);
+        $this->assertSame([], PageFile::lire_hors_infolettre());
+
+        [$reponse, $code] = self::ajax_infolettre(['id' => (string) $id, 'dans' => '0', 'nonce' => $nonce]);
+        $this->assertSame(200, $code);
+        $this->assertFalse($reponse['data']['dans']);
+        $this->assertStringContainsString('data-dans="0"', $reponse['data']['html']);
+        $this->assertStringContainsString('Mettre dans l&#039;infolettre', $reponse['data']['html']);
+        $this->assertSame([$id], PageFile::lire_hors_infolettre());
+        [$reponse] = self::ajax_infolettre(['id' => (string) $id, 'dans' => '1', 'nonce' => $nonce]);
+        $this->assertTrue($reponse['data']['dans']);
+        $this->assertSame([], PageFile::lire_hors_infolettre());
+
+        // Valeur inconnue, fiche inconnue ou autre type de contenu : refusé.
+        $article = wp_insert_post(['post_type' => 'post', 'post_status' => 'publish', 'post_title' => 'Billet']);
+        foreach ([['id' => (string) $id, 'dans' => 'oui'], ['id' => '0', 'dans' => '0'], ['id' => (string) $article, 'dans' => '0'], ['id' => ['x'], 'dans' => ['0']]] as $mauvais) {
+            [, $code] = self::ajax_infolettre($mauvais + ['nonce' => $nonce]);
+            $this->assertSame(400, $code);
+        }
+        $this->assertSame([], PageFile::lire_hors_infolettre());
     }
 
     public function test_a_verifier_trie_par_arrivee_decroissante(): void {
@@ -177,7 +370,7 @@ final class PageFileTest extends TestCase {
         $this->assertSame([2, 1], self::ids(PageFile::filtrer($lot, 'a_verifier', '', '')));
     }
 
-    public function test_ecartees_triees_par_debut_decroissant(): void {
+    public function test_ecartees_triees_par_date_decroissante(): void {
         $this->assertSame([7, 6], self::ids(PageFile::filtrer(self::lot(), 'ecarte', '', '')));
     }
 
@@ -236,7 +429,8 @@ final class PageFileTest extends TestCase {
     }
 
     public function test_compteurs_et_sources_distinctes(): void {
-        $this->assertSame(['a_approuver' => 5, 'publie' => 2, 'ecarte' => 2, 'a_verifier' => 1], PageFile::compteurs(self::lot()));
+        // Les deux fiches publiées du lot sont passées : archivées (l'une reste aussi « à vérifier »).
+        $this->assertSame(['a_approuver' => 5, 'publie' => 0, 'archive' => 2, 'ecarte' => 2, 'a_verifier' => 1], PageFile::compteurs(self::lot()));
         $this->assertSame(['FRQ : appels', 'Mila : événements', 'Obvia : événements'], PageFile::sources_distinctes(self::lot()));
     }
 
@@ -268,7 +462,7 @@ final class PageFileTest extends TestCase {
         $this->assertSame(0, $f->absences);
         $this->assertNull($f->absent_depuis);
         $this->assertTrue($f->manuel);
-        $this->assertSame(['a_approuver' => 0, 'publie' => 1, 'ecarte' => 0, 'a_verifier' => 0], $r['compteurs']);
+        $this->assertSame(['a_approuver' => 0, 'publie' => 1, 'archive' => 0, 'ecarte' => 0, 'a_verifier' => 0], $r['compteurs']);
     }
 
     public function test_ecarter_pose_manuel_sans_toucher_aux_absences(): void {
@@ -280,7 +474,7 @@ final class PageFileTest extends TestCase {
         $this->assertTrue($f->manuel);
         $this->assertSame(2, $f->absences);
         $this->assertSame('2026-10-20', $f->absent_depuis);
-        $this->assertSame(['a_approuver' => 0, 'publie' => 0, 'ecarte' => 1, 'a_verifier' => 0], $r['compteurs']);
+        $this->assertSame(['a_approuver' => 0, 'publie' => 0, 'archive' => 0, 'ecarte' => 1, 'a_verifier' => 0], $r['compteurs']);
     }
 
     public function test_changer_statut_purge_la_page_veille(): void {
@@ -399,9 +593,13 @@ final class PageFileTest extends TestCase {
         $GLOBALS['rsn_veille_wp']['requetes'] = [];
 
         $r = PageFile::changer_statut($e, $id, 'ecarte');
-        $this->assertSame(['a_approuver' => 0, 'publie' => 3, 'ecarte' => 1, 'a_verifier' => 0], $r['compteurs']);
+        $this->assertSame(['a_approuver' => 0, 'publie' => 3, 'archive' => 0, 'ecarte' => 1, 'a_verifier' => 0], $r['compteurs']);
+        // Les seules lectures entières : la file en attente, et les fiches publiées bornées par leurs dates
+        // (celles de la page publique). Jamais tout l'historique des publiées ou des écartées.
         foreach ($GLOBALS['rsn_veille_wp']['requetes'] as $requete) {
-            $this->assertFalse(($requete['posts_per_page'] ?? 0) === -1, 'aucune requête sans borne');
+            if (($requete['posts_per_page'] ?? 0) === -1) {
+                $this->assertTrue(($requete['post_status'] ?? []) === ['pending'] || !empty($requete['meta_query']), 'aucune requête sans borne : ' . json_encode($requete));
+            }
         }
     }
 

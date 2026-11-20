@@ -38,6 +38,7 @@ final class Menu {
         add_action('admin_enqueue_scripts', [self::class, 'charger_ressources']);
         // Connectés seulement : pas de wp_ajax_nopriv_.
         add_action('wp_ajax_' . PageFile::ACTION_AJAX, [PageFile::class, 'ajax_changer_statut']);
+        add_action('wp_ajax_' . PageFile::ACTION_INFOLETTRE, [PageFile::class, 'ajax_infolettre']);
         // Réglages : option rsn_veille_reglages (options.php), lancement de la collecte et import (admin-post.php).
         PageReglages::accrocher();
         // Radar : actions AJAX garder, ignorer et retirer ; rafraîchissement (admin-post.php).
@@ -106,6 +107,7 @@ final class Menu {
         wp_localize_script(self::RESSOURCE, self::OBJET_JS, [
             'ajaxurl' => admin_url('admin-ajax.php'),
             'action' => PageFile::ACTION_AJAX,
+            'action_infolettre' => PageFile::ACTION_INFOLETTRE,
             'nonce' => wp_create_nonce(PageFile::NONCE),
             'textes' => [
                 'erreur' => __('Le changement de statut a échoué. Réessayez ou rechargez la page.', 'rsn-veille'),

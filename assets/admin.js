@@ -1,5 +1,6 @@
 /**
- * RSN Veille : boutons Publier, Écarter, Retirer et Garder de la file d'approbation.
+ * RSN Veille : boutons de la file d'approbation (Publier + infolettre, Publier seulement, Écarter, Retirer de la
+ * page, Garder publiée) et choix de l'infolettre d'une fiche publiée (`rsn-veille-action-infolettre`).
  * Envoi en fetch vers admin-ajax.php ; au succès, la ligne quitte l'onglet et les compteurs suivent ;
  * en cas d'échec, un message s'affiche dans la ligne. Aucune dépendance.
  */
@@ -46,9 +47,12 @@
 		erreur.textContent = message;
 	}
 
-	/** La fiche reste dans l'onglet courant seulement si son statut y correspond (une fiche gardée sort de « À vérifier »). */
+	/**
+	 * La fiche reste dans l'onglet courant seulement si son statut y correspond (une fiche gardée sort de
+	 * « À vérifier » ; dans « Archivées », toute action fait sortir la fiche).
+	 */
 	function appliquer(ligne, statut) {
-		if (onglet === 'a_verifier' || statut !== onglet) {
+		if (onglet === 'a_verifier' || onglet === 'archive' || statut !== onglet) {
 			ligne.parentNode.removeChild(ligne);
 			videSiNecessaire();
 			return;
@@ -62,26 +66,13 @@
 
 	function occuper(ligne, occupee) {
 		ligne.setAttribute('aria-busy', occupee ? 'true' : 'false');
-		ligne.querySelectorAll('.rsn-veille-action').forEach(function (bouton) {
+		ligne.querySelectorAll('.rsn-veille-action, .rsn-veille-action-infolettre').forEach(function (bouton) {
 			bouton.disabled = occupee;
 		});
 	}
 
-	tableau.addEventListener('click', function (evenement) {
-		var bouton = evenement.target.closest('.rsn-veille-action');
-		if (!bouton) {
-			return;
-		}
-		var ligne = bouton.closest('tr[data-id]');
-		var statut = bouton.getAttribute('data-statut');
-		var donnees = new FormData();
-		donnees.append('action', config.action);
-		donnees.append('nonce', config.nonce);
-		donnees.append('id', ligne.getAttribute('data-id'));
-		donnees.append('statut', statut);
-
-		occuper(ligne, true);
-		fetch(config.ajaxurl, { method: 'POST', credentials: 'same-origin', body: donnees })
+	function envoyer(donnees) {
+		return fetch(config.ajaxurl, { method: 'POST', credentials: 'same-origin', body: donnees })
 			.then(function (reponse) {
 				return reponse.json().catch(function () {
 					return null;
@@ -93,8 +84,67 @@
 					refus.serveur = true;
 					throw refus;
 				}
-				majCompteurs(json.data.compteurs);
-				appliquer(ligne, json.data.statut);
+				return json.data;
+			});
+	}
+
+	/** Fiche publiée : la mettre dans l'infolettre du RSN ou l'en retirer. Le serveur rend la cellule à jour. */
+	function reglerInfolettre(bouton) {
+		var ligne = bouton.closest('tr[data-id]');
+		var cellule = bouton.closest('.rsn-veille-infolettre-cellule');
+		var donnees = new FormData();
+		donnees.append('action', config.action_infolettre);
+		donnees.append('nonce', config.nonce);
+		donnees.append('id', ligne.getAttribute('data-id'));
+		donnees.append('dans', bouton.getAttribute('data-dans'));
+		occuper(ligne, true);
+		envoyer(donnees)
+			.then(function (data) {
+				// HTML produit et échappé par le serveur (`PageFile::infolettre_html`).
+				cellule.innerHTML = data.html;
+				var erreur = ligne.querySelector('.rsn-veille-erreur');
+				if (erreur) {
+					erreur.parentNode.removeChild(erreur);
+				}
+				occuper(ligne, false);
+				var suivant = cellule.querySelector('.rsn-veille-action-infolettre');
+				if (suivant) {
+					suivant.focus();
+				}
+			})
+			.catch(function (erreur) {
+				occuper(ligne, false);
+				afficherErreur(ligne, erreur && erreur.serveur ? erreur.message : config.textes.erreur);
+			});
+	}
+
+	tableau.addEventListener('click', function (evenement) {
+		var choix = evenement.target.closest('.rsn-veille-action-infolettre');
+		if (choix) {
+			reglerInfolettre(choix);
+			return;
+		}
+		var bouton = evenement.target.closest('.rsn-veille-action');
+		if (!bouton) {
+			return;
+		}
+		var ligne = bouton.closest('tr[data-id]');
+		var statut = bouton.getAttribute('data-statut');
+		var donnees = new FormData();
+		donnees.append('action', config.action);
+		donnees.append('nonce', config.nonce);
+		donnees.append('id', ligne.getAttribute('data-id'));
+		donnees.append('statut', statut);
+		// « Publier + infolettre » (1) ou « Publier seulement » (0) : le choix suit la publication.
+		if (bouton.hasAttribute('data-infolettre')) {
+			donnees.append('infolettre', bouton.getAttribute('data-infolettre'));
+		}
+
+		occuper(ligne, true);
+		envoyer(donnees)
+			.then(function (data) {
+				majCompteurs(data.compteurs);
+				appliquer(ligne, data.statut);
 			})
 			.catch(function (erreur) {
 				occuper(ligne, false);
