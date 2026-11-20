@@ -1,5 +1,19 @@
 # Journal des modifications
 
+## 0.14.0 (2026-11-20)
+
+Radar : rangé comme la file d'approbation, à la demande de l'équipe. Les nouvelles étaient groupées par organisme ; ce qui venait de paraître n'était pas en haut.
+
+### Un tableau, les plus récentes d'abord (`Admin\PageRadar`)
+- L'onglet « À trier » est un **tableau**, comme celui de la file : une ligne par nouvelle, **de la plus récente à la plus ancienne, toutes sources mêlées** (à date égale, l'ordre de lecture ; sans date, à la fin). Les groupes par source et leurs titres disparaissent.
+- Colonnes : **Publiée le**, **Nouvelle** (titre et extrait), **Source**, **Repères** (« Santé + numérique », « Santé seulement », « Numérique seulement », et « Déjà paru dans n autres numéros »), **Actions**. Le liseré orange des « Déjà paru » est gardé, à gauche de la ligne.
+- « Gardées pour l'infolettre » et « Écartées » ont le même tableau ; la quatrième colonne y donne la date à laquelle la nouvelle a été gardée ou écartée (leur ordre ne change pas : la plus récemment gardée ou écartée d'abord).
+- **Filtre par source** à côté du filtre par dates (« Toutes les sources », puis les sources de l'onglet en ordre alphabétique), pour retrouver d'un coup les nouvelles d'un organisme maintenant qu'elles ne sont plus groupées. Les onglets gardent le filtre ; leurs nombres restent des totaux. Avec un filtre : « 30 nouvelles de « Unité de soutien SSA Québec : infolettre » » et le lien « Tout afficher ».
+- Quand la dernière ligne d'un onglet part, le tableau se cache et le message « Aucune nouvelle… » paraît (`assets/admin.js`).
+
+### Livraison
+- Tests : 4 nouveaux (826 au total) ; rendu essayé sur les vrais flux du 20 novembre 2026 (58 nouvelles à trier de 8 sources, bien mêlées par date) et actions essayées sur ce rendu avec un serveur simulé. Rien ne change dans les données : ni les options, ni la lecture des flux, ni l'infolettre. Numéro de version 0.14.0.
+
 ## 0.13.0 (2026-11-20)
 
 File d'approbation : les mêmes repères que le Radar, à la demande de l'équipe. La file ne disait pas si une fiche à approuver était déjà dans l'agenda sous un autre titre.

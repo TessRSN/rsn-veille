@@ -107,7 +107,7 @@
 /**
  * RSN Veille : radar des nouvelles, en trois onglets (À trier, Gardées pour l'infolettre, Écartées). Les
  * boutons (`data-act` : garder, ignorer, retirer, retablir) envoient l'adresse de la nouvelle en fetch vers
- * admin-ajax.php ; le serveur reprend titre et résumé dans son cache. Au succès, la ligne quitte l'onglet et
+ * admin-ajax.php ; le serveur reprend titre et résumé dans son cache. Au succès, la ligne quitte le tableau et
  * les nombres des onglets (`data-compteur`) suivent ; en cas d'échec, le message s'affiche dans la zone
  * `role="status"`. Aucune dépendance.
  */
@@ -133,23 +133,23 @@
 		});
 	}
 
-	/** Le message « aucune nouvelle » d'une section réapparaît quand elle n'a plus de ligne. */
+	/** Sans ligne, le tableau d'une section se cache et son message « aucune nouvelle » réapparaît. */
 	function majVides() {
 		page.querySelectorAll('[data-section]').forEach(function (section) {
+			var reste = !!section.querySelector('tr[data-url]');
 			var vide = section.querySelector('.rsn-veille-vide');
+			var tableau = section.querySelector('.rsn-veille-radar-tableau');
 			if (vide) {
-				vide.hidden = !!section.querySelector('li[data-url]');
+				vide.hidden = reste;
+			}
+			if (tableau) {
+				tableau.hidden = !reste;
 			}
 		});
 	}
 
 	function retirerLigne(ligne) {
-		var liste = ligne.parentNode;
-		liste.removeChild(ligne);
-		var groupe = liste.closest('.rsn-veille-groupe');
-		if (groupe && !liste.querySelector('li[data-url]')) {
-			groupe.parentNode.removeChild(groupe);
-		}
+		ligne.parentNode.removeChild(ligne);
 		majVides();
 	}
 
@@ -159,7 +159,7 @@
 			return;
 		}
 		var acte = bouton.getAttribute('data-act');
-		var ligne = bouton.closest('li[data-url]');
+		var ligne = bouton.closest('tr[data-url]');
 		if (!ligne || !config.actions[acte]) {
 			return;
 		}
