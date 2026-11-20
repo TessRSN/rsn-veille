@@ -59,6 +59,24 @@ final class RessemblanceTest extends TestCase {
         $this->assertFalse(Ressemblance::memes(self::fiche(['url' => '']), self::fiche(['id' => 2, 'titre' => 'FISQ 2026', 'url' => ''])));
     }
 
+    public function test_adresse_partagee_ne_prouve_rien(): void {
+        $jour = ['debut' => '2026-06-08', 'fin' => '2026-06-10', 'statut' => 'publie'];
+        // Événements importés d'un même numéro d'infolettre : ils en portent tous l'adresse.
+        $a = self::fiche(['id' => 1, 'titre' => 'Colloque francophone en gestion', 'url' => 'https://mailchi.mp/2131bce05a84/b67j7bewg8-63129'] + $jour);
+        $b = self::fiche(['id' => 2, 'titre' => 'Institut d\'été en santé mondiale', 'url' => 'https://mailchi.mp/2131bce05a84/b67j7bewg8-63129'] + $jour);
+        $this->assertFalse(Ressemblance::memes($a, $b));
+        // Page générale d'un site, partagée par trois fiches ou plus : écartée par `pour_la_file`.
+        $page = 'https://organisme.test/formations/';
+        $attente = [
+            self::fiche(['id' => 10, 'titre' => 'Atelier sur les données ouvertes', 'url' => $page, 'statut' => 'a_approuver'] + $jour),
+            self::fiche(['id' => 11, 'titre' => 'Séminaire de gouvernance clinique', 'url' => $page, 'statut' => 'a_approuver'] + $jour),
+        ];
+        $publiees = [self::fiche(['id' => 3, 'titre' => 'Formation en éthique appliquée', 'url' => $page] + $jour)];
+        $this->assertSame([], Ressemblance::pour_la_file($attente, $publiees));
+        // À deux seulement, la même page reste un bon indice.
+        $this->assertSame([10 => 3], array_map(static fn(Fiche $f): int => (int) $f->id, Ressemblance::pour_la_file([$attente[0]], $publiees)));
+    }
+
     public function test_appels(): void {
         $appel = static fn(array $c): Fiche => self::fiche($c + ['type' => 'appel', 'titre' => 'Appel à projets en santé numérique', 'debut' => '2026-11-01', 'fin' => '2026-11-01', 'echeance' => '2027-01-15', 'url' => 'https://frq.test/appel']);
         // Même titre et même date limite, publiés à des jours différents.

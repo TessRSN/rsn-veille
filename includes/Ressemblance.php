@@ -24,6 +24,9 @@ final class Ressemblance {
         'the', 'of', 'and', 'for', 'on', 'in', 'to', 'an',
     ];
 
+    /** Hôtes des numéros d'infolettres (Mailchimp) : une adresse commune à tout ce qu'un numéro annonce. */
+    private const INFOLETTRES = '~(?:^|\.)(?:mailchi\.mp|campaign-archive\.com|eepurl\.com|list-manage\.com)$~i';
+
     /** Part des mots du titre le plus court qui doivent se retrouver dans l'autre. */
     private const PART_COMMUNE = 0.8;
 
@@ -36,6 +39,9 @@ final class Ressemblance {
      * @return array<int,Fiche>
      */
     public static function pour_la_file(array $en_attente, array $publiees): array {
+        // Une adresse portée par trois fiches ou plus est une page générale : elle ne désigne pas un événement.
+        $usages = array_count_values(array_filter(array_map(static fn(Fiche $f): string => self::adresse($f->url), array_merge($en_attente, $publiees))));
+        $generales = array_keys(array_filter($usages, static fn(int $n): bool => $n > 2));
         $trouvees = [];
         foreach ($en_attente as $fiche) {
             if ($fiche->id === null) {
@@ -43,7 +49,7 @@ final class Ressemblance {
             }
             foreach ([$publiees, $en_attente] as $candidates) {
                 foreach ($candidates as $candidate) {
-                    if (self::memes($fiche, $candidate)) {
+                    if (self::memes($fiche, $candidate, $generales)) {
                         $trouvees[(int) $fiche->id] = $candidate;
                         continue 3;
                     }
@@ -56,12 +62,15 @@ final class Ressemblance {
     /**
      * Même type, et : pour deux événements, des dates qui se recoupent avec un titre proche ou la même adresse ; pour
      * deux appels, un titre proche sans dates limites contraires, ou la même adresse.
+     *
+     * @param string[] $adresses_generales Adresses (ramenées à l'essentiel) qui ne désignent pas une seule fiche.
      */
-    public static function memes(Fiche $a, Fiche $b): bool {
+    public static function memes(Fiche $a, Fiche $b, array $adresses_generales = []): bool {
         if ($a->type !== $b->type || ($a->id !== null && $a->id === $b->id)) {
             return false;
         }
-        $meme_adresse = self::adresse($a->url) !== '' && self::adresse($a->url) === self::adresse($b->url);
+        $adresse = self::adresse($a->url);
+        $meme_adresse = $adresse !== '' && $adresse === self::adresse($b->url) && !in_array($adresse, $adresses_generales, true);
         if ($a->type === 'appel') {
             $limites = array_filter([$a->echeance, $b->echeance]);
             $limites_contraires = count($limites) === 2 && $a->echeance !== $b->echeance;
@@ -111,7 +120,8 @@ final class Ressemblance {
     /** Adresse ramenée à l'essentiel pour la comparaison : sans protocole, « www. », suivi publicitaire ni barre finale. */
     private static function adresse(string $url): string {
         $url = DecoupageMailchimp::nettoyer_url($url);
-        if ($url === '') {
+        // Le numéro d'une infolettre annonce plusieurs événements : son adresse n'en désigne aucun.
+        if ($url === '' || preg_match(self::INFOLETTRES, (string) parse_url($url, PHP_URL_HOST)) === 1) {
             return '';
         }
         $url = preg_replace('~^https?://(?:www\.)?~i', '', $url) ?? '';
