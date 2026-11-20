@@ -15,6 +15,9 @@ if (!defined('ABSPATH')) {
  * dans la langue de la page. Les identifiants, les adresses et les organisateurs restent tels quels.
  */
 final class Sources {
+    /** Flux d'archive Mailchimp de l'infolettre de l'Unité de soutien SSA Québec. */
+    private const INFOLETTRE_SSA = 'https://us16.campaign-archive.com/feed?u=fd0647c2aa2f94eddd88a461a&id=83efb57620';
+
     /** Niveaux qu'un réglage peut imposer. */
     private const NIVEAUX = ['A', 'B', 'C', 'M'];
 
@@ -51,12 +54,24 @@ final class Sources {
             self::entree('cares_appels', __('CARES : concours', 'rsn-veille'), 'https://reseaucares.ca/feed/', 'rss', 'B', 'sante', 'CARES', ['mode' => 'appels', 'categories' => ['Concours']]),
             self::entree('hippocrate_appels', __('Prix Hippocrate : appels de candidatures', 'rsn-veille'), 'https://prixhippocrate.ca/feed/', 'rss', 'B', 'sante', 'Prix Hippocrate', ['mode' => 'appels', 'motif_titre' => 'appel|candidature']),
 
+            // Infolettres Mailchimp (flux d'archive : dix derniers envois). Le bloc « À l'agenda » de chaque numéro donne des
+            // événements, toujours à approuver (type_source « infolettre ») ; ses encadrés vont au Radar (plus bas).
+            // sans_absences : un événement qui sort de l'agenda n'est pas annulé. url_publique : page d'archive montrée dans
+            // la table des sources. hotes_organisateur : liens qui mènent chez l'éditeur, seuls cas où l'organisateur est connu.
+            self::entree('ssa_agenda', __('Unité de soutien SSA Québec : agenda (infolettre)', 'rsn-veille'), self::INFOLETTRE_SSA, 'infolettre_mailchimp', 'C', 'infolettre', 'Unité de soutien SSA Québec', [
+                'sans_absences' => true,
+                'url_publique' => 'https://us16.campaign-archive.com/home/?u=fd0647c2aa2f94eddd88a461a&id=83efb57620',
+                'hotes_organisateur' => ['ssaquebec.ca', 'ssa.illuxi.com'],
+            ]),
+
             // Nouvelles : radar de l'équipe seulement, jamais de fiches persistées (devis § 3.3).
             self::nouvelles('frq', __('FRQ : nouvelles', 'rsn-veille'), 'https://frq.gouv.qc.ca/feed/', 'generaliste', 'Fonds de recherche du Québec'),
             self::nouvelles('ivado_nouvelles', __('IVADO : nouvelles', 'rsn-veille'), 'https://ivado.ca/feed/', 'numerique', 'IVADO'),
             self::nouvelles('mila_nouvelles', __('Mila : nouvelles', 'rsn-veille'), 'https://mila.quebec/fr/rss.xml', 'numerique', 'Mila'),
             self::nouvelles('inspq', __('INSPQ : nouvelles', 'rsn-veille'), 'https://www.inspq.qc.ca/nouvelles/rss.xml', 'sante', 'INSPQ'),
             self::nouvelles('ssa', __('Unité de soutien SSA Québec', 'rsn-veille'), 'https://ssaquebec.ca/feed/', 'sante', 'Unité de soutien SSA Québec'),
+            // decoupage : chaque encadré d'un numéro devient une nouvelle (`Nouvelles::lire_infolettre`).
+            self::nouvelles('ssa_infolettre', __('Unité de soutien SSA Québec : infolettre', 'rsn-veille'), self::INFOLETTRE_SSA, 'sante', 'Unité de soutien SSA Québec', ['decoupage' => 'mailchimp']),
             self::nouvelles('conseil_innovation', __('Conseil de l’innovation du Québec', 'rsn-veille'), 'https://conseilinnovation.quebec/feed/', 'generaliste', 'Conseil de l’innovation du Québec'),
             self::nouvelles('genome', __('Génome Québec', 'rsn-veille'), 'https://genomequebec.com/feed/', 'sante', 'Génome Québec'),
             self::nouvelles('rqrm', __('RQRM : nouvelles', 'rsn-veille'), 'https://www.rqrm.ca/feed/', 'sante', 'RQRM'),
@@ -128,8 +143,8 @@ final class Sources {
     }
 
     /** Un flux de nouvelles (RSS, niveau B, 8 éléments au plus). */
-    private static function nouvelles(string $id, string $nom, string $url, string $type_source, string $organisateur): array {
-        return self::entree($id, $nom, $url, 'rss', 'B', $type_source, $organisateur, [
+    private static function nouvelles(string $id, string $nom, string $url, string $type_source, string $organisateur, array $extras = []): array {
+        return self::entree($id, $nom, $url, 'rss', 'B', $type_source, $organisateur, $extras + [
             'mode' => 'nouvelles',
             'limite' => 8,
             'categorie_nouvelles' => true,

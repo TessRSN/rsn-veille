@@ -29,6 +29,9 @@ msgstr "Events RSS feed"
 msgid "Page des événements du site"
 msgstr "Site events page"
 
+msgid "Infolettre, bloc « À l’agenda »"
+msgstr "Newsletter, “À l’agenda” (upcoming events) section"
+
 msgid "Titre obligatoire"
 msgstr "Title required"
 
@@ -633,6 +636,12 @@ msgstr "INSPQ: news"
 
 msgid "Unité de soutien SSA Québec"
 msgstr "Quebec SPOR SUPPORT Unit"
+
+msgid "Unité de soutien SSA Québec : infolettre"
+msgstr "Quebec SPOR SUPPORT Unit: newsletter"
+
+msgid "Unité de soutien SSA Québec : agenda (infolettre)"
+msgstr "Quebec SPOR SUPPORT Unit: agenda (newsletter)"
 
 msgid "Conseil de l’innovation du Québec"
 msgstr "Quebec Innovation Council"

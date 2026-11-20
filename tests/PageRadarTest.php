@@ -487,7 +487,7 @@ final class PageRadarTest extends TestCase {
         $appels = 0;
         self::reseau($appels);
         $a = PageRadar::donnees();
-        $this->assertCount(12, $a['erreurs']);
+        $this->assertCount(13, $a['erreurs']);
         $this->assertSame([], $a['nouvelles']);
         $this->assertSame(13, $appels);
         // Tout a échoué : pas de copie complète ; les erreurs sont gardées par source (10 min) sans relancer le réseau.

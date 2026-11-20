@@ -101,4 +101,20 @@ final class PageJournalTest extends TestCase {
         $abime = PageJournal::ligne_html('mila', 'Mila', self::entree(['appariees_en' => 'beaucoup']));
         $this->assertStringContainsString('0 appariées en anglais, 0 orphelines', $abime);
     }
+
+    public function test_alerte_de_gabarit_visible_dans_la_ligne_et_en_tete(): void {
+        $alerte = 'Rien lu, alors que la source donne d’habitude environ 6 éléments <b>';
+        $journal = ['obvia' => [self::entree(['lus' => 0, 'alerte' => $alerte]), self::entree()], 'mila' => [self::entree()]];
+        $html = PageJournal::page_html(PageJournal::resume($journal, self::SOURCES), '');
+        // En tête : la liste des sources à vérifier.
+        $this->assertStringContainsString('<div class="notice notice-warning inline rsn-veille-alerte-gabarit"><p><strong>Gabarit à vérifier</strong></p><ul><li><strong>Obvia : événements</strong> : Rien lu, alors que la source donne d’habitude environ 6 éléments &lt;b&gt;</li></ul>', $html);
+        $this->assertLessThan(strpos($html, '<table'), strpos($html, 'rsn-veille-alerte-gabarit'));
+        // Dans la ligne de la source : une étiquette de couleur et la phrase.
+        $ligne = PageJournal::ligne_html('obvia', 'Obvia : événements', $journal['obvia'][0]);
+        $this->assertStringContainsString('<span class="rsn-veille-etiquette-gabarit">Gabarit à vérifier</span>', $ligne);
+        $this->assertStringContainsString('&lt;b&gt;', $ligne);
+        $this->assertStringNotContainsString('rsn-veille-etiquette-gabarit', PageJournal::ligne_html('mila', 'Mila : événements', $journal['mila'][0]));
+        // Sans alerte : rien en tête.
+        $this->assertStringNotContainsString('rsn-veille-alerte-gabarit', PageJournal::page_html(PageJournal::resume(['mila' => [self::entree()]], self::SOURCES), ''));
+    }
 }

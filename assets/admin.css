@@ -110,6 +110,50 @@
 	vertical-align: -3px;
 }
 
+/* Rappel des sources dont le gabarit a peut-être changé (file d'approbation). */
+.rsn-veille-rappel-gabarit {
+	margin: 10px 0;
+	padding: 8px 12px;
+	border-left: 4px solid #dba617;
+	background: #fcf9e8;
+}
+
+.rsn-veille-rappel-gabarit .dashicons {
+	color: #996800;
+	vertical-align: -3px;
+}
+
+/* Alerte de gabarit (Radar, Journal) et son étiquette dans une ligne du journal. */
+.rsn-veille-alerte-gabarit {
+	margin: 12px 0;
+}
+
+.rsn-veille-alerte-gabarit ul {
+	margin: 0 0 6px 18px;
+	list-style: disc;
+}
+
+.rsn-veille-gabarit {
+	margin-bottom: 4px;
+}
+
+.rsn-veille-etiquette-gabarit,
+.rsn-veille-deja-paru {
+	display: inline-block;
+	padding: 1px 8px;
+	border-radius: 10px;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.6;
+	white-space: nowrap;
+}
+
+.rsn-veille-etiquette-gabarit {
+	background: #fcf0c3;
+	color: #6b4a00;
+	border: 1px solid #dba617;
+}
+
 .rsn-veille-niveau {
 	color: #50575e;
 	white-space: nowrap;
@@ -266,6 +310,18 @@
 
 .rsn-veille-nouvelle .rsn-veille-actions {
 	white-space: normal;
+}
+
+/* Encadré d'une infolettre qui revient d'un numéro à l'autre : étiquette orange et liseré, repérables d'un coup d'œil. */
+.rsn-veille-deja-paru {
+	background: #fde3cf;
+	color: #7a3200;
+	border: 1px solid #e07b39;
+}
+
+.rsn-veille-nouvelle[data-deja-paru] {
+	padding-left: 10px;
+	border-left: 4px solid #e07b39;
 }
 
 .rsn-veille-radar-statut[data-statut="reperee"] {

@@ -723,7 +723,7 @@ final class CollecteTest extends TestCase {
     public function test_mettre_en_file_toutes_les_sources_actives_sauf_les_nouvelles(): void {
         Collecte::mettre_en_file();
         $this->assertSame(
-            ['rsn', 'dhc', 'rqrv', 'sommeil', 'obvia', 'mila', 'frq_evenements', 'ivado', 'frq_appels', 'crm_appels', 'rsn_appels', 'cares_appels', 'hippocrate_appels'],
+            ['rsn', 'dhc', 'rqrv', 'sommeil', 'obvia', 'mila', 'frq_evenements', 'ivado', 'frq_appels', 'crm_appels', 'rsn_appels', 'cares_appels', 'hippocrate_appels', 'ssa_agenda'],
             get_option(Collecte::OPTION_FILE)
         );
         $prochaine = wp_next_scheduled(Collecte::CROCHET_SOURCE);

@@ -7,6 +7,7 @@ use RSN\Veille\Lecteurs\Echeance;
 use RSN\Veille\Lecteurs\Lecteur;
 use RSN\Veille\Lecteurs\LecteurFrqEvenements;
 use RSN\Veille\Lecteurs\LecteurIcal;
+use RSN\Veille\Lecteurs\LecteurInfolettre;
 use RSN\Veille\Lecteurs\LecteurIvado;
 use RSN\Veille\Lecteurs\LecteurMila;
 use RSN\Veille\Lecteurs\LecteurObvia;
@@ -56,6 +57,7 @@ final class Collecte {
         'rss' => ['xml', 'est_flux'],
         'ical' => ['ical', 'est_ical'],
         'html' => ['html', 'est_html'],
+        'infolettre_mailchimp' => ['xml', 'est_flux'],
     ];
 
     /**
@@ -109,6 +111,7 @@ final class Collecte {
             'html_mila' => new LecteurMila(),
             'html_frq' => new LecteurFrqEvenements(),
             'html_ivado' => new LecteurIvado(),
+            'infolettre_mailchimp' => new LecteurInfolettre(),
             default => throw new \InvalidArgumentException('Type de source inconnu : ' . ($source['type'] ?? '')),
         };
     }
@@ -368,6 +371,9 @@ final class Collecte {
                 $ligne['lus'] = count($resultat->fiches);
                 $ligne['ignores'] = $resultat->ignores;
                 array_push($ligne['erreurs'], ...$resultat->erreurs);
+                if ($resultat->alertes !== []) {
+                    $ligne['alerte'] = implode(' ', $resultat->alertes);
+                }
                 foreach ($resultat->fiches as $fiche) {
                     $cles_vues[] = $fiche->cle_source;
                 }
@@ -399,7 +405,10 @@ final class Collecte {
                     $ecritures_en = self::apparier_anglais($source, $resultat->fiches, $depot, $ligne, $accept, $reconnaitre, $resolutions);
                 }
             }
-            $depot->signaler_absents($id, $cles_vues, $reussie, \rsn_veille_aujourdhui());
+            // `sans_absences` : une infolettre n'annonce un événement qu'un temps ; en sortir n'est pas être annulé.
+            if (empty($source['sans_absences'])) {
+                $depot->signaler_absents($id, $cles_vues, $reussie, \rsn_veille_aujourdhui());
+            }
         } catch (\Throwable $e) {
             /* translators: %s : message de l'exception. */
             $ligne['erreurs'][] = sprintf(__('Erreur : %s', 'rsn-veille'), $e->getMessage());

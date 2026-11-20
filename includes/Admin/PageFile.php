@@ -7,6 +7,7 @@ use RSN\Veille\Collecte;
 use RSN\Veille\Entrepot;
 use RSN\Veille\EntrepotWordPress;
 use RSN\Veille\Fiche;
+use RSN\Veille\Journal;
 use RSN\Veille\Public\Formulaire;
 use RSN\Veille\TypeContenu;
 
@@ -76,7 +77,26 @@ final class PageFile {
             'peut_ajouter' => current_user_can('edit_posts'),
             'origine' => $origine,
             'courriels' => $courriels,
+            'sources_a_verifier' => self::sources_a_verifier(Journal::alertes(Journal::tout()), Collecte::sources()),
+            'url_journal' => admin_url('admin.php?page=' . Menu::SLUG_JOURNAL),
         ]);
+    }
+
+    /**
+     * Noms des sources actives dont la dernière collecte porte une alerte de gabarit, dans l'ordre du registre.
+     *
+     * @param array<string,string> $alertes `Journal::alertes()`
+     * @param array<string,array<string,mixed>> $sources Sources actives.
+     * @return string[]
+     */
+    public static function sources_a_verifier(array $alertes, array $sources): array {
+        $noms = [];
+        foreach ($sources as $id => $source) {
+            if (isset($alertes[$id]) && is_array($source)) {
+                $noms[] = (string) ($source['nom'] ?? $id);
+            }
+        }
+        return $noms;
     }
 
     /**
@@ -270,10 +290,11 @@ final class PageFile {
      * Page complète : titre et bouton « Ajouter une fiche », onglets, filtres, zone de message et tableau.
      *
      * @param Fiche[] $fiches Fiches chargées (celles de l'onglet, ou toutes).
-     * @param array{url_admin?: string, compteurs?: array<string,int>, plafond_atteint?: bool, peut_ajouter?: bool} $options
+     * @param array{url_admin?: string, compteurs?: array<string,int>, plafond_atteint?: bool, peut_ajouter?: bool, sources_a_verifier?: string[], url_journal?: string} $options
      *        `compteurs` : nombres par onglet de l'entrepôt (`Entrepot::compter`), sinon comptés sur $fiches ;
      *        `plafond_atteint` : l'onglet ne montre que les `PLAFOND` fiches les plus récentes ;
-     *        `peut_ajouter` : bouton « Ajouter une fiche » (vrai par défaut).
+     *        `peut_ajouter` : bouton « Ajouter une fiche » (vrai par défaut) ;
+     *        `sources_a_verifier`, `url_journal` : rappel des sources dont le gabarit a peut-être changé.
      */
     public static function page_html(array $fiches, string $onglet, string $type, string $source, string $url_page, array $options): string {
         $compteurs = is_array($options['compteurs'] ?? null) ? $options['compteurs'] : self::compteurs($fiches);
@@ -297,6 +318,7 @@ final class PageFile {
             . '<div class="rsn-veille-message" role="status" aria-live="polite"></div>'
             . $mention
             . self::rappel_propositions_html($fiches, $onglet, $type, $source, $origine, $url_page)
+            . self::rappel_gabarit_html($onglet, is_array($options['sources_a_verifier'] ?? null) ? $options['sources_a_verifier'] : [], (string) ($options['url_journal'] ?? ''))
             . self::tableau_html(self::filtrer($fiches, $onglet, $type, $source, $origine), $onglet, $options)
             . '</div>';
     }
@@ -490,6 +512,24 @@ final class PageFile {
         $texte = sprintf(_n('%d proposition du public à traiter', '%d propositions du public à traiter', $nombre, 'rsn-veille'), $nombre);
         return '<p class="rsn-veille-rappel-propositions"><span class="dashicons dashicons-admin-users" aria-hidden="true"></span> '
             . '<a href="' . esc_url($url) . '">' . esc_html($texte) . '</a></p>';
+    }
+
+    /**
+     * Rappel, dans la file à approuver, des sources dont la dernière collecte rompt avec l'habitude (`Journal::alertes`) :
+     * leur page a peut-être changé de gabarit, et ce qu'elles annoncent n'arrive plus dans la file.
+     *
+     * @param array<int,mixed> $sources Noms des sources à vérifier.
+     */
+    private static function rappel_gabarit_html(string $onglet, array $sources, string $url_journal): string {
+        $sources = array_values(array_filter($sources, static fn($s): bool => is_string($s) && $s !== ''));
+        if ($onglet !== 'a_approuver' || $sources === []) {
+            return '';
+        }
+        /* translators: 1 : nombre de sources ; 2 : leurs noms, séparés par des virgules. */
+        $texte = sprintf(_n('%1$d source à vérifier (gabarit peut-être changé) : %2$s', '%1$d sources à vérifier (gabarit peut-être changé) : %2$s', count($sources), 'rsn-veille'), count($sources), implode(', ', $sources));
+        return '<p class="rsn-veille-rappel-gabarit"><span class="dashicons dashicons-warning" aria-hidden="true"></span> ' . esc_html($texte)
+            . ($url_journal !== '' ? ' <a href="' . esc_url($url_journal) . '">' . esc_html__('Voir le journal', 'rsn-veille') . '</a>' : '')
+            . '</p>';
     }
 
     /** Boutons selon le statut ; une fiche absente de sa source peut aussi être gardée (drapeau levé). */

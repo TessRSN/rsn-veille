@@ -475,11 +475,17 @@ final class Donnees {
         if ($type === 'rss') {
             return $mode === 'appels' ? __('Fil RSS, articles d’appels et de concours', 'rsn-veille') : __('Fil RSS des événements', 'rsn-veille');
         }
+        if ($type === 'infolettre_mailchimp') {
+            return __('Infolettre, bloc « À l’agenda »', 'rsn-veille');
+        }
         return __('Page des événements du site', 'rsn-veille');
     }
 
-    /** Une page lue est montrée telle quelle ; un flux ou une API, par l'adresse de son site. */
+    /** Une page lue est montrée telle quelle ; un flux ou une API, par l'adresse de son site, sauf `url_publique`. */
     private static function adresse_publique(array $source): string {
+        if (is_string($source['url_publique'] ?? null) && $source['url_publique'] !== '') {
+            return $source['url_publique'];
+        }
         $url = (string) ($source['url'] ?? '');
         if (str_starts_with((string) ($source['type'] ?? ''), 'html')) {
             return $url;

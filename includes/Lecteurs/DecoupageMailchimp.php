@@ -135,6 +135,15 @@ final class DecoupageMailchimp {
         return $lignes;
     }
 
+    /** « 20 novembre 2026 », « 1er mai 2026 » ; vide si la date n'est pas `Y-m-d`. */
+    public static function date_en_clair(string $date): string {
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $m) !== 1 || !checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+            return '';
+        }
+        $mois = array_search((int) $m[2], self::MOIS, true);
+        return ((int) $m[3] === 1 ? '1er' : (string) (int) $m[3]) . ' ' . $mois . ' ' . $m[1];
+    }
+
     /** Texte d'un numéro entier, sans son en-tête, ses styles ni ses scripts (résumé d'un envoi sans encadré). */
     public static function texte(string $html): string {
         $corps = preg_replace('~<head\b.*?</head>|<style\b.*?</style>|<script\b.*?</script>|<!--.*?-->~is', ' ', $html) ?? '';

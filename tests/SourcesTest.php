@@ -15,7 +15,7 @@ final class SourcesTest extends TestCase {
             'rsn', 'dhc', 'rqrv', 'sommeil', 'obvia', 'mila', 'frq_evenements', 'ivado',
             'frq_appels', 'crm_appels', 'rsn_appels', 'cares_appels', 'hippocrate_appels',
             'frq', 'ivado_nouvelles', 'mila_nouvelles', 'inspq', 'ssa', 'conseil_innovation',
-            'genome', 'rqrm', 'rqrd', 'cmdo', 'acfas', 'quebec_ca',
+            'genome', 'rqrm', 'rqrd', 'cmdo', 'acfas', 'quebec_ca', 'ssa_agenda', 'ssa_infolettre',
         ];
         foreach ($attendues as $id) {
             $this->assertArrayHasKey($id, $sources, $id);
@@ -23,7 +23,7 @@ final class SourcesTest extends TestCase {
     }
 
     public function test_chaque_source_est_complete(): void {
-        $types = ['tec', 'rss', 'ical', 'html_obvia', 'html_mila', 'html_frq', 'html_ivado'];
+        $types = ['tec', 'rss', 'ical', 'html_obvia', 'html_mila', 'html_frq', 'html_ivado', 'infolettre_mailchimp'];
         foreach (Sources::par_defaut() as $id => $s) {
             $this->assertSame($id, $s['id']);
             foreach (['nom', 'url', 'organisateur', 'langue'] as $cle) {
@@ -32,7 +32,7 @@ final class SourcesTest extends TestCase {
             $this->assertStringStartsWith('https://', $s['url'], $id);
             $this->assertContains($s['type'], $types, $id);
             $this->assertContains($s['niveau'], ['A', 'B', 'C'], $id);
-            $this->assertContains($s['type_source'], ['sante_numerique', 'sante', 'numerique', 'generaliste'], $id);
+            $this->assertContains($s['type_source'], ['sante_numerique', 'sante', 'numerique', 'generaliste', 'infolettre'], $id);
             $this->assertTrue($s['actif'], $id);
             if ($s['type'] === 'rss') {
                 $this->assertContains($s['mode'], ['evenements', 'appels', 'nouvelles'], $id);
