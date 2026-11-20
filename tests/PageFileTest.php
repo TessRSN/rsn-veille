@@ -521,6 +521,49 @@ final class PageFileTest extends TestCase {
         $this->assertStringNotContainsString('rsn-veille-rappel-gabarit', PageFile::page_html([self::fiche()], 'a_approuver', '', '', $url, self::OPTIONS));
     }
 
+    // --- Mêmes repères que le Radar : ce qui est peut-être déjà là, ce qu'une infolettre répète (0.13.0) ---
+
+    public function test_etiquette_peut_etre_deja_dans_l_agenda(): void {
+        $url = 'https://exemple.test/wp-admin/admin.php?page=rsn-veille';
+        $forum = self::fiche(['id' => 10, 'titre' => 'Forum de la santé de Québec', 'debut' => '2026-11-24', 'fin' => '2026-11-25']);
+        $publiee = self::fiche(['id' => 2, 'titre' => '20e Forum <b>de la santé</b>', 'debut' => '2026-11-24', 'fin' => '2026-11-25', 'heure' => '', 'statut' => 'publie']);
+        $collectee = self::fiche(['id' => 11, 'titre' => 'Colloque du sommeil']);
+        $proposee = self::fiche(['id' => 12, 'titre' => 'Colloque sur le sommeil', 'source' => 'proposition', 'niveau' => 'M']);
+        $seule = self::fiche(['id' => 13, 'titre' => 'Sans pareille']);
+        $options = self::OPTIONS + ['ressemblances' => [10 => $publiee, 11 => $proposee, 12 => $collectee, 99 => 'illisible']];
+        $html = PageFile::page_html([$forum, $collectee, $proposee, $seule], 'a_approuver', '', '', $url, $options);
+        $ligne = static function (int $id) use ($html): string {
+            preg_match('~<tr id="rsn-veille-fiche-' . $id . '".*?</tr>~s', $html, $l);
+            return $l[0] ?? '';
+        };
+        // Ressemble à une fiche publiée : étiquette orange (celle du Radar), lien vers la fiche publiée, ses dates.
+        $this->assertStringContainsString('data-ressemble="publie"', $ligne(10));
+        $this->assertStringContainsString('<span class="rsn-veille-deja-paru">Peut-être déjà dans l&#039;agenda</span>', $ligne(10));
+        $this->assertStringContainsString('<a href="https://exemple.test/wp-admin/post.php?post=2&#038;action=edit">20e Forum &lt;b&gt;de la santé&lt;/b&gt;</a>', str_replace('&amp;', '&#038;', $ligne(10)));
+        $this->assertStringContainsString('Du 24 au 25 novembre 2026', $ligne(10));
+        // Ressemble à une autre fiche en attente : lien vers sa ligne, dans les deux sens.
+        $this->assertStringContainsString('data-ressemble="a_approuver"', $ligne(11));
+        $this->assertStringContainsString('<span class="rsn-veille-deja-paru">Ressemble à une autre fiche en attente</span>', $ligne(11));
+        $this->assertStringContainsString('<a href="#rsn-veille-fiche-12">Colloque sur le sommeil</a>', $ligne(11));
+        $this->assertStringContainsString('<a href="#rsn-veille-fiche-11">Colloque du sommeil</a>', $ligne(12));
+        $this->assertStringNotContainsString('data-ressemble', $ligne(13));
+        $this->assertStringNotContainsString('rsn-veille-deja-paru', $ligne(13));
+        // Seulement dans la file à approuver.
+        $publie = PageFile::page_html([self::fiche(['id' => 10, 'statut' => 'publie'])], 'publie', '', '', $url, $options);
+        $this->assertStringNotContainsString('data-ressemble', $publie);
+        $this->assertStringNotContainsString('data-ressemble', PageFile::page_html([$forum], 'a_approuver', '', '', $url, self::OPTIONS));
+    }
+
+    public function test_etiquette_annonce_dans_n_numeros(): void {
+        $url = 'https://exemple.test/wp-admin/admin.php?page=rsn-veille';
+        $trois = self::fiche(['id' => 20, 'source' => 'SSA : agenda (infolettre)', 'niveau' => 'B', 'cle_source' => 'ssa_agenda:a', 'cles_source' => ['autre:z', 'ssa_agenda:a']]);
+        $une = self::fiche(['id' => 21, 'source' => 'SSA : agenda (infolettre)', 'niveau' => 'B', 'cle_source' => 'ssa_agenda:b', 'cles_source' => ['ssa_agenda:b']]);
+        $html = PageFile::page_html([$trois, $une], 'a_approuver', '', '', $url, self::OPTIONS + ['mentions' => ['ssa_agenda:a' => 3, 'ssa_agenda:b' => 1, 'ssa_agenda:c' => 5, 'autre:z' => 'x']]);
+        $this->assertSame(1, substr_count($html, 'class="rsn-veille-mentions"'));
+        $this->assertMatchesRegularExpression('~<tr id="rsn-veille-fiche-20".*?<span class="rsn-veille-mentions"[^>]*>Annoncé dans 3 numéros</span>.*?</tr>~s', $html);
+        $this->assertStringNotContainsString('rsn-veille-mentions', PageFile::page_html([$trois], 'a_approuver', '', '', $url, self::OPTIONS));
+    }
+
     public function test_courriel_du_proposant_echappe(): void {
         $url = 'https://exemple.test/wp-admin/admin.php?page=rsn-veille';
         $f = self::fiche(['id' => 1, 'source' => 'proposition', 'niveau' => 'M']);
