@@ -26,6 +26,9 @@ final class PageFile {
     public const ACTION_AJAX = 'rsn_veille_changer_statut';
 
     /** Onglets, dans l'ordre d'affichage. `a_verifier` : fiches publiées signalées absentes de leur source. */
+    /** Origines d'une fiche (`Fiche::origine`), pour le filtre de la file. */
+    public const ORIGINES = ['proposition', 'collecte', 'equipe'];
+
     public const ONGLETS = ['a_approuver', 'publie', 'ecarte', 'a_verifier'];
 
     /** Statuts qu'un bouton peut donner. */
@@ -50,16 +53,29 @@ final class PageFile {
         $onglet = self::parametre('statut');
         $type = self::parametre('type');
         $source = isset($_GET['source']) && is_string($_GET['source']) ? sanitize_text_field(wp_unslash($_GET['source'])) : '';
+        $origine = self::parametre('origine');
         $onglet = in_array($onglet, self::ONGLETS, true) ? $onglet : 'a_approuver';
         $type = in_array($type, self::TYPES, true) ? $type : '';
         $entrepot = new EntrepotWordPress();
         [$fiches, $plafond_atteint] = self::fiches_de_l_onglet($entrepot, $onglet, $type);
+        // Courriel des proposants (méta privée, jamais publiée), pour que l'équipe puisse leur répondre.
+        $courriels = [];
+        foreach ($fiches as $fiche) {
+            if ($fiche->est_proposition() && $fiche->id !== null) {
+                $courriel = get_post_meta($fiche->id, TypeContenu::PREFIXE . 'courriel_proposant', true);
+                if (is_string($courriel) && $courriel !== '') {
+                    $courriels[$fiche->id] = $courriel;
+                }
+            }
+        }
         // Sortie entièrement échappée par les méthodes de rendu.
         echo self::page_html($fiches, $onglet, $type, $source, admin_url('admin.php?page=' . Menu::SLUG), [
             'url_admin' => admin_url(),
             'compteurs' => $entrepot->compter(),
             'plafond_atteint' => $plafond_atteint,
             'peut_ajouter' => current_user_can('edit_posts'),
+            'origine' => $origine,
+            'courriels' => $courriels,
         ]);
     }
 
@@ -171,10 +187,12 @@ final class PageFile {
      * @param Fiche[] $fiches
      * @return Fiche[]
      */
-    public static function filtrer(array $fiches, string $statut, string $type, string $source): array {
+    public static function filtrer(array $fiches, string $statut, string $type, string $source, string $origine = ''): array {
+        $origine = in_array($origine, self::ORIGINES, true) ? $origine : '';
         $retenues = array_values(array_filter($fiches, static fn(Fiche $f): bool => self::dans_onglet($f, $statut)
             && ($type === '' || $f->type === $type)
-            && ($source === '' || $f->source === $source)));
+            && ($source === '' || $f->source === $source)
+            && ($origine === '' || $f->origine() === $origine)));
         if (self::est_onglet_d_arrivee($statut)) {
             usort($retenues, static function (Fiche $a, Fiche $b): int {
                 $ja = $a->cree_le ?? '';
@@ -270,14 +288,16 @@ final class PageFile {
         $ajouter = ($options['peut_ajouter'] ?? true)
             ? ' <a href="' . esc_url(admin_url('post-new.php?post_type=' . TypeContenu::TYPE)) . '" class="page-title-action">' . esc_html__('Ajouter une fiche', 'rsn-veille') . '</a>'
             : '';
+        $origine = in_array($options['origine'] ?? '', self::ORIGINES, true) ? (string) $options['origine'] : '';
         return '<div class="wrap rsn-veille-admin">'
             . '<h1 class="wp-heading-inline">' . esc_html__("File d'approbation", 'rsn-veille') . '</h1>'
             . $ajouter . '<hr class="wp-header-end">'
-            . self::onglets_html($onglet, $compteurs, $type, $source, $url_page)
-            . self::filtres_html($onglet, $type, $source, self::sources_distinctes($fiches))
+            . self::onglets_html($onglet, $compteurs, $type, $source, $url_page, $origine)
+            . self::filtres_html($onglet, $type, $source, self::sources_distinctes($fiches), $origine)
             . '<div class="rsn-veille-message" role="status" aria-live="polite"></div>'
             . $mention
-            . self::tableau_html(self::filtrer($fiches, $onglet, $type, $source), $onglet, $options)
+            . self::rappel_propositions_html($fiches, $onglet, $type, $source, $origine, $url_page)
+            . self::tableau_html(self::filtrer($fiches, $onglet, $type, $source, $origine), $onglet, $options)
             . '</div>';
     }
 
@@ -290,12 +310,12 @@ final class PageFile {
      */
     public static function ligne_html(Fiche $f, array $options): string {
         $id = (int) $f->id;
-        return '<tr id="rsn-veille-fiche-' . $id . '" data-id="' . $id . '" data-statut="' . esc_attr($f->statut) . '">'
+        return '<tr id="rsn-veille-fiche-' . $id . '" data-id="' . $id . '" data-statut="' . esc_attr($f->statut) . '" data-origine="' . esc_attr($f->origine()) . '">'
             . '<td class="rsn-veille-titre">' . self::titre_html($f, (string) ($options['url_admin'] ?? ''), self::est_onglet_d_arrivee((string) ($options['onglet'] ?? '')) && self::est_nouvelle($f, rsn_veille_aujourdhui())) . '</td>'
             . '<td>' . esc_html(self::libelle_type($f->type)) . '</td>'
             . '<td>' . self::dates_html($f) . '</td>'
             . '<td>' . esc_html($f->organisateur) . '</td>'
-            . '<td>' . self::source_html($f) . '</td>'
+            . '<td>' . self::source_html($f, is_array($options['courriels'] ?? null) ? (string) ($options['courriels'][$id] ?? '') : '') . '</td>'
             . '<td class="rsn-veille-extrait">' . esc_html(Fiche::court($f->resume, self::LONGUEUR_EXTRAIT)) . '</td>'
             . '<td class="rsn-veille-actions">' . self::boutons_html($f) . '</td>'
             . '</tr>';
@@ -323,7 +343,7 @@ final class PageFile {
     }
 
     /** @param array<string,int> $compteurs */
-    private static function onglets_html(string $actif, array $compteurs, string $type, string $source, string $url_page): string {
+    private static function onglets_html(string $actif, array $compteurs, string $type, string $source, string $url_page, string $origine = ''): string {
         $libelles = [
             'a_approuver' => __('À approuver', 'rsn-veille'),
             'publie' => __('Publiées', 'rsn-veille'),
@@ -332,7 +352,7 @@ final class PageFile {
         ];
         $html = '<nav class="nav-tab-wrapper" aria-label="' . esc_attr__('Statut des fiches', 'rsn-veille') . '">';
         foreach (self::ONGLETS as $onglet) {
-            $url = $url_page . '&' . http_build_query(array_filter(['statut' => $onglet, 'type' => $type, 'source' => $source], static fn(string $v): bool => $v !== ''), '', '&', PHP_QUERY_RFC3986);
+            $url = $url_page . '&' . http_build_query(array_filter(['statut' => $onglet, 'type' => $type, 'source' => $source, 'origine' => $origine], static fn(string $v): bool => $v !== ''), '', '&', PHP_QUERY_RFC3986);
             $classe = 'nav-tab' . ($onglet === $actif ? ' nav-tab-active' : '');
             $courant = $onglet === $actif ? ' aria-current="page"' : '';
             $html .= '<a class="' . $classe . '"' . $courant . ' href="' . esc_url($url) . '">' . esc_html($libelles[$onglet])
@@ -342,8 +362,9 @@ final class PageFile {
     }
 
     /** @param string[] $sources */
-    private static function filtres_html(string $onglet, string $type, string $source, array $sources): string {
+    private static function filtres_html(string $onglet, string $type, string $source, array $sources, string $origine = ''): string {
         $types = ['' => __('Tous les types', 'rsn-veille'), 'evenement' => __('Événements', 'rsn-veille'), 'appel' => __('Appels', 'rsn-veille')];
+        $origines = ['' => __('Toutes les origines', 'rsn-veille')] + self::libelles_origines();
         $choix_sources = ['' => __('Toutes les sources', 'rsn-veille')];
         foreach ($sources as $nom) {
             $choix_sources[$nom] = $nom;
@@ -355,6 +376,8 @@ final class PageFile {
             . self::liste_html('rsn-veille-type', 'type', $types, $type)
             . '<label class="screen-reader-text" for="rsn-veille-source">' . esc_html__('Source', 'rsn-veille') . '</label>'
             . self::liste_html('rsn-veille-source', 'source', $choix_sources, $source)
+            . '<label class="screen-reader-text" for="rsn-veille-origine">' . esc_html__('Origine', 'rsn-veille') . '</label>'
+            . self::liste_html('rsn-veille-origine', 'origine', $origines, $origine)
             . '<button type="submit" class="button">' . esc_html__('Filtrer', 'rsn-veille') . '</button>'
             . '</form>';
     }
@@ -404,19 +427,69 @@ final class PageFile {
         return $html;
     }
 
-    private static function source_html(Fiche $f): string {
+    /** @return array<string,string> Origines d'une fiche et leur libellé, dans l'ordre du filtre. */
+    private static function libelles_origines(): array {
+        return [
+            'proposition' => __('Propositions du public', 'rsn-veille'),
+            'collecte' => __('Collecte automatique', 'rsn-veille'),
+            'equipe' => __("Saisie par l'équipe", 'rsn-veille'),
+        ];
+    }
+
+    /**
+     * Origine (pastille : proposition du public, collecte automatique ou saisie par l'équipe), puis la source et son
+     * niveau. Une proposition montre « Formulaire de la page » et le courriel de la personne (lien pour lui répondre).
+     */
+    private static function source_html(Fiche $f, string $courriel = ''): string {
         $niveaux = [
             'A' => __('Flux structuré avec dates', 'rsn-veille'),
             'B' => __('Flux RSS', 'rsn-veille'),
             'C' => __('Page web structurée', 'rsn-veille'),
             'M' => __('Saisie manuelle', 'rsn-veille'),
         ];
-        $html = esc_html($f->source);
+        $origine = $f->origine();
+        $pastilles = [
+            'proposition' => __('Proposition du public', 'rsn-veille'),
+            'collecte' => __('Collecte automatique', 'rsn-veille'),
+            'equipe' => __("Saisie par l'équipe", 'rsn-veille'),
+        ];
+        $html = '<span class="rsn-veille-origine" data-origine="' . esc_attr($origine) . '">'
+            . ($origine === 'proposition' ? '<span class="dashicons dashicons-admin-users" aria-hidden="true"></span> ' : '')
+            . esc_html($pastilles[$origine]) . '</span><br>';
+        if ($origine === 'proposition') {
+            $html .= esc_html__('Formulaire de la page', 'rsn-veille');
+            if ($courriel !== '' && is_email($courriel)) {
+                $html .= '<br><a href="' . esc_url('mailto:' . $courriel) . '">' . esc_html($courriel) . '</a>';
+            }
+            return $html;
+        }
+        $html .= esc_html($f->source);
         if ($f->niveau !== '') {
             $titre = $niveaux[$f->niveau] ?? '';
             $html .= ' <span class="rsn-veille-niveau">' . esc_html__('niveau', 'rsn-veille') . ' <abbr title="' . esc_attr($titre) . '">' . esc_html($f->niveau) . '</abbr></span>';
         }
         return $html;
+    }
+
+    /**
+     * Rappel au-dessus de la file « À approuver » : le nombre de propositions du public en attente, avec un lien qui
+     * ne montre qu'elles. Rien s'il n'y en a pas, ni quand on les regarde déjà.
+     *
+     * @param Fiche[] $fiches
+     */
+    private static function rappel_propositions_html(array $fiches, string $onglet, string $type, string $source, string $origine, string $url_page): string {
+        if ($onglet !== 'a_approuver' || $origine === 'proposition') {
+            return '';
+        }
+        $nombre = count(self::filtrer($fiches, $onglet, $type, $source, 'proposition'));
+        if ($nombre === 0) {
+            return '';
+        }
+        $url = $url_page . '&' . http_build_query(['statut' => $onglet, 'origine' => 'proposition'], '', '&', PHP_QUERY_RFC3986);
+        /* translators: %d : nombre de propositions du public en attente. */
+        $texte = sprintf(_n('%d proposition du public à traiter', '%d propositions du public à traiter', $nombre, 'rsn-veille'), $nombre);
+        return '<p class="rsn-veille-rappel-propositions"><span class="dashicons dashicons-admin-users" aria-hidden="true"></span> '
+            . '<a href="' . esc_url($url) . '">' . esc_html($texte) . '</a></p>';
     }
 
     /** Boutons selon le statut ; une fiche absente de sa source peut aussi être gardée (drapeau levé). */

@@ -209,6 +209,17 @@ final class Fiche {
     }
 
     /**
+     * D'où vient la fiche : `proposition` (une personne l'a envoyée par le formulaire public), `equipe` (saisie à la
+     * main ou importée par l'équipe : niveau M, ou sans source) ou `collecte` (lue automatiquement à une source).
+     */
+    public function origine(): string {
+        if ($this->est_proposition()) {
+            return 'proposition';
+        }
+        return $this->niveau === 'M' || $this->source === '' ? 'equipe' : 'collecte';
+    }
+
+    /**
      * Date limite d'un appel (Y-m-d) : l'échéance, sinon une fin distincte du début (un lecteur qui ne
      * trouve pas d'échéance met la fin au jour de publication), sinon null.
      */

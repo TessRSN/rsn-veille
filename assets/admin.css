@@ -61,6 +61,55 @@
 	font-style: italic;
 }
 
+/* Origine d'une fiche : proposition du public (mise en avant), collecte automatique, saisie par l'équipe. */
+.rsn-veille-origine {
+	display: inline-block;
+	margin-bottom: 3px;
+	padding: 1px 7px;
+	border-radius: 999px;
+	background: #f0f0f1;
+	color: #50575e;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.7;
+	white-space: nowrap;
+}
+
+.rsn-veille-origine[data-origine="proposition"] {
+	background: #FFCC4E;
+	color: #003469;
+}
+
+.rsn-veille-origine[data-origine="equipe"] {
+	background: #e5f0fa;
+	color: #003469;
+}
+
+.rsn-veille-origine .dashicons {
+	width: 14px;
+	height: 14px;
+	font-size: 14px;
+	vertical-align: -2px;
+}
+
+/* Ligne d'une proposition : trait jaune à gauche, pour la repérer dans la file. */
+.rsn-veille-file tr[data-origine="proposition"] > td:first-child {
+	box-shadow: inset 4px 0 0 #FFCC4E;
+}
+
+.rsn-veille-rappel-propositions {
+	margin: 10px 0;
+	padding: 8px 12px;
+	border-left: 4px solid #FFCC4E;
+	background: #fff;
+	font-weight: 600;
+}
+
+.rsn-veille-rappel-propositions .dashicons {
+	color: #003469;
+	vertical-align: -3px;
+}
+
 .rsn-veille-niveau {
 	color: #50575e;
 	white-space: nowrap;

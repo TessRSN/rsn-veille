@@ -68,6 +68,12 @@ lancent par `npx wp-env run cli wp …`.
       gardée, le champ porte la pastille « corrigé à la main » et `wp post meta get <id> rsn_veille_champs_manuels`
       le liste ; une collecte (Réglages) ne la remet pas. Une date de début vidée sur un événement garde l'ancienne
       date, avec un avis rouge. Compte `lecteur` : pas d'accès à l'éditeur d'une fiche.
+- [ ] **Origine des fiches** (0.11.0) : proposer un événement par le formulaire de la page (avec un courriel), puis
+      ouvrir la file. Sa ligne a un trait jaune à gauche et, dans la colonne Source, la pastille « Proposition du
+      public », « Formulaire de la page » et le courriel en lien `mailto:`. Une fiche collectée montre « Collecte
+      automatique », une fiche ajoutée à la main « Saisie par l'équipe ». Au-dessus du tableau : « 1 proposition du
+      public à traiter » ; le lien et le filtre « Propositions du public » ne montrent qu'elle ; changer d'onglet
+      garde le filtre.
 - [ ] **Ajouter une fiche** (0.6.0) : le bouton en tête de la file d'approbation (à droite du titre) ouvre un
       éditeur vide avec l'encadré (type « Événement » par défaut) ; avec un titre et une date de début, **Publier**
       crée la fiche : `rsn_veille_source` vaut `manuel`, `rsn_veille_niveau` `M`, `rsn_veille_cle_source`
@@ -84,7 +90,7 @@ lancent par `npx wp-env run cli wp …`.
       « N appariées en anglais, M orphelines » au-dessus des erreurs, erreurs repliées sous
       « N erreurs », et le déroulé de chaque source replié en bas de page.
 - [ ] Les fichiers `admin.css` et `admin.js` ne sont chargés que sur les pages du menu Veille (onglet
-      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.10.0`.
+      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.11.0`.
 - [ ] Aucune erreur PHP dans `wp-content/debug.log` ni dans la console du navigateur.
 
 ## Réglages (tâche 12)
