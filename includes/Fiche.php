@@ -254,6 +254,29 @@ final class Fiche {
     }
 
     /**
+     * Date qui compte pour l'équipe (Y-m-d), '' si inconnue : le début d'un événement, la date limite d'un appel
+     * (jamais sa date de publication). Sert à ranger la file d'approbation.
+     */
+    public function date_utile(): string {
+        return $this->type === 'appel' ? (string) ($this->limite_appel() ?? '') : (string) ($this->debut ?? '');
+    }
+
+    /**
+     * Fiche dépassée le jour $aujourdhui (Y-m-d) : un événement fini (sa fin, sinon son début, est passée), un appel
+     * qui n'est plus en cours (`appel_en_cours` : date limite passée, ou sans date limite et publié il y a plus de
+     * 30 jours). Un événement sans date, ou un autre type de fiche, n'est jamais dépassé.
+     */
+    public function est_passee(string $aujourdhui): bool {
+        if ($this->type === 'appel') {
+            return !$this->appel_en_cours($aujourdhui);
+        }
+        if ($this->type !== 'evenement' || ($this->debut ?? '') === '') {
+            return false;
+        }
+        return max((string) $this->debut, (string) ($this->fin ?? '')) < $aujourdhui;
+    }
+
+    /**
      * Toutes les propriétés publiques, sous forme de tableau.
      */
     public function vers_tableau(): array {

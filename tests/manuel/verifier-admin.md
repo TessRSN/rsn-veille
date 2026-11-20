@@ -36,18 +36,33 @@ lancent par `npx wp-env run cli wp …`.
       `/wp-admin/admin.php?page=rsn-veille` répond « Désolé, vous n'avez pas l'autorisation… ».
 - [ ] Le titre `<script>` s'affiche en texte (aucune alerte), avec le lien « Modifier » qui ouvre
       l'éditeur WordPress de la fiche et le lien « Page d'origine » dans un nouvel onglet.
-- [ ] Onglet « À approuver » : **Publier** retire la ligne sans recharger, le compteur « À approuver »
-      baisse de 1 et « Publiées » monte de 1 ; `wp post get <id> --field=post_status` donne `publish`
-      et `wp post meta get <id> rsn_veille_manuel` donne `1`.
+- [ ] Onglet « À approuver » : **Publier + infolettre** (0.15.0 ; « Publier » avant) retire la ligne sans recharger,
+      le compteur « À approuver » baisse de 1 et « Publiées » monte de 1 ; `wp post get <id> --field=post_status`
+      donne `publish` et `wp post meta get <id> rsn_veille_manuel` donne `1`.
 - [ ] **Écarter** retire la ligne ; statut `draft`.
-- [ ] Onglet « Publiées » : **Retirer** retire la ligne ; statut `draft`.
+- [ ] Onglet « Publiées » : **Retirer de la page** (0.15.0 ; « Retirer » avant) retire la ligne ; statut `draft`.
+- [ ] **Type et niveaux** (0.15.0) : la colonne Type montre une pastille bleue « Événement » (icône de calendrier)
+      ou violette « Appel » (porte-voix). Sous le nom de la source : « niveau A : flux structuré » (ou C, M, B en
+      clair). Sous le tableau, « Que veulent dire les niveaux ? » se déplie sur quatre lignes.
+- [ ] **Rangement par date** (0.15.0) : « À approuver » et « Publiées » vont de la date la plus proche à la plus
+      lointaine ; un appel est rangé à sa **date limite**, pas à sa date de publication ; une fiche sans date est
+      à la fin.
+- [ ] **Archivées** (0.15.0) : l'onglet « Archivées » liste les événements passés et les appels échus, du plus
+      récent au plus ancien, avec « rien n'est supprimé » en tête. Aucun d'eux n'est dans « Publiées » ni dans
+      « À approuver ». Passer la date d'un événement publié à hier (éditeur de la fiche) : il passe dans
+      « Archivées » ; les nombres des onglets suivent ; il reste sur le calendrier public. Une fiche en attente
+      dépassée y porte « Jamais publiée » et n'a que le bouton **Écarter**.
+- [ ] **Infolettre du RSN** (0.15.0) : approuver une fiche par **Publier seulement** : dans « Publiées », sa
+      colonne « Infolettre du RSN » dit « Pas dans l'infolettre », et Veille > Infolettre ne la reprend pas (note
+      « 1 événement publié est tenu hors de l'infolettre » sous le bloc). **Mettre dans l'infolettre** : la
+      pastille devient verte sans recharger, et la fiche revient dans le bloc. Une fiche approuvée par
+      **Publier + infolettre**, ou publiée par la collecte, est « Dans l'infolettre ».
+      `wp option get rsn_veille_hors_infolettre --format=json` liste les identifiants tenus hors de l'infolettre.
 - [ ] Onglet « Écartées » : **Publier** remet la fiche en `publish` ; les écartées sont triées de la
       plus récente à la plus ancienne.
-- [ ] **Tri par arrivée** : dans « À approuver » et « À vérifier », les fiches vont de la dernière arrivée
-      (jour `rsn_veille_cree_le`, puis identifiant) à la plus ancienne, quelle que soit la date de
-      l'événement ; une fiche sans `rsn_veille_cree_le` prend le jour de son `post_date`
-      (la date de l'événement) et se range selon ce jour. « Publiées » et « Écartées » restent
-      triées par date d'événement.
+- [ ] **Tri par arrivée** : dans « À vérifier » seulement depuis la 0.15.0 (« À approuver » aussi avant), les
+      fiches vont de la dernière arrivée (jour `rsn_veille_cree_le`, puis identifiant) à la plus ancienne ; une
+      fiche sans `rsn_veille_cree_le` prend le jour de son `post_date`.
 - [ ] **Repère « Nouveau »** (jaune, après le titre) : seulement sur les fiches arrivées aujourd'hui ou hier,
       et seulement dans « À approuver » et « À vérifier ».
 - [ ] **Image de la fiche** (éditeur d'une fiche, colonne latérale) : la boîte montre l'image de la source
@@ -112,7 +127,7 @@ lancent par `npx wp-env run cli wp …`.
       « N appariées en anglais, M orphelines » au-dessus des erreurs, erreurs repliées sous
       « N erreurs », et le déroulé de chaque source replié en bas de page.
 - [ ] Les fichiers `admin.css` et `admin.js` ne sont chargés que sur les pages du menu Veille (onglet
-      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.14.0`.
+      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.15.0`.
 - [ ] Aucune erreur PHP dans `wp-content/debug.log` ni dans la console du navigateur.
 
 ## Réglages (tâche 12)
@@ -176,7 +191,11 @@ flux de nouvelles un à un (8 s au plus chacun), chaque source étant gardée un
 copie de 24 h (`rsn_veille_radar_dernier`). Un verrou de 2 min (`rsn_veille_radar_lecture`) évite que deux
 éditeurs relancent les flux ensemble.
 
-- [ ] La page s'ouvre sans erreur PHP. En haut : bouton **Rafraîchir**, « Flux lus le … », puis les trois
+- [ ] **Bouton vert et archivées** (0.15.0) : une nouvelle « Santé + numérique » a une pastille verte et un bouton
+      « Garder pour l'infolettre » vert ; les autres gardent le bouton bleu. Un quatrième onglet, « Archivées »,
+      reçoit les nouvelles gardées publiées depuis plus de 60 jours : **Remettre dans l'infolettre** la renvoie
+      dans « Gardées pour l'infolettre », **Retirer** l'enlève. Veille > Infolettre ne reprend pas une archivée.
+- [ ] La page s'ouvre sans erreur PHP. En haut : bouton **Rafraîchir**, « Flux lus le … », puis les
       onglets (0.9.0) « À trier (n) », « Gardées pour l'infolettre (0) », « Écartées (0) » et le filtre
       « Publiées du … au … ». L'onglet « À trier » est un tableau (0.14.0 ; des groupes par source avant) : une
       ligne par nouvelle, de la plus récente à la plus ancienne, toutes sources mêlées.
@@ -289,6 +308,12 @@ avoir des articles de la catégorie 149 avec l'extrait 45 du site actif.
 - [ ] Largeur mobile (375 px) : pas de défilement horizontal de la page.
 
 ## Courriel hebdomadaire (tâche 17)
+
+- [ ] **À regarder** (0.15.0) : proposer un événement par le formulaire de la page, puis **Envoyer un essai
+      maintenant**. Le courriel commence par un encadré jaune « À regarder (n) » : « 1 proposition du public
+      attend votre décision dans la file : « … » ». Avec une source en erreur au Journal, une ligne « 1 source
+      n'a pas pu être lue à la dernière collecte : … ». Sans nouvelle fiche de la semaine mais avec une
+      proposition en attente, le sujet est « Veille de l'écosystème : 1 point à regarder ».
 
 Courriel optionnel (Veille › Réglages › Courriel hebdomadaire) : fiches publiées par la collecte depuis sept
 jours, fiches à approuver, nouvelles repérées du Radar (lues dans le cache, aucune requête réseau). Tâche

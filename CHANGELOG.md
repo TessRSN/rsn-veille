@@ -1,5 +1,34 @@
 # Journal des modifications
 
+## 0.15.0 (2026-11-20)
+
+Ménage de l'administration, d'après les remarques de l'équipe après une première vraie utilisation : dans la file, on ne distinguait pas un événement d'un appel, les niveaux n'étaient pas expliqués, les fiches dépassées restaient, et rien ne disait ce qui irait dans l'infolettre.
+
+### File d'approbation (`Admin\PageFile`, `Fiche`)
+- **Type bien visible** : « Événement » et « Appel » sont des pastilles de couleur avec une icône (calendrier bleu, porte-voix violet).
+- **Niveaux expliqués** : sous le nom de la source, le niveau est écrit en clair (« niveau A : flux structuré », « niveau C : page web lue », « niveau M : saisie à la main », « niveau B : flux RSS ou infolettre »), et une légende repliée sous le tableau, « Que veulent dire les niveaux ? », dit ce que chacun vaut.
+- **Rangement par la date qui compte** (`Fiche::date_utile`) : le début d'un événement, la **date limite** d'un appel, jamais sa date de publication. « À approuver » et « Publiées » vont de la plus proche à la plus lointaine ; « Archivées » et « Écartées », de la plus récente à la plus ancienne ; sans date, à la fin. « À approuver » n'est donc plus rangée par jour d'arrivée (le repère « Nouveau » reste).
+- **Onglet « Archivées »** (`Fiche::est_passee`) : un événement fini, ou un appel dont la date limite est passée (sans date limite : publié depuis plus de 30 jours), quitte seul « À approuver » ou « Publiées ». Son statut ne change pas et rien n'est supprimé : une fiche publiée dépassée reste visible sur le calendrier public comme avant. Une fiche en attente déjà dépassée porte « Jamais publiée » et ne peut plus qu'être écartée.
+- **Infolettre du RSN** : à l'approbation, **« Publier + infolettre »** (sur la page et dans l'infolettre) ou **« Publier seulement »**. Dans « Publiées », une colonne « Infolettre du RSN » dit pour chaque fiche « Dans l'infolettre » ou « Pas dans l'infolettre », avec un bouton pour changer d'avis. Les fiches déjà publiées, et celles que la collecte publie d'elle-même, sont « dans l'infolettre », comme avant. Le choix est gardé dans l'option `rsn_veille_hors_infolettre`.
+- « Retirer » (dépublier) s'appelle maintenant **« Retirer de la page »**, pour ne pas le confondre avec « Retirer de l'infolettre ».
+
+### Radar (`Admin\PageRadar`)
+- Les nouvelles **« Santé + numérique »** ont une pastille verte et un bouton **« Garder pour l'infolettre » vert** : elles se repèrent dans le tableau.
+- **Onglet « Archivées »** : une nouvelle gardée publiée depuis plus de 60 jours quitte « Gardées pour l'infolettre » et n'est plus dans l'infolettre. **« Remettre dans l'infolettre »** la garde malgré son âge ; « Retirer » l'enlève.
+
+### Infolettre (`Admin\PageInfolettre`)
+- Les blocs ne reprennent plus les fiches tenues hors de l'infolettre ni les nouvelles archivées ; une note sous chaque bloc dit combien, et où les retrouver. Les événements passés et les appels échus n'y étaient déjà pas.
+
+### Courriel hebdomadaire (`Courriel`)
+- Section **« À regarder »** en tête : propositions du public qui attendent une décision, sources dont la page a peut-être changé (gabarit), sources en erreur à la dernière collecte, flux du Radar en erreur, fiches publiées qui ne sont plus à leur source.
+- Une proposition du public en attente ou un gabarit à vérifier fait partir le courriel même sans nouvelle fiche (sujet « n points à regarder »). Une source en panne seule ne le fait pas partir.
+
+### Livraison
+- Tests : 27 nouveaux (853 au total). Rendu de la file essayé sur les 93 fiches publiées du site au 20 novembre 2026 (49 d'actualité, 44 archivées) et du Radar sur les vrais flux ; boutons essayés sur ces rendus avec un serveur simulé.
+- Relecture indépendante, corrigée avant la livraison : le choix « Pas dans l'infolettre » est appliqué avant le dédoublonnage (`Donnees::elements`), pour qu'il tienne quand un événement du RSN remplace la fiche et qu'un doublon voulu dans l'infolettre y garde l'événement ; une action de la file rend des variations des nombres d'onglets au lieu de relire la file ; le courriel ne compte plus comme « en attente » une fiche déjà dépassée ; une vieille nouvelle gardée depuis « Écartées » n'est pas archivée d'office ; « Garder publiée » ne fait plus disparaître la ligne dans « Archivées ».
+- Limite connue : « Archivées » cherche les fiches dépassées parmi les 200 dernières fiches publiées ; au-delà, les plus anciennes ne sont plus listées (elles restent dans la base).
+- Aucune fiche ni aucune option existante n'est modifiée par la mise à jour. Numéro de version 0.15.0.
+
 ## 0.14.0 (2026-11-20)
 
 Radar : rangé comme la file d'approbation, à la demande de l'équipe. Les nouvelles étaient groupées par organisme ; ce qui venait de paraître n'était pas en haut.

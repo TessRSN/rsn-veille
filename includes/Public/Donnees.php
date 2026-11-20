@@ -48,16 +48,22 @@ final class Donnees {
     /**
      * @param array<int,array<string,mixed>> $evenements_rsn Événements de The Events Calendar du site, au format fiche.
      * @param ?string $langue `fr` ou `en` (toute autre valeur vaut `fr`) ; par défaut la langue courante (WPML).
+     * @param int[] $hors_infolettre Page Infolettre seulement : fiches que l'équipe tient hors de l'infolettre. Leurs
+     *                               éléments portent `hors_infolettre => true` (voir `elements`). Jamais passé par
+     *                               la page publique ni par le JSON, qui ne portent donc jamais cette clé.
      * @return array{genere_le: string, langue: string, sources: array<int,array<string,mixed>>, items: array<int,array<string,mixed>>}
      */
-    public static function construire(string $aujourdhui, Entrepot $e, array $evenements_rsn, bool $equipe = false, ?string $langue = null): array {
+    public static function construire(string $aujourdhui, Entrepot $e, array $evenements_rsn, bool $equipe = false, ?string $langue = null, array $hors_infolettre = []): array {
         $langue = self::langue_ou_fr($langue ?? self::langue_courante());
         $cles = $equipe ? array_merge(self::CLES_PUBLIQUES, self::CLES_EQUIPE) : self::CLES_PUBLIQUES;
         $items = [];
-        foreach (self::elements($e, $evenements_rsn, $aujourdhui, $langue) as $element) {
+        foreach (self::elements($e, $evenements_rsn, $aujourdhui, $langue, $hors_infolettre) as $element) {
             $item = [];
             foreach ($cles as $cle) {
                 $item[$cle] = $element[$cle] ?? null;
+            }
+            if (!empty($element['hors_infolettre'])) {
+                $item['hors_infolettre'] = true;
             }
             $organise = $element['organise_par'] ?? null;
             $organisateur = self::organisateur_canonique((string) ($item['organisateur'] ?? ''));
@@ -104,9 +110,16 @@ final class Donnees {
      * @param ?string $langue `fr` ou `en` ; par défaut la langue courante. En `en`, les appels du RSN prennent
      *                        le texte de leur traduction WPML et une fiche collectée du site prend le texte de
      *                        l'événement anglais de son groupe de traduction.
+     * @param int[] $hors_infolettre Fiches que l'équipe tient hors de l'infolettre. L'élément rendu porte
+     *                               `hors_infolettre => true` quand toutes les fiches qu'il réunit (doublons de
+     *                               même date et même titre) le sont, même si un événement du RSN les remplace :
+     *                               le choix est appliqué avant le dédoublonnage, pas à l'identifiant qui en sort.
      * @return array<int,array<string,mixed>>
      */
-    public static function elements(Entrepot $e, array $evenements_rsn, ?string $aujourdhui = null, ?string $langue = null): array {
+    public static function elements(Entrepot $e, array $evenements_rsn, ?string $aujourdhui = null, ?string $langue = null, array $hors_infolettre = []): array {
+        $hors = array_flip(array_filter($hors_infolettre, 'is_int'));
+        /** @var array<int,bool> $positions_hors Position d'un événement => toutes ses fiches sont hors de l'infolettre. */
+        $positions_hors = [];
         $langue = self::langue_ou_fr($langue ?? self::langue_courante());
         $aujourdhui ??= \rsn_veille_aujourdhui();
         $jour = \DateTimeImmutable::createFromFormat('!Y-m-d', $aujourdhui) ?: new \DateTimeImmutable('today');
@@ -131,15 +144,24 @@ final class Donnees {
                         $traduit = self::appel_traduit($appel, $langue);
                         $appel = $traduit === $appel ? self::avec_champs_anglais($appel, $langue) : $traduit;
                     }
+                    if (isset($hors[(int) $fiche->id])) {
+                        $appel['hors_infolettre'] = true;
+                    }
                     $appels[] = $appel;
                 }
             } elseif ($fiche->type === 'evenement' && $recent($fiche)) {
                 // Clé sur le titre de la fiche (français), calculée avant toute traduction.
                 $cle = $fiche->cle_dedoublonnage();
                 $position = $positions[$cle] ?? null;
+                $est_hors = isset($hors[(int) $fiche->id]);
+                if ($position !== null) {
+                    // Un doublon que l'équipe veut dans l'infolettre y garde l'événement.
+                    $positions_hors[$position] = ($positions_hors[$position] ?? false) && $est_hors;
+                }
                 if ($position === null) {
                     $position = count($evenements);
                     $positions[$cle] = $position;
+                    $positions_hors[$position] = $est_hors;
                     $evenements[] = self::avec_champs_anglais($fiche->vers_tableau(), $langue);
                 } elseif ((string) $evenements[$position]['source'] === Fiche::SOURCE_PROPOSITION && !$fiche->est_proposition()) {
                     // Doublon entre fiches de veille : une proposition publiée cède la place à la fiche collectée.
@@ -196,6 +218,10 @@ final class Donnees {
             }
         }
 
+        // Après le dédoublonnage (un événement du RSN peut avoir pris la place de la fiche) : la marque suit la position.
+        foreach (array_keys(array_filter($positions_hors)) as $position) {
+            $evenements[$position]['hors_infolettre'] = true;
+        }
         usort($evenements, static fn(array $a, array $b): int => [(string) $a['debut'], (string) $a['titre']] <=> [(string) $b['debut'], (string) $b['titre']]);
         // Appels : ceux qui ont une échéance d'abord (la plus proche en premier), puis les autres par date de publication.
         $cle_appel = static fn(array $a): array => [$a['echeance'] === null ? 1 : 0, (string) $a['echeance'], (string) $a['debut'], (string) $a['titre']];

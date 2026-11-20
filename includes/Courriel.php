@@ -5,6 +5,7 @@ namespace RSN\Veille;
 
 use RSN\Veille\Admin\Dates;
 use RSN\Veille\Admin\Menu;
+use RSN\Veille\Admin\PageFile;
 use RSN\Veille\Admin\PageRadar;
 
 if (!defined('ABSPATH')) {
@@ -60,18 +61,26 @@ final class Courriel {
      * @param int $attente_anterieure Fiches à approuver plus anciennes, résumées en une ligne (hors décompte).
      * @return array{sujet: string, html: string, texte: string}|null
      */
-    public static function composer(array $nouvelles_fiches, array $en_attente, array $nouvelles_radar, string $url_file, string $aujourdhui, int $attente_anterieure = 0): ?array {
+    public static function composer(array $nouvelles_fiches, array $en_attente, array $nouvelles_radar, string $url_file, string $aujourdhui, int $attente_anterieure = 0, array $a_regarder = []): ?array {
         $publiees = self::fiches_lisibles($nouvelles_fiches);
         $attente = self::fiches_lisibles($en_attente);
         $radar = self::fiches_lisibles($nouvelles_radar);
+        $points = array_values(array_filter(array_map(static fn($p): string => is_string($p) ? trim($p) : '', $a_regarder), static fn(string $p): bool => $p !== ''));
         $total = count($publiees) + count($attente);
-        if ($total === 0) {
+        if ($total === 0 && $points === []) {
             return null;
         }
 
-        /* translators: %d : nombre de nouveautés de la semaine. */
-        $sujet = sprintf(_n("Veille de l'écosystème : %d nouveauté cette semaine", "Veille de l'écosystème : %d nouveautés cette semaine", $total, 'rsn-veille'), $total);
-        $intro = self::intro(count($publiees), count($attente));
+        if ($total > 0) {
+            /* translators: %d : nombre de nouveautés de la semaine. */
+            $sujet = sprintf(_n("Veille de l'écosystème : %d nouveauté cette semaine", "Veille de l'écosystème : %d nouveautés cette semaine", $total, 'rsn-veille'), $total);
+            $intro = self::intro(count($publiees), count($attente));
+        } else {
+            /* translators: %d : nombre de points à regarder. */
+            $sujet = sprintf(_n("Veille de l'écosystème : %d point à regarder", "Veille de l'écosystème : %d points à regarder", count($points), 'rsn-veille'), count($points));
+            $intro = __('Aucune nouvelle fiche cette semaine, mais la veille demande un coup d’œil.', 'rsn-veille');
+        }
+        $titre_points = __('À regarder', 'rsn-veille');
         $anterieure = $attente_anterieure > 0
             /* translators: %d : nombre de fiches à approuver créées avant la semaine. */
             ? sprintf(_n('%d fiche attend toujours dans la file.', '%d fiches attendent toujours dans la file.', $attente_anterieure, 'rsn-veille'), $attente_anterieure)
@@ -101,6 +110,16 @@ final class Courriel {
             . '<p style="margin:0 0 8px">' . self::texte($intro) . '</p>'
             . ($anterieure !== '' ? '<p style="margin:0 0 8px">' . self::texte($anterieure) . '</p>' : '')
             . ($bouton_seul ? self::bouton_file($url_file) : '');
+        if ($points !== []) {
+            // Avant les listes : ce qui demande une décision ou une vérification (propositions, erreurs, gabarits).
+            $html .= '<div style="margin:20px 0 0;padding:10px 14px;border-left:4px solid ' . self::JAUNE . ';background:#FFF8E1">'
+                . '<h2 style="margin:0 0 6px;font-size:16px;color:' . self::MARINE . '">' . self::texte($titre_points . ' (' . count($points) . ')') . '</h2>'
+                . '<ul style="margin:0;padding:0 0 0 18px">';
+            foreach ($points as $point) {
+                $html .= '<li style="margin:0 0 6px">' . self::texte($point) . '</li>';
+            }
+            $html .= '</ul></div>';
+        }
         foreach ($sections as [$cle, $titre, $elements, $genre]) {
             $html .= '<h2 style="margin:28px 0 4px;padding-top:12px;border-top:1px solid ' . self::FILET . ';font-size:16px;color:' . self::MARINE . '">'
                 . self::texte($titre . ' (' . count($elements) . ')') . '</h2>';
@@ -125,6 +144,13 @@ final class Courriel {
         if ($bouton_seul) {
             $lignes[] = __("Ouvrir la file d'approbation", 'rsn-veille') . ' : ' . self::adresse($url_file);
         }
+        if ($points !== []) {
+            $lignes[] = '';
+            $lignes[] = mb_strtoupper($titre_points) . ' (' . count($points) . ')';
+            foreach ($points as $point) {
+                $lignes[] = '- ' . $point;
+            }
+        }
         foreach ($sections as [$cle, $titre, $elements, $genre]) {
             $lignes[] = '';
             $lignes[] = mb_strtoupper($titre) . ' (' . count($elements) . ')';
@@ -143,6 +169,111 @@ final class Courriel {
         array_push($lignes, '', '--', $pied);
 
         return ['sujet' => $sujet, 'html' => $html, 'texte' => implode("\n", $lignes) . "\n"];
+    }
+
+    // --- Points à regarder ---
+
+    /** Noms cités au plus dans un point ; les autres sont comptés (« et 3 autres »). */
+    private const MAX_NOMS = 5;
+
+    /**
+     * Ce que l'équipe doit regarder, en phrases, par ordre d'importance : propositions du public en attente,
+     * gabarits peut-être changés, sources en erreur à la dernière collecte, fiches publiées absentes de leur source,
+     * puis les phrases du radar (alertes de gabarit d'une infolettre, flux de nouvelles en erreur).
+     *
+     * @param array<int,mixed> $propositions Titres des propositions du public qui attendent dans la file.
+     * @param array<int,mixed> $gabarits Noms des sources dont le gabarit a peut-être changé.
+     * @param array<int,mixed> $en_erreur Noms des sources en erreur à leur dernière collecte.
+     * @param int $absentes Fiches publiées qui ne sont plus à leur source (onglet « À vérifier »).
+     * @param array<int,mixed> $alertes_radar Alertes de gabarit du radar, déjà en phrases.
+     * @param array<int,mixed> $erreurs_radar Flux de nouvelles en erreur (« FRQ : nouvelles : Réponse HTTP 403 »).
+     * @return string[]
+     */
+    public static function points_a_regarder(array $propositions, array $gabarits, array $en_erreur, int $absentes, array $alertes_radar = [], array $erreurs_radar = []): array {
+        $propre = static fn(array $liste): array => array_values(array_filter(array_map(static fn($v): string => is_string($v) ? trim($v) : '', $liste), static fn(string $v): bool => $v !== ''));
+        [$propositions, $gabarits, $en_erreur, $alertes_radar, $erreurs_radar] = array_map($propre, [$propositions, $gabarits, $en_erreur, $alertes_radar, $erreurs_radar]);
+        $points = [];
+        if ($propositions !== []) {
+            $n = count($propositions);
+            /* translators: 1 : nombre de propositions ; 2 : leurs titres entre guillemets. */
+            $points[] = sprintf(_n('%1$d proposition du public attend votre décision dans la file : %2$s.', '%1$d propositions du public attendent votre décision dans la file : %2$s.', $n, 'rsn-veille'), $n, self::enumeration(array_map(static fn(string $t): string => '« ' . $t . ' »', $propositions)));
+        }
+        if ($gabarits !== []) {
+            $n = count($gabarits);
+            /* translators: 1 : nombre de sources ; 2 : leurs noms. */
+            $points[] = sprintf(_n('%1$d source ne donne plus ce qu’elle donnait, sa page a peut-être changé : %2$s (Veille › Journal).', '%1$d sources ne donnent plus ce qu’elles donnaient, leur page a peut-être changé : %2$s (Veille › Journal).', $n, 'rsn-veille'), $n, self::enumeration($gabarits));
+        }
+        foreach ($alertes_radar as $alerte) {
+            $points[] = $alerte;
+        }
+        if ($en_erreur !== []) {
+            $n = count($en_erreur);
+            /* translators: 1 : nombre de sources ; 2 : leurs noms. */
+            $points[] = sprintf(_n('%1$d source n’a pas pu être lue à la dernière collecte : %2$s (Veille › Journal).', '%1$d sources n’ont pas pu être lues à la dernière collecte : %2$s (Veille › Journal).', $n, 'rsn-veille'), $n, self::enumeration($en_erreur));
+        }
+        if ($erreurs_radar !== []) {
+            $n = count($erreurs_radar);
+            /* translators: 1 : nombre de flux ; 2 : les erreurs. */
+            $points[] = sprintf(_n('%1$d flux de nouvelles du Radar est en erreur : %2$s.', '%1$d flux de nouvelles du Radar sont en erreur : %2$s.', $n, 'rsn-veille'), $n, self::enumeration($erreurs_radar));
+        }
+        if ($absentes > 0) {
+            /* translators: %d : nombre de fiches publiées absentes de leur source. */
+            $points[] = sprintf(_n('%d fiche publiée n’est plus à sa source : annulée ou déplacée ? (File d’approbation › À vérifier).', '%d fiches publiées ne sont plus à leur source : annulées ou déplacées ? (File d’approbation › À vérifier).', $absentes, 'rsn-veille'), $absentes);
+        }
+        return $points;
+    }
+
+    /** « A, B, C et 2 autres » : au plus `MAX_NOMS` noms. @param string[] $noms */
+    private static function enumeration(array $noms): string {
+        $cites = array_slice($noms, 0, self::MAX_NOMS);
+        $reste = count($noms) - count($cites);
+        /* translators: %d : nombre d'éléments non cités. */
+        return implode(', ', $cites) . ($reste > 0 ? ' ' . sprintf(_n('et %d autre', 'et %d autres', $reste, 'rsn-veille'), $reste) : '');
+    }
+
+    /**
+     * Points à regarder d'après l'état du site : file d'approbation, journal de collecte et cache du radar (aucune
+     * requête réseau). Rend [points, importants] : `importants` est vrai quand une proposition du public attend ou
+     * qu'un gabarit a peut-être changé, ce qui justifie un courriel même sans nouvelle fiche.
+     *
+     * @param Fiche[] $en_file Fiches à approuver qui attendent encore une décision (les dépassées n'y sont pas).
+     * @return array{0: string[], 1: bool}
+     */
+    private static function etat_a_regarder(Entrepot $entrepot, array $en_file): array {
+        $propositions = [];
+        foreach ($en_file as $fiche) {
+            if ($fiche->est_proposition()) {
+                $propositions[] = $fiche->titre !== '' ? $fiche->titre : __('(sans titre)', 'rsn-veille');
+            }
+        }
+        $journal = Journal::tout();
+        $sources = Collecte::sources();
+        $gabarits = PageFile::sources_a_verifier(Journal::alertes($journal), $sources);
+        $en_erreur = [];
+        foreach ($sources as $id => $source) {
+            $erreurs = is_array($journal[$id][0]['erreurs'] ?? null) ? $journal[$id][0]['erreurs'] : [];
+            if ($erreurs !== [] && is_array($source)) {
+                $en_erreur[] = (string) ($source['nom'] ?? $id);
+            }
+        }
+        $radar = [];
+        foreach ([PageRadar::TRANSIENT, PageRadar::TRANSIENT_DERNIER] as $transient) {
+            $cache = get_transient($transient);
+            if (is_array($cache) && is_array($cache['nouvelles'] ?? null)) {
+                $radar = $cache;
+                break;
+            }
+        }
+        $alertes_radar = is_array($radar['alertes'] ?? null) ? $radar['alertes'] : [];
+        $points = self::points_a_regarder(
+            $propositions,
+            $gabarits,
+            $en_erreur,
+            (int) ($entrepot->compter()['a_verifier'] ?? 0),
+            $alertes_radar,
+            is_array($radar['erreurs'] ?? null) ? $radar['erreurs'] : []
+        );
+        return [$points, $propositions !== [] || $gabarits !== [] || array_filter($alertes_radar, 'is_string') !== []];
     }
 
     // --- Réglages et planification ---
@@ -276,15 +407,24 @@ final class Courriel {
             static fn(Fiche $f): bool => $f->type !== 'appel' || $f->appel_en_cours($aujourdhui)
         ));
         // Seules les fiches à approuver de la semaine comptent ; les plus anciennes sont résumées en une ligne.
-        $en_attente = $entrepot->lister_crees_depuis($limite, 'a_approuver');
-        $anterieure = max(0, $entrepot->compter()['a_approuver'] - count($en_attente));
+        // Une fiche en attente déjà dépassée (onglet « Archivées » de la file) n'attend plus de décision.
+        $en_file = array_values(array_filter($entrepot->lister('a_approuver'), static fn(Fiche $f): bool => !$f->est_passee($aujourdhui)));
+        $en_attente = array_values(array_filter($entrepot->lister_crees_depuis($limite, 'a_approuver'), static fn(Fiche $f): bool => !$f->est_passee($aujourdhui)));
+        $anterieure = max(0, count($en_file) - count($en_attente));
+        // Erreurs, gabarits, propositions : dits en tête du courriel. Seuls, ils ne le font partir que s'ils demandent
+        // une décision (proposition du public, gabarit à vérifier) : une source en panne chaque semaine ne suffit pas.
+        [$points, $importants] = self::etat_a_regarder($entrepot, $en_file);
+        if ($publiees === [] && $en_attente === [] && !$importants) {
+            $points = [];
+        }
         $courriel = self::composer(
             array_map(static fn(Fiche $f): array => $f->vers_tableau(), $publiees),
             array_map(static fn(Fiche $f): array => $f->vers_tableau(), $en_attente),
             self::nouvelles_du_radar($limite),
             admin_url('admin.php?page=' . Menu::SLUG),
             $aujourdhui,
-            $anterieure
+            $anterieure,
+            $points
         );
         if ($courriel === null) {
             return ['statut' => 'rien', 'nb' => 0, 'destinataires' => $destinataires];

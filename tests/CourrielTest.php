@@ -11,6 +11,7 @@ use RSN\Veille\Collecte;
 use RSN\Veille\Courriel;
 use RSN\Veille\EntrepotWordPress;
 use RSN\Veille\Fiche;
+use RSN\Veille\Journal;
 
 final class CourrielTest extends TestCase {
     private const AUJOURDHUI = '2026-10-26';
@@ -335,6 +336,121 @@ final class CourrielTest extends TestCase {
         $e->creer(Fiche::depuis_tableau(['type' => 'evenement', 'titre' => 'En attente depuis septembre', 'debut' => '2026-11-20', 'statut' => 'a_approuver', 'cle_source' => 'o:9', 'cles_source' => ['o:9'], 'cree_le' => '2026-09-01']));
         $this->assertSame(['statut' => 'rien', 'nb' => 0, 'destinataires' => ['equipe@exemple.test', 'tess@exemple.test']], Courriel::tenter());
         $this->assertSame([], self::courriels());
+    }
+
+    // --- À regarder : propositions, gabarits, erreurs (0.15.0) ---
+
+    public function test_points_a_regarder(): void {
+        $this->assertSame([], Courriel::points_a_regarder([], [], [], 0));
+        $points = Courriel::points_a_regarder(
+            ['Colloque proposé', 'Atelier <b>proposé</b>'],
+            ['Mila : événements'],
+            ['INSPQ : événements', 'Obvia : événements'],
+            2,
+            ['Unité SSA : infolettre : le numéro « Décembre » n’a donné aucun encadré.'],
+            ['FRQ : nouvelles : Réponse HTTP 403']
+        );
+        $this->assertSame([
+            '2 propositions du public attendent votre décision dans la file : « Colloque proposé », « Atelier <b>proposé</b> ».',
+            '1 source ne donne plus ce qu’elle donnait, sa page a peut-être changé : Mila : événements (Veille › Journal).',
+            'Unité SSA : infolettre : le numéro « Décembre » n’a donné aucun encadré.',
+            '2 sources n’ont pas pu être lues à la dernière collecte : INSPQ : événements, Obvia : événements (Veille › Journal).',
+            '1 flux de nouvelles du Radar est en erreur : FRQ : nouvelles : Réponse HTTP 403.',
+            '2 fiches publiées ne sont plus à leur source : annulées ou déplacées ? (File d’approbation › À vérifier).',
+        ], $points);
+        // Au plus cinq noms cités ; ce qui n'est pas du texte est laissé.
+        $longue = Courriel::points_a_regarder([], [], ['A', 'B', 42, 'C', '', 'D', 'E', 'F', 'G'], 0);
+        $this->assertSame(['7 sources n’ont pas pu être lues à la dernière collecte : A, B, C, D, E et 2 autres (Veille › Journal).'], $longue);
+        $this->assertSame(['1 proposition du public attend votre décision dans la file : « X ».'], Courriel::points_a_regarder(['X'], [], [], 0));
+    }
+
+    public function test_composer_met_les_points_a_regarder_en_tete(): void {
+        $points = ['1 proposition du public attend votre décision dans la file : « Atelier <b>proposé</b> ».', '', 42, '1 source n’a pas pu être lue.'];
+        $c = Courriel::composer([self::fiche('Atelier données')], [], [], self::URL_FILE, self::AUJOURDHUI, 0, $points);
+        $this->assertSame("Veille de l'écosystème : 1 nouveauté cette semaine", $c['sujet']);
+        $this->assertStringContainsString('À regarder (2)</h2>', $c['html']);
+        $this->assertStringContainsString('« Atelier &lt;b&gt;proposé&lt;/b&gt; »', $c['html']);
+        $this->assertStringNotContainsString('<b>proposé', $c['html']);
+        $this->assertLessThan(strpos($c['html'], 'Publiées automatiquement'), strpos($c['html'], 'À regarder'));
+        $this->assertStringContainsString("À REGARDER (2)\n- 1 proposition du public attend votre décision dans la file : « Atelier <b>proposé</b> ».\n- 1 source n’a pas pu être lue.", $c['texte']);
+        $this->assertLessThan(strpos($c['texte'], 'PUBLIÉES AUTOMATIQUEMENT'), strpos($c['texte'], 'À REGARDER'));
+        // Sans nouvelle fiche : le courriel part quand même, avec son propre sujet.
+        $seul = Courriel::composer([], [], [], self::URL_FILE, self::AUJOURDHUI, 0, ['Un point.', 'Un autre.']);
+        $this->assertSame("Veille de l'écosystème : 2 points à regarder", $seul['sujet']);
+        $this->assertStringContainsString('Aucune nouvelle fiche cette semaine', $seul['html']);
+        $this->assertStringNotContainsString('Cette semaine :', $seul['html']);
+        // Sans point : comme avant.
+        $this->assertStringNotContainsString('À regarder', Courriel::composer([self::fiche('Atelier données')], [], [], self::URL_FILE, self::AUJOURDHUI)['html']);
+        $this->assertNull(Courriel::composer([], [], [], self::URL_FILE, self::AUJOURDHUI, 0, ['', 7]));
+    }
+
+    public function test_une_proposition_du_public_en_attente_fait_partir_le_courriel(): void {
+        self::regler();
+        $e = new EntrepotWordPress();
+        $e->creer(Fiche::depuis_tableau(['type' => 'evenement', 'titre' => 'Colloque proposé en septembre', 'debut' => '2026-11-20', 'statut' => 'a_approuver', 'source' => 'proposition', 'niveau' => 'M', 'cree_le' => '2026-09-01']));
+        // Proposition dont la date est passée : archivée dans la file, elle n'est plus à regarder.
+        $e->creer(Fiche::depuis_tableau(['type' => 'evenement', 'titre' => 'Proposition passée', 'debut' => '2026-10-01', 'statut' => 'a_approuver', 'source' => 'proposition', 'niveau' => 'M', 'cree_le' => '2026-09-01']));
+        Courriel::accrocher();
+        $this->assertSame('envoye', Courriel::tenter()['statut']);
+        $c = self::courriels()[0];
+        $this->assertSame("Veille de l'écosystème : 1 point à regarder", $c['sujet']);
+        $this->assertStringContainsString('1 proposition du public attend votre décision dans la file : « Colloque proposé en septembre ».', $c['message']);
+        $this->assertStringNotContainsString('Proposition passée', $c['message']);
+        $this->assertStringContainsString('À REGARDER (1)', (string) $c['texte']);
+    }
+
+    public function test_une_fiche_en_attente_depassee_n_attend_plus(): void {
+        self::regler();
+        $e = new EntrepotWordPress();
+        $base = ['type' => 'evenement', 'statut' => 'a_approuver', 'organisateur' => 'Obvia', 'source' => 'obvia', 'niveau' => 'A'];
+        // Arrivée cette semaine mais déjà passée : dans « Archivées », elle n'est pas une nouveauté à approuver.
+        $e->creer(Fiche::depuis_tableau($base + ['titre' => 'Atelier d’hier', 'debut' => '2026-10-20', 'cree_le' => '2026-10-24', 'cle_source' => 'o:1', 'cles_source' => ['o:1']]));
+        // Anciennes et passées : elles n'attendent plus dans la file.
+        $e->creer(Fiche::depuis_tableau($base + ['titre' => 'Colloque de septembre', 'debut' => '2026-09-10', 'cree_le' => '2026-09-01', 'cle_source' => 'o:2', 'cles_source' => ['o:2']]));
+        $this->assertSame('rien', Courriel::tenter()['statut']);
+        // Une fiche de la semaine encore à venir, et une ancienne encore à venir.
+        $e->creer(Fiche::depuis_tableau($base + ['titre' => 'Webinaire à venir', 'debut' => '2026-11-20', 'cree_le' => '2026-10-24', 'cle_source' => 'o:3', 'cles_source' => ['o:3']]));
+        $e->creer(Fiche::depuis_tableau($base + ['titre' => 'Forum de décembre', 'debut' => '2026-12-05', 'cree_le' => '2026-09-01', 'cle_source' => 'o:4', 'cles_source' => ['o:4']]));
+        Courriel::accrocher();
+        $this->assertSame(['statut' => 'envoye', 'nb' => 1, 'destinataires' => ['equipe@exemple.test', 'tess@exemple.test']], Courriel::tenter());
+        $message = self::courriels()[0]['message'];
+        $this->assertStringContainsString('Webinaire à venir', $message);
+        $this->assertStringNotContainsString('Atelier d’hier', $message);
+        $this->assertStringContainsString('1 fiche attend toujours dans la file.', $message);
+    }
+
+    public function test_erreurs_et_gabarits_du_journal_dans_le_courriel(): void {
+        self::regler();
+        $ids = array_keys(Collecte::sources());
+        $noms = array_map(static fn(array $s): string => (string) $s['nom'], array_values(Collecte::sources()));
+        update_option(Journal::OPTION, [
+            $ids[0] => [['date' => '2026-10-26 02:00', 'lus' => 0, 'erreurs' => ['Réponse HTTP 403']], ['date' => '2026-10-25 02:00', 'lus' => 4, 'erreurs' => []]],
+            // Erreur ancienne, réparée depuis : seule la dernière collecte compte.
+            $ids[1] => [['date' => '2026-10-26 02:00', 'lus' => 5, 'erreurs' => []], ['date' => '2026-10-25 02:00', 'lus' => 0, 'erreurs' => ['Délai dépassé']]],
+            'source_retiree' => [['date' => '2026-10-26 02:00', 'lus' => 0, 'erreurs' => ['Inconnue']]],
+        ]);
+        // Une source en panne ne fait pas partir le courriel à elle seule.
+        $this->assertSame('rien', Courriel::tenter()['statut']);
+        // Avec une nouveauté, elle est dite en tête.
+        self::fiches_de_test();
+        Courriel::accrocher();
+        $this->assertSame('envoye', Courriel::tenter()['statut']);
+        $message = self::courriels()[0]['message'];
+        $this->assertStringContainsString('1 source n’a pas pu être lue à la dernière collecte : ' . esc_html($noms[0]) . ' (Veille › Journal).', $message);
+        $this->assertStringNotContainsString('source_retiree', $message);
+        $this->assertStringNotContainsString('sa page a peut-être changé', $message);
+
+        // Un gabarit peut-être changé demande une vérification : le courriel part même sans nouveauté.
+        rsn_veille_bouchons_reinitialiser();
+        self::regler();
+        update_option(Journal::OPTION, [$ids[2] => [['date' => '2026-10-26 02:00', 'lus' => 0, 'erreurs' => [], 'alerte' => 'Rien de lu alors que la source donne 8 éléments.']]]);
+        set_transient(PageRadar::TRANSIENT, ['nouvelles' => [], 'erreurs' => ['FRQ : nouvelles : Réponse HTTP 403'], 'genere_le' => '2026-10-26 09:00'], 3600);
+        Courriel::accrocher();
+        $this->assertSame('envoye', Courriel::tenter()['statut']);
+        $c = self::courriels()[0];
+        $this->assertSame("Veille de l'écosystème : 2 points à regarder", $c['sujet']);
+        $this->assertStringContainsString('1 source ne donne plus ce qu’elle donnait, sa page a peut-être changé : ' . esc_html($noms[2]), $c['message']);
+        $this->assertStringContainsString('1 flux de nouvelles du Radar est en erreur : FRQ : nouvelles : Réponse HTTP 403.', $c['message']);
     }
 
     public function test_composer_resume_la_file_ancienne_sans_la_compter(): void {

@@ -210,6 +210,80 @@ final class PageRadarTest extends TestCase {
         $this->assertStringContainsString('Aucune nouvelle gardée', $vide);
     }
 
+    // --- Nouvelles gardées trop vieilles : archivées (0.15.0) ---
+
+    public function test_nouvelle_gardee_archivee_apres_60_jours(): void {
+        $jour = '2026-12-20';
+        $gardee = static fn(array $c): array => $c + self::nouvelle(1) + ['gardee_le' => '2026-12-01 10:00'];
+        // 60 jours avant le 20 décembre : le 21 octobre. Publiée ce jour-là, elle reste ; la veille, elle est archivée.
+        $this->assertFalse(PageRadar::est_archivee($gardee(['date' => '2026-10-21']), $jour));
+        $this->assertTrue(PageRadar::est_archivee($gardee(['date' => '2026-10-20']), $jour));
+        $this->assertTrue(PageRadar::est_archivee($gardee(['date' => '2026-10-20T08:00:00']), $jour));
+        // Remise par l'équipe : elle reste malgré son âge.
+        $this->assertFalse(PageRadar::est_archivee($gardee(['date' => '2026-06-01', 'conservee' => '1']), $jour));
+        // Sans date de publication : la date à laquelle elle a été gardée ; sans aucune date, jamais archivée.
+        $this->assertFalse(PageRadar::est_archivee($gardee(['date' => '']), $jour));
+        $this->assertTrue(PageRadar::est_archivee($gardee(['date' => '', 'gardee_le' => '2026-09-01 10:00']), $jour));
+        $this->assertFalse(PageRadar::est_archivee(['url' => 'https://x.test/a', 'titre' => 'T'], $jour));
+        $this->assertFalse(PageRadar::est_archivee($gardee(['date' => '2026-06-01']), 'illisible'));
+
+        $gardees = [$gardee(['url' => 'https://x.test/a', 'date' => '2026-12-10']), 'illisible', $gardee(['url' => 'https://x.test/b', 'date' => '2026-09-01'])];
+        $this->assertSame(['https://x.test/a'], array_column(PageRadar::gardees_actives($gardees, $jour), 'url'));
+        $this->assertSame(['https://x.test/b'], array_column(PageRadar::gardees_archivees($gardees, $jour), 'url'));
+        $conservees = PageRadar::conserver($gardees, 'https://x.test/b');
+        $this->assertSame(['https://x.test/a', 'https://x.test/b'], array_column(PageRadar::gardees_actives($conservees, $jour), 'url'));
+        $this->assertSame($gardees, PageRadar::conserver($gardees, 'https://x.test/inconnue'));
+    }
+
+    public function test_garder_une_vieille_nouvelle_ne_l_archive_pas_d_office(): void {
+        // Reprise depuis « Écartées » : publiée en août, gardée en décembre. L'équipe la veut dans l'infolettre.
+        $gardees = PageRadar::garder([], self::nouvelle(1, ['date' => '2026-08-01']), '2026-12-20 10:00');
+        $this->assertSame('1', $gardees[0]['conservee']);
+        $this->assertSame(['https://x.test/n1'], array_column(PageRadar::gardees_actives($gardees, '2026-12-20'), 'url'));
+        $this->assertSame([], PageRadar::gardees_archivees($gardees, '2027-06-01'));
+        // Nouvelle récente : pas de drapeau, elle sera archivée à son heure.
+        $gardees = PageRadar::garder([], self::nouvelle(2, ['date' => '2026-12-10']), '2026-12-20 10:00');
+        $this->assertArrayNotHasKey('conservee', $gardees[0]);
+        $this->assertSame(['https://x.test/n2'], array_column(PageRadar::gardees_archivees($gardees, '2027-06-01'), 'url'));
+    }
+
+    public function test_onglet_archivees(): void {
+        $recente = self::nouvelle(1, ['date' => '2026-12-10']) + ['gardee_le' => '2026-12-11 08:00'];
+        $vieille = self::nouvelle(2, ['date' => '2026-09-01', 'source' => 'Autre source']) + ['gardee_le' => '2026-09-02 08:00'];
+        $options = self::options(['aujourdhui' => '2026-12-20']);
+        $html = PageRadar::page_html(self::lot(), [$recente, $vieille], [], ['onglet' => 'gardees'] + $options);
+        // Les nombres : une gardée encore bonne pour l'infolettre, une archivée.
+        $this->assertMatchesRegularExpression('~data-compteur="gardees">\(1\)~', $html);
+        $this->assertMatchesRegularExpression('~href="[^"]*onglet=archivees[^"]*">Archivées <span class="count" data-compteur="archivees">\(1\)</span>~', $html);
+        $this->assertStringContainsString('Titre 1', $html);
+        $this->assertStringNotContainsString('Titre 2', $html);
+        preg_match_all('~data-compteur="([a-z_]+)"~', $html, $m);
+        $this->assertSame(['a_trier', 'gardees', 'archivees', 'ecartees'], $m[1]);
+
+        $html = PageRadar::page_html(self::lot(), [$recente, $vieille], [], ['onglet' => 'archivees'] + $options);
+        $this->assertStringContainsString('data-section="archivees"', $html);
+        $this->assertStringContainsString('publiées depuis plus de 60 jours', $html);
+        $this->assertStringContainsString('Titre 2', $html);
+        $this->assertStringNotContainsString('Titre 1', $html);
+        $this->assertStringContainsString('<td class="rsn-veille-nouvelle-source">Autre source</td>', $html);
+        $this->assertStringContainsString('data-act="conserver">Remettre dans l&#039;infolettre</button>', $html);
+        $this->assertStringContainsString('data-act="retirer">Retirer</button>', $html);
+        $vide = PageRadar::page_html(self::lot(), [$recente], [], ['onglet' => 'archivees'] + $options);
+        $this->assertStringContainsString('<p class="rsn-veille-vide">Aucune nouvelle archivée.</p>', $vide);
+        // Remise par l'équipe : de retour dans « Gardées ».
+        $html = PageRadar::page_html(self::lot(), [$recente, $vieille + ['conservee' => '1']], [], ['onglet' => 'gardees'] + $options);
+        $this->assertStringContainsString('Titre 2', $html);
+        $this->assertMatchesRegularExpression('~data-compteur="archivees">\(0\)~', $html);
+    }
+
+    public function test_bouton_garder_vert_pour_sante_et_numerique(): void {
+        $donnees = ['genere_le' => '', 'erreurs' => [], 'nouvelles' => [self::nouvelle(1), self::nouvelle(2, ['statut_radar' => 'a_trier', 'domaine' => 'sante'])]];
+        $html = PageRadar::page_html($donnees, [], [], self::options());
+        $this->assertMatchesRegularExpression('~data-url="https://x\.test/n1">.*?<button type="button" class="button button-primary rsn-veille-radar-action rsn-veille-bouton-pertinent" data-act="garder">~s', $html);
+        $this->assertMatchesRegularExpression('~data-url="https://x\.test/n2">.*?<button type="button" class="button button-primary rsn-veille-radar-action" data-act="garder">~s', $html);
+        $this->assertSame(1, substr_count($html, 'rsn-veille-bouton-pertinent'));
+    }
+
     public function test_onglet_ecartees_les_plus_recentes_d_abord(): void {
         $details = [
             'https://x.test/n1' => ['titre' => 'Titre 1', 'date' => '2026-10-20', 'source' => 'Source X', 'organisateur' => 'Organisme X', 'resume' => 'Résumé 1', 'ignoree_le' => '2026-11-09 10:00'],
@@ -409,7 +483,7 @@ final class PageRadarTest extends TestCase {
             'nonce' => self::jeton(), 'url' => 'https://x.test/n2', 'titre' => 'TITRE FORGÉ', 'resume' => 'FORGÉ',
         ]);
         $this->assertSame(200, $code);
-        $this->assertSame(['ok' => true, 'gardees' => 1, 'libelle' => '1 gardée', 'compteurs' => ['a_trier' => 1, 'gardees' => 1, 'ecartees' => 0]], $reponse['data']);
+        $this->assertSame(['ok' => true, 'gardees' => 1, 'libelle' => '1 gardée', 'compteurs' => ['a_trier' => 1, 'gardees' => 1, 'archivees' => 0, 'ecartees' => 0]], $reponse['data']);
         $this->assertTrue($reponse['success']);
         $gardees = get_option('rsn_veille_nouvelles_gardees');
         $this->assertSame('Titre 2', $gardees[0]['titre']);
@@ -535,6 +609,25 @@ final class PageRadarTest extends TestCase {
         $this->assertStringNotContainsString('Rafraîchissement en cours', PageRadar::page_html(['en_cours' => false] + $donnees, [], [], self::options()));
     }
 
+    public function test_conserver_remet_une_archivee_dans_l_infolettre(): void {
+        $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-12-20';
+        $vieille = self::nouvelle(2, ['date' => '2026-09-01']) + ['gardee_le' => '2026-09-02 08:00'];
+        update_option('rsn_veille_nouvelles_gardees', [self::nouvelle(1, ['date' => '2026-12-10']) + ['gardee_le' => '2026-12-11 08:00'], $vieille]);
+        [$reponse, $code] = self::ajax('ajax_retirer', ['nonce' => self::jeton(), 'url' => 'https://x.test/inconnue']);
+        $this->assertSame(['a_trier' => 0, 'gardees' => 1, 'archivees' => 1, 'ecartees' => 0], $reponse['data']['compteurs']);
+        [$reponse, $code] = self::ajax('ajax_conserver', ['nonce' => self::jeton(), 'url' => 'https://x.test/n2']);
+        $this->assertSame(200, $code);
+        $this->assertSame(['a_trier' => 0, 'gardees' => 2, 'archivees' => 0, 'ecartees' => 0], $reponse['data']['compteurs']);
+        $this->assertSame('1', PageRadar::lire_gardees()[1]['conservee']);
+        // Jeton exigé ; une nouvelle qui n'est plus gardée ne peut pas être remise.
+        [, $code] = self::ajax('ajax_conserver', ['nonce' => 'faux', 'url' => 'https://x.test/n2']);
+        $this->assertSame(403, $code);
+        [$reponse, $code] = self::ajax('ajax_conserver', ['nonce' => self::jeton(), 'url' => 'https://x.test/inconnue']);
+        $this->assertSame([404, false], [$code, $reponse['success']]);
+        $this->assertStringContainsString("n'est plus gardée", $reponse['data']['message']);
+        $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-10-25';
+    }
+
     public function test_ignorer(): void {
         [$reponse, $code] = self::ajax('ajax_ignorer', ['nonce' => self::jeton(), 'url' => 'https://x.test/n1']);
         $this->assertSame(200, $code);
@@ -647,7 +740,7 @@ final class PageRadarTest extends TestCase {
         self::ajax('ajax_ignorer', ['nonce' => self::jeton(), 'url' => 'https://x.test/n2']);
         [$reponse, $code] = self::ajax('ajax_retablir', ['nonce' => self::jeton(), 'url' => 'https://x.test/n1']);
         $this->assertSame(200, $code);
-        $this->assertSame(['a_trier' => 1, 'gardees' => 0, 'ecartees' => 1], $reponse['data']['compteurs']);
+        $this->assertSame(['a_trier' => 1, 'gardees' => 0, 'archivees' => 0, 'ecartees' => 1], $reponse['data']['compteurs']);
         $this->assertSame('Nouvelle remise dans le radar.', $reponse['data']['message']);
         $this->assertSame(['https://x.test/n2'], PageRadar::lire_ignorees());
         $this->assertSame(['https://x.test/n2'], array_keys(PageRadar::lire_details_ignorees()));

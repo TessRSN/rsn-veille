@@ -128,6 +128,42 @@ final class DonneesTest extends TestCase {
         $this->assertSame('https://rsn.quebec/wp-content/uploads/choisie.jpg', $items[0]['image_url']);
     }
 
+    // --- Fiches tenues hors de l'infolettre : marque posée avant le dédoublonnage (0.15.0) ---
+
+    public function test_hors_infolettre_suit_l_evenement_du_rsn_qui_remplace_la_fiche(): void {
+        // Fiche sans image : l'événement du RSN prend sa place (et n'a pas son identifiant).
+        $id = $this->entrepot->creer($this->fiche(['image_url' => '']));
+        $items = Donnees::elements($this->entrepot, [$this->evenement_rsn()], '2026-10-25', 'fr', [$id]);
+        $this->assertCount(1, $items);
+        $this->assertSame('rsn-tec:7', $items[0]['cle_source']);
+        $this->assertTrue($items[0]['hors_infolettre']);
+        $construit = Donnees::construire('2026-10-25', $this->entrepot, [$this->evenement_rsn()], false, 'fr', [$id]);
+        $this->assertTrue($construit['items'][0]['hors_infolettre']);
+        // Sans le choix de l'équipe (page publique, JSON) : la clé n'existe pas.
+        $public = Donnees::construire('2026-10-25', $this->entrepot, [$this->evenement_rsn()], false, 'fr');
+        $this->assertArrayNotHasKey('hors_infolettre', $public['items'][0]);
+        $this->assertArrayNotHasKey('hors_infolettre', Donnees::elements($this->entrepot, [$this->evenement_rsn()], '2026-10-25', 'fr')[0]);
+    }
+
+    public function test_hors_infolettre_un_doublon_voulu_dans_l_infolettre_garde_l_evenement(): void {
+        $a = $this->entrepot->creer($this->fiche([]));
+        $b = $this->entrepot->creer($this->fiche(['source' => 'Mila : événements', 'cle_source' => 'mila:9', 'cles_source' => ['mila:9']]));
+        $autre = $this->entrepot->creer($this->fiche(['titre' => 'Atelier', 'debut' => '2026-11-20', 'cle_source' => 'obvia:50', 'cles_source' => ['obvia:50']]));
+        $marques = static fn(array $items): array => array_column(array_map(static fn(array $i): array => ['t' => $i['titre'], 'h' => !empty($i['hors_infolettre'])], $items), 'h', 't');
+        // A hors, B dedans : le dédoublonnage garde A, mais l'événement reste dans l'infolettre.
+        $this->assertSame(['Colloque sur la santé numérique' => false, 'Atelier' => false], $marques(Donnees::elements($this->entrepot, [], '2026-10-25', 'fr', [$a])));
+        $this->assertSame(['Colloque sur la santé numérique' => false, 'Atelier' => false], $marques(Donnees::elements($this->entrepot, [], '2026-10-25', 'fr', [$b])));
+        // Les deux hors : l'événement l'est. Valeurs illisibles ignorées.
+        $this->assertSame(['Colloque sur la santé numérique' => true, 'Atelier' => false], $marques(Donnees::elements($this->entrepot, [], '2026-10-25', 'fr', [$a, $b, 'x', null])));
+        $this->assertSame(['Colloque sur la santé numérique' => false, 'Atelier' => true], $marques(Donnees::elements($this->entrepot, [], '2026-10-25', 'fr', [$autre])));
+    }
+
+    public function test_hors_infolettre_un_appel(): void {
+        $id = $this->entrepot->creer($this->fiche(['type' => 'appel', 'titre' => 'Bourse', 'debut' => '2026-10-20', 'echeance' => '2026-12-01', 'cle_source' => 'frq:1', 'cles_source' => ['frq:1']]));
+        $this->assertTrue(Donnees::elements($this->entrepot, [], '2026-10-25', 'fr', [$id])[0]['hors_infolettre']);
+        $this->assertArrayNotHasKey('hors_infolettre', Donnees::elements($this->entrepot, [], '2026-10-25', 'fr', [$id + 1])[0]);
+    }
+
     public function test_evenement_rsn_sans_doublon_ajoute(): void {
         $this->entrepot->creer($this->fiche([]));
         $items = Donnees::construire('2026-10-25', $this->entrepot, [$this->evenement_rsn(['titre' => 'Journées scientifiques', 'debut' => '2025-09-15'])])['items'];

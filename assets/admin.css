@@ -61,6 +61,88 @@
 	font-style: italic;
 }
 
+/* Type de la fiche : pastille de couleur avec icône, pour distinguer d'un coup d'œil un événement d'un appel. */
+.rsn-veille-type {
+	display: inline-block;
+	padding: 2px 9px 2px 7px;
+	border-radius: 999px;
+	background: #f0f0f1;
+	color: #3c434a;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.7;
+	white-space: nowrap;
+}
+
+.rsn-veille-type[data-type="evenement"] {
+	background: #e5f0fa;
+	color: #003469;
+}
+
+.rsn-veille-type[data-type="appel"] {
+	background: #efe6fa;
+	color: #4a1d7a;
+}
+
+.rsn-veille-type .dashicons {
+	width: 15px;
+	height: 15px;
+	font-size: 15px;
+	vertical-align: -3px;
+}
+
+.rsn-veille-jamais-publiee {
+	display: inline-block;
+	margin-top: 4px;
+	color: #8a4b00;
+	font-size: 12px;
+	font-style: italic;
+}
+
+/* Niveau de la source, en clair sous son nom ; la légende repliée sous le tableau les explique. */
+.rsn-veille-niveau {
+	color: #646970;
+	font-size: 12px;
+	cursor: help;
+}
+
+.rsn-veille-legende {
+	max-width: 960px;
+	margin-top: 16px;
+	color: #3c434a;
+}
+
+.rsn-veille-legende ul {
+	margin: 6px 0 0 18px;
+	list-style: disc;
+}
+
+/* Infolettre du RSN : une fiche publiée y va, ou non. */
+.rsn-veille-pastille-infolettre {
+	display: inline-block;
+	margin-bottom: 3px;
+	padding: 1px 8px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.7;
+	white-space: nowrap;
+}
+
+.rsn-veille-pastille-infolettre[data-dans="1"] {
+	background: #dff3e4;
+	color: #0b5a23;
+}
+
+.rsn-veille-pastille-infolettre[data-dans="0"] {
+	background: #f0f0f1;
+	color: #646970;
+}
+
+.rsn-veille-file .rsn-veille-actions .button {
+	margin: 0 4px 4px 0;
+}
+
 /* Origine d'une fiche : proposition du public (mise en avant), collecte automatique, saisie par l'équipe. */
 .rsn-veille-origine {
 	display: inline-block;
@@ -377,8 +459,29 @@
 	box-shadow: inset 4px 0 0 #e07b39;
 }
 
+/* « Santé + numérique » : a priori pour le RSN. Pastille et bouton « Garder » verts, pour les repérer dans le tableau. */
 .rsn-veille-radar-statut[data-statut="reperee"] {
+	padding: 1px 8px;
+	border-radius: 10px;
+	background: #dff3e4;
+	color: #0b5a23;
+	font-size: 12px;
 	font-weight: 600;
+	line-height: 1.6;
+	white-space: nowrap;
+}
+
+.rsn-veille-admin .button.button-primary.rsn-veille-bouton-pertinent {
+	border-color: #0f6b2c;
+	background: #15803d;
+	color: #fff;
+}
+
+.rsn-veille-admin .button.button-primary.rsn-veille-bouton-pertinent:hover,
+.rsn-veille-admin .button.button-primary.rsn-veille-bouton-pertinent:focus {
+	border-color: #0b5a23;
+	background: #0f6b2c;
+	color: #fff;
 }
 
 .rsn-veille-radar-filtre {

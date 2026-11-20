@@ -66,6 +66,15 @@ Le dépôt est **privé** (`TessRSN/rsn-veille`) et la branche de livraison est 
 
 Quelle que soit la voie, l'activation lance les mêmes opérations (voir section 9).
 
+### Après la mise à jour de la 0.14.0 vers la 0.15.0
+
+Rien à régler. Ce qui change à l'écran :
+
+- **File d'approbation** : cinq onglets. Le nouvel onglet **« Archivées »** reçoit seul les événements passés et les appels dont la date limite est dépassée : à la première ouverture, « Publiées » se vide donc de tout ce qui est passé (rien n'est supprimé ni dépublié). Les fiches sont rangées par la date de l'événement ou la date limite de l'appel, la plus proche en haut. « Événement » et « Appel » sont des pastilles de couleur ; le niveau de la source est écrit en clair, avec la légende « Que veulent dire les niveaux ? » sous le tableau.
+- **Infolettre** : pour approuver une fiche, **« Publier + infolettre »** ou **« Publier seulement »**. Dans « Publiées », la colonne **« Infolettre du RSN »** dit ce qui ira dans l'infolettre et permet de changer d'avis. Tout ce qui est déjà publié est « dans l'infolettre », comme avant : rien ne disparaît de la page Infolettre tant que l'équipe ne le demande pas.
+- **Radar** : bouton « Garder pour l'infolettre » vert pour les nouvelles « Santé + numérique » ; onglet **« Archivées »** pour les nouvelles gardées publiées depuis plus de 60 jours, qui sortent de l'infolettre (« Remettre dans l'infolettre » pour en garder une).
+- **Courriel hebdomadaire** : une section « À regarder » en tête (propositions du public en attente, sources en erreur, gabarits à vérifier). Il peut maintenant partir sans nouvelle fiche, quand une proposition attend ou qu'un gabarit est à vérifier.
+
 ### Après la mise à jour de la 0.13.0 vers la 0.14.0
 
 Rien à régler. **Veille › Radar** est maintenant rangé comme la file d'approbation : un tableau, une ligne par nouvelle, **les plus récentes en haut, toutes sources mêlées**. La source est dans sa colonne, à côté des repères (« Santé + numérique », « Déjà paru dans n autres numéros »). Pour ne voir qu'un organisme, le menu **« Toutes les sources »** du filtre, à côté des dates. Les onglets « Gardées pour l'infolettre » et « Écartées » ont le même tableau, avec la date à laquelle la nouvelle a été gardée ou écartée. Les nouvelles déjà gardées ou écartées ne bougent pas.

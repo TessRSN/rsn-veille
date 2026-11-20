@@ -26,12 +26,21 @@ if (!defined('ABSPATH')) {
 final class PageFile {
     public const NONCE = 'rsn_veille_file';
     public const ACTION_AJAX = 'rsn_veille_changer_statut';
+    /** Action AJAX : mettre une fiche publiée dans l'infolettre du RSN, ou l'en retirer. */
+    public const ACTION_INFOLETTRE = 'rsn_veille_fiche_infolettre';
+    /**
+     * Identifiants des fiches publiées que l'équipe ne veut pas dans l'infolettre (option). Sans y être, une fiche
+     * publiée et d'actualité est reprise par la page Infolettre, comme avant la 0.15.0.
+     */
+    public const OPTION_HORS_INFOLETTRE = 'rsn_veille_hors_infolettre';
+    /** Nombre d'identifiants gardés au plus dans cette option (les plus récents). */
+    private const MAX_HORS_INFOLETTRE = 500;
 
     /** Onglets, dans l'ordre d'affichage. `a_verifier` : fiches publiées signalées absentes de leur source. */
     /** Origines d'une fiche (`Fiche::origine`), pour le filtre de la file. */
     public const ORIGINES = ['proposition', 'collecte', 'equipe'];
 
-    public const ONGLETS = ['a_approuver', 'publie', 'ecarte', 'a_verifier'];
+    public const ONGLETS = ['a_approuver', 'publie', 'archive', 'ecarte', 'a_verifier'];
 
     /** Statuts qu'un bouton peut donner. */
     private const STATUTS = ['publie', 'a_approuver', 'ecarte'];
@@ -59,7 +68,11 @@ final class PageFile {
         $onglet = in_array($onglet, self::ONGLETS, true) ? $onglet : 'a_approuver';
         $type = in_array($type, self::TYPES, true) ? $type : '';
         $entrepot = new EntrepotWordPress();
-        [$fiches, $plafond_atteint] = self::fiches_de_l_onglet($entrepot, $onglet, $type);
+        $aujourdhui = rsn_veille_aujourdhui();
+        // Lues une seule fois : elles servent aux fiches de l'onglet, aux nombres des onglets et aux ressemblances.
+        $actuelles = self::publiees_d_actualite($entrepot, $aujourdhui);
+        $attente = $entrepot->lister('a_approuver');
+        [$fiches, $plafond_atteint] = self::fiches_de_l_onglet($entrepot, $onglet, $type, $aujourdhui, $actuelles, $attente);
         // Courriel des proposants (méta privée, jamais publiée), pour que l'équipe puisse leur répondre.
         $courriels = [];
         foreach ($fiches as $fiche) {
@@ -73,14 +86,16 @@ final class PageFile {
         // Sortie entièrement échappée par les méthodes de rendu.
         echo self::page_html($fiches, $onglet, $type, $source, admin_url('admin.php?page=' . Menu::SLUG), [
             'url_admin' => admin_url(),
-            'compteurs' => $entrepot->compter(),
+            'compteurs' => self::compteurs_de($entrepot, $aujourdhui, $actuelles, $attente),
+            'aujourdhui' => $aujourdhui,
+            'hors_infolettre' => self::lire_hors_infolettre(),
             'plafond_atteint' => $plafond_atteint,
             'peut_ajouter' => current_user_can('edit_posts'),
             'origine' => $origine,
             'courriels' => $courriels,
             'sources_a_verifier' => self::sources_a_verifier(Journal::alertes(Journal::tout()), Collecte::sources()),
             // Mêmes repères que le Radar : ce qui est peut-être déjà publié, ce qu'une infolettre annonce plusieurs fois.
-            'ressemblances' => $onglet === 'a_approuver' ? self::ressemblances($entrepot, $fiches, rsn_veille_aujourdhui()) : [],
+            'ressemblances' => $onglet === 'a_approuver' ? self::ressemblances($entrepot, $fiches, $aujourdhui, $actuelles) : [],
             'mentions' => Collecte::mentions(),
             'url_journal' => admin_url('admin.php?page=' . Menu::SLUG_JOURNAL),
         ]);
@@ -91,15 +106,118 @@ final class PageFile {
      * d'actualité (événements à venir ou en cours, appels en cours : jamais toute la base) et les autres fiches en attente.
      *
      * @param Fiche[] $en_attente
+     * @param Fiche[]|null $publiees Fiches publiées d'actualité déjà lues (`publiees_d_actualite`), sinon lues ici.
      * @return array<int,Fiche>
      */
-    public static function ressemblances(Entrepot $e, array $en_attente, string $aujourdhui): array {
+    public static function ressemblances(Entrepot $e, array $en_attente, string $aujourdhui, ?array $publiees = null): array {
         if ($en_attente === []) {
             return [];
         }
+        return Ressemblance::pour_la_file($en_attente, $publiees ?? self::publiees_d_actualite($e, $aujourdhui), $aujourdhui);
+    }
+
+    /**
+     * Fiches publiées qui peuvent encore être d'actualité (événements à venir ou en cours, appels en cours) : un
+     * sur-ensemble borné par les dates (`Entrepot::lister_pour_page`), jamais toute la base.
+     *
+     * @return Fiche[]
+     */
+    private static function publiees_d_actualite(Entrepot $e, string $aujourdhui): array {
         $jour = \DateTimeImmutable::createFromFormat('!Y-m-d', $aujourdhui);
         $limite_appels = $jour !== false ? $jour->modify('-' . Fiche::JOURS_APPEL_SANS_LIMITE . ' days')->format('Y-m-d') : $aujourdhui;
-        return Ressemblance::pour_la_file($en_attente, $e->lister_pour_page($aujourdhui, $aujourdhui, $limite_appels), $aujourdhui);
+        return $e->lister_pour_page($aujourdhui, $aujourdhui, $limite_appels);
+    }
+
+    /**
+     * Nombre de fiches par onglet. Une fiche dépassée (`Fiche::est_passee` : événement fini, appel qui n'est plus
+     * en cours) quitte « À approuver » ou « Publiées » pour « Archivées », sans que son statut change.
+     *
+     * Réservé à l'affichage de la page : il lit la file en attente et les fiches publiées d'actualité (ou reçoit
+     * celles que la page a déjà lues). Une action AJAX rend seulement des variations (`onglets_de`).
+     *
+     * @param Fiche[]|null $actuelles Fiches publiées d'actualité déjà lues (`publiees_d_actualite`).
+     * @param Fiche[]|null $attente Fiches à approuver déjà lues, tous types.
+     * @return array<string,int>
+     */
+    public static function compteurs_de(Entrepot $e, string $aujourdhui, ?array $actuelles = null, ?array $attente = null): array {
+        $bruts = $e->compter();
+        $en_cours = count(array_filter($actuelles ?? self::publiees_d_actualite($e, $aujourdhui), static fn(Fiche $f): bool => self::dans_onglet($f, 'publie', $aujourdhui)));
+        $attente_passees = count(array_filter($attente ?? $e->lister('a_approuver'), static fn(Fiche $f): bool => self::dans_onglet($f, 'archive', $aujourdhui)));
+        return [
+            'a_approuver' => max(0, (int) ($bruts['a_approuver'] ?? 0) - $attente_passees),
+            'publie' => $en_cours,
+            'archive' => max(0, (int) ($bruts['publie'] ?? 0) - $en_cours) + $attente_passees,
+            'ecarte' => (int) ($bruts['ecarte'] ?? 0),
+            'a_verifier' => (int) ($bruts['a_verifier'] ?? 0),
+        ];
+    }
+
+    /**
+     * Onglets où une fiche est montrée ce jour-là (« À vérifier » recoupe « Publiées » ou « Archivées »).
+     *
+     * @return string[]
+     */
+    public static function onglets_de(Fiche $f, string $aujourdhui): array {
+        return array_values(array_filter(self::ONGLETS, static fn(string $onglet): bool => self::dans_onglet($f, $onglet, $aujourdhui)));
+    }
+
+    /**
+     * Ce qu'une action change aux nombres des onglets : -1 pour ceux que la fiche quitte, +1 pour ceux où elle
+     * arrive. Le navigateur l'applique aux nombres affichés, sans que le serveur relise la file.
+     *
+     * @return array<string,int>
+     */
+    public static function variations(?Fiche $avant, ?Fiche $apres, string $aujourdhui): array {
+        $variations = [];
+        foreach ($avant !== null ? self::onglets_de($avant, $aujourdhui) : [] as $onglet) {
+            $variations[$onglet] = ($variations[$onglet] ?? 0) - 1;
+        }
+        foreach ($apres !== null ? self::onglets_de($apres, $aujourdhui) : [] as $onglet) {
+            $variations[$onglet] = ($variations[$onglet] ?? 0) + 1;
+        }
+        return array_filter($variations, static fn(int $v): bool => $v !== 0);
+    }
+
+    // --- Infolettre du RSN : fiches publiées que l'équipe n'y veut pas ---
+
+    /** @return int[] Identifiants des fiches publiées tenues hors de l'infolettre (option illisible : aucun). */
+    public static function lire_hors_infolettre(): array {
+        $option = get_option(self::OPTION_HORS_INFOLETTRE, []);
+        $ids = [];
+        foreach (is_array($option) ? $option : [] as $id) {
+            if (is_numeric($id) && (int) $id > 0) {
+                $ids[] = (int) $id;
+            }
+        }
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Liste mise à jour : `$dans = false` y ajoute la fiche (à la fin), `true` l'en retire. Bornée aux
+     * `MAX_HORS_INFOLETTRE` derniers identifiants : les plus anciens sont ceux de fiches depuis longtemps dépassées.
+     *
+     * @param array<int,mixed> $hors
+     * @return int[]
+     */
+    public static function regler_infolettre(array $hors, int $id, bool $dans): array {
+        $ids = [];
+        foreach ($hors as $autre) {
+            if (is_numeric($autre) && (int) $autre > 0 && (int) $autre !== $id) {
+                $ids[] = (int) $autre;
+            }
+        }
+        $ids = array_values(array_unique($ids));
+        if (!$dans && $id > 0) {
+            $ids[] = $id;
+        }
+        return array_slice($ids, -self::MAX_HORS_INFOLETTRE);
+    }
+
+    /** Enregistre le choix pour une fiche et rend la liste à jour. @return int[] */
+    private static function enregistrer_infolettre(int $id, bool $dans): array {
+        $hors = self::regler_infolettre(self::lire_hors_infolettre(), $id, $dans);
+        update_option(self::OPTION_HORS_INFOLETTRE, $hors, false);
+        return $hors;
     }
 
     /**
@@ -120,26 +238,37 @@ final class PageFile {
     }
 
     /**
-     * Fiches à afficher pour un onglet : la file « À approuver » et « À vérifier » en entier ; « Publiées »
-     * et « Écartées », les `PLAFOND` plus récentes seulement (du type demandé). Rend [fiches, plafond atteint].
+     * Fiches à charger pour un onglet (la page les filtre et les range ensuite, `filtrer`) : « À approuver » et
+     * « À vérifier » en entier ; « Publiées », les fiches publiées encore d'actualité ; « Archivées », les `PLAFOND`
+     * fiches publiées les plus récentes (seules les dépassées seront gardées) et les fiches en attente ;
+     * « Écartées », les `PLAFOND` plus récentes. Rend [fiches, plafond atteint].
      *
      * @return array{0: Fiche[], 1: bool}
      */
-    public static function fiches_de_l_onglet(Entrepot $e, string $onglet, string $type): array {
+    public static function fiches_de_l_onglet(Entrepot $e, string $onglet, string $type, ?string $aujourdhui = null, ?array $actuelles = null, ?array $attente = null): array {
+        $aujourdhui ??= rsn_veille_aujourdhui();
+        $du_type = static fn(array $fiches): array => array_values(array_filter($fiches, static fn(Fiche $f): bool => $type === '' || $f->type === $type));
+        // Fiches à approuver : celles que la page a déjà lues (tous types), sinon lues ici.
+        $en_attente = static fn(): array => $attente !== null ? $du_type($attente) : $e->lister('a_approuver', $type);
         if ($onglet === 'a_verifier') {
             return [$e->lister_absentes(), false];
         }
-        if ($onglet === 'publie' || $onglet === 'ecarte') {
-            // Une de plus que le plafond : savoir s'il est atteint sans compter à part.
-            $fiches = $e->lister_recentes($onglet, self::PLAFOND + 1, $type);
-            return [array_slice($fiches, 0, self::PLAFOND), count($fiches) > self::PLAFOND];
+        if ($onglet === 'publie') {
+            return [$du_type($actuelles ?? self::publiees_d_actualite($e, $aujourdhui)), false];
         }
-        return [$e->lister('a_approuver', $type), false];
+        if ($onglet === 'archive' || $onglet === 'ecarte') {
+            // Une de plus que le plafond : savoir s'il est atteint sans compter à part.
+            $fiches = $e->lister_recentes($onglet === 'archive' ? 'publie' : 'ecarte', self::PLAFOND + 1, $type);
+            $atteint = count($fiches) > self::PLAFOND;
+            $fiches = array_slice($fiches, 0, self::PLAFOND);
+            return [$onglet === 'archive' ? array_merge($fiches, $en_attente()) : $fiches, $atteint];
+        }
+        return [$en_attente(), false];
     }
 
     /**
      * Action AJAX : jeton `rsn_veille_file` (champ `nonce`) et capacité `rsn_veille_gerer` exigés.
-     * Réponse `{success, data: {ok, statut, compteurs}}`, ou `{success: false, data: {ok, message}}`
+     * Réponse `{success, data: {ok, statut, variations}}`, ou `{success: false, data: {ok, message}}`
      * en 403 (jeton ou droits) ou 400 (statut ou fiche invalides).
      */
     public static function ajax_changer_statut(): void {
@@ -155,10 +284,39 @@ final class PageFile {
         $statut = isset($_POST['statut']) && is_string($_POST['statut']) ? sanitize_key(wp_unslash($_POST['statut'])) : '';
         $resultat = self::changer_statut(new EntrepotWordPress(), $id, $statut);
         if ($resultat['ok']) {
+            // « Publier seulement » (infolettre = 0) ou « Publier + infolettre » (1) : le choix suit la publication.
+            $infolettre = isset($_POST['infolettre']) && is_string($_POST['infolettre']) ? sanitize_key(wp_unslash($_POST['infolettre'])) : '';
+            if ($statut === 'publie' && ($infolettre === '0' || $infolettre === '1')) {
+                self::enregistrer_infolettre($id, $infolettre === '1');
+            }
             wp_send_json_success($resultat);
             return;
         }
         wp_send_json_error($resultat, 400);
+    }
+
+    /**
+     * Action AJAX : met une fiche dans l'infolettre du RSN (`dans = 1`) ou l'en retire (`dans = 0`). Mêmes jeton et
+     * capacité que le changement de statut. Réponse `{success, data: {ok, dans, html}}` : `html` est le contenu à
+     * jour de la cellule « Infolettre du RSN » de la ligne.
+     */
+    public static function ajax_infolettre(): void {
+        if (check_ajax_referer(self::NONCE, 'nonce', false) === false) {
+            wp_send_json_error(['ok' => false, 'message' => __('Jeton de sécurité expiré : rechargez la page.', 'rsn-veille')], 403);
+            return;
+        }
+        if (!current_user_can(Menu::CAPACITE)) {
+            wp_send_json_error(['ok' => false, 'message' => __("Vous n'avez pas le droit de modifier la veille.", 'rsn-veille')], 403);
+            return;
+        }
+        $id = isset($_POST['id']) && is_scalar($_POST['id']) ? absint(wp_unslash((string) $_POST['id'])) : 0;
+        $dans = isset($_POST['dans']) && is_string($_POST['dans']) ? sanitize_key(wp_unslash($_POST['dans'])) : '';
+        if ($id <= 0 || ($dans !== '0' && $dans !== '1') || (new EntrepotWordPress())->obtenir($id) === null) {
+            wp_send_json_error(['ok' => false, 'message' => __('Fiche introuvable.', 'rsn-veille')], 400);
+            return;
+        }
+        $hors = self::enregistrer_infolettre($id, $dans === '1');
+        wp_send_json_success(['ok' => true, 'dans' => $dans === '1', 'html' => self::infolettre_html(!in_array($id, $hors, true))]);
     }
 
     // --- Logique ---
@@ -167,7 +325,10 @@ final class PageFile {
      * Change le statut d'une fiche à la main (`manuel = true`). Publier remet aussi les absences à zéro
      * et lève le drapeau « absent de la source ». Purge ensuite les caches de la page Veille.
      *
-     * @return array{ok: bool, statut?: string, compteurs?: array<string,int>, message?: string}
+     * La réponse donne les `variations` des nombres des onglets (`variations()`), pas un recomptage : une action ne
+     * relit jamais la file.
+     *
+     * @return array{ok: bool, statut?: string, variations?: array<string,int>, message?: string}
      */
     public static function changer_statut(Entrepot $e, int $id, string $statut): array {
         if (!in_array($statut, self::STATUTS, true)) {
@@ -180,6 +341,8 @@ final class PageFile {
         if ($statut === 'publie') {
             $champs += ['absences' => 0, 'absent_depuis' => null];
         }
+        $aujourdhui = rsn_veille_aujourdhui();
+        $avant = $e->obtenir($id);
         try {
             $e->mettre_a_jour($id, $champs);
         } catch (\InvalidArgumentException $erreur) {
@@ -188,14 +351,12 @@ final class PageFile {
         } catch (\RuntimeException $erreur) {
             return ['ok' => false, 'message' => __("Le changement de statut n'a pas pu être enregistré.", 'rsn-veille')];
         }
-        if ($statut === 'ecarte') {
-            $fiche = $e->obtenir($id);
-            if ($fiche !== null && $fiche->est_proposition()) {
-                self::retirer_image_proposee($e, $id);
-            }
+        $apres = $e->obtenir($id);
+        if ($statut === 'ecarte' && $apres !== null && $apres->est_proposition()) {
+            self::retirer_image_proposee($e, $id);
         }
         Collecte::purger_caches();
-        return ['ok' => true, 'statut' => $statut, 'compteurs' => $e->compter()];
+        return ['ok' => true, 'statut' => $statut, 'variations' => self::variations($avant, $apres, $aujourdhui)];
     }
 
     /**
@@ -219,21 +380,24 @@ final class PageFile {
     }
 
     /**
-     * Fiches d'un onglet, d'un type et d'une source (vides : tous). « À approuver » et « À vérifier » :
-     * les dernières arrivées d'abord (jour `cree_le` décroissant, sans jour en dernier, puis `id`
-     * décroissant). Les autres onglets : par date de début croissante (décroissante pour les écartées) ;
-     * sans début, la date limite sert de date ; sans date, en dernier.
+     * Fiches d'un onglet, d'un type et d'une source (vides : tous), rangées par la date qui compte
+     * (`Fiche::date_utile` : début d'un événement, date limite d'un appel, jamais la date de publication).
+     * « À approuver » et « Publiées » : de la plus proche à la plus lointaine. « Archivées » et « Écartées » : de la
+     * plus récente à la plus ancienne. Sans date : à la fin. « À vérifier » : les dernières arrivées d'abord (jour
+     * `cree_le` décroissant, sans jour en dernier, puis `id` décroissant).
      *
      * @param Fiche[] $fiches
+     * @param ?string $aujourdhui Jour courant (Y-m-d) : une fiche dépassée va dans « Archivées ».
      * @return Fiche[]
      */
-    public static function filtrer(array $fiches, string $statut, string $type, string $source, string $origine = ''): array {
+    public static function filtrer(array $fiches, string $statut, string $type, string $source, string $origine = '', ?string $aujourdhui = null): array {
+        $aujourdhui ??= rsn_veille_aujourdhui();
         $origine = in_array($origine, self::ORIGINES, true) ? $origine : '';
-        $retenues = array_values(array_filter($fiches, static fn(Fiche $f): bool => self::dans_onglet($f, $statut)
+        $retenues = array_values(array_filter($fiches, static fn(Fiche $f): bool => self::dans_onglet($f, $statut, $aujourdhui)
             && ($type === '' || $f->type === $type)
             && ($source === '' || $f->source === $source)
             && ($origine === '' || $f->origine() === $origine)));
-        if (self::est_onglet_d_arrivee($statut)) {
+        if ($statut === 'a_verifier') {
             usort($retenues, static function (Fiche $a, Fiche $b): int {
                 $ja = $a->cree_le ?? '';
                 $jb = $b->cree_le ?? '';
@@ -244,10 +408,10 @@ final class PageFile {
             });
             return $retenues;
         }
-        $sens = $statut === 'ecarte' ? -1 : 1;
+        $sens = $statut === 'ecarte' || $statut === 'archive' ? -1 : 1;
         usort($retenues, static function (Fiche $a, Fiche $b) use ($sens): int {
-            $da = $a->debut ?? $a->echeance ?? '';
-            $db = $b->debut ?? $b->echeance ?? '';
+            $da = $a->date_utile();
+            $db = $b->date_utile();
             if ($da === '' || $db === '') {
                 return ($da === '') <=> ($db === '') ?: (int) $a->id <=> (int) $b->id;
             }
@@ -280,11 +444,12 @@ final class PageFile {
      * @param Fiche[] $fiches
      * @return array<string,int>
      */
-    public static function compteurs(array $fiches): array {
+    public static function compteurs(array $fiches, ?string $aujourdhui = null): array {
+        $aujourdhui ??= rsn_veille_aujourdhui();
         $compteurs = array_fill_keys(self::ONGLETS, 0);
         foreach ($fiches as $fiche) {
             foreach (self::ONGLETS as $onglet) {
-                if (self::dans_onglet($fiche, $onglet)) {
+                if (self::dans_onglet($fiche, $onglet, $aujourdhui)) {
                     $compteurs[$onglet]++;
                 }
             }
@@ -319,14 +484,19 @@ final class PageFile {
      *        (`Collecte::mentions`) : étiquettes « Peut-être déjà dans l'agenda » et « Annoncé dans n numéros ».
      */
     public static function page_html(array $fiches, string $onglet, string $type, string $source, string $url_page, array $options): string {
-        $compteurs = is_array($options['compteurs'] ?? null) ? $options['compteurs'] : self::compteurs($fiches);
+        $aujourdhui = is_string($options['aujourdhui'] ?? null) && $options['aujourdhui'] !== '' ? $options['aujourdhui'] : rsn_veille_aujourdhui();
+        $options['aujourdhui'] = $aujourdhui;
+        $compteurs = is_array($options['compteurs'] ?? null) ? $options['compteurs'] : self::compteurs($fiches, $aujourdhui);
         $mention = !empty($options['plafond_atteint'])
             ? '<p class="description rsn-veille-plafond">' . esc_html(sprintf(
                 /* translators: %d : nombre de fiches affichées au plus dans l'onglet. */
-                __('Les %d plus récentes sont affichées.', 'rsn-veille'),
+                $onglet === 'archive' ? __('Seules les fiches dépassées parmi les %d dernières publiées sont affichées.', 'rsn-veille') : __('Les %d plus récentes sont affichées.', 'rsn-veille'),
                 self::PLAFOND
             )) . '</p>'
             : '';
+        if ($onglet === 'archive') {
+            $mention = '<p class="description rsn-veille-intro-archive">' . esc_html__("Événements passés et appels dont la date limite est dépassée. Ils quittent seuls « À approuver » et « Publiées » ; rien n'est supprimé.", 'rsn-veille') . '</p>' . $mention;
+        }
         // Bouton « Ajouter une fiche » à côté du titre, comme « Ajouter » des listes de WordPress.
         $ajouter = ($options['peut_ajouter'] ?? true)
             ? ' <a href="' . esc_url(admin_url('post-new.php?post_type=' . TypeContenu::TYPE)) . '" class="page-title-action">' . esc_html__('Ajouter une fiche', 'rsn-veille') . '</a>'
@@ -339,36 +509,44 @@ final class PageFile {
             . self::filtres_html($onglet, $type, $source, self::sources_distinctes($fiches), $origine)
             . '<div class="rsn-veille-message" role="status" aria-live="polite"></div>'
             . $mention
-            . self::rappel_propositions_html($fiches, $onglet, $type, $source, $origine, $url_page)
+            . self::rappel_propositions_html($fiches, $onglet, $type, $source, $origine, $url_page, $aujourdhui)
             . self::rappel_gabarit_html($onglet, is_array($options['sources_a_verifier'] ?? null) ? $options['sources_a_verifier'] : [], (string) ($options['url_journal'] ?? ''))
-            . self::tableau_html(self::filtrer($fiches, $onglet, $type, $source, $origine), $onglet, $options)
+            . self::tableau_html(self::filtrer($fiches, $onglet, $type, $source, $origine, $aujourdhui), $onglet, $options)
+            . self::legende_html()
             . '</div>';
     }
 
     /**
-     * Une ligne du tableau : titre (lien Modifier, lien d'information, drapeau d'absence), type, dates,
-     * organisateur, source et niveau, extrait, boutons selon le statut.
+     * Une ligne du tableau : titre (lien Modifier, lien d'information, drapeau d'absence), type (pastille), dates,
+     * organisateur, source et niveau, extrait, puis, dans « Publiées », si la fiche va dans l'infolettre du RSN, et
+     * enfin les boutons selon le statut.
      *
-     * @param array{url_admin?: string, onglet?: string} $options `url_admin` : adresse de wp-admin, terminée par « / » ;
-     *        `onglet` : onglet affiché, le repère « Nouveau » n'apparaît que dans « À approuver » et « À vérifier ».
+     * @param array{url_admin?: string, onglet?: string, aujourdhui?: string, hors_infolettre?: int[]} $options
+     *        `url_admin` : adresse de wp-admin, terminée par « / » ; `onglet` : onglet affiché (le repère « Nouveau »
+     *        n'apparaît que dans « À approuver » et « À vérifier », la colonne de l'infolettre que dans « Publiées ») ;
+     *        `hors_infolettre` : fiches que l'équipe ne veut pas dans l'infolettre.
      */
     public static function ligne_html(Fiche $f, array $options): string {
         $id = (int) $f->id;
         $url_admin = (string) ($options['url_admin'] ?? '');
+        $onglet = (string) ($options['onglet'] ?? '');
+        $aujourdhui = is_string($options['aujourdhui'] ?? null) && $options['aujourdhui'] !== '' ? $options['aujourdhui'] : rsn_veille_aujourdhui();
         // Fiche ressemblante (déjà publiée, ou autre fiche en attente) : seulement dans la file à approuver.
-        $pareille = ($options['onglet'] ?? '') === 'a_approuver' && is_array($options['ressemblances'] ?? null) ? ($options['ressemblances'][$id] ?? null) : null;
+        $pareille = $onglet === 'a_approuver' && is_array($options['ressemblances'] ?? null) ? ($options['ressemblances'][$id] ?? null) : null;
         $pareille = $pareille instanceof Fiche ? $pareille : null;
+        $hors = is_array($options['hors_infolettre'] ?? null) ? $options['hors_infolettre'] : [];
         return '<tr id="rsn-veille-fiche-' . $id . '" data-id="' . $id . '" data-statut="' . esc_attr($f->statut) . '" data-origine="' . esc_attr($f->origine()) . '"'
             . ($pareille !== null ? ' data-ressemble="' . ($pareille->statut === 'publie' ? 'publie' : 'a_approuver') . '"' : '') . '>'
-            . '<td class="rsn-veille-titre">' . self::titre_html($f, $url_admin, self::est_onglet_d_arrivee((string) ($options['onglet'] ?? '')) && self::est_nouvelle($f, rsn_veille_aujourdhui()))
+            . '<td class="rsn-veille-titre">' . self::titre_html($f, $url_admin, self::est_onglet_d_arrivee($onglet) && self::est_nouvelle($f, $aujourdhui))
             . ($pareille !== null ? self::ressemblance_html($pareille, $url_admin, in_array((int) $pareille->id, is_array($options['affichees'] ?? null) ? $options['affichees'] : [], true)) : '') . '</td>'
-            . '<td>' . esc_html(self::libelle_type($f->type)) . '</td>'
+            . '<td>' . self::type_html($f->type) . ($onglet === 'archive' && $f->statut === 'a_approuver' ? '<br><span class="rsn-veille-jamais-publiee">' . esc_html__('Jamais publiée', 'rsn-veille') . '</span>' : '') . '</td>'
             . '<td>' . self::dates_html($f) . '</td>'
             . '<td>' . esc_html($f->organisateur) . '</td>'
             . '<td>' . self::source_html($f, is_array($options['courriels'] ?? null) ? (string) ($options['courriels'][$id] ?? '') : '')
             . self::mentions_html($f, is_array($options['mentions'] ?? null) ? $options['mentions'] : []) . '</td>'
             . '<td class="rsn-veille-extrait">' . esc_html(Fiche::court($f->resume, self::LONGUEUR_EXTRAIT)) . '</td>'
-            . '<td class="rsn-veille-actions">' . self::boutons_html($f) . '</td>'
+            . ($onglet === 'publie' ? '<td class="rsn-veille-infolettre-cellule">' . self::infolettre_html(!in_array($id, $hors, true)) . '</td>' : '')
+            . '<td class="rsn-veille-actions">' . self::boutons_html($f, $f->est_passee($aujourdhui)) . '</td>'
             . '</tr>';
     }
 
@@ -376,8 +554,13 @@ final class PageFile {
     private static function tableau_html(array $fiches, string $onglet, array $options): string {
         $colonnes = [
             __('Titre', 'rsn-veille'), __('Type', 'rsn-veille'), __('Dates', 'rsn-veille'), __('Organisateur', 'rsn-veille'),
-            __('Source', 'rsn-veille'), __('Extrait', 'rsn-veille'), __('Actions', 'rsn-veille'),
+            __('Source', 'rsn-veille'), __('Extrait', 'rsn-veille'),
         ];
+        if ($onglet === 'publie') {
+            // « du RSN » : une source peut elle-même être une infolettre (celle de l'Unité SSA).
+            $colonnes[] = __('Infolettre du RSN', 'rsn-veille');
+        }
+        $colonnes[] = __('Actions', 'rsn-veille');
         $entete = '';
         foreach ($colonnes as $colonne) {
             $entete .= '<th scope="col">' . esc_html($colonne) . '</th>';
@@ -399,6 +582,7 @@ final class PageFile {
         $libelles = [
             'a_approuver' => __('À approuver', 'rsn-veille'),
             'publie' => __('Publiées', 'rsn-veille'),
+            'archive' => __('Archivées', 'rsn-veille'),
             'ecarte' => __('Écartées', 'rsn-veille'),
             'a_verifier' => __('À vérifier', 'rsn-veille'),
         ];
@@ -527,16 +711,56 @@ final class PageFile {
     }
 
     /**
+     * Niveaux d'une source : à quel point ce qu'elle donne est sûr. [nom court, explication].
+     *
+     * @return array<string,array{0: string, 1: string}>
+     */
+    private static function niveaux(): array {
+        return [
+            'A' => [__('flux structuré', 'rsn-veille'), __("Calendrier ou flux d'événements : dates, heures et lieux sont donnés tels quels par l'organisme. Le plus sûr.", 'rsn-veille')],
+            'C' => [__('page web lue', 'rsn-veille'), __("Page du site de l'organisme, lue par l'extension : sûre tant que le site garde la même présentation.", 'rsn-veille')],
+            'M' => [__('saisie à la main', 'rsn-veille'), __("Fiche ajoutée par l'équipe ou proposée par le public : ce qu'une personne a écrit.", 'rsn-veille')],
+            'B' => [__('flux RSS ou infolettre', 'rsn-veille'), __("Fil de nouvelles ou infolettre : le titre et le lien sont sûrs, les dates sont devinées dans le texte. À relire.", 'rsn-veille')],
+        ];
+    }
+
+    /** Légende des niveaux, repliée sous le tableau, du plus sûr au moins sûr. */
+    private static function legende_html(): string {
+        $items = '';
+        foreach (self::niveaux() as $lettre => [$nom, $explication]) {
+            /* translators: 1 : lettre du niveau (A, B, C, M) ; 2 : son nom court. */
+            $items .= '<li><strong>' . esc_html(sprintf(__('Niveau %1$s, %2$s', 'rsn-veille'), $lettre, $nom)) . '</strong> : ' . esc_html($explication) . '</li>';
+        }
+        return '<details class="rsn-veille-deroule rsn-veille-legende"><summary>' . esc_html__('Que veulent dire les niveaux ?', 'rsn-veille') . '</summary>'
+            . '<p>' . esc_html__("Le niveau dit d'où vient la fiche et à quel point ses dates sont sûres. Quand deux sources annoncent la même chose, la plus sûre l'emporte.", 'rsn-veille') . '</p>'
+            . '<ul>' . $items . '</ul></details>';
+    }
+
+    /** Type de la fiche en pastille de couleur, avec son icône : un événement et un appel se distinguent d'un coup d'œil. */
+    private static function type_html(string $type): string {
+        $icone = ['evenement' => 'dashicons-calendar-alt', 'appel' => 'dashicons-megaphone'][$type] ?? '';
+        return '<span class="rsn-veille-type" data-type="' . esc_attr($type) . '">'
+            . ($icone !== '' ? '<span class="dashicons ' . $icone . '" aria-hidden="true"></span> ' : '')
+            . esc_html(self::libelle_type($type)) . '</span>';
+    }
+
+    /**
+     * Cellule « Infolettre du RSN » d'une fiche publiée : pastille (dedans ou non) et bouton pour changer. « Dedans »
+     * veut dire reprise par la page Infolettre tant qu'elle est d'actualité.
+     */
+    public static function infolettre_html(bool $dans): string {
+        $pastille = $dans ? __("Dans l'infolettre", 'rsn-veille') : __("Pas dans l'infolettre", 'rsn-veille');
+        $bouton = $dans ? __("Retirer de l'infolettre", 'rsn-veille') : __("Mettre dans l'infolettre", 'rsn-veille');
+        return '<span class="rsn-veille-pastille-infolettre" data-dans="' . ($dans ? '1' : '0') . '" title="' . esc_attr__("La page Infolettre reprend les prochains événements publiés (8 par défaut) et les appels encore ouverts.", 'rsn-veille') . '">'
+            . esc_html($pastille) . '</span><br>'
+            . '<button type="button" class="button-link rsn-veille-action-infolettre" data-dans="' . ($dans ? '0' : '1') . '">' . esc_html($bouton) . '</button>';
+    }
+
+    /**
      * Origine (pastille : proposition du public, collecte automatique ou saisie par l'équipe), puis la source et son
-     * niveau. Une proposition montre « Formulaire de la page » et le courriel de la personne (lien pour lui répondre).
+     * niveau en clair. Une proposition montre « Formulaire de la page » et le courriel de la personne (lien pour lui répondre).
      */
     private static function source_html(Fiche $f, string $courriel = ''): string {
-        $niveaux = [
-            'A' => __('Flux structuré avec dates', 'rsn-veille'),
-            'B' => __('Flux RSS', 'rsn-veille'),
-            'C' => __('Page web structurée', 'rsn-veille'),
-            'M' => __('Saisie manuelle', 'rsn-veille'),
-        ];
         $origine = $f->origine();
         $pastilles = [
             'proposition' => __('Proposition du public', 'rsn-veille'),
@@ -555,8 +779,10 @@ final class PageFile {
         }
         $html .= esc_html($f->source);
         if ($f->niveau !== '') {
-            $titre = $niveaux[$f->niveau] ?? '';
-            $html .= ' <span class="rsn-veille-niveau">' . esc_html__('niveau', 'rsn-veille') . ' <abbr title="' . esc_attr($titre) . '">' . esc_html($f->niveau) . '</abbr></span>';
+            $niveau = self::niveaux()[$f->niveau] ?? null;
+            /* translators: 1 : lettre du niveau ; 2 : son nom court (« flux structuré »…). */
+            $texte = $niveau !== null ? sprintf(__('niveau %1$s : %2$s', 'rsn-veille'), $f->niveau, $niveau[0]) : sprintf(__('niveau %s', 'rsn-veille'), $f->niveau);
+            $html .= '<br><span class="rsn-veille-niveau"' . ($niveau !== null ? ' title="' . esc_attr($niveau[1]) . '"' : '') . '>' . esc_html($texte) . '</span>';
         }
         return $html;
     }
@@ -567,11 +793,11 @@ final class PageFile {
      *
      * @param Fiche[] $fiches
      */
-    private static function rappel_propositions_html(array $fiches, string $onglet, string $type, string $source, string $origine, string $url_page): string {
+    private static function rappel_propositions_html(array $fiches, string $onglet, string $type, string $source, string $origine, string $url_page, ?string $aujourdhui = null): string {
         if ($onglet !== 'a_approuver' || $origine === 'proposition') {
             return '';
         }
-        $nombre = count(self::filtrer($fiches, $onglet, $type, $source, 'proposition'));
+        $nombre = count(self::filtrer($fiches, $onglet, $type, $source, 'proposition', $aujourdhui));
         if ($nombre === 0) {
             return '';
         }
@@ -600,19 +826,29 @@ final class PageFile {
             . '</p>';
     }
 
-    /** Boutons selon le statut ; une fiche absente de sa source peut aussi être gardée (drapeau levé). */
-    private static function boutons_html(Fiche $f): string {
-        $boutons = match ($f->statut) {
-            'a_approuver' => [['publie', __('Publier', 'rsn-veille'), true], ['ecarte', __('Écarter', 'rsn-veille'), false]],
-            'publie' => [['ecarte', __('Retirer', 'rsn-veille'), false]],
-            default => [['publie', __('Publier', 'rsn-veille'), true]],
+    /**
+     * Boutons selon le statut. À approuver : « Publier + infolettre » (sur la page et dans l'infolettre du RSN),
+     * « Publier seulement » (sur la page, pas dans l'infolettre) ou « Écarter » ; une fiche en attente déjà dépassée
+     * ne peut plus qu'être écartée. Une fiche publiée absente de sa source peut aussi être gardée (drapeau levé).
+     */
+    private static function boutons_html(Fiche $f, bool $passee = false): string {
+        $boutons = match (true) {
+            $f->statut === 'a_approuver' && $passee => [['ecarte', __('Écarter', 'rsn-veille'), false, '']],
+            $f->statut === 'a_approuver' => [
+                ['publie', __('Publier + infolettre', 'rsn-veille'), true, '1'],
+                ['publie', __('Publier seulement', 'rsn-veille'), false, '0'],
+                ['ecarte', __('Écarter', 'rsn-veille'), false, ''],
+            ],
+            $f->statut === 'publie' => [['ecarte', __('Retirer de la page', 'rsn-veille'), false, '']],
+            default => [['publie', __('Publier', 'rsn-veille'), true, '']],
         };
         if ($f->statut === 'publie' && $f->absent_depuis !== null && $f->absent_depuis !== '') {
-            array_unshift($boutons, ['publie', __('Garder publiée', 'rsn-veille'), false]);
+            array_unshift($boutons, ['publie', __('Garder publiée', 'rsn-veille'), false, '']);
         }
         $html = '';
-        foreach ($boutons as [$statut, $libelle, $principal]) {
-            $html .= '<button type="button" class="button' . ($principal ? ' button-primary' : '') . ' rsn-veille-action" data-statut="' . esc_attr($statut) . '">'
+        foreach ($boutons as [$statut, $libelle, $principal, $infolettre]) {
+            $html .= '<button type="button" class="button' . ($principal ? ' button-primary' : '') . ' rsn-veille-action" data-statut="' . esc_attr($statut) . '"'
+                . ($infolettre !== '' ? ' data-infolettre="' . esc_attr($infolettre) . '"' : '') . '>'
                 . esc_html($libelle) . '</button> ';
         }
         return rtrim($html);
@@ -627,11 +863,24 @@ final class PageFile {
         };
     }
 
-    private static function dans_onglet(Fiche $f, string $onglet): bool {
+    /**
+     * Une fiche dépassée (`Fiche::est_passee`) quitte « À approuver » et « Publiées » pour « Archivées » : son statut
+     * ne change pas, seul l'onglet où elle est montrée.
+     */
+    private static function dans_onglet(Fiche $f, string $onglet, string $aujourdhui): bool {
         if ($onglet === 'a_verifier') {
             return $f->statut === 'publie' && $f->absent_depuis !== null && $f->absent_depuis !== '';
         }
-        return $f->statut === $onglet;
+        if ($onglet === 'ecarte') {
+            return $f->statut === 'ecarte';
+        }
+        if ($f->statut !== 'publie' && $f->statut !== 'a_approuver') {
+            return false;
+        }
+        // Une fiche publiée qui n'est ni un événement ni un appel n'est sur aucune page : rangée avec les archivées,
+        // pour qu'aucune fiche publiée ne soit introuvable dans la file.
+        $passee = $f->est_passee($aujourdhui) || ($f->statut === 'publie' && !in_array($f->type, self::TYPES, true));
+        return $onglet === 'archive' ? $passee : (!$passee && $f->statut === $onglet);
     }
 
     /** Paramètre d'adresse réduit à une clé (`sanitize_key`), vide s'il manque. */

@@ -63,7 +63,9 @@ final class PageInfolettre {
         $aujourdhui = \rsn_veille_aujourdhui();
         // Même source que la page publique : fiches publiées et événements du RSN dédoublonnés, sans les champs d'équipe.
         // L'infolettre est française : toujours `fr`, quelle que soit la langue de l'administration.
-        $donnees = Donnees::construire($aujourdhui, new EntrepotWordPress(), EvenementsRsn::lire(langue: 'fr'), false, 'fr');
+        // Les fiches tenues hors de l'infolettre sont marquées avant le dédoublonnage (`Donnees::elements`).
+        $hors = PageFile::lire_hors_infolettre();
+        $donnees = Donnees::construire($aujourdhui, new EntrepotWordPress(), EvenementsRsn::lire(langue: 'fr'), false, 'fr', $hors);
         // Sortie entièrement échappée par les méthodes de rendu.
         echo self::page_html($donnees['items'], PageRadar::lire_gardees(), self::programmes_rsn(), [
             'aujourdhui' => $aujourdhui,
@@ -178,18 +180,31 @@ final class PageInfolettre {
      * @param array<int,mixed> $gardees Nouvelles gardées.
      * @param array<int,mixed> $programmes Programmes du RSN ouverts, au format appel.
      * @param array{aujourdhui?: string, nombre?: int, jusqu_au?: ?string, url_page?: string, url_action?: string, nonce?: string, vide?: bool} $options
+     *
+     * Un élément marqué `hors_infolettre` par `Donnees` (fiche que l'équipe ne veut pas dans l'infolettre : « Publier
+     * seulement » ou « Retirer de l'infolettre » dans la file) n'est pas repris. Une nouvelle gardée trop vieille
+     * (`PageRadar::est_archivee`) non plus.
      */
     public static function page_html(array $items, array $gardees, array $programmes, array $options): string {
         $aujourdhui = (string) ($options['aujourdhui'] ?? \rsn_veille_aujourdhui());
         $nombre = self::nombre_demande($options['nombre'] ?? null);
         $horizon = self::horizon_demande($options['jusqu_au'] ?? null);
-        $gardees = array_values(array_filter($gardees, static fn($g): bool => is_array($g)));
-        $appels = array_values(array_filter($items, static fn($i): bool => is_array($i) && ($i['type'] ?? '') === 'appel'));
-        $evenements = array_values(array_filter($items, static fn($i): bool => is_array($i) && ($i['type'] ?? '') === 'evenement'));
+        $toutes_gardees = array_values(array_filter($gardees, static fn($g): bool => is_array($g)));
+        $gardees = PageRadar::gardees_actives($toutes_gardees, $aujourdhui);
+        $nb_archivees = count($toutes_gardees) - count($gardees);
+        // Fiches que l'équipe tient hors de l'infolettre (marque de `Donnees`, qui tient compte des doublons) :
+        // retirées avant le choix des blocs.
+        $dedans = static fn($i): bool => is_array($i) && empty($i['hors_infolettre']);
+        $du_type = static fn(string $type): array => array_values(array_filter($items, static fn($i): bool => is_array($i) && ($i['type'] ?? '') === $type));
+        $appels = array_values(array_filter($du_type('appel'), $dedans));
+        $evenements = array_values(array_filter($du_type('evenement'), $dedans));
 
         $nb_evenements = count(Infolettre::evenements_retenus($evenements, $nombre, $horizon, $aujourdhui));
         $nb_appels = count(Infolettre::appels_retenus($appels, $programmes, $aujourdhui));
         $nb_nouvelles = count(Infolettre::nouvelles_retenues($gardees));
+        // Ce qui aurait été repris sans le choix de l'équipe : dit sous chaque bloc, pour que rien ne manque en silence.
+        $hors_evenements = count(Infolettre::evenements_retenus($du_type('evenement'), PHP_INT_MAX, $horizon, $aujourdhui)) - count(Infolettre::evenements_retenus($evenements, PHP_INT_MAX, $horizon, $aujourdhui));
+        $hors_appels = count(Infolettre::appels_retenus($du_type('appel'), $programmes, $aujourdhui)) - $nb_appels;
 
         $avis = !empty($options['vide'])
             ? '<div class="notice notice-success inline"><p>' . esc_html__('Nouvelles gardées vidées.', 'rsn-veille') . '</p></div>'
@@ -206,7 +221,10 @@ final class PageInfolettre {
                 self::libelle_evenements($nb_evenements),
                 Infolettre::bloc_agenda($evenements, $nombre, $horizon, $aujourdhui),
                 $nb_evenements,
-                self::reglages_html($nombre, $horizon, $options)
+                self::reglages_html($nombre, $horizon, $options) . self::note_html($hors_evenements > 0
+                    /* translators: %d : nombre d'événements publiés que l'équipe tient hors de l'infolettre. */
+                    ? sprintf(_n("%d événement publié est tenu hors de l'infolettre (File d'approbation › Publiées).", "%d événements publiés sont tenus hors de l'infolettre (File d'approbation › Publiées).", $hors_evenements, 'rsn-veille'), $hors_evenements)
+                    : '')
             )
             . self::section_html(
                 'appels',
@@ -214,7 +232,10 @@ final class PageInfolettre {
                 self::libelle_appels($nb_appels),
                 Infolettre::bloc_appels($appels, $programmes, $aujourdhui),
                 $nb_appels,
-                ''
+                self::note_html($hors_appels > 0
+                    /* translators: %d : nombre d'appels publiés que l'équipe tient hors de l'infolettre. */
+                    ? sprintf(_n("%d appel publié est tenu hors de l'infolettre (File d'approbation › Publiées).", "%d appels publiés sont tenus hors de l'infolettre (File d'approbation › Publiées).", $hors_appels, 'rsn-veille'), $hors_appels)
+                    : '')
             )
             . self::section_html(
                 'nouvelles',
@@ -222,9 +243,17 @@ final class PageInfolettre {
                 self::libelle_nouvelles($nb_nouvelles),
                 Infolettre::bloc_nouvelles($gardees, $aujourdhui),
                 $nb_nouvelles,
-                self::vider_html(count($gardees), $options)
+                self::note_html($nb_archivees > 0
+                    /* translators: 1 : nombre de nouvelles gardées archivées ; 2 : nombre de jours. */
+                    ? sprintf(_n('%1$d nouvelle gardée, publiée depuis plus de %2$d jours, est archivée (Radar › Archivées).', '%1$d nouvelles gardées, publiées depuis plus de %2$d jours, sont archivées (Radar › Archivées).', $nb_archivees, 'rsn-veille'), $nb_archivees, PageRadar::JOURS_ARCHIVE)
+                    : '') . self::vider_html(count($toutes_gardees), $options)
             )
             . '</div>';
+    }
+
+    /** Note sous un bloc (ce que l'équipe a tenu hors de l'infolettre, ce qui est archivé) ; vide sans texte. */
+    private static function note_html(string $texte): string {
+        return $texte !== '' ? '<p class="description rsn-veille-infolettre-note">' . esc_html($texte) . '</p>' : '';
     }
 
     /**
