@@ -48,6 +48,9 @@ final class DecoupageMailchimpTest extends TestCase {
         // Identifiant d'abonné de Mailchimp : jamais gardé.
         $this->assertSame('https://mailchi.mp/x/nov', DecoupageMailchimp::nettoyer_url('https://mailchi.mp/x/nov?e=265de85461'));
         $this->assertSame('https://x.test/a?e=3', DecoupageMailchimp::nettoyer_url('https://x.test/a?e=3'));
+        // Identifiant de partage de YouTube : retiré, la vidéo reste.
+        $this->assertSame('https://youtu.be/pQTw98pgS-I', DecoupageMailchimp::nettoyer_url('https://youtu.be/pQTw98pgS-I?si=szFls_LpHZxhGar6'));
+        $this->assertSame('https://www.youtube.com/watch?v=abc', DecoupageMailchimp::nettoyer_url('https://www.youtube.com/watch?v=abc&si=xyz'));
         // Lien « Safe Links » d'Outlook : la vraie adresse est dans le paramètre url.
         $this->assertSame('https://www.eventzilla.net/e/journee-2026', DecoupageMailchimp::nettoyer_url('https://can01.safelinks.protection.outlook.com/?url=https%3A%2F%2Fwww.eventzilla.net%2Fe%2Fjournee-2026&data=05%7C02%7Cnom%40ex.ca&reserved=0'));
         $this->assertSame('', DecoupageMailchimp::nettoyer_url('javascript:alert(1)'));

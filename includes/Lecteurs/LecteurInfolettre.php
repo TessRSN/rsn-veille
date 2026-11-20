@@ -90,8 +90,11 @@ final class LecteurInfolettre implements Lecteur {
         $fiche->cles_source = [$cle];
         $editeur = (string) ($source['organisateur'] ?? $source['nom'] ?? '');
         $date = DecoupageMailchimp::date_en_clair($numero['date']);
-        /* translators: 1 : éditeur de l'infolettre ; 2 : date du numéro (« 20 novembre 2026 »), ou vide. */
-        $resume = trim(sprintf(__('Signalé dans l’infolettre de %1$s %2$s', 'rsn-veille'), $editeur, $date !== '' ? sprintf(__('du %s', 'rsn-veille'), $date) : ''));
+        $resume = $date !== ''
+            /* translators: 1 : date du numéro (« 20 novembre 2026 ») ; 2 : éditeur de l'infolettre. */
+            ? sprintf(__('Annoncé dans l’infolettre du %1$s (%2$s)', 'rsn-veille'), $date, $editeur)
+            /* translators: %s : éditeur de l'infolettre. */
+            : sprintf(__('Annoncé dans l’infolettre (%s)', 'rsn-veille'), $editeur);
         $fiche->resume = Fiche::court($resume . ($mention !== '' ? ' : ' . $mention : '') . '.');
         return $fiche;
     }

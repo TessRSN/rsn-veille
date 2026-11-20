@@ -74,8 +74,8 @@ final class LecteurInfolettreTest extends TestCase {
         // L'organisateur n'est connu que si le lien mène chez l'éditeur de l'infolettre.
         $this->assertSame(['', 'Unité SSA', ''], [$labos->organisateur, $pas->organisateur, $forum->organisateur]);
         $this->assertSame(['SSA : agenda de l’infolettre', 'C', ''], [$labos->source, $labos->niveau, $labos->lieu]);
-        $this->assertSame('Signalé dans l’infolettre de Unité SSA du 20 novembre 2026 : en ligne.', $labos->resume);
-        $this->assertStringEndsWith('du 20 novembre 2026 : à Whitehorse et en ligne en anglais.', $yukon->resume);
+        $this->assertSame('Annoncé dans l’infolettre du 20 novembre 2026 (Unité SSA) : en ligne.', $labos->resume);
+        $this->assertStringEndsWith('(Unité SSA) : à Whitehorse et en ligne en anglais.', $yukon->resume);
         $this->assertStringStartsWith('ssa_agenda:2026-11-24|', $forum->cle_source);
         $this->assertSame([$forum->cle_source], $forum->cles_source);
         $this->assertCount(5, array_unique(array_map(static fn($f): string => $f->cle_source, $r->fiches)));

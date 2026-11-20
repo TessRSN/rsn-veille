@@ -182,7 +182,8 @@ final class DecoupageMailchimp {
 
     /**
      * Adresse http(s) débarrassée de ce qui ne sert pas à la lire : enveloppe « Safe Links » d'Outlook, paramètres de
-     * suivi publicitaire, identifiant d'abonné de Mailchimp. Vide si ce n'est pas une adresse http(s).
+     * suivi publicitaire, identifiant d'abonné de Mailchimp, identifiant de partage de YouTube. Vide si ce n'est pas une
+     * adresse http(s).
      */
     public static function nettoyer_url(string $url, bool $deballer = true): string {
         $url = trim(html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
@@ -209,9 +210,10 @@ final class DecoupageMailchimp {
             return '';
         }
         $mailchimp = preg_match('~(?:^|\.)(?:mailchi\.mp|campaign-archive\.com|list-manage\.com)$~', $hote) === 1;
+        $youtube = preg_match('~(?:^|\.)(?:youtu\.be|youtube\.com)$~', $hote) === 1;
         $gardes = [];
         foreach ($parametres as [$nom, $paire]) {
-            $suivi = str_starts_with($nom, 'utm_') || str_starts_with($nom, 'gad_') || in_array($nom, self::SUIVI, true) || ($mailchimp && $nom === 'e');
+            $suivi = str_starts_with($nom, 'utm_') || str_starts_with($nom, 'gad_') || in_array($nom, self::SUIVI, true) || ($mailchimp && $nom === 'e') || ($youtube && $nom === 'si');
             if (!$suivi) {
                 $gardes[] = $paire;
             }
