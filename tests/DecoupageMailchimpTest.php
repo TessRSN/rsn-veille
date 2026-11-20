@@ -4,49 +4,19 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 use RSN\Veille\Lecteurs\DecoupageMailchimp;
 
+require_once __DIR__ . '/GabaritMailchimp.php';
+
 /**
  * Découpage d'une infolettre Mailchimp (gabarit standard : blocs `mcn…Block`) en encadrés et en lignes d'agenda.
  * Le gabarit de test reprend celui de l'infolettre de l'Unité de soutien SSA Québec (2026).
  */
 final class DecoupageMailchimpTest extends TestCase {
-    public static function carte(string $titre, string $texte, string $lien): string {
-        return '<table class="mcnImageCardBlock"><tbody><tr><td><img src="https://mcusercontent.com/x.png" alt="">'
-            . '<table><tr><td class="mcnTextContent"><strong>' . $titre . '</strong><br>' . $texte
-            . ($lien !== '' ? ' <a href="' . $lien . '" target="_blank">Lire la suite</a>' : '') . '</td></tr></table></td></tr></tbody></table>';
-    }
-
-    public static function section(string $titre): string {
-        return '<table class="mcnBoxedTextBlock"><tbody><tr><td class="mcnTextContent"><span>' . $titre . '</span></td></tr></tbody></table>';
-    }
-
-    /** @param string[] $lignes Lignes HTML de l'agenda (contenu d'un <li>). */
-    public static function agenda(array $lignes): string {
-        return '<table class="mcnBoxedTextBlock"><tbody><tr><td class="mcnTextContent"><div><span><span>À L\'AGENDA</span></span><br> &nbsp;</div><ul><li>'
-            . implode('</li><li>', $lignes) . '</li></ul></td></tr></tbody></table>';
-    }
-
-    public static function numero(array $blocs): string {
-        return '<style>.x{color:red}</style><table class="mcnTextBlock"><tbody><tr><td class="mcnTextContent">Voir l\'infolettre dans le navigateur</td></tr></tbody></table>'
-            . implode('', $blocs)
-            . '<table class="mcnFollowBlock"><tbody><tr><td><a href="https://www.linkedin.com/company/x">LinkedIn</a></td></tr></tbody></table>';
-    }
-
-    /** @param array<int,array{0: string, 1: string, 2: string, 3: string}> $numeros [titre, lien, date RSS, html] */
-    public static function flux(array $numeros): string {
-        $items = '';
-        foreach ($numeros as [$titre, $lien, $date, $html]) {
-            $items .= '<item><title>' . $titre . '</title><link>' . $lien . '</link><guid>' . $lien . '</guid><description><![CDATA[<html><head><title>' . $titre . '</title></head><body>' . $html . '</body></html>]]></description>'
-                . '<content:encoded><![CDATA[<html><head><title>' . $titre . '</title></head><body>' . $html . '</body></html>]]></content:encoded><pubDate>' . $date . '</pubDate></item>';
-        }
-        return "\n" . '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Infolettre Archive Feed</title><pubDate>Fri, 01 Jan 2021 10:00:00 +0000</pubDate>' . $items . '</channel></rss>';
-    }
-
     public function test_cartes_titre_lien_et_resume(): void {
-        $html = self::numero([
-            self::section('Développer des savoirs'),
-            self::carte('Rapport d’activités 2025-2026', 'Voici le rapport qui fait état de notre vision.', 'https://ssa.test/rapport/?utm_source=mailchimp&utm_medium=email'),
-            self::carte('Boîte à outils SSA', 'Outils et formations.', 'https://ssa.test/boite-a-outils/'),
-            self::agenda(['<a href="https://ssa.test/e1">Webinaire</a> &gt; 24 novembre en ligne']),
+        $html = GabaritMailchimp::numero([
+            GabaritMailchimp::section('Développer des savoirs'),
+            GabaritMailchimp::carte('Rapport d’activités 2025-2026', 'Voici le rapport qui fait état de notre vision.', 'https://ssa.test/rapport/?utm_source=mailchimp&utm_medium=email'),
+            GabaritMailchimp::carte('Boîte à outils SSA', 'Outils et formations.', 'https://ssa.test/boite-a-outils/'),
+            GabaritMailchimp::agenda(['<a href="https://ssa.test/e1">Webinaire</a> &gt; 24 novembre en ligne']),
         ]);
         $cartes = DecoupageMailchimp::cartes($html);
         $this->assertCount(2, $cartes);
@@ -59,7 +29,7 @@ final class DecoupageMailchimpTest extends TestCase {
     public function test_carte_sans_gras_prend_son_debut_et_carte_sans_lien_est_laissee(): void {
         $sans_gras = '<table class="mcnImageCardBlock"><tr><td class="mcnTextContent">Un projet pilote au Québec. Il a démarré en mai. <a href="https://ssa.test/pilote">Lire</a></td></tr></table>';
         $sans_lien = '<table class="mcnImageCardBlock"><tr><td class="mcnTextContent"><strong>Sans lien</strong> Texte.</td></tr></table>';
-        $cartes = DecoupageMailchimp::cartes(self::numero([$sans_gras, $sans_lien]));
+        $cartes = DecoupageMailchimp::cartes(GabaritMailchimp::numero([$sans_gras, $sans_lien]));
         $this->assertCount(1, $cartes);
         $this->assertSame('https://ssa.test/pilote', $cartes[0]['url']);
         $this->assertStringStartsWith('Un projet pilote au Québec', $cartes[0]['titre']);
@@ -85,7 +55,7 @@ final class DecoupageMailchimpTest extends TestCase {
     }
 
     public function test_agenda_lignes_dates_lieux(): void {
-        $html = self::numero([self::agenda([
+        $html = GabaritMailchimp::numero([GabaritMailchimp::agenda([
             '<a href="https://teams.test/e/1" target="_blank">Les laboratoires vivants en ruralité</a>&nbsp;&gt;<strong>&nbsp;</strong>24 novembre en ligne',
             '<a href="https://qi.test/fisq?gclid=abc">Forum de l\'industrie de la santé de Québec</a> &gt; 24 et 25 novembre à Québec',
             '<a href="https://ccna.test/conf">Conférence annuelle du </a><a href="https://ccna.test/conf">Consortium 2026</a> &gt; <strong>26 au 28 octobre à Vancouver</strong>',
@@ -115,8 +85,8 @@ final class DecoupageMailchimpTest extends TestCase {
     }
 
     public function test_numeros_du_flux(): void {
-        $flux = self::flux([
-            ['Infolettre - Novembre 2026', 'https://mailchi.mp/x/nov', 'Fri, 20 Nov 2026 15:00:00 +0000', self::numero([self::carte('A', 'a', 'https://ssa.test/a')])],
+        $flux = GabaritMailchimp::flux([
+            ['Infolettre - Novembre 2026', 'https://mailchi.mp/x/nov', 'Fri, 20 Nov 2026 15:00:00 +0000', GabaritMailchimp::numero([GabaritMailchimp::carte('A', 'a', 'https://ssa.test/a')])],
             ['Infolettre - Octobre 2026', 'https://mailchi.mp/x/oct', 'Wed, 28 Oct 2026 15:00:00 +0000', '<p>x</p>'],
         ]);
         $numeros = DecoupageMailchimp::numeros($flux);

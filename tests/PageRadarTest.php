@@ -238,6 +238,35 @@ final class PageRadarTest extends TestCase {
         $this->assertStringNotContainsString('<details', $sans);
     }
 
+    public function test_etiquette_deja_paru(): void {
+        $donnees = ['genere_le' => '', 'erreurs' => [], 'nouvelles' => [
+            self::nouvelle(1, ['titre' => 'Boîte à outils', 'deja_paru' => '3']),
+            self::nouvelle(2, ['deja_paru' => '1']),
+            self::nouvelle(3),
+            self::nouvelle(4, ['deja_paru' => '<b>x</b>']),
+        ]];
+        $html = PageRadar::page_html($donnees, [], [], self::options());
+        $this->assertSame(2, substr_count($html, 'class="rsn-veille-deja-paru"'));
+        $this->assertMatchesRegularExpression('~<li class="rsn-veille-nouvelle" data-url="https://x\.test/n1" data-deja-paru="3">.*?<span class="rsn-veille-deja-paru"[^>]*>Déjà paru dans 3 autres numéros</span>~s', $html);
+        $this->assertStringContainsString('>Déjà paru dans 1 autre numéro</span>', $html);
+        $this->assertStringContainsString('<li class="rsn-veille-nouvelle" data-url="https://x.test/n3">', $html);
+        $this->assertStringContainsString('<li class="rsn-veille-nouvelle" data-url="https://x.test/n4">', $html);
+        // L'étiquette ne sert qu'au tri : pas dans « Gardées ».
+        $gardees = PageRadar::page_html($donnees, [self::nouvelle(1, ['deja_paru' => '3', 'gardee_le' => '2026-10-25 10:00'])], [], self::options(['onglet' => 'gardees']));
+        $this->assertStringNotContainsString('rsn-veille-deja-paru', $gardees);
+    }
+
+    public function test_alerte_de_gabarit_bien_visible(): void {
+        $donnees = self::lot() + ['alertes' => ['SSA : infolettre : le numéro « <i>Décembre</i> » n’a donné aucun encadré.', 42]];
+        $html = PageRadar::page_html($donnees, [], [], self::options());
+        $this->assertSame(1, substr_count($html, 'rsn-veille-alerte-gabarit'));
+        $this->assertStringContainsString('<div class="notice notice-warning inline rsn-veille-alerte-gabarit"><p><strong>Gabarit à vérifier</strong></p><ul><li>SSA : infolettre : le numéro « &lt;i&gt;Décembre&lt;/i&gt; » n’a donné aucun encadré.</li></ul>', $html);
+        // Avant les onglets : on la voit sans dérouler quoi que ce soit, sur chaque onglet.
+        $this->assertLessThan(strpos($html, 'nav-tab-wrapper'), strpos($html, 'rsn-veille-alerte-gabarit'));
+        $this->assertStringContainsString('rsn-veille-alerte-gabarit', PageRadar::page_html($donnees, [], [], self::options(['onglet' => 'ecartees'])));
+        $this->assertStringNotContainsString('rsn-veille-alerte-gabarit', PageRadar::page_html(self::lot(), [], [], self::options()));
+    }
+
     // --- Cache et AJAX ---
 
     private const NONCE = 'rsn_veille_radar';
@@ -359,10 +388,22 @@ final class PageRadarTest extends TestCase {
             return ['corps' => self::FLUX, 'type' => 'application/rss+xml', 'code' => 200, 'url_finale' => $url, 'erreur' => null];
         };
         $donnees = PageRadar::donnees();
-        $this->assertSame(10, $appels);
+        $this->assertSame(11, $appels);
         $this->assertFalse($donnees['en_cours']);
         $this->assertIsArray(get_transient('rsn_veille_radar'));
         $this->assertIsArray(get_transient('rsn_veille_radar_dernier'));
+    }
+
+    public function test_les_alertes_de_gabarit_passent_par_les_caches(): void {
+        set_transient('rsn_veille_radar_frq', ['nouvelles' => [self::nouvelle(1)], 'erreurs' => [], 'alertes' => ['Alerte A', ['x']], 'lu_le' => '2026-10-25 09:00'], 3600);
+        set_transient('rsn_veille_radar_lecture', 1, 120);
+        $this->assertSame(['Alerte A'], PageRadar::donnees()['alertes']);
+        delete_transient('rsn_veille_radar_lecture');
+        // Résultat complet en cache : les alertes y sont aussi.
+        set_transient('rsn_veille_radar', ['nouvelles' => [self::nouvelle(1)], 'erreurs' => [], 'alertes' => ['Alerte B'], 'genere_le' => '2026-10-25 09:00'], 3600);
+        $this->assertSame(['Alerte B'], PageRadar::donnees()['alertes']);
+        self::cache([self::nouvelle(1)]);
+        $this->assertArrayNotHasKey('alertes', PageRadar::donnees());
     }
 
     public function test_les_flux_du_radar_sont_lus_avec_un_delai_de_8_secondes(): void {
@@ -370,7 +411,7 @@ final class PageRadarTest extends TestCase {
         $options_vues = [];
         self::reseau($appels, self::FLUX, $options_vues);
         PageRadar::donnees();
-        $this->assertSame(12, $appels);
+        $this->assertSame(13, $appels);
         foreach ($options_vues as $options) {
             $this->assertSame(['accept' => 'xml', 'timeout' => 8], $options);
         }
@@ -448,18 +489,18 @@ final class PageRadarTest extends TestCase {
         $a = PageRadar::donnees();
         $this->assertCount(12, $a['erreurs']);
         $this->assertSame([], $a['nouvelles']);
-        $this->assertSame(12, $appels);
+        $this->assertSame(13, $appels);
         // Tout a échoué : pas de copie complète ; les erreurs sont gardées par source (10 min) sans relancer le réseau.
         $this->assertFalse(get_transient('rsn_veille_radar'));
         $this->assertFalse(get_transient('rsn_veille_radar_dernier'));
         PageRadar::donnees();
-        $this->assertSame(12, $appels);
+        $this->assertSame(13, $appels);
 
         PageRadar::vider_cache();
         $this->assertFalse(get_transient('rsn_veille_radar_frq'));
         self::cache([self::nouvelle(1)]);
         $this->assertSame('Titre 1', PageRadar::donnees()['nouvelles'][0]['titre']);
-        $this->assertSame(12, $appels);
+        $this->assertSame(13, $appels);
         PageRadar::vider_cache();
         $this->assertFalse(get_transient('rsn_veille_radar'));
     }

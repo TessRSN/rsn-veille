@@ -207,7 +207,7 @@ final class PageRadar {
             'nouvelles' => array_values(array_filter($partie['nouvelles'], 'is_array')),
             'erreurs' => array_values(array_filter($partie['erreurs'], 'is_string')),
             'lu_le' => isset($partie['lu_le']) && is_string($partie['lu_le']) ? $partie['lu_le'] : '',
-        ];
+        ] + self::alertes_de($partie);
     }
 
     /**
@@ -232,7 +232,13 @@ final class PageRadar {
             'nouvelles' => array_values(array_filter($cache['nouvelles'], 'is_array')),
             'erreurs' => isset($cache['erreurs']) && is_array($cache['erreurs']) ? array_values(array_filter($cache['erreurs'], 'is_string')) : [],
             'genere_le' => isset($cache['genere_le']) && is_string($cache['genere_le']) ? $cache['genere_le'] : '',
-        ];
+        ] + self::alertes_de($cache);
+    }
+
+    /** @return array{alertes?: string[]} Alertes de gabarit d'une lecture (`Nouvelles`), seulement s'il y en a. */
+    private static function alertes_de(array $lecture): array {
+        $alertes = is_array($lecture['alertes'] ?? null) ? array_values(array_filter($lecture['alertes'], 'is_string')) : [];
+        return $alertes !== [] ? ['alertes' => $alertes] : [];
     }
 
     /**
@@ -599,10 +605,10 @@ final class PageRadar {
     // --- Rendu ---
 
     /**
-     * Page complète : barre (Rafraîchir), onglets avec leur nombre (À trier, Gardées pour l'infolettre, Écartées),
-     * filtre par dates de publication, zone de message, liste de l'onglet, erreurs.
+     * Page complète : barre (Rafraîchir), alertes de gabarit, onglets avec leur nombre (À trier, Gardées pour
+     * l'infolettre, Écartées), filtre par dates de publication, zone de message, liste de l'onglet, erreurs.
      *
-     * @param array{nouvelles?: array<int,array<string,mixed>>, erreurs?: string[], genere_le?: string, en_cours?: bool} $donnees
+     * @param array{nouvelles?: array<int,array<string,mixed>>, erreurs?: string[], alertes?: string[], genere_le?: string, en_cours?: bool} $donnees
      * @param array<int,mixed> $gardees
      * @param string[] $ignorees
      * @param array{url_action?: string, nonce?: string, url_page?: string, onglet?: string, du?: string, au?: string} $options
@@ -639,6 +645,7 @@ final class PageRadar {
             . '<h1>' . esc_html__('Radar', 'rsn-veille') . '</h1>'
             . '<p class="description">' . esc_html__("Les nouvelles des organisations de l'écosystème qui touchent la santé ou le numérique. Gardez celles qui iront dans l'infolettre, écartez les autres.", 'rsn-veille') . '</p>'
             . self::barre_html((string) ($donnees['genere_le'] ?? ''), $options)
+            . self::alertes_html(is_array($donnees['alertes'] ?? null) ? $donnees['alertes'] : [])
             . (!empty($donnees['en_cours']) ? '<p class="rsn-veille-radar-en-cours">' . esc_html__("Rafraîchissement en cours par un autre utilisateur : certaines sources ne sont pas encore là. Rechargez la page dans une minute.", 'rsn-veille') . '</p>' : '')
             . self::onglets_html($onglet, ['a_trier' => count($visibles), 'gardees' => count($gardees), 'ecartees' => count($ignorees)], $du, $au, $url_page)
             . self::filtre_html($onglet, $du, $au, $affichees, $url_page)
@@ -843,6 +850,8 @@ final class PageRadar {
         $titre_html = '<a href="' . esc_url($url) . '" target="_blank" rel="noopener noreferrer">' . esc_html($titre) . '</a>';
         $date = Dates::date_longue((string) ($n['date'] ?? ''));
 
+        // Encadré d'une infolettre qui revient d'un numéro à l'autre : nombre d'autres numéros où il a paru.
+        $deja_paru = !$gardee && is_numeric($n['deja_paru'] ?? null) ? max(0, (int) $n['deja_paru']) : 0;
         $meta = [];
         if ($gardee) {
             $source = trim((string) ($n['source'] ?? ''));
@@ -858,6 +867,11 @@ final class PageRadar {
             $meta[] = ($n['statut_radar'] ?? '') === 'reperee'
                 ? '<span class="rsn-veille-radar-statut" data-statut="reperee">' . esc_html__('Repérée', 'rsn-veille') . '</span>'
                 : '<span class="rsn-veille-radar-statut" data-statut="a_trier">' . esc_html__('À trier', 'rsn-veille') . '</span>';
+            if ($deja_paru > 0) {
+                /* translators: %d : nombre d'autres numéros de l'infolettre où l'encadré a déjà paru. */
+                $meta[] = '<span class="rsn-veille-deja-paru" title="' . esc_attr__("Cet encadré revient d'un numéro à l'autre de l'infolettre : rien de neuf, sans doute.", 'rsn-veille') . '">'
+                    . esc_html(sprintf(_n('Déjà paru dans %d autre numéro', 'Déjà paru dans %d autres numéros', $deja_paru, 'rsn-veille'), $deja_paru)) . '</span>';
+            }
         }
 
         $boutons = $gardee
@@ -865,7 +879,7 @@ final class PageRadar {
             : self::bouton_html('garder', __("Garder pour l'infolettre", 'rsn-veille'), true) . ' ' . self::bouton_html('ignorer', __('Écarter', 'rsn-veille'), false);
 
         $resume = Fiche::court((string) ($n['resume'] ?? ''), self::LONGUEUR_EXTRAIT);
-        return '<li class="rsn-veille-nouvelle" data-url="' . esc_attr($url) . '">'
+        return '<li class="rsn-veille-nouvelle" data-url="' . esc_attr($url) . '"' . ($deja_paru > 0 ? ' data-deja-paru="' . $deja_paru . '"' : '') . '>'
             . '<div class="rsn-veille-nouvelle-tete">'
             . ($date !== '' ? '<span class="rsn-veille-nouvelle-date">' . esc_html($date) . '</span> ' : '')
             . '<strong>' . $titre_html . '</strong>'
@@ -879,6 +893,23 @@ final class PageRadar {
     private static function bouton_html(string $acte, string $libelle, bool $principal): string {
         return '<button type="button" class="button' . ($principal ? ' button-primary' : '') . ' rsn-veille-radar-action" data-act="' . esc_attr($acte) . '">'
             . esc_html($libelle) . '</button>';
+    }
+
+    /**
+     * Alertes de gabarit (une infolettre découpée ne donne plus ses encadrés), bien visibles en haut de la page.
+     *
+     * @param array<int,mixed> $alertes
+     */
+    private static function alertes_html(array $alertes): string {
+        $items = '';
+        foreach (array_filter($alertes, 'is_string') as $alerte) {
+            $items .= '<li>' . esc_html($alerte) . '</li>';
+        }
+        if ($items === '') {
+            return '';
+        }
+        return '<div class="notice notice-warning inline rsn-veille-alerte-gabarit"><p><strong>' . esc_html__('Gabarit à vérifier', 'rsn-veille') . '</strong></p><ul>' . $items . '</ul>'
+            . '<p class="description">' . esc_html__("Ouvrez le dernier numéro pour voir s'il est présenté autrement. Si oui, le découpage est à adapter : en attendant, le numéro reste lisible en une seule nouvelle.", 'rsn-veille') . '</p></div>';
     }
 
     /** Sources en erreur, discrètement, repliées. @param string[] $erreurs */

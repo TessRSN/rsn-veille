@@ -33,6 +33,12 @@ final class DecoupageMailchimp {
     /** Longueur maximale du titre tiré du début d'un encadré sans gras. */
     private const TITRE_MAX = 120;
 
+    /** Numéros précédents qu'il faut pour connaître l'habitude d'une infolettre (`rupture`). */
+    private const NUMEROS_HABITUELS = 3;
+
+    /** En dessous de cette habitude, un numéro plus court que les autres n'est pas signalé. */
+    private const HABITUDE_MIN = 6;
+
     /**
      * Numéros du flux d'archive, dans l'ordre du flux (le plus récent d'abord).
      * Lecture sans analyseur XML : un flux tronqué en route (il pèse plusieurs mégaoctets) garde ses numéros complets.
@@ -129,6 +135,42 @@ final class DecoupageMailchimp {
         return $lignes;
     }
 
+    /** Texte d'un numéro entier, sans son en-tête, ses styles ni ses scripts (résumé d'un envoi sans encadré). */
+    public static function texte(string $html): string {
+        $corps = preg_replace('~<head\b.*?</head>|<style\b.*?</style>|<script\b.*?</script>|<!--.*?-->~is', ' ', $html) ?? '';
+        return Fiche::nettoyer_texte($corps);
+    }
+
+    /**
+     * Le dernier numéro rompt-il avec l'habitude des précédents ? Oui s'il ne donne rien alors qu'il porte un titre
+     * comme les autres (un envoi spécial a un autre titre, et un autre gabarit : il n'est pas signalé), ou s'il donne
+     * moins du tiers de ce que donnent les précédents. Il faut au moins trois numéros précédents qui donnent quelque
+     * chose pour connaître l'habitude (leur médiane).
+     *
+     * @param array<int,array{titre: string, n: int}> $numeros Du plus récent au plus ancien : titre et nombre d'éléments reconnus.
+     * @return array{titre: string, n: int, habitude: int}|null Null si rien n'est à signaler.
+     */
+    public static function rupture(array $numeros): ?array {
+        $dernier = array_shift($numeros);
+        $habituels = array_values(array_filter($numeros, static fn(array $n): bool => $n['n'] > 0));
+        if ($dernier === null || count($habituels) < self::NUMEROS_HABITUELS) {
+            return null;
+        }
+        $comptes = array_column($habituels, 'n');
+        sort($comptes);
+        $habitude = $comptes[intdiv(count($comptes), 2)];
+        if ($dernier['n'] === 0) {
+            $mots = array_count_values(array_map([self::class, 'premier_mot'], array_column($habituels, 'titre')));
+            arsort($mots);
+            if (self::premier_mot($dernier['titre']) !== (string) array_key_first($mots)) {
+                return null;
+            }
+        } elseif ($habitude < self::HABITUDE_MIN || $dernier['n'] * 3 >= $habitude) {
+            return null;
+        }
+        return ['titre' => $dernier['titre'], 'n' => $dernier['n'], 'habitude' => $habitude];
+    }
+
     /**
      * Adresse http(s) débarrassée de ce qui ne sert pas à la lire : enveloppe « Safe Links » d'Outlook, paramètres de
      * suivi publicitaire, identifiant d'abonné de Mailchimp. Vide si ce n'est pas une adresse http(s).
@@ -188,6 +230,10 @@ final class DecoupageMailchimp {
             $blocs[] = ['classe' => $trouves[1][$i][0], 'html' => preg_replace('~<!--.*?-->~s', '', substr($html, $debut, $fin - $debut)) ?? ''];
         }
         return $blocs;
+    }
+
+    private static function premier_mot(string $titre): string {
+        return preg_match('/[\p{L}\d]+/u', $titre, $m) === 1 ? mb_strtolower($m[0]) : '';
     }
 
     /** HTML de la zone de texte d'un bloc (`mcnTextContent`) ; tout le bloc s'il n'en a pas. */
