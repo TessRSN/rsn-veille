@@ -111,13 +111,19 @@ final class LecteurInfolettreTest extends TestCase {
         $this->assertCount(5, $mentions);
         $forum = array_values(array_filter($entrepot->lister(''), static fn($f): bool => str_starts_with($f->titre, 'Forum')))[0];
         $this->assertSame(2, $mentions[$forum->cle_source]);
-        // Une autre source garde les siennes ; la collecte suivante de celle-ci remplace les siennes.
-        update_option(Collecte::OPTION_MENTIONS, get_option(Collecte::OPTION_MENTIONS) + ['autre' => ['autre:x' => 4, 'autre:y' => 'illisible']], false);
+        // Un flux illisible ne vide pas les comptes de la collecte précédente.
+        self::servir('<rss><channel></channel></rss>');
+        Collecte::collecter_source(self::SOURCE, new Depot($entrepot), new Pertinence());
+        $this->assertCount(5, Collecte::mentions());
+        // Une autre source active garde les siennes ; une source qui n'est plus au registre (ou désactivée) n'est plus montrée.
+        update_option(Collecte::OPTION_MENTIONS, get_option(Collecte::OPTION_MENTIONS) + ['dhc' => ['dhc:x' => 4, 'dhc:y' => 'illisible'], 'ancienne' => ['ancienne:z' => 3]], false);
+        // La collecte suivante de la source remplace ses comptes.
         self::servir(GabaritMailchimp::flux([['Infolettre - Décembre 2026', 'https://mailchi.mp/x/dec', 'Sat, 21 Nov 2026 12:00:00 +0000', GabaritMailchimp::numero_de([['A', 'https://ssa.test/a']], ['<a href="https://z.test/z">Autre chose</a> &gt; 15 décembre à Québec'])]]));
         Collecte::collecter_source(self::SOURCE, new Depot($entrepot), new Pertinence());
         $mentions = Collecte::mentions();
-        $this->assertSame(4, $mentions['autre:x']);
-        $this->assertArrayNotHasKey('autre:y', $mentions);
+        $this->assertSame(4, $mentions['dhc:x']);
+        $this->assertArrayNotHasKey('dhc:y', $mentions);
+        $this->assertArrayNotHasKey('ancienne:z', $mentions);
         $this->assertCount(2, $mentions);
         // Option illisible : rien, sans erreur.
         update_option(Collecte::OPTION_MENTIONS, 'x', false);

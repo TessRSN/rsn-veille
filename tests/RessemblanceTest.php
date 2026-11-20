@@ -20,6 +20,8 @@ final class RessemblanceTest extends TestCase {
             ['Journée d\'étude : IA & santé', 'JOURNEE D ETUDE – IA et Sante'],
             ['Conférence canadienne sur la science ouverte', '2e Conférence canadienne sur la science ouverte – Ottawa'],
             ['Colloque annuel du RSN', 'Colloque annuel du RSN'],
+            // Deux mots, mais les mêmes de part et d'autre.
+            ['Colloque sur le sommeil', 'Colloque du sommeil'],
         ];
         foreach ($proches as [$a, $b]) {
             $this->assertTrue(Ressemblance::titres_proches($a, $b), "$a / $b");
@@ -29,7 +31,10 @@ final class RessemblanceTest extends TestCase {
             // Un seul mot en commun, ou un titre d'un seul mot : pas assez pour conclure.
             ['Webinaire', 'Webinaire sur l\'intelligence artificielle'],
             ['Colloque sur la santé numérique', 'Colloque sur le sommeil'],
-            ['Office Hours Online', 'Portes ouvertes en ligne'],
+            // Un titre de deux mots contenu dans un titre plus long : trop peu pour conclure.
+            ['Webinaire IA', 'Webinaire : l\'IA générative en soins infirmiers'],
+            ['Appel à communications', 'Appel de communications – Congrès ACFAS'],
+            ['Forum santé numérique', 'Digital Health Forum'],
             ['', 'Forum'],
             ['2026', '20e édition 2026'],
         ];
@@ -75,6 +80,65 @@ final class RessemblanceTest extends TestCase {
         $this->assertSame([], Ressemblance::pour_la_file($attente, $publiees));
         // À deux seulement, la même page reste un bon indice.
         $this->assertSame([10 => 3], array_map(static fn(Fiche $f): int => (int) $f->id, Ressemblance::pour_la_file([$attente[0]], $publiees)));
+    }
+
+    public function test_organisateurs_differents_demandent_plus(): void {
+        $jour = ['debut' => '2026-12-03', 'fin' => '2026-12-03', 'url' => ''];
+        $a = self::fiche(['id' => 1, 'titre' => 'Assemblée générale annuelle', 'organisateur' => 'CRCHUM'] + $jour);
+        // Même titre banal, le même jour, chez deux organisateurs sans rapport : deux assemblées.
+        $this->assertFalse(Ressemblance::memes($a, self::fiche(['id' => 2, 'titre' => 'Assemblée générale annuelle 2026', 'organisateur' => 'IVADO'] + $jour)));
+        // Organisateur inconnu d'un côté (agenda d'une infolettre), ou écrit autrement : le titre suffit.
+        $this->assertTrue(Ressemblance::memes($a, self::fiche(['id' => 2, 'titre' => 'Assemblée générale annuelle 2026', 'organisateur' => ''] + $jour)));
+        $this->assertTrue(Ressemblance::memes($a, self::fiche(['id' => 2, 'titre' => 'Assemblée générale annuelle 2026', 'organisateur' => 'Centre de recherche du CHUM (CRCHUM)'] + $jour)));
+        // Organisateurs différents mais un long titre commun : un événement conjoint.
+        $long = 'Colloque québécois sur les données de santé et l\'intelligence artificielle';
+        $this->assertTrue(Ressemblance::memes(self::fiche(['id' => 1, 'titre' => $long, 'organisateur' => 'Obvia'] + $jour), self::fiche(['id' => 2, 'titre' => '3e ' . $long, 'organisateur' => 'IVADO'] + $jour)));
+    }
+
+    public function test_page_d_accueil_et_fiches_sans_identifiant(): void {
+        $jour = ['debut' => '2026-12-03', 'fin' => '2026-12-03'];
+        // La page d'accueil d'un organisme ne désigne aucun événement.
+        $this->assertFalse(Ressemblance::memes(self::fiche(['id' => 1, 'titre' => 'Atelier sur les données', 'url' => 'https://org.test/'] + $jour), self::fiche(['id' => 2, 'titre' => 'Séminaire de gouvernance', 'url' => 'https://www.org.test'] + $jour)));
+        // Une fiche sans identifiant n'a pas de ligne dans la file : jamais signalée.
+        $sans_id = self::fiche(['id' => null] + $jour);
+        $this->assertSame([], Ressemblance::pour_la_file([$sans_id], [self::fiche(['id' => 2, 'statut' => 'publie'] + $jour)]));
+    }
+
+    public function test_une_fiche_publiee_passe_avant_une_fiche_en_attente(): void {
+        $jour = ['debut' => '2026-12-03', 'fin' => '2026-12-03', 'url' => ''];
+        $attente = [
+            self::fiche(['id' => 11, 'titre' => 'Colloque sur le sommeil et la santé'] + $jour),
+            self::fiche(['id' => 10, 'titre' => 'Colloque du sommeil et de la santé'] + $jour),
+        ];
+        $publiee = self::fiche(['id' => 2, 'titre' => '4e Colloque sur le sommeil et la santé', 'statut' => 'publie'] + $jour);
+        $this->assertSame([11 => 2, 10 => 2], array_map(static fn(Fiche $f): int => (int) $f->id, Ressemblance::pour_la_file($attente, [$publiee])));
+    }
+
+    public function test_appels_echus_jamais_compares(): void {
+        $appel = static fn(array $c): Fiche => self::fiche($c + ['type' => 'appel', 'titre' => 'Bourses de formation postdoctorale', 'debut' => '2026-11-01', 'fin' => '2026-11-01', 'echeance' => null, 'url' => 'https://frq.test/bourses']);
+        $nouveau = $appel(['id' => 10, 'titre' => 'Bourses de formation postdoctorale 2027-2028']);
+        // L'édition de l'an passé, encore publiée mais échue : ce n'est pas « déjà dans l'agenda ».
+        $echu = $appel(['id' => 2, 'statut' => 'publie', 'debut' => '2025-08-01', 'fin' => '2025-10-01', 'echeance' => '2025-10-01']);
+        $this->assertSame([], Ressemblance::pour_la_file([$nouveau], [$echu], '2026-11-20'));
+        // Le même concours en cours : signalé.
+        $en_cours = $appel(['id' => 3, 'statut' => 'publie', 'echeance' => '2027-01-15', 'fin' => '2027-01-15']);
+        $this->assertSame([10 => 3], array_map(static fn(Fiche $f): int => (int) $f->id, Ressemblance::pour_la_file([$nouveau], [$echu, $en_cours], '2026-11-20')));
+        // Même page de programme, deux dates limites différentes : deux concours.
+        $this->assertFalse(Ressemblance::memes($appel(['echeance' => '2026-12-01']), $appel(['id' => 2, 'titre' => 'Autre volet', 'echeance' => '2027-04-01'])));
+    }
+
+    public function test_grosse_file_reste_rapide(): void {
+        $attente = [];
+        $publiees = [];
+        for ($i = 0; $i < 300; $i++) {
+            $attente[] = self::fiche(['id' => 10000 + $i, 'titre' => 'Atelier a' . $i . 'a b' . $i . 'b c' . $i . 'c', 'debut' => '2026-12-' . sprintf('%02d', 1 + $i % 28), 'fin' => null, 'url' => 'https://a.test/e/' . $i . '?utm_source=x']);
+        }
+        for ($i = 0; $i < 2000; $i++) {
+            $publiees[] = self::fiche(['id' => 1 + $i, 'statut' => 'publie', 'titre' => 'Conférence d' . $i . 'd e' . $i . 'e f' . $i . 'f', 'debut' => '2026-12-' . sprintf('%02d', 1 + $i % 28), 'fin' => null, 'url' => 'https://p.test/e/' . $i]);
+        }
+        $debut = microtime(true);
+        $this->assertSame([], Ressemblance::pour_la_file($attente, $publiees, '2026-11-20'));
+        $this->assertLessThan(0.5, microtime(true) - $debut);
     }
 
     public function test_appels(): void {

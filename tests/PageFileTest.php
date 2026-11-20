@@ -548,10 +548,29 @@ final class PageFileTest extends TestCase {
         $this->assertStringContainsString('<a href="#rsn-veille-fiche-11">Colloque du sommeil</a>', $ligne(12));
         $this->assertStringNotContainsString('data-ressemble', $ligne(13));
         $this->assertStringNotContainsString('rsn-veille-deja-paru', $ligne(13));
+        // La fiche pareille est cachée par un filtre : son titre reste, sans lien vers une ligne absente.
+        $filtre = PageFile::page_html([$forum, $collectee, $proposee, $seule], 'a_approuver', '', '', $url, $options + ['origine' => 'proposition']);
+        $this->assertStringContainsString('Ressemble à une autre fiche en attente</span> Colloque du sommeil', $filtre);
+        $this->assertStringNotContainsString('href="#rsn-veille-fiche-11"', $filtre);
         // Seulement dans la file à approuver.
         $publie = PageFile::page_html([self::fiche(['id' => 10, 'statut' => 'publie'])], 'publie', '', '', $url, $options);
         $this->assertStringNotContainsString('data-ressemble', $publie);
         $this->assertStringNotContainsString('data-ressemble', PageFile::page_html([$forum], 'a_approuver', '', '', $url, self::OPTIONS));
+    }
+
+    public function test_ressemblances_ne_charge_que_les_fiches_publiees_d_actualite(): void {
+        $GLOBALS['rsn_veille_test_aujourdhui'] = '2026-11-20';
+        $entrepot = new \RSN\Veille\EntrepotMemoire();
+        $base = ['type' => 'evenement', 'debut' => '2026-12-03', 'fin' => '2026-12-03', 'statut' => 'publie', 'source' => 'X', 'niveau' => 'A'];
+        $publie = $entrepot->creer(Fiche::depuis_tableau(['titre' => '4e Colloque sur le sommeil et la santé', 'cle_source' => 'x:1', 'cles_source' => ['x:1']] + $base));
+        // Appel de l'an passé, encore publié mais échu.
+        $entrepot->creer(Fiche::depuis_tableau(['type' => 'appel', 'titre' => 'Bourses de formation postdoctorale', 'debut' => '2025-08-01', 'fin' => '2025-10-01', 'echeance' => '2025-10-01', 'cle_source' => 'x:2', 'cles_source' => ['x:2']] + $base));
+        $colloque = $entrepot->creer(Fiche::depuis_tableau(['titre' => 'Colloque du sommeil et de la santé', 'statut' => 'a_approuver', 'cle_source' => 'y:1', 'cles_source' => ['y:1']] + $base));
+        $bourses = $entrepot->creer(Fiche::depuis_tableau(['type' => 'appel', 'titre' => 'Bourses de formation postdoctorale 2027-2028', 'debut' => '2026-11-10', 'fin' => '2026-11-10', 'statut' => 'a_approuver', 'cle_source' => 'y:2', 'cles_source' => ['y:2']] + $base));
+        $r = PageFile::ressemblances($entrepot, $entrepot->lister('a_approuver'), '2026-11-20');
+        $this->assertSame([$colloque => $publie], array_map(static fn(Fiche $f): int => (int) $f->id, $r));
+        $this->assertArrayNotHasKey($bourses, $r);
+        $this->assertSame([], PageFile::ressemblances($entrepot, [], '2026-11-20'));
     }
 
     public function test_etiquette_annonce_dans_n_numeros(): void {

@@ -376,12 +376,15 @@ final class Collecte {
                 if ($resultat->alertes !== []) {
                     $ligne['alerte'] = implode(' ', $resultat->alertes);
                 }
-                self::garder_mentions($id, $resultat->mentions);
                 foreach ($resultat->fiches as $fiche) {
                     $cles_vues[] = $fiche->cle_source;
                 }
                 // Une source lisible qui ne rend rien (gabarit changé ?) ne compte pas comme collecte réussie.
                 $reussie = $resultat->fiches !== [] || $resultat->ignores > 0;
+                if ($reussie) {
+                    // Une lecture qui ne rend rien (flux illisible) garde les mentions de la précédente.
+                    self::garder_mentions($id, $resultat->mentions);
+                }
 
                 // Pages d'événements IVADO : plafond et budget partagés par les deux langues.
                 $resolutions = ['debut' => self::horloge(), 'reste' => ResolutionIvado::MAX];
@@ -756,11 +759,12 @@ final class Collecte {
         update_option(self::OPTION_MENTIONS, $toutes, false);
     }
 
-    /** @return array<string,int> Nombre de numéros qui annoncent un événement d'infolettre, par clé de source (toutes sources). */
+    /** @return array<string,int> Nombre de numéros qui annoncent un événement d'infolettre, par clé de source (sources actives). */
     public static function mentions(): array {
         $toutes = get_option(self::OPTION_MENTIONS, []);
         $mentions = [];
-        foreach (is_array($toutes) ? $toutes : [] as $par_cle) {
+        // Seulement les sources actives : une source désactivée ne laisse pas ses comptes dans la file.
+        foreach (array_intersect_key(is_array($toutes) ? $toutes : [], self::sources()) as $par_cle) {
             foreach (is_array($par_cle) ? $par_cle : [] as $cle => $nombre) {
                 if (is_int($nombre) && $nombre > 0) {
                     $mentions[(string) $cle] = $nombre;

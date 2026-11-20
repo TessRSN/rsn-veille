@@ -1,6 +1,6 @@
 # Installation et bascule sur rsn.quebec
 
-Ce guide dit comment installer l'extension **RSN : veille de l'écosystème** (version 0.12.0) sur le site, quoi régler le premier jour, comment faire passer la page Veille à la place de la page Événements, et que faire quand quelque chose ne va pas. Rien n'est fait sur le site tant que la personne qui porte le projet ne l'a pas décidé : les étapes de la bascule se font une à une, avec un accord à chaque étape.
+Ce guide dit comment installer l'extension **RSN : veille de l'écosystème** (version 0.13.0) sur le site, quoi régler le premier jour, comment faire passer la page Veille à la place de la page Événements, et que faire quand quelque chose ne va pas. Rien n'est fait sur le site tant que la personne qui porte le projet ne l'a pas décidé : les étapes de la bascule se font une à une, avec un accord à chaque étape.
 
 ## 1. Prérequis
 
@@ -41,7 +41,7 @@ Sans cron du serveur (c'est-à-dire sans `DISABLE_WP_CRON`), l'extension fonctio
 À partir du dépôt, sur un poste avec Git (après avoir amené la branche voulue, par exemple `main`) :
 
 ```
-git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.12.0.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
+git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.13.0.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
 ```
 
 Le zip contient `rsn-veille.php`, `uninstall.php`, `includes/`, `assets/` et `languages/` (la traduction anglaise de la page en dépend) (et les documents de racine), sans tests, sans documents de conception et sans `vendor/`. Dans wp-admin : **Extensions › Ajouter › Téléverser une extension**, choisir le zip, installer, puis activer.
@@ -65,6 +65,10 @@ Le dépôt est **privé** (`TessRSN/rsn-veille`) et la branche de livraison est 
 **Premier essai : le zip** (voie 1), pour installer, régler et valider la page en brouillon sans rien d'autre à configurer. **Pour suivre les corrections** pendant les premières semaines : **WP Pusher** (voie 2), avec les mises à jour manuelles (un clic après chaque correction relue) plutôt qu'automatiques. Si WP Pusher est écarté pour son coût, Git Updater fait le même travail avec la même méthode.
 
 Quelle que soit la voie, l'activation lance les mêmes opérations (voir section 9).
+
+### Après la mise à jour de la 0.12.0 vers la 0.13.0
+
+Rien à régler. Dans la file d'approbation, onglet « À approuver », une fiche qui ressemble à une fiche déjà publiée porte l'étiquette orange **« Peut-être déjà dans l'agenda »** (la même couleur que « Déjà paru » au Radar), avec un lien vers la fiche publiée et ses dates : comparer, puis écarter le doublon ou publier si ce sont deux choses différentes. Si elle ressemble à une autre fiche en attente, l'étiquette dit « Ressemble à une autre fiche en attente » et mène à sa ligne. Rien n'est fusionné ni écarté tout seul. Un événement de l'agenda d'une infolettre annoncé dans plusieurs numéros affiche « Annoncé dans n numéros » dans la colonne Source, après la prochaine collecte.
 
 ### Après la mise à jour de la 0.11.0 vers la 0.12.0
 
@@ -268,7 +272,7 @@ Depuis la 0.5.0, la bande « Prochains événements » de l'accueil est le code 
 
 **Caches et ressources.**
 - Les données viennent du cache JSON de la page Veille (par langue, une heure au plus). La collecte de nuit, toute modification de fiche et la mise à jour de l'extension purgent aussi LiteSpeed et le cache Elementor de la page d'accueil et de ses traductions WPML. La page d'accueil est celle du réglage WordPress « Page d'accueil » (`page_on_front`) ; si ce réglage n'est pas une page statique, il n'y a rien à purger de ce côté. Si l'accueil est servi par un cache un jour plus tard, le script de la bande recalcule le jour entouré et les colonnes selon la date du jour (celle de Montréal, lue dans le navigateur).
-- `accueil.css` et `accueil.js` (`?ver=0.12.0`) se chargent sur la page d'accueil et sur toute page dont le contenu contient `[rsn_veille_accueil]` : le CSS dans l'en-tête, le script en pied de page. **Un code court posé dans un widget d'une autre page Elementor que l'accueil** n'a ses ressources qu'au rendu : elles arrivent après le contenu. Cette page n'est pas purgée par la collecte : la bande y suit les caches de LiteSpeed et d'Elementor (une purge manuelle la met à jour). Le filtre `rsn_veille_charger_accueil` force le chargement en tête d'une page : `add_filter('rsn_veille_charger_accueil', '__return_true')`.
+- `accueil.css` et `accueil.js` (`?ver=0.13.0`) se chargent sur la page d'accueil et sur toute page dont le contenu contient `[rsn_veille_accueil]` : le CSS dans l'en-tête, le script en pied de page. **Un code court posé dans un widget d'une autre page Elementor que l'accueil** n'a ses ressources qu'au rendu : elles arrivent après le contenu. Cette page n'est pas purgée par la collecte : la bande y suit les caches de LiteSpeed et d'Elementor (une purge manuelle la met à jour). Le filtre `rsn_veille_charger_accueil` force le chargement en tête d'une page : `add_filter('rsn_veille_charger_accueil', '__return_true')`.
 
 **Retour en arrière.** Dans Elementor, remettre `[rsn_events_cards limit="3"]` dans le widget Code court de la page 152 et de la page 1147 (et rétablir les marges de 100 px et de 50 px si elles ont été changées), puis purger LiteSpeed. L'extension peut rester active : tant que `[rsn_veille_accueil]` n'est dans aucune page, elle est sans effet visible : ses ressources se chargent sur l'accueil et l'accueil est purgé dès la mise à jour, mais rien ne s'y dessine de nouveau.
 
@@ -312,6 +316,6 @@ Depuis la 0.5.0, la bande « Prochains événements » de l'accueil est le code 
   ```
   Faire ce nettoyage **avant** de supprimer l'extension ; après coup, il faudrait la réinstaller le temps du nettoyage.
 
-## 10. Limites connues de la version 0.12.0
+## 10. Limites connues de la version 0.13.0
 
 Voir la section « Limites connues » du `LISEZMOI.md`.
