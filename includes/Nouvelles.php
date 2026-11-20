@@ -33,7 +33,7 @@ final class Nouvelles {
      * @param array<string,array<string,mixed>> $sources_nouvelles Registre de sources (seules les actives `categorie_nouvelles` sont lues).
      * @param callable(string): array $obtenir Renvoie `['corps' => …, 'type' => …, 'code' => …, 'erreur' => …]` (comme `Http::obtenir`).
      * @param string $aujourdhui Date du jour, `Y-m-d`.
-     * @return array{nouvelles: array<int,array{url: string, titre: string, date: string, source: string, organisateur: string, resume: string, statut_radar: string}>, erreurs: string[], genere_le: string}
+     * @return array{nouvelles: array<int,array{url: string, titre: string, date: string, source: string, organisateur: string, resume: string, statut_radar: string, domaine?: string, deja_paru?: string}>, erreurs: string[], genere_le: string}
      */
     public static function lire(array $sources_nouvelles, callable $obtenir, Pertinence $p, string $aujourdhui): array {
         $parties = [];
@@ -103,9 +103,32 @@ final class Nouvelles {
                 'organisateur' => (string) ($source['organisateur'] ?? ''),
                 'resume' => $fiche->resume,
                 'statut_radar' => $statut === 'publie' ? 'reperee' : 'a_trier',
-            ];
+            ] + self::domaine($statut, $source, $p, $fiche->titre . ' ' . $fiche->resume);
         }
         return $partie;
+    }
+
+    /**
+     * Domaine d'une nouvelle qui ne touche qu'un des deux (`statut_radar = a_trier`) : celui de la source si elle est de
+     * santé ou du numérique, sinon celui que le texte touche. Le Radar l'affiche (« Santé seulement », « Numérique
+     * seulement »). Rien pour une nouvelle repérée.
+     *
+     * @param array<string,mixed> $source
+     * @return array{domaine?: string}
+     */
+    private static function domaine(string $statut, array $source, Pertinence $p, string $texte): array {
+        if ($statut === 'publie') {
+            return [];
+        }
+        $type = (string) ($source['type_source'] ?? '');
+        if ($type === 'sante' || $type === 'numerique') {
+            return ['domaine' => $type];
+        }
+        $touche = $p->touche($texte);
+        if ($touche['sante'] !== $touche['numerique']) {
+            return ['domaine' => $touche['sante'] ? 'sante' : 'numerique'];
+        }
+        return [];
     }
 
     /**
@@ -167,7 +190,7 @@ final class Nouvelles {
                     'organisateur' => (string) ($source['organisateur'] ?? ''),
                     'resume' => $element['resume'],
                     'statut_radar' => $statut === 'publie' ? 'reperee' : 'a_trier',
-                ];
+                ] + self::domaine($statut, $source, $p, $element['titre'] . ' ' . $element['resume']);
                 $autres = count($parus[$url] ?? []) - 1;
                 if ($autres > 0) {
                     $nouvelle['deja_paru'] = (string) $autres;

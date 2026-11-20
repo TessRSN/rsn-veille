@@ -171,9 +171,10 @@ copie de 24 h (`rsn_veille_radar_dernier`). Un verrou de 2 min (`rsn_veille_rada
 - [ ] La page s'ouvre sans erreur PHP. En haut : bouton **Rafraîchir**, « Flux lus le … », puis les trois
       onglets (0.9.0) « À trier (n) », « Gardées pour l'infolettre (0) », « Écartées (0) » et le filtre
       « Publiées du … au … ». L'onglet « À trier » montre les nouvelles groupées par source, la plus récente d'abord.
-- [ ] Chaque nouvelle montre la date, le titre (lien qui s'ouvre dans un nouvel onglet), « Repérée » ou
-      « À trier », un extrait, et les boutons **Garder pour l'infolettre** et **Écarter**. Aucune nouvelle
-      de plus de 60 jours. Une source généraliste (FRQ, Acfas) donne surtout des « À trier ».
+- [ ] Chaque nouvelle montre la date, le titre (lien qui s'ouvre dans un nouvel onglet), ce qu'elle touche
+      (0.12.0 : « Santé + numérique » en gras, « Santé seulement » ou « Numérique seulement » ; « Repérée » et
+      « À trier » avant), un extrait, et les boutons **Garder pour l'infolettre** et **Écarter**. Aucune nouvelle
+      de plus de 60 jours. Une source généraliste (FRQ, Acfas) donne surtout des « … seulement ».
 - [ ] Les sources en erreur (un 403, un flux devenu une page HTML) sont listées en bas, repliées, sous
       « N sources en erreur », sans casser les autres sources.
 - [ ] **Garder** deux nouvelles : chaque ligne disparaît du radar, le message « Nouvelle gardée pour

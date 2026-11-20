@@ -834,7 +834,7 @@ final class PageRadar {
     }
 
     /**
-     * Une nouvelle : date, titre (lien), source des gardées ou statut du radar, extrait et boutons.
+     * Une nouvelle : date, titre (lien), source des gardées ou pertinence (santé, numérique), extrait et boutons.
      * Vide si l'adresse n'est pas une adresse http(s) valide.
      *
      * @param array<string,mixed> $n
@@ -864,9 +864,7 @@ final class PageRadar {
                 $meta[] = esc_html(sprintf(__('gardée le %s', 'rsn-veille'), $quand));
             }
         } else {
-            $meta[] = ($n['statut_radar'] ?? '') === 'reperee'
-                ? '<span class="rsn-veille-radar-statut" data-statut="reperee">' . esc_html__('Repérée', 'rsn-veille') . '</span>'
-                : '<span class="rsn-veille-radar-statut" data-statut="a_trier">' . esc_html__('À trier', 'rsn-veille') . '</span>';
+            $meta[] = self::pertinence_html((string) ($n['statut_radar'] ?? ''), (string) ($n['domaine'] ?? ''));
             if ($deja_paru > 0) {
                 /* translators: %d : nombre d'autres numéros de l'infolettre où l'encadré a déjà paru. */
                 $meta[] = '<span class="rsn-veille-deja-paru" title="' . esc_attr__("Cet encadré revient d'un numéro à l'autre de l'infolettre : rien de neuf, sans doute.", 'rsn-veille') . '">'
@@ -888,6 +886,25 @@ final class PageRadar {
             . ($resume !== '' ? '<p class="rsn-veille-extrait">' . esc_html($resume) . '</p>' : '')
             . '<div class="rsn-veille-actions">' . $boutons . '</div>'
             . '</li>';
+    }
+
+    /**
+     * Ce que touche la nouvelle, d'après les mots-clés des Réglages : « Santé + numérique » (repérée : a priori pour le
+     * RSN), sinon « Santé seulement » ou « Numérique seulement » (à juger). Sans domaine connu (lecture gardée en cache
+     * par une version précédente) : « Un seul des deux ».
+     */
+    private static function pertinence_html(string $statut, string $domaine): string {
+        if ($statut === 'reperee') {
+            return '<span class="rsn-veille-radar-statut" data-statut="reperee" title="' . esc_attr__('Le texte touche la santé et le numérique : a priori dans le mille.', 'rsn-veille') . '">'
+                . esc_html__('Santé + numérique', 'rsn-veille') . '</span>';
+        }
+        $libelle = match ($domaine) {
+            'sante' => __('Santé seulement', 'rsn-veille'),
+            'numerique' => __('Numérique seulement', 'rsn-veille'),
+            default => __('Un seul des deux', 'rsn-veille'),
+        };
+        return '<span class="rsn-veille-radar-statut" data-statut="a_trier" title="' . esc_attr__("Le texte ne touche qu'un des deux, santé ou numérique : à vous de juger.", 'rsn-veille') . '">'
+            . esc_html($libelle) . '</span>';
     }
 
     private static function bouton_html(string $acte, string $libelle, bool $principal): string {

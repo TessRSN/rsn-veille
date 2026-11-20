@@ -56,7 +56,9 @@ final class NouvellesTest extends TestCase {
         $this->assertSame([], $r['erreurs']);
         $this->assertNotEmpty($r['nouvelles']);
         foreach ($r['nouvelles'] as $n) {
-            $this->assertSame(['url', 'titre', 'date', 'source', 'organisateur', 'resume', 'statut_radar'], array_keys($n));
+            // `domaine` (santé ou numérique) n'accompagne que les nouvelles qui ne touchent qu'un des deux.
+            $this->assertSame(['url', 'titre', 'date', 'source', 'organisateur', 'resume', 'statut_radar'], array_keys(array_diff_key($n, ['domaine' => 0])));
+            $this->assertSame($n['statut_radar'] === 'a_trier', isset($n['domaine']));
             $this->assertMatchesRegularExpression('/^2026-\d\d-\d\d$/', $n['date']);
             $this->assertNotSame('', $n['titre']);
             $this->assertMatchesRegularExpression('#^https?://#', $n['url']);
@@ -100,6 +102,23 @@ final class NouvellesTest extends TestCase {
         // Source de santé et numérique : tout est repéré.
         $r = Nouvelles::lire(self::une_source('sante_numerique'), $obtenir, new Pertinence(), self::AUJOURDHUI);
         $this->assertSame(['reperee', 'reperee', 'reperee'], array_column($r['nouvelles'], 'statut_radar'));
+    }
+
+    public function test_domaine_d_une_nouvelle_qui_ne_touche_qu_un_des_deux(): void {
+        $flux = self::rss(
+            self::item('Santé et intelligence artificielle', '2026-10-20')
+            . self::item('Santé seulement', '2026-10-19')
+            . self::item('Un algorithme primé', '2026-10-18')
+            . self::item('Assemblée annuelle', '2026-10-17')
+        );
+        $obtenir = self::obtenir(['https://x.test/feed/' => self::reponse($flux)]);
+        $domaines = static fn(string $type): array => array_column(Nouvelles::lire(self::une_source($type), $obtenir, new Pertinence(), self::AUJOURDHUI)['nouvelles'], 'domaine', 'titre');
+        // Source généraliste : le domaine est celui que le texte touche ; ce qui touche les deux n'en porte pas.
+        $this->assertSame(['Santé seulement' => 'sante', 'Un algorithme primé' => 'numerique'], $domaines('generaliste'));
+        // Source de santé ou du numérique : c'est le domaine de la source, quel que soit le texte.
+        $this->assertSame(['Santé seulement' => 'sante', 'Assemblée annuelle' => 'sante'], $domaines('sante'));
+        $this->assertSame(['Un algorithme primé' => 'numerique', 'Assemblée annuelle' => 'numerique'], $domaines('numerique'));
+        $this->assertSame([], $domaines('sante_numerique'));
     }
 
     public function test_retention_de_60_jours(): void {

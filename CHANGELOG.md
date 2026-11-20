@@ -15,6 +15,9 @@ Infolettres Mailchimp : celle de l'Unité de soutien SSA Québec est lue et déc
 - **« Déjà paru dans n autres numéros »** : étiquette orange et liseré sur un encadré qui revient d'un numéro à l'autre (« Boîte à outils SSA », « Formations gratuites »…). Deux envois du même numéro (mêmes encadrés, à une semaine d'écart) comptent pour un seul. Une nouvelle écartée ne revient pas aux numéros suivants.
 - **« Gabarit à vérifier »** en tête du Radar si le dernier numéro ne donne plus d'encadré (ou moins du tiers de l'habitude) alors qu'il porte un titre comme les autres, ou si aucun numéro du flux n'en donne. Le numéro reste lisible en une seule nouvelle.
 
+### Radar : libellés de pertinence
+- À côté du titre, « Repérée » devient **« Santé + numérique »** et « À trier » devient **« Santé seulement »** ou **« Numérique seulement »** (le domaine de la source, ou celui que le texte touche pour une source généraliste). « À trier » ne désigne plus que l'onglet. Une lecture gardée en cache par la version précédente affiche « Un seul des deux » jusqu'au prochain rafraîchissement.
+
 ### Agenda de l'infolettre : événements à approuver (`Lecteurs\LecteurInfolettre`)
 - Nouvelle source collectée la nuit, « Unité de soutien SSA Québec : agenda (infolettre) » : chaque ligne datée et à venir du bloc « À l'agenda » devient un événement **toujours « à approuver »** (jamais publié d'office). Le même événement annoncé dans plusieurs numéros ne donne qu'une fiche. S'il est déjà connu d'une autre source (même jour, même titre), la mention s'y rattache **sans rien réécrire** : la source est de niveau B, le moins fiable, et ne fait que combler un lien ou une image manquants. L'adresse ne sert jamais à repérer un doublon (`sans_doublon_par_url`), parce que plusieurs lignes peuvent partager celle du numéro ou d'une page générale.
 - Format, ville, région et langue sont déduits de la mention (« en ligne », « à Québec et en ligne », « en anglais »). L'organisateur n'est rempli que si le lien mène chez l'éditeur de l'infolettre ; sinon il reste vide, à compléter dans « Détails de la fiche ». Le résumé dit d'où vient l'annonce (« Annoncé dans l'infolettre du 20 novembre 2026 (…) : à Québec. »).
@@ -27,7 +30,7 @@ Infolettres Mailchimp : celle de l'Unité de soutien SSA Québec est lue et déc
 - Pour l'agenda de l'infolettre, l'alerte porte sur le dernier numéro : il n'a plus de ligne d'agenda alors que les précédents en ont.
 
 ### Livraison
-- Tests : 36 nouveaux (804 au total) ; découpage vérifié sur le vrai flux et les 20 envois publics ; relecture indépendante (fusions à tort, dates à cheval sur deux années, HTML hostile : corrigés avant la livraison). Textes anglais au `.po` (noms des deux sources, libellé de la table des sources). Numéro de version 0.12.0.
+- Tests : 38 nouveaux (806 au total) ; découpage vérifié sur le vrai flux et les 20 envois publics ; relecture indépendante (fusions à tort, dates à cheval sur deux années, HTML hostile : corrigés avant la livraison). Textes anglais au `.po` (noms des deux sources, libellé de la table des sources). Numéro de version 0.12.0.
 
 ## 0.11.0 (2026-11-20)
 

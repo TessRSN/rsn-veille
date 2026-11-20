@@ -107,7 +107,9 @@ final class PageRadarTest extends TestCase {
         $this->assertStringNotContainsString('Titre 4', $html);
         $this->assertStringContainsString('Garder pour l&#039;infolettre</button>', $html);
         $this->assertStringContainsString('data-act="ignorer">Écarter</button>', $html);
-        $this->assertStringContainsString('Repérée', $html);
+        $this->assertStringContainsString('<span class="rsn-veille-radar-statut" data-statut="reperee"', $html);
+        $this->assertStringContainsString('>Santé + numérique</span>', $html);
+        $this->assertStringNotContainsString('Repérée', $html);
         $this->assertStringContainsString('20 octobre 2026', $html);
         $this->assertSame(1, substr_count($html, 'role="status"'));
         $this->assertStringContainsString('rel="noopener noreferrer"', $html);
@@ -236,6 +238,23 @@ final class PageRadarTest extends TestCase {
         $this->assertStringContainsString('Aucune nouvelle à trier', $html);
         $sans = PageRadar::page_html(['genere_le' => '', 'erreurs' => [], 'nouvelles' => []], [], [], self::options());
         $this->assertStringNotContainsString('<details', $sans);
+    }
+
+    public function test_libelles_de_pertinence(): void {
+        $donnees = ['genere_le' => '', 'erreurs' => [], 'nouvelles' => [
+            self::nouvelle(1),
+            self::nouvelle(2, ['statut_radar' => 'a_trier', 'domaine' => 'sante']),
+            self::nouvelle(3, ['statut_radar' => 'a_trier', 'domaine' => 'numerique']),
+            // Lecture gardée en cache par une version précédente (sans domaine), ou domaine inconnu.
+            self::nouvelle(4, ['statut_radar' => 'a_trier']),
+            self::nouvelle(5, ['statut_radar' => 'a_trier', 'domaine' => '<b>']),
+        ]];
+        $html = PageRadar::page_html($donnees, [], [], self::options());
+        preg_match_all('~<span class="rsn-veille-radar-statut" data-statut="([a-z_]+)"[^>]*>([^<]*)</span>~', $html, $m);
+        $this->assertSame(['reperee', 'a_trier', 'a_trier', 'a_trier', 'a_trier'], $m[1]);
+        $this->assertSame(['Santé + numérique', 'Santé seulement', 'Numérique seulement', 'Un seul des deux', 'Un seul des deux'], $m[2]);
+        // Le mot « À trier » ne reste que sur l'onglet.
+        $this->assertStringNotContainsString('>À trier</span>', $html);
     }
 
     public function test_etiquette_deja_paru(): void {
