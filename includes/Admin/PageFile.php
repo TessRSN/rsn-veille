@@ -132,8 +132,8 @@ final class PageFile {
      */
     public static function compteurs_de(Entrepot $e, string $aujourdhui): array {
         $bruts = $e->compter();
-        $en_cours = count(array_filter(self::publiees_d_actualite($e, $aujourdhui), static fn(Fiche $f): bool => !$f->est_passee($aujourdhui)));
-        $attente_passees = count(array_filter($e->lister('a_approuver'), static fn(Fiche $f): bool => $f->est_passee($aujourdhui)));
+        $en_cours = count(array_filter(self::publiees_d_actualite($e, $aujourdhui), static fn(Fiche $f): bool => self::dans_onglet($f, 'publie', $aujourdhui)));
+        $attente_passees = count(array_filter($e->lister('a_approuver'), static fn(Fiche $f): bool => self::dans_onglet($f, 'archive', $aujourdhui)));
         return [
             'a_approuver' => max(0, (int) ($bruts['a_approuver'] ?? 0) - $attente_passees),
             'publie' => $en_cours,
@@ -836,7 +836,9 @@ final class PageFile {
         if ($f->statut !== 'publie' && $f->statut !== 'a_approuver') {
             return false;
         }
-        $passee = $f->est_passee($aujourdhui);
+        // Une fiche publiée qui n'est ni un événement ni un appel n'est sur aucune page : rangée avec les archivées,
+        // pour qu'aucune fiche publiée ne soit introuvable dans la file.
+        $passee = $f->est_passee($aujourdhui) || ($f->statut === 'publie' && !in_array($f->type, self::TYPES, true));
         return $onglet === 'archive' ? $passee : (!$passee && $f->statut === $onglet);
     }
 

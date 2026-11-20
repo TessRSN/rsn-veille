@@ -253,6 +253,22 @@ final class PageFileTest extends TestCase {
         $this->assertSame(['a_approuver' => 0, 'publie' => 0, 'archive' => 5, 'ecarte' => 1, 'a_verifier' => 0], PageFile::compteurs_de($e, '2026-12-02'));
     }
 
+    public function test_une_fiche_publiee_d_un_autre_type_reste_trouvable_dans_les_archivees(): void {
+        $e = new EntrepotMemoire();
+        $f = self::fiche(['statut' => 'publie', 'type' => 'nouvelle', 'titre' => 'Fiche d’un autre type']);
+        $f->id = null;
+        $id = $e->creer($f);
+        // Ni événement ni appel : elle n'est sur aucune page publique, donc pas dans « Publiées ».
+        $page = static fn(string $onglet): array => self::ids(PageFile::filtrer(PageFile::fiches_de_l_onglet($e, $onglet, '', '2026-10-27')[0], $onglet, '', '', '', '2026-10-27'));
+        $this->assertSame([], $page('publie'));
+        $this->assertSame([$id], $page('archive'));
+        $this->assertSame(['a_approuver' => 0, 'publie' => 0, 'archive' => 1, 'ecarte' => 0, 'a_verifier' => 0], PageFile::compteurs_de($e, '2026-10-27'));
+        // En attente, elle reste dans « À approuver ».
+        $e->mettre_a_jour($id, ['statut' => 'a_approuver']);
+        $this->assertSame([$id], $page('a_approuver'));
+        $this->assertSame([], $page('archive'));
+    }
+
     // --- Type bien visible et niveaux expliqués (0.15.0) ---
 
     public function test_pastille_de_type_et_legende_des_niveaux(): void {

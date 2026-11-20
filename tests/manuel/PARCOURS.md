@@ -1,4 +1,4 @@
-# Parcours de vérification de bout en bout (version 0.14.0)
+# Parcours de vérification de bout en bout (version 0.15.0)
 
 Ce parcours enchaîne, dans l'ordre d'un vrai usage, toutes les listes de vérification manuelles :
 `verifier-admin.md` (administration), `verifier-public.md` (page publique, formulaire, REST et iCal) et
@@ -102,15 +102,17 @@ une erreur consignée, pas un défaut), et la file `rsn_veille_file` est vide.
 
 `verifier-admin.md`, section **Préparation** point 4 (trois fiches de vérification, si la collecte n'a pas
 donné assez de fiches à approuver), puis section **Vérifications** : titre `<script>` en texte, onglet
-« À approuver » (**Publier**, **Écarter**), onglet « Publiées » (**Retirer**), onglet « Écartées » (**Publier**),
-filtres, onglet « À vérifier » (**Garder publiée**, **Retirer**), jeton expiré, largeur mobile.
+« À approuver » (**Publier + infolettre**, **Publier seulement**, **Écarter**), onglet « Publiées » (**Retirer de la
+page**, colonne « Infolettre du RSN »), onglet « Archivées » (0.15.0), onglet « Écartées » (**Publier**), filtres,
+onglet « À vérifier » (**Garder publiée**, **Retirer de la page**), jeton expiré, largeur mobile. **0.15.0** : type en
+pastille, niveaux en clair et légende, rangement par date de l'événement ou date limite de l'appel.
 **Tri et repère « Nouveau »** (créer au moins deux fiches à approuver à des jours d'arrivée différents :
 `wp post meta update <ID> rsn_veille_cree_le AAAA-MM-JJ`, avec la date du jour, celle d'hier et une date plus
 ancienne ; l'une doit aussi avoir une date d'événement plus lointaine que les autres) :
-- « À approuver » et « À vérifier » sont triés par jour d'arrivée décroissant, pas par date d'événement : la fiche
-  arrivée aujourd'hui est en tête même si son événement est le plus lointain ;
+- « À vérifier » est trié par jour d'arrivée décroissant ; depuis la 0.15.0, « À approuver » est rangé par date
+  d'événement ou date limite d'appel, la plus proche en haut : la fiche arrivée aujourd'hui n'est plus forcément en tête ;
 - le repère jaune « Nouveau » suit le titre des fiches arrivées aujourd'hui ou hier, et seulement celles-là, dans
-  ces deux onglets ; il n'existe pas dans « Publiées » ni dans « Écartées », qui restent triés par date d'événement ;
+  ces deux onglets ; il n'existe pas dans « Publiées », « Archivées » ni « Écartées » ;
 - une fiche sans `rsn_veille_cree_le` (`wp post meta delete <ID> rsn_veille_cree_le`) prend, à la lecture, le jour de
   son `post_date` (qui suit la date de l'événement) : elle se range selon ce jour et n'a le repère « Nouveau » que si
   ce jour est aujourd'hui ou hier.
@@ -191,7 +193,7 @@ est vide pour la page Veille choisie.
     (la bande ne doit causer aucun défilement horizontal). Consigner tout écart dans le tableau des écarts.
     Vérifier aussi à 375 px (cartes empilées).
 12. Section **Ressources et cohabitation** de `verifier-public.md` : ressources seulement sur la page Veille
-    (chargées avec `?ver=0.14.0`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
+    (chargées avec `?ver=0.15.0`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
     si installé (la page anglaise a ses propres points, 24 à 32).
 13. Section **REST et iCal** : `/wp-json/rsn/v1/veille` (aucune clé retirée), `/veille.ics` (CRLF, en-têtes,
     validateur iCal, abonnement dans un agenda).
@@ -202,7 +204,7 @@ est vide pour la page Veille choisie.
     et il n'est pas à la une du RSN.
 15. **Purge à la mise à jour** : `wp option delete rsn_veille_version`, puis charger une page de wp-admin ; le transient
     `rsn_veille_json_fr` a disparu (`wp transient get rsn_veille_json_fr` ne rend rien) et
-    `wp option get rsn_veille_version` rend `0.14.0`. Un second chargement ne purge plus.
+    `wp option get rsn_veille_version` rend `0.15.0`. Un second chargement ne purge plus.
 16. **Bandeau continu** (version 0.3.0 ; exige le thème Vault, absent de wp-env : à faire sur rsn.quebec, sur la page
     ordinaire avec un bloc Code court, renommée « Événements et appels », fenêtre large) :
     - aucun écart blanc entre l'en-tête du thème (fil d'Ariane et titre) et l'intro du bandeau, ni entre l'intro, les
@@ -356,7 +358,7 @@ changement de fiche (`wp transient delete rsn_veille_json_fr` et `rsn_veille_jso
 1. **Rendu et hauteur** (hors connexion, fenêtre de 1 440 px) : trois colonnes, le calendrier du mois, « Au RSN » et
    « Dans l'écosystème ». La bande est nettement plus basse qu'avant (environ 1 040 px pour l'ancienne bande ; mesurer
    la section avec les outils du navigateur et la noter dans le tableau des écarts). `accueil.css` et `accueil.js`
-   sont chargés avec `?ver=0.14.0` (le CSS dans l'en-tête, le script en pied de page) sur l'accueil ; ni `veille.css` ni `veille.js`. Aucune erreur dans la
+   sont chargés avec `?ver=0.15.0` (le CSS dans l'en-tête, le script en pied de page) sur l'accueil ; ni `veille.css` ni `veille.js`. Aucune erreur dans la
    console, aucun défilement horizontal (`document.documentElement.scrollWidth === document.documentElement.clientWidth`).
    **Charger l'accueil sans toucher la souris ni le clavier** : la bande doit se dessiner d'elle-même ; si elle reste vide,
    exclure `accueil.js` du délai du JavaScript de LiteSpeed (LiteSpeed › Optimisation de page › Réglages JS).
