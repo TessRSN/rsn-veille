@@ -506,6 +506,21 @@ final class PageFileTest extends TestCase {
         $this->assertStringNotContainsString('à traiter', PageFile::page_html([$publiee], 'publie', '', '', $url, self::OPTIONS));
     }
 
+    public function test_rappel_des_sources_dont_le_gabarit_est_a_verifier(): void {
+        $url = 'https://exemple.test/wp-admin/admin.php?page=rsn-veille';
+        $options = self::OPTIONS + ['sources_a_verifier' => ['Obvia : événements', 'SSA <b>', 7], 'url_journal' => 'https://exemple.test/wp-admin/admin.php?page=rsn-veille-journal'];
+        $html = PageFile::page_html([self::fiche()], 'a_approuver', '', '', $url, $options);
+        $this->assertStringContainsString('<p class="rsn-veille-rappel-gabarit">', $html);
+        $this->assertStringContainsString('2 sources à vérifier (gabarit peut-être changé) : Obvia : événements, SSA &lt;b&gt;', $html);
+        $this->assertStringContainsString('<a href="https://exemple.test/wp-admin/admin.php?page=rsn-veille-journal">Voir le journal</a>', $html);
+        $this->assertLessThan(strpos($html, '<table'), strpos($html, 'rsn-veille-rappel-gabarit'));
+        $une = PageFile::page_html([self::fiche()], 'a_approuver', '', '', $url, ['sources_a_verifier' => ['Mila : événements']] + $options);
+        $this->assertStringContainsString('1 source à vérifier (gabarit peut-être changé) : Mila : événements', $une);
+        // Seulement dans la file à approuver, et seulement s'il y en a.
+        $this->assertStringNotContainsString('rsn-veille-rappel-gabarit', PageFile::page_html([self::fiche()], 'publie', '', '', $url, $options));
+        $this->assertStringNotContainsString('rsn-veille-rappel-gabarit', PageFile::page_html([self::fiche()], 'a_approuver', '', '', $url, self::OPTIONS));
+    }
+
     public function test_courriel_du_proposant_echappe(): void {
         $url = 'https://exemple.test/wp-admin/admin.php?page=rsn-veille';
         $f = self::fiche(['id' => 1, 'source' => 'proposition', 'niveau' => 'M']);

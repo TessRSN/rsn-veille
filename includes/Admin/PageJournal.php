@@ -30,7 +30,7 @@ final class PageJournal {
         $journal = Journal::tout();
         // Sources actives, puis les sources désactivées qui ont un journal (sous leur nom).
         $sources = Collecte::sources() + array_intersect_key(Sources::par_defaut(), $journal);
-        echo self::page_html(self::resume($journal, $sources), $lisible);
+        echo self::page_html(self::resume($journal, $sources), $lisible, array_map('strval', array_keys(Collecte::sources())));
     }
 
     /**
@@ -79,8 +79,10 @@ final class PageJournal {
     /**
      * @param array<int,array{id: string, nom: string, entree: ?array, historique: array<int,array>}> $lignes `resume()`
      * @param string $derniere Date lisible de la dernière collecte terminée, vide si aucune.
+     * @param string[]|null $actives Identifiants des sources actives : seules leurs alertes de gabarit montent en tête
+     *        de page (null : toutes).
      */
-    public static function page_html(array $lignes, string $derniere): string {
+    public static function page_html(array $lignes, string $derniere, ?array $actives = null): string {
         $texte = $derniere !== ''
             /* translators: %s : date et heure de la dernière collecte terminée. */
             ? sprintf(__('Dernière collecte terminée : %s', 'rsn-veille'), $derniere)
@@ -92,10 +94,32 @@ final class PageJournal {
         return '<div class="wrap rsn-veille-admin">'
             . '<h1>' . esc_html__('Journal des collectes', 'rsn-veille') . '</h1>'
             . '<p class="rsn-veille-derniere">' . esc_html($texte) . '</p>'
+            . self::alertes_html($lignes, $actives)
             . '<h2>' . esc_html__('Dernière collecte par source', 'rsn-veille') . '</h2>'
             . self::tableau_html(__('Source', 'rsn-veille'), $corps)
             . self::deroule_html($lignes)
             . '</div>';
+    }
+
+    /** Sources dont la dernière collecte rompt avec l'habitude (gabarit peut-être changé), bien visibles en tête. */
+    private static function alertes_html(array $lignes, ?array $actives): string {
+        $items = '';
+        foreach ($lignes as $ligne) {
+            $alerte = self::alerte($ligne['entree'] ?? null);
+            if ($alerte !== '' && ($actives === null || in_array((string) $ligne['id'], $actives, true))) {
+                $items .= '<li><strong>' . esc_html((string) $ligne['nom']) . '</strong> : ' . esc_html($alerte) . '</li>';
+            }
+        }
+        if ($items === '') {
+            return '';
+        }
+        return '<div class="notice notice-warning inline rsn-veille-alerte-gabarit"><p><strong>' . esc_html__('Gabarit à vérifier', 'rsn-veille') . '</strong></p><ul>' . $items . '</ul>'
+            . '<p class="description">' . esc_html__("Ouvrez la page de la source : si elle est présentée autrement, sa lecture est à adapter ; si elle n'annonce simplement plus rien, il n'y a rien à faire et l'alerte s'éteindra d'elle-même.", 'rsn-veille') . '</p></div>';
+    }
+
+    /** Alerte de gabarit d'une entrée, ou vide. */
+    private static function alerte(mixed $entree): string {
+        return is_array($entree) && is_string($entree['alerte'] ?? null) ? $entree['alerte'] : '';
     }
 
     /** Déroulé des entrées de chaque source collectée, replié. */
@@ -133,7 +157,7 @@ final class PageJournal {
         return '<table class="wp-list-table widefat striped rsn-veille-journal"><thead><tr>' . $entete . '</tr></thead><tbody>' . $corps . '</tbody></table>';
     }
 
-    /** Cellules d'une entrée : date, compteurs, erreurs, durée. Valeurs illisibles tolérées. */
+    /** Cellules d'une entrée : date, compteurs, alerte de gabarit et erreurs, durée. Valeurs illisibles tolérées. */
     private static function cellules_html(array $entree): string {
         $date = is_string($entree['date'] ?? null) ? $entree['date'] : '';
         $lisible = Dates::date_heure($date);
@@ -144,7 +168,11 @@ final class PageJournal {
         }
         $erreurs = is_array($entree['erreurs'] ?? null) ? array_filter($entree['erreurs'], 'is_scalar') : [];
         $duree = $entree['duree_ms'] ?? 0;
-        return $html . '<td>' . self::anglais_html($entree) . self::erreurs_html($erreurs) . '</td>'
+        $alerte = self::alerte($entree);
+        $gabarit = $alerte !== ''
+            ? '<div class="rsn-veille-gabarit"><span class="rsn-veille-etiquette-gabarit">' . esc_html__('Gabarit à vérifier', 'rsn-veille') . '</span> ' . esc_html($alerte) . '</div>'
+            : '';
+        return $html . '<td>' . $gabarit . self::anglais_html($entree) . self::erreurs_html($erreurs) . '</td>'
             . '<td>' . esc_html(self::duree(is_numeric($duree) ? (int) $duree : 0)) . '</td>';
     }
 

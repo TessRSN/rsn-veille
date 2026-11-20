@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Ce que rapporte la lecture d'une source : fiches, erreurs et éléments ignorés.
+ * Ce que rapporte la lecture d'une source : fiches, erreurs, éléments ignorés et alertes de gabarit.
  */
 final class Resultat {
     /** @var Fiche[] */
@@ -19,4 +19,11 @@ final class Resultat {
     public array $erreurs = [];
     /** Éléments écartés (par exemple événements déjà terminés). */
     public int $ignores = 0;
+    /**
+     * Signes que la source a changé de gabarit sans cesser d'être lisible (une infolettre dont le dernier numéro n'a
+     * plus son bloc d'agenda) : consignés au journal, sans faire échouer la lecture.
+     *
+     * @var string[]
+     */
+    public array $alertes = [];
 }

@@ -137,10 +137,10 @@ final class Depot {
 
     /**
      * La fiche est déjà connue (même clé de source, doublon ou même URL) : `integrer()` ne créerait
-     * pas de nouvelle fiche. N'écrit rien.
+     * pas de nouvelle fiche. N'écrit rien. `$doublon_par_url` : comme pour `integrer()`.
      */
-    public function existe(Fiche $f): bool {
-        return $this->trouver_par_cles($this->cles($f)) !== null || $this->trouver_doublon($f) !== null;
+    public function existe(Fiche $f, bool $doublon_par_url = true): bool {
+        return $this->trouver_par_cles($this->cles($f)) !== null || $this->trouver_doublon($f, $doublon_par_url) !== null;
     }
 
     /** La fiche enregistrée qui porte une clé de source de $f (sans recherche de doublon), sinon null. N'écrit rien. */

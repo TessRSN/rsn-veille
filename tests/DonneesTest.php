@@ -195,6 +195,10 @@ final class DonneesTest extends TestCase {
         $this->assertSame(0, $parNom['Mila : événements']['nb']);
         // Un flux structuré est présenté par son site, pas par l'adresse de son API.
         $this->assertSame('https://digitalhealthcanada.com/', $parNom['Digital Health Canada']['url']);
+        // Une infolettre découpée : son archive publique, pas le flux ; ses encadrés (Radar) ne sont pas listés.
+        $agenda = $parNom['Unité de soutien SSA Québec : agenda (infolettre)'];
+        $this->assertSame(['Infolettre, bloc « À l’agenda »', 'https://us16.campaign-archive.com/home/?u=fd0647c2aa2f94eddd88a461a&id=83efb57620'], [$agenda['flux'], $agenda['url']]);
+        $this->assertArrayNotHasKey('Unité de soutien SSA Québec : infolettre', $parNom);
     }
 
     public function test_sources_en_mode_equipe_avec_niveau(): void {

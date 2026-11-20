@@ -159,7 +159,7 @@ function animer(racine, noeudDonnees) {
     return `<div class="ev${classeRSN(k)}">${HEX}${blocJour(k)}<div class="corps"><div class="tx"${attrLangue(k)}>
       ${pastilles(k)}
       <h3><a href="${lien(k.url)}" target="_blank" rel="noopener">${esc(k.titre)}</a></h3>
-      <div class="meta"><b>${esc(k.organisateur)}</b>${lieuTexte(k) ? ' · ' + esc(lieuTexte(k)) : ''}</div>
+      <div class="meta">${[k.organisateur ? `<b>${esc(k.organisateur)}</b>` : '', esc(lieuTexte(k))].filter(Boolean).join(' · ')}</div>
       ${ligneSerie(k)}
       <div class="pied"><a class="plus" href="${lien(k.url)}" target="_blank" rel="noopener">${esc(t('plus_info'))}</a></div>
     </div></div></div>`;

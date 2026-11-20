@@ -1,4 +1,4 @@
-# Parcours de vérification de bout en bout (version 0.11.0)
+# Parcours de vérification de bout en bout (version 0.12.0)
 
 Ce parcours enchaîne, dans l'ordre d'un vrai usage, toutes les listes de vérification manuelles :
 `verifier-admin.md` (administration), `verifier-public.md` (page publique, formulaire, REST et iCal) et
@@ -65,7 +65,7 @@ Dans la même étape, la case **Rôles** de la section Vérifications (« Régla
 ## 4. Collecte
 
 1. `wp eval-file wp-content/plugins/rsn-veille/tests/manuel/lancer-collecte.php` : une ligne par source,
-   plus de 60 fiches en attente et publiées (le script traite les 13 sources en boucle, sans attendre WP-Cron).
+   plus de 60 fiches en attente et publiées (le script traite les 14 sources en boucle, sans attendre WP-Cron).
 2. Ensuite, la case « Sources › **Lancer la collecte maintenant** » de la section Réglages (message « Collecte
    lancée : N sources en file », tâche `rsn_veille_source` échue immédiatement, aucune ligne pour une source décochée),
    puis laisser WP-Cron (`wp cron event run --due-now`, répété) vider la file.
@@ -87,7 +87,7 @@ Dans la même étape, la case **Rôles** de la section Vérifications (« Régla
    reçoivent leurs champs anglais à ce passage (`wp post meta get <ID> rsn_veille_titre_en`). Le résultat sur la
    page est vérifié à l'étape 7, point 29.
 
-**Terminé quand** : le Journal montre les 13 sources, au plus quelques erreurs de réseau expliquées (un 403 est
+**Terminé quand** : le Journal montre les 14 sources, au plus quelques erreurs de réseau expliquées (un 403 est
 une erreur consignée, pas un défaut), et la file `rsn_veille_file` est vide.
 
 ## 5. Import des événements des infolettres
@@ -191,7 +191,7 @@ est vide pour la page Veille choisie.
     (la bande ne doit causer aucun défilement horizontal). Consigner tout écart dans le tableau des écarts.
     Vérifier aussi à 375 px (cartes empilées).
 12. Section **Ressources et cohabitation** de `verifier-public.md` : ressources seulement sur la page Veille
-    (chargées avec `?ver=0.11.0`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
+    (chargées avec `?ver=0.12.0`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
     si installé (la page anglaise a ses propres points, 24 à 32).
 13. Section **REST et iCal** : `/wp-json/rsn/v1/veille` (aucune clé retirée), `/veille.ics` (CRLF, en-têtes,
     validateur iCal, abonnement dans un agenda).
@@ -202,7 +202,7 @@ est vide pour la page Veille choisie.
     et il n'est pas à la une du RSN.
 15. **Purge à la mise à jour** : `wp option delete rsn_veille_version`, puis charger une page de wp-admin ; le transient
     `rsn_veille_json_fr` a disparu (`wp transient get rsn_veille_json_fr` ne rend rien) et
-    `wp option get rsn_veille_version` rend `0.11.0`. Un second chargement ne purge plus.
+    `wp option get rsn_veille_version` rend `0.12.0`. Un second chargement ne purge plus.
 16. **Bandeau continu** (version 0.3.0 ; exige le thème Vault, absent de wp-env : à faire sur rsn.quebec, sur la page
     ordinaire avec un bloc Code court, renommée « Événements et appels », fenêtre large) :
     - aucun écart blanc entre l'en-tête du thème (fil d'Ariane et titre) et l'intro du bandeau, ni entre l'intro, les
@@ -356,7 +356,7 @@ changement de fiche (`wp transient delete rsn_veille_json_fr` et `rsn_veille_jso
 1. **Rendu et hauteur** (hors connexion, fenêtre de 1 440 px) : trois colonnes, le calendrier du mois, « Au RSN » et
    « Dans l'écosystème ». La bande est nettement plus basse qu'avant (environ 1 040 px pour l'ancienne bande ; mesurer
    la section avec les outils du navigateur et la noter dans le tableau des écarts). `accueil.css` et `accueil.js`
-   sont chargés avec `?ver=0.11.0` (le CSS dans l'en-tête, le script en pied de page) sur l'accueil ; ni `veille.css` ni `veille.js`. Aucune erreur dans la
+   sont chargés avec `?ver=0.12.0` (le CSS dans l'en-tête, le script en pied de page) sur l'accueil ; ni `veille.css` ni `veille.js`. Aucune erreur dans la
    console, aucun défilement horizontal (`document.documentElement.scrollWidth === document.documentElement.clientWidth`).
    **Charger l'accueil sans toucher la souris ni le clavier** : la bande doit se dessiner d'elle-même ; si elle reste vide,
    exclure `accueil.js` du délai du JavaScript de LiteSpeed (LiteSpeed › Optimisation de page › Réglages JS).
@@ -417,7 +417,8 @@ sur la page avec son image, sans courriel nulle part.
 
 `verifier-admin.md`, section **Radar (tâche 15)** : ouverture sans erreur, nouvelles groupées par source,
 sources en erreur repliées, **Garder** (deux nouvelles), **Retirer**, **Ignorer**, **Rafraîchir**, verrou,
-Garder sans réseau, titre jamais pris de la requête, jeton et droits, mobile. Laisser **deux nouvelles gardées**
+Garder sans réseau, titre jamais pris de la requête, jeton et droits, mobile, **infolettre découpée** (0.12.0 :
+encadrés de l'infolettre de l'Unité SSA, étiquette « Déjà paru »). Laisser **deux nouvelles gardées**
 pour l'étape suivante.
 
 **Terminé quand** : `wp option get rsn_veille_nouvelles_gardees --format=json` contient deux nouvelles.

@@ -124,7 +124,7 @@ final class Pertinence {
                     return 'publie';
                 }
                 return ($touche['sante'] || $touche['numerique']) ? 'a_approuver' : 'ecarte';
-            default: // proposition et tout type inconnu
+            default: // proposition, infolettre (mention dans une infolettre) et tout type inconnu
                 return 'a_approuver';
         }
     }
