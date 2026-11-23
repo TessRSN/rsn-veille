@@ -274,7 +274,8 @@
  * (`ClipboardItem`), pour un collage enrichi dans l'éditeur de Mailchimp ; repli : sélection du rendu
  * de l'aperçu et `execCommand('copy')`. « Copier le code HTML » copie le code source (`writeText`, repli
  * sur une zone de texte temporaire). Les codes viennent de zones de texte cachées, déjà échappées par le
- * serveur. Le cadre d'aperçu prend la hauteur de son contenu. Aucune dépendance.
+ * serveur. Le cadre d'aperçu prend la hauteur de son contenu, et la reprend quand la fenêtre change de largeur.
+ * Aucune dépendance.
  */
 (function () {
 	'use strict';
@@ -368,9 +369,20 @@
 	function ajusterCadre(cadre) {
 		var doc = cadre.contentDocument;
 		if (doc && doc.documentElement) {
+			// Repart du minimum : la hauteur d'un document n'est jamais inférieure à celle de son cadre, qui ne
+			// rétrécirait donc jamais (les billets changent de hauteur avec la largeur de la fenêtre).
+			cadre.style.height = '120px';
 			cadre.style.height = Math.max(120, doc.documentElement.scrollHeight + 4) + 'px';
 		}
 	}
+
+	var attente = null;
+	window.addEventListener('resize', function () {
+		window.clearTimeout(attente);
+		attente = window.setTimeout(function () {
+			page.querySelectorAll('iframe.rsn-veille-apercu').forEach(ajusterCadre);
+		}, 150);
+	});
 
 	page.querySelectorAll('iframe.rsn-veille-apercu').forEach(function (cadre) {
 		cadre.addEventListener('load', function () {

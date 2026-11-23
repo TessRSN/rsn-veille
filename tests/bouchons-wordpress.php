@@ -103,6 +103,9 @@ function rsn_veille_bouchons_reinitialiser(): void {
         'urls' => [], 'permaliens' => [], 'categories' => [],
         // Écran courant de l'administration (`get_current_screen`) : objet {base, post_type} posé par le test, ou null.
         'ecran' => null,
+        // Images : dossier des téléversements (`['basedir' => …, 'baseurl' => …]`, null : aucun), éditeurs d'images
+        // ouverts, et ce que l'éditeur simulé doit rendre (`erreur` : échec à l'ouverture ; `type` : format de sortie imposé).
+        'televersements' => null, 'editeurs' => [], 'editeur' => [],
     ];
     $GLOBALS['rsn_veille_wp']['roles'] = [
         'administrator' => new WP_Role('administrator', ['manage_options' => true, 'edit_posts' => true]),
@@ -139,6 +142,72 @@ function wp_remote_retrieve_header(array|WP_Error $reponse, string $nom): array|
 /** Corps de la réponse, '' pour une erreur. */
 function wp_remote_retrieve_body(array|WP_Error $reponse): string {
     return is_array($reponse) ? (string) ($reponse['body'] ?? '') : '';
+}
+
+/**
+ * Éditeur d'images simulé (`wp_get_image_editor`) : note ce qu'on lui demande et écrit un petit fichier à
+ * l'enregistrement. `$GLOBALS['rsn_veille_wp']['editeur']['type']` impose un format de sortie, comme le ferait
+ * une extension par le filtre `image_editor_output_format` : le fichier écrit change alors d'extension.
+ */
+final class RsnVeilleEditeurImages {
+    /** @var array<int,array<int,mixed>> */
+    public array $appels = [];
+
+    public function __construct(public string $source) {
+    }
+
+    /** @return array{width:int,height:int} */
+    public function get_size(): array {
+        $taille = getimagesize($this->source);
+        return ['width' => (int) ($taille[0] ?? 0), 'height' => (int) ($taille[1] ?? 0)];
+    }
+
+    public function resize(?int $largeur, ?int $hauteur, bool $rogner = false): bool|WP_Error {
+        $this->appels[] = ['resize', $largeur, $hauteur, $rogner];
+        return !empty($GLOBALS['rsn_veille_wp']['editeur']['resize_echoue']) ? new WP_Error('resize', 'Redimensionnement impossible.') : true;
+    }
+
+    public function set_quality(int $qualite): bool {
+        $this->appels[] = ['set_quality', $qualite];
+        return true;
+    }
+
+    /** @return array<string,mixed>|WP_Error */
+    public function save(string $destination, string $type): array|WP_Error {
+        $this->appels[] = ['save', $destination, $type];
+        if (!empty($GLOBALS['rsn_veille_wp']['editeur']['save_echoue'])) {
+            return new WP_Error('save', 'Écriture impossible.');
+        }
+        $impose = $GLOBALS['rsn_veille_wp']['editeur']['type'] ?? null;
+        if (is_string($impose) && $impose !== $type) {
+            $type = $impose;
+            $destination = (string) preg_replace('/\.[a-z]+$/', '.' . substr($type, 6), $destination);
+        }
+        file_put_contents($destination, 'copie ' . $type);
+        return ['path' => $destination, 'file' => basename($destination), 'width' => 400, 'height' => 267, 'mime-type' => $type];
+    }
+}
+
+function wp_upload_dir(?string $temps = null, bool $creer = true): array {
+    $dossier = $GLOBALS['rsn_veille_wp']['televersements'] ?? null;
+    return is_array($dossier) ? $dossier + ['error' => false] : ['basedir' => '', 'baseurl' => '', 'error' => 'Aucun dossier de téléversement.'];
+}
+
+function wp_mkdir_p(string $dossier): bool {
+    return is_dir($dossier) || @mkdir($dossier, 0777, true);
+}
+
+function wp_delete_file(string $fichier): bool {
+    return is_file($fichier) && unlink($fichier);
+}
+
+function wp_get_image_editor(string $source): RsnVeilleEditeurImages|WP_Error {
+    if (!empty($GLOBALS['rsn_veille_wp']['editeur']['erreur'])) {
+        return new WP_Error('image_no_editor', 'Aucun éditeur ne lit ce format.');
+    }
+    $editeur = new RsnVeilleEditeurImages($source);
+    $GLOBALS['rsn_veille_wp']['editeurs'][] = $editeur;
+    return $editeur;
 }
 
 class WP_Error {

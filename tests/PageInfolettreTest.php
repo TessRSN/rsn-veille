@@ -83,14 +83,24 @@ final class PageInfolettreTest extends TestCase {
 
     // --- Rendu ---
 
-    public function test_trois_blocs_avec_apercu_et_boutons(): void {
+    public function test_cinq_blocs_avec_apercu_et_boutons(): void {
         $html = PageInfolettre::page_html([self::evenement()], [self::gardee()], [], self::OPTIONS);
-        foreach (['agenda', 'appels', 'nouvelles'] as $bloc) {
+        // Ce que le RSN organise d'abord, puis l'écosystème, puis les nouvelles.
+        $positions = [];
+        foreach (['evenements-rsn', 'programmes-rsn', 'agenda', 'appels', 'nouvelles'] as $bloc) {
             $this->assertStringContainsString('data-bloc="' . $bloc . '"', $html);
+            $positions[] = strpos($html, 'data-bloc="' . $bloc . '"');
         }
-        $this->assertSame(3, substr_count($html, '<iframe'));
-        $this->assertSame(3, substr_count($html, '>Copier</button>'));
-        $this->assertSame(3, substr_count($html, '>Copier le code HTML</button>'));
+        $trie = $positions;
+        sort($trie);
+        $this->assertSame($trie, $positions);
+        foreach (['Événements du RSN', 'Programmes de financement du RSN', 'Agenda de l&#039;écosystème', 'Appels de l&#039;écosystème', 'Nouvelles gardées'] as $titre) {
+            $this->assertStringContainsString('<h2>' . $titre . ' <span', $html);
+        }
+        $this->assertStringContainsString('Cinq blocs prêts pour Mailchimp', $html);
+        $this->assertSame(5, substr_count($html, '<iframe'));
+        $this->assertSame(5, substr_count($html, '>Copier</button>'));
+        $this->assertSame(5, substr_count($html, '>Copier le code HTML</button>'));
         $this->assertStringContainsString('rsn-veille-infolettre', $html);
         $this->assertStringContainsString('role="status"', $html);
         // Le bloc Appels est vide : ses boutons sont désactivés, pas ceux des blocs garnis.
@@ -127,7 +137,7 @@ final class PageInfolettreTest extends TestCase {
         // Aucune balise de textarea ne peut être refermée par le contenu.
         $this->assertSame(substr_count($agenda[0], '<textarea'), substr_count($agenda[0], '</textarea>'));
         preg_match('/<textarea[^>]*data-role="texte"[^>]*>(.*?)<\/textarea>/s', $agenda[0], $texte);
-        $this->assertStringContainsString("12 nov.\nA &amp; &lt;i&gt;B&lt;/i&gt;", $texte[1]);
+        $this->assertStringContainsString("12 NOV.\nA &amp; &lt;i&gt;B&lt;/i&gt;", $texte[1]);
     }
 
     public function test_reglages_de_l_agenda_en_get(): void {
@@ -172,16 +182,93 @@ final class PageInfolettreTest extends TestCase {
         $this->assertStringNotContainsString('Nouvelles gardées vidées.', PageInfolettre::page_html([], [], [], self::OPTIONS));
     }
 
-    public function test_les_appels_ne_prennent_que_les_appels_des_donnees(): void {
+    /** @return array<string,string> Le HTML de chaque bloc de la page, par clé. */
+    private static function blocs(string $html): array {
+        preg_match_all('/<section[^>]*data-bloc="([^"]+)".*?<\/section>/s', $html, $sections, PREG_SET_ORDER);
+        return array_column($sections, 0, 1);
+    }
+
+    public function test_chaque_element_dans_son_bloc(): void {
         $appel = ['type' => 'appel', 'titre' => 'Bourse X', 'debut' => '2026-10-01', 'echeance' => '2026-11-20', 'organisateur' => 'FRQ', 'categorie' => 'Bourse', 'resume' => '', 'url' => 'https://frq.test/x'];
         $programme = ['type' => 'appel', 'titre' => 'Programme Y', 'debut' => '2026-10-02', 'echeance' => null, 'organisateur' => 'RSN', 'categorie' => 'Programme du RSN', 'resume' => '', 'url' => 'https://rsn.test/y'];
-        $html = PageInfolettre::page_html([self::evenement(), $appel], [], [$programme], self::OPTIONS);
-        preg_match('/<section[^>]*data-bloc="appels".*?<\/section>/s', $html, $appels);
-        $this->assertStringContainsString('Bourse X', $appels[0]);
-        $this->assertStringContainsString('Programme Y', $appels[0]);
-        $this->assertStringNotContainsString('Midi-conférence', $appels[0]);
-        preg_match('/<section[^>]*data-bloc="agenda".*?<\/section>/s', $html, $agenda);
-        $this->assertStringNotContainsString('Bourse X', $agenda[0]);
+        $du_rsn = self::evenement(['titre' => 'Atelier du RSN', 'organisateur' => 'RSN', 'organise_par' => 'rsn', 'debut' => '2026-11-05']);
+        $blocs = self::blocs(PageInfolettre::page_html([self::evenement(), $du_rsn, $appel], [], [$programme], self::OPTIONS));
+        $contenu = ['evenements-rsn' => 'Atelier du RSN', 'programmes-rsn' => 'Programme Y', 'agenda' => 'Midi-conférence', 'appels' => 'Bourse X'];
+        foreach ($contenu as $bloc => $titre) {
+            foreach ($contenu as $autre => $titre_autre) {
+                if ($autre === $bloc) {
+                    $this->assertStringContainsString($titre, $blocs[$bloc]);
+                } else {
+                    $this->assertStringNotContainsString($titre_autre, $blocs[$bloc], "« $titre_autre » n'a rien à faire dans le bloc $bloc");
+                }
+            }
+        }
+        $this->assertStringContainsString('<span class="rsn-veille-compteur">1 événement</span>', $blocs['evenements-rsn']);
+        $this->assertStringContainsString('<span class="rsn-veille-compteur">1 programme</span>', $blocs['programmes-rsn']);
+        $this->assertStringContainsString('<span class="rsn-veille-compteur">1 événement</span>', $blocs['agenda']);
+        $this->assertStringContainsString('<span class="rsn-veille-compteur">1 appel</span>', $blocs['appels']);
+        // Sans rien du RSN : ses blocs sont vides, boutons désactivés.
+        $vides = self::blocs(PageInfolettre::page_html([self::evenement(), $appel], [], [], self::OPTIONS));
+        foreach (['evenements-rsn', 'programmes-rsn'] as $bloc) {
+            $this->assertStringContainsString('Aucun élément', $vides[$bloc]);
+            $this->assertStringContainsString('disabled', $vides[$bloc]);
+        }
+        $this->assertStringContainsString('<span class="rsn-veille-compteur">0 programmes</span>', $vides['programmes-rsn']);
+    }
+
+    public function test_images_des_billets_du_rsn_adaptees_au_courriel(): void {
+        $du_rsn = self::evenement(['titre' => 'Atelier du RSN', 'organise_par' => 'rsn', 'image_url' => 'https://rsn.test/atelier.webp']);
+        $passe = self::evenement(['titre' => 'Passé du RSN', 'organise_par' => 'rsn', 'debut' => '2026-10-01', 'image_url' => 'https://rsn.test/passe.webp']);
+        $externe = self::evenement(['titre' => 'Colloque Mila', 'image_url' => 'https://mila.test/colloque.webp']);
+        $programme = ['type' => 'appel', 'titre' => 'Programme Y', 'debut' => '2026-10-02', 'echeance' => null, 'organisateur' => 'RSN', 'organise_par' => 'rsn', 'programme' => true, 'resume' => '', 'url' => 'https://rsn.test/y', 'image_url' => 'https://rsn.test/y.webp'];
+        $sans_image = ['titre' => 'Programme Z', 'url' => 'https://rsn.test/z', 'image_url' => ''] + $programme;
+        $demandees = [];
+        $image = static function (string $url) use (&$demandees): string {
+            $demandees[] = $url;
+            return (string) preg_replace('/\.webp$/', '.jpg', $url);
+        };
+        $html = PageInfolettre::page_html([$du_rsn, $passe, $externe], [], [$programme, $sans_image], ['image' => $image] + self::OPTIONS);
+        // Seules les images de ce qui est repris dans un billet sont converties.
+        sort($demandees);
+        $this->assertSame(['https://rsn.test/atelier.webp', 'https://rsn.test/y.webp'], $demandees);
+        $this->assertStringContainsString('src=&quot;https://rsn.test/atelier.jpg&quot;', $html);
+        $this->assertStringContainsString('src=&quot;https://rsn.test/y.jpg&quot;', $html);
+        $this->assertStringNotContainsString('.webp', $html);
+        // Sans convertisseur (tests, autre usage) : les adresses d'origine.
+        $this->assertStringContainsString('src=&quot;https://rsn.test/atelier.webp&quot;', PageInfolettre::page_html([$du_rsn], [], [], self::OPTIONS));
+    }
+
+    public function test_programme_converti_avec_les_renseignements_de_sa_case(): void {
+        $id = wp_insert_post([
+            'post_type' => 'post', 'post_status' => 'publish', 'post_title' => 'Appel à projets 2027-2028 : 200 000 $ pour cinq projets',
+            'post_excerpt' => 'Programme fondateur du RSN.', 'post_date' => '2026-10-23 09:00:00',
+            'post_content' => '<h2>En bref</h2><ul><li><strong>Pour qui :</strong> équipes multi-axes</li><li><strong>Montant :</strong> 40 000 $ par projet</li></ul>'
+                . '<p><a href="https://event.fourwaves.com/fr/appel-projets">Déposer une demande</a></p>',
+        ]);
+        update_post_meta($id, 'rsn_appel_titre', 'Appel à projets de recherche 2027-2028');
+        update_post_meta($id, 'rsn_date_limite', '2026-12-13');
+        update_post_meta($id, 'rsn_appel_public', 'chercheurs');
+        $programme = PageInfolettre::programme_depuis_article(get_post($id), '2026-10-26');
+        $this->assertSame('Appel à projets de recherche 2027-2028', $programme['titre'], 'le titre court de l’encadré, comme sur le site');
+        $this->assertSame('2026-12-13', $programme['echeance']);
+        $this->assertSame('Programme fondateur du RSN.', $programme['texte']);
+        $this->assertSame('https://event.fourwaves.com/fr/appel-projets', $programme['lien'], 'sans champ rempli : le premier lien Fourwaves du texte');
+        $this->assertSame('Chercheur·euses', $programme['pour_qui'], 'les cases de l’encadré priment sur le bloc En bref');
+        $this->assertSame('40 000 $ par projet', $programme['montant']);
+        $this->assertSame('rsn', $programme['organise_par']);
+        $this->assertSame((string) get_permalink($id), $programme['url']);
+
+        // Sans encadré rempli : titre de l'article, « Pour qui » du bloc En bref, lien du champ s'il existe.
+        delete_post_meta($id, 'rsn_appel_titre');
+        delete_post_meta($id, 'rsn_appel_public');
+        delete_post_meta($id, 'rsn_date_limite');
+        update_post_meta($id, 'rsn_appel_lien', 'https://formulaire.test/depot');
+        update_post_meta($id, 'rsn_appel_periode', 'Date limite : 15 novembre 2026');
+        $programme = PageInfolettre::programme_depuis_article(get_post($id), '2026-10-26');
+        $this->assertSame('Appel à projets 2027-2028 : 200 000 $ pour cinq projets', $programme['titre']);
+        $this->assertSame('Équipes multi-axes', $programme['pour_qui']);
+        $this->assertSame('https://formulaire.test/depot', $programme['lien']);
+        $this->assertSame('2026-11-15', $programme['echeance'], 'sans date limite dans l’encadré : celle de la période');
     }
 
     // --- Vider les gardées, accès, programmes ---
@@ -205,12 +292,37 @@ final class PageInfolettreTest extends TestCase {
         $this->assertStringNotContainsString('Appel hors infolettre', $html);
         $this->assertStringContainsString('<p class="description rsn-veille-infolettre-note">1 événement publié est tenu hors de l&#039;infolettre (File d&#039;approbation › Publiées).</p>', $html);
         $this->assertStringContainsString('1 appel publié est tenu hors de l&#039;infolettre', $html);
+        $blocs = self::blocs($html);
+        $this->assertStringContainsString('rsn-veille-infolettre-note', $blocs['agenda']);
+        $this->assertStringContainsString('rsn-veille-infolettre-note', $blocs['appels']);
+        $this->assertStringNotContainsString('rsn-veille-infolettre-note', $blocs['evenements-rsn']);
+        $this->assertStringNotContainsString('rsn-veille-infolettre-note', $blocs['programmes-rsn']);
         // Sans choix de l'équipe : tout y est, aucune note.
         $sans = array_map(static fn(array $i): array => array_diff_key($i, ['hors_infolettre' => true]), $items);
         $html = PageInfolettre::page_html($sans, [], [], self::OPTIONS);
         $this->assertStringContainsString('Midi écarté', $html);
         $this->assertStringContainsString('Appel hors infolettre', $html);
         $this->assertStringNotContainsString('rsn-veille-infolettre-note', $html);
+    }
+
+    public function test_ce_que_le_rsn_organise_tenu_hors_de_l_infolettre(): void {
+        $programme = ['type' => 'appel', 'titre' => 'Programme du site', 'debut' => '2026-10-02', 'echeance' => '2026-12-13', 'organisateur' => 'RSN', 'organise_par' => 'rsn', 'programme' => true, 'resume' => '', 'url' => 'https://rsn.test/programme/'];
+        $autre = ['titre' => 'Autre programme', 'url' => 'https://rsn.test/autre/'] + $programme;
+        $items = [
+            self::evenement(['id' => 31, 'titre' => 'Atelier du RSN retiré', 'organise_par' => 'rsn', 'hors_infolettre' => true]),
+            // La fiche publiée du même appel que le programme du site, tenue hors de l'infolettre.
+            ['id' => 41, 'type' => 'appel', 'titre' => 'Fiche du programme', 'debut' => '2026-10-02', 'echeance' => '2026-12-13', 'organisateur' => 'RSN', 'organise_par' => 'rsn', 'url' => 'https://rsn.test/programme', 'resume' => '', 'hors_infolettre' => true],
+        ];
+        $blocs = self::blocs(PageInfolettre::page_html($items, [], [$programme, $autre], self::OPTIONS));
+        $this->assertStringNotContainsString('Atelier du RSN retiré', $blocs['evenements-rsn']);
+        $this->assertStringContainsString('1 événement publié est tenu hors de l&#039;infolettre', $blocs['evenements-rsn']);
+        // Le choix fait sur la fiche vaut aussi pour le programme du site, qui l'aurait remplacée.
+        $this->assertStringNotContainsString('Programme du site', $blocs['programmes-rsn']);
+        $this->assertStringNotContainsString('Fiche du programme', $blocs['programmes-rsn']);
+        $this->assertStringContainsString('Autre programme', $blocs['programmes-rsn']);
+        $this->assertStringContainsString('1 appel publié est tenu hors de l&#039;infolettre', $blocs['programmes-rsn']);
+        $this->assertStringNotContainsString('rsn-veille-infolettre-note', $blocs['agenda']);
+        $this->assertStringNotContainsString('rsn-veille-infolettre-note', $blocs['appels']);
     }
 
     public function test_afficher_applique_le_choix_de_la_file(): void {

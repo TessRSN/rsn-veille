@@ -13,12 +13,15 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Page Infolettre : trois blocs HTML (Agenda, Appels, Nouvelles gardées) à coller dans Mailchimp.
+ * Page Infolettre : cinq blocs HTML à coller dans Mailchimp. Ce que le RSN organise a ses propres blocs, en
+ * billets avec image (Événements du RSN, Programmes de financement du RSN) ; le reste est en listes (Agenda
+ * de l'écosystème, Appels de l'écosystème, Nouvelles gardées).
  *
  * Chaque bloc a un aperçu (cadre isolé, sans script), « Copier » (collage enrichi : HTML et texte) et
  * « Copier le code HTML ». Les événements et les appels viennent de `Donnees::construire` (les fiches
  * publiées et les événements du RSN, dédoublonnés comme sur la page publique) ; les programmes ouverts du
- * RSN, des articles de la catégorie 149 ; les nouvelles, de l'option du radar.
+ * RSN, des articles de la catégorie 149, avec les renseignements de leur case sur le site ; les nouvelles,
+ * de l'option du radar. Les images des billets passent par `ImageCourriel` (copie JPEG, pour Outlook).
  *
  * Le HTML des blocs est produit par `Infolettre` (testée sans WordPress) ; `page_html` assemble la page à
  * partir de données déjà lues. `afficher`, `traiter_vider` et `programmes_rsn` lisent WordPress.
@@ -35,6 +38,13 @@ final class PageInfolettre {
 
     /** Méta de l'article qui porte la période d'un programme (« date limite : 15 novembre 2026 »). */
     public const META_PERIODE = 'rsn_appel_periode';
+
+    // Autres champs de l'encadré « Appel de financement (RSN) » de l'article (extraits 44 et 45 du site).
+    public const META_DATE_LIMITE = 'rsn_date_limite';
+    public const META_TITRE = 'rsn_appel_titre';
+    public const META_LIEN = 'rsn_appel_lien';
+    public const META_PUBLIC = 'rsn_appel_public';
+    public const META_NIVEAUX = 'rsn_appel_niveaux';
 
     /** Nombre d'articles de programmes lus au plus. */
     private const MAX_PROGRAMMES = 50;
@@ -68,6 +78,7 @@ final class PageInfolettre {
         $donnees = Donnees::construire($aujourdhui, new EntrepotWordPress(), EvenementsRsn::lire(langue: 'fr'), false, 'fr', $hors);
         // Sortie entièrement échappée par les méthodes de rendu.
         echo self::page_html($donnees['items'], PageRadar::lire_gardees(), self::programmes_rsn(), [
+            'image' => [ImageCourriel::class, 'adresse'],
             'aujourdhui' => $aujourdhui,
             'nombre' => $nombre,
             'jusqu_au' => $horizon,
@@ -119,21 +130,51 @@ final class PageInfolettre {
             if (!$article instanceof \WP_Post || self::etat_programme('rsn_appel_etat', $article) !== self::ETAT_OUVERT) {
                 continue;
             }
-            $extrait = (string) get_the_excerpt($article);
-            if ($extrait === '') {
-                $extrait = (string) $article->post_content;
-            }
-            $periode = get_post_meta($article->ID, self::META_PERIODE, true);
-            $programmes[] = Infolettre::appel_programme(
-                html_entity_decode(wp_strip_all_tags((string) get_the_title($article)), ENT_QUOTES, 'UTF-8'),
-                (string) get_permalink($article),
-                $extrait,
-                is_string($periode) ? $periode : '',
-                (string) $article->post_date,
-                $aujourdhui
-            );
+            $programmes[] = self::programme_depuis_article($article, $aujourdhui);
         }
         return $programmes;
+    }
+
+    /**
+     * Un article de programme converti en appel, avec ce que sa case montre sur la page Programmes du site
+     * (extrait 45) : titre court de l'encadré s'il est rempli, date limite, image mise en avant, lien du
+     * formulaire de dépôt (champ de l'encadré, sinon premier lien Fourwaves du texte), « Pour qui » (cases de
+     * l'encadré, sinon bloc « En bref » du texte) et « Montant » (bloc « En bref »).
+     *
+     * @return array<string,mixed>
+     */
+    public static function programme_depuis_article(\WP_Post $article, string $aujourdhui): array {
+        $meta = static function (string $cle) use ($article): string {
+            $valeur = get_post_meta($article->ID, $cle, true);
+            return is_string($valeur) ? trim($valeur) : '';
+        };
+        $liste = static fn(string $cle): array => array_values(array_filter(array_map('trim', explode(',', $meta($cle))), static fn(string $v): bool => $v !== ''));
+        $contenu = (string) $article->post_content;
+        $extrait = (string) get_the_excerpt($article);
+        if ($extrait === '') {
+            $extrait = $contenu;
+        }
+        $titre = $meta(self::META_TITRE);
+        if ($titre === '') {
+            $titre = html_entity_decode(wp_strip_all_tags((string) get_the_title($article)), ENT_QUOTES, 'UTF-8');
+        }
+        $lien = $meta(self::META_LIEN);
+        $image = function_exists('get_the_post_thumbnail_url') ? get_the_post_thumbnail_url($article->ID, 'large') : false;
+        return Infolettre::appel_programme(
+            $titre,
+            (string) get_permalink($article),
+            $extrait,
+            $meta(self::META_PERIODE),
+            (string) $article->post_date,
+            $aujourdhui,
+            [
+                'echeance' => $meta(self::META_DATE_LIMITE),
+                'image_url' => is_string($image) ? $image : '',
+                'lien' => $lien !== '' ? $lien : Infolettre::lien_fourwaves($contenu),
+                'pour_qui' => Infolettre::pour_qui($liste(self::META_PUBLIC), $liste(self::META_NIVEAUX), Infolettre::en_bref($contenu, [__('Pour qui', 'rsn-veille')])),
+                'montant' => Infolettre::en_bref($contenu, [__('Montant', 'rsn-veille')]),
+            ]
+        );
     }
 
     /**
@@ -179,7 +220,8 @@ final class PageInfolettre {
      * @param array<int,mixed> $items Fiches de `Donnees` (événements et appels publiés).
      * @param array<int,mixed> $gardees Nouvelles gardées.
      * @param array<int,mixed> $programmes Programmes du RSN ouverts, au format appel.
-     * @param array{aujourdhui?: string, nombre?: int, jusqu_au?: ?string, url_page?: string, url_action?: string, nonce?: string, vide?: bool} $options
+     * @param array{aujourdhui?: string, nombre?: int, jusqu_au?: ?string, url_page?: string, url_action?: string, nonce?: string, vide?: bool, image?: callable} $options
+     *        `image` : reçoit l'adresse de l'image d'un billet du RSN et rend celle à mettre dans le courriel.
      *
      * Un élément marqué `hors_infolettre` par `Donnees` (fiche que l'équipe ne veut pas dans l'infolettre : « Publier
      * seulement » ou « Retirer de l'infolettre » dans la file) n'est pas repris. Une nouvelle gardée trop vieille
@@ -194,17 +236,49 @@ final class PageInfolettre {
         $nb_archivees = count($toutes_gardees) - count($gardees);
         // Fiches que l'équipe tient hors de l'infolettre (marque de `Donnees`, qui tient compte des doublons) :
         // retirées avant le choix des blocs.
-        $dedans = static fn($i): bool => is_array($i) && empty($i['hors_infolettre']);
+        $dedans = static fn(array $i): bool => empty($i['hors_infolettre']);
         $du_type = static fn(string $type): array => array_values(array_filter($items, static fn($i): bool => is_array($i) && ($i['type'] ?? '') === $type));
-        $appels = array_values(array_filter($du_type('appel'), $dedans));
-        $evenements = array_values(array_filter($du_type('evenement'), $dedans));
+        $tous_appels = $du_type('appel');
+        $tous_evenements = $du_type('evenement');
+        $appels = array_values(array_filter($tous_appels, $dedans));
+        $evenements = array_values(array_filter($tous_evenements, $dedans));
+        // Un programme du site dont la fiche publiée (même adresse) est tenue hors de l'infolettre n'y va pas non plus.
+        $adresse = static fn(array $a): string => rtrim(trim((string) ($a['url'] ?? '')), '/');
+        $adresses_hors = [];
+        foreach ($tous_appels as $appel) {
+            if (!$dedans($appel) && $adresse($appel) !== '') {
+                $adresses_hors[$adresse($appel)] = true;
+            }
+        }
+        $tous_programmes = array_values(array_filter($programmes, static fn($p): bool => is_array($p)));
+        $programmes = array_values(array_filter($tous_programmes, static fn(array $p): bool => !isset($adresses_hors[$adresse($p)])));
 
-        $nb_evenements = count(Infolettre::evenements_retenus($evenements, $nombre, $horizon, $aujourdhui));
-        $nb_appels = count(Infolettre::appels_retenus($appels, $programmes, $aujourdhui));
+        // Images des billets du RSN : la copie pour courriel (JPEG), faite seulement pour ce qui est repris.
+        $evenements_rsn = Infolettre::evenements_rsn_retenus($evenements, $horizon, $aujourdhui);
+        $image = $options['image'] ?? null;
+        if (is_callable($image)) {
+            $adapter = static function (array $element) use ($image): array {
+                if (Infolettre::du_rsn($element) && is_string($element['image_url'] ?? null) && $element['image_url'] !== '') {
+                    $element['image_url'] = (string) $image($element['image_url']);
+                }
+                return $element;
+            };
+            $evenements_rsn = array_map($adapter, $evenements_rsn);
+            $programmes = array_map($adapter, $programmes);
+            $appels = array_map($adapter, $appels);
+        }
+
+        $nb_evenements_rsn = count($evenements_rsn);
+        $nb_programmes = count(Infolettre::appels_rsn_retenus($appels, $programmes, $aujourdhui));
+        $nb_evenements = count(Infolettre::evenements_ecosysteme_retenus($evenements, $nombre, $horizon, $aujourdhui));
+        $nb_appels = count(Infolettre::appels_ecosysteme_retenus($appels, $programmes, $aujourdhui));
         $nb_nouvelles = count(Infolettre::nouvelles_retenues($gardees));
         // Ce qui aurait été repris sans le choix de l'équipe : dit sous chaque bloc, pour que rien ne manque en silence.
-        $hors_evenements = count(Infolettre::evenements_retenus($du_type('evenement'), PHP_INT_MAX, $horizon, $aujourdhui)) - count(Infolettre::evenements_retenus($evenements, PHP_INT_MAX, $horizon, $aujourdhui));
-        $hors_appels = count(Infolettre::appels_retenus($du_type('appel'), $programmes, $aujourdhui)) - $nb_appels;
+        $hors_evenements_rsn = count(Infolettre::evenements_rsn_retenus($tous_evenements, $horizon, $aujourdhui)) - $nb_evenements_rsn;
+        $hors_programmes = count(Infolettre::appels_rsn_retenus($tous_appels, $tous_programmes, $aujourdhui)) - $nb_programmes;
+        $hors_evenements = count(Infolettre::evenements_ecosysteme_retenus($tous_evenements, PHP_INT_MAX, $horizon, $aujourdhui))
+            - count(Infolettre::evenements_ecosysteme_retenus($evenements, PHP_INT_MAX, $horizon, $aujourdhui));
+        $hors_appels = count(Infolettre::appels_ecosysteme_retenus($tous_appels, $tous_programmes, $aujourdhui)) - $nb_appels;
 
         $avis = !empty($options['vide'])
             ? '<div class="notice notice-success inline"><p>' . esc_html__('Nouvelles gardées vidées.', 'rsn-veille') . '</p></div>'
@@ -212,30 +286,40 @@ final class PageInfolettre {
 
         return '<div class="wrap rsn-veille-admin rsn-veille-infolettre">'
             . '<h1>' . esc_html__('Infolettre', 'rsn-veille') . '</h1>'
-            . '<p class="description">' . esc_html__("Trois blocs prêts pour Mailchimp. « Copier » garde la mise en forme : collez-la dans l'éditeur de l'infolettre. « Copier le code HTML » sert pour un bloc Code.", 'rsn-veille') . '</p>'
+            . '<p class="description">' . esc_html__("Cinq blocs prêts pour Mailchimp : ce que le RSN organise en billets avec image, le reste de l'écosystème en listes. « Copier » garde la mise en forme : collez-la dans l'éditeur de l'infolettre. « Copier le code HTML » sert pour un bloc Code.", 'rsn-veille') . '</p>'
             . $avis
             . '<div class="rsn-veille-message" role="status" aria-live="polite"></div>'
             . self::section_html(
+                'evenements-rsn',
+                __('Événements du RSN', 'rsn-veille'),
+                self::libelle_evenements($nb_evenements_rsn),
+                Infolettre::bloc_evenements_rsn($evenements_rsn, $horizon, $aujourdhui),
+                $nb_evenements_rsn,
+                self::note_html(self::note_evenements_hors($hors_evenements_rsn))
+            )
+            . self::section_html(
+                'programmes-rsn',
+                __('Programmes de financement du RSN', 'rsn-veille'),
+                self::libelle_programmes($nb_programmes),
+                Infolettre::bloc_programmes_rsn($appels, $programmes, $aujourdhui),
+                $nb_programmes,
+                self::note_html(self::note_appels_hors($hors_programmes))
+            )
+            . self::section_html(
                 'agenda',
-                __('Agenda', 'rsn-veille'),
+                __("Agenda de l'écosystème", 'rsn-veille'),
                 self::libelle_evenements($nb_evenements),
                 Infolettre::bloc_agenda($evenements, $nombre, $horizon, $aujourdhui),
                 $nb_evenements,
-                self::reglages_html($nombre, $horizon, $options) . self::note_html($hors_evenements > 0
-                    /* translators: %d : nombre d'événements publiés que l'équipe tient hors de l'infolettre. */
-                    ? sprintf(_n("%d événement publié est tenu hors de l'infolettre (File d'approbation › Publiées).", "%d événements publiés sont tenus hors de l'infolettre (File d'approbation › Publiées).", $hors_evenements, 'rsn-veille'), $hors_evenements)
-                    : '')
+                self::reglages_html($nombre, $horizon, $options) . self::note_html(self::note_evenements_hors($hors_evenements))
             )
             . self::section_html(
                 'appels',
-                __('Appels', 'rsn-veille'),
+                __("Appels de l'écosystème", 'rsn-veille'),
                 self::libelle_appels($nb_appels),
                 Infolettre::bloc_appels($appels, $programmes, $aujourdhui),
                 $nb_appels,
-                self::note_html($hors_appels > 0
-                    /* translators: %d : nombre d'appels publiés que l'équipe tient hors de l'infolettre. */
-                    ? sprintf(_n("%d appel publié est tenu hors de l'infolettre (File d'approbation › Publiées).", "%d appels publiés sont tenus hors de l'infolettre (File d'approbation › Publiées).", $hors_appels, 'rsn-veille'), $hors_appels)
-                    : '')
+                self::note_html(self::note_appels_hors($hors_appels))
             )
             . self::section_html(
                 'nouvelles',
@@ -249,6 +333,16 @@ final class PageInfolettre {
                     : '') . self::vider_html(count($toutes_gardees), $options)
             )
             . '</div>';
+    }
+
+    private static function note_evenements_hors(int $n): string {
+        /* translators: %d : nombre d'événements publiés que l'équipe tient hors de l'infolettre. */
+        return $n > 0 ? sprintf(_n("%d événement publié est tenu hors de l'infolettre (File d'approbation › Publiées).", "%d événements publiés sont tenus hors de l'infolettre (File d'approbation › Publiées).", $n, 'rsn-veille'), $n) : '';
+    }
+
+    private static function note_appels_hors(int $n): string {
+        /* translators: %d : nombre d'appels publiés que l'équipe tient hors de l'infolettre. */
+        return $n > 0 ? sprintf(_n("%d appel publié est tenu hors de l'infolettre (File d'approbation › Publiées).", "%d appels publiés sont tenus hors de l'infolettre (File d'approbation › Publiées).", $n, 'rsn-veille'), $n) : '';
     }
 
     /** Note sous un bloc (ce que l'équipe a tenu hors de l'infolettre, ce qui est archivé) ; vide sans texte. */
@@ -274,7 +368,7 @@ final class PageInfolettre {
             // Cadre isolé : aucun script (pas d'allow-scripts), même origine seulement pour que « Copier » puisse sélectionner le rendu.
             // `htmlspecialchars` (et non esc_attr) : esc_attr ne ré-encode pas les entités, ce qui rendrait « &lt;b&gt; » en vraie balise.
             . '<iframe class="rsn-veille-apercu" title="' . esc_attr(sprintf(
-                /* translators: %s : nom du bloc (Agenda, Appels, Nouvelles gardées). */
+                /* translators: %s : nom du bloc (Événements du RSN, Agenda de l'écosystème, Nouvelles gardées…). */
                 __('Aperçu du bloc %s', 'rsn-veille'),
                 $titre
             )) . '" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" srcdoc="'
@@ -297,7 +391,7 @@ final class PageInfolettre {
             . '<label for="rsn-veille-jusqu-au">' . esc_html__("ou jusqu'au", 'rsn-veille') . '</label> '
             . '<input type="date" name="jusqu_au" id="rsn-veille-jusqu-au" value="' . esc_attr((string) $horizon) . '"> '
             . '<button type="submit" class="button">' . esc_html__('Appliquer', 'rsn-veille') . '</button> '
-            . '<span class="description">' . esc_html__("Une date remplace le nombre d'événements.", 'rsn-veille') . '</span>'
+            . '<span class="description">' . esc_html__("Une date remplace le nombre d'événements ; elle borne aussi les événements du RSN.", 'rsn-veille') . '</span>'
             . '</form>';
     }
 
@@ -311,12 +405,17 @@ final class PageInfolettre {
     }
 
     private static function libelle_evenements(int $n): string {
-        /* translators: %d : nombre d'événements dans le bloc Agenda. */
+        /* translators: %d : nombre d'événements dans un bloc d'événements (du RSN, de l'écosystème). */
         return sprintf(_n('%d événement', '%d événements', $n, 'rsn-veille'), $n);
     }
 
+    private static function libelle_programmes(int $n): string {
+        /* translators: %d : nombre de programmes dans le bloc Programmes de financement du RSN. */
+        return sprintf(_n('%d programme', '%d programmes', $n, 'rsn-veille'), $n);
+    }
+
     private static function libelle_appels(int $n): string {
-        /* translators: %d : nombre d'appels dans le bloc Appels. */
+        /* translators: %d : nombre d'appels dans le bloc Appels de l'écosystème. */
         return sprintf(_n('%d appel', '%d appels', $n, 'rsn-veille'), $n);
     }
 
