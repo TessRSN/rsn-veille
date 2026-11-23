@@ -66,6 +66,16 @@ Le dépôt est **privé** (`TessRSN/rsn-veille`) et la branche de livraison est 
 
 Quelle que soit la voie, l'activation lance les mêmes opérations (voir section 9).
 
+### Après la mise à jour de la 0.15.0 vers la 0.16.0
+
+Rien à régler. **Veille › Infolettre** a maintenant cinq blocs au lieu de trois, au style de l'infolettre du RSN :
+
+- **Événements du RSN** et **Programmes de financement du RSN** : ce que le RSN organise est à part, en **billets** avec image. Un programme reprend les renseignements de sa case sur la page Programmes du site (pour qui, montant, dépôt), avec un bouton vers le formulaire de dépôt et un lien « Lire l'annonce ».
+- **Agenda de l'écosystème** et **Appels de l'écosystème** : tout le reste, en listes (pastille de date marine et jaune, pastilles de thème en couleur, bouton bleu). Le nombre d'événements choisi vaut pour l'agenda de l'écosystème ; une date « jusqu'au » borne aussi les événements du RSN.
+- **Nouvelles gardées** : inchangé.
+
+Un bloc sans élément (par exemple « Événements du RSN » quand aucun n'est à venir) le dit, boutons grisés : il suffit de ne pas le copier. À la première ouverture de la page après la mise à jour, l'extension recopie les images des billets en JPEG dans `wp-content/uploads/rsn-veille-infolettre/` (Outlook n'affiche pas le WebP) : la page peut mettre quelques secondes de plus à s'ouvrir cette fois-là. Ces copies ne sont jamais effacées par l'extension, pas même à la désinstallation : les infolettres envoyées les affichent. Si un billet d'un programme n'a pas d'image, c'est que son article n'a pas d'image mise en avant.
+
 ### Après la mise à jour de la 0.14.0 vers la 0.15.0
 
 Rien à régler. Ce qui change à l'écran :
@@ -318,7 +328,7 @@ Depuis la 0.5.0, la bande « Prochains événements » de l'accueil est le code 
 - **Activation** : planifie la collecte quotidienne (`rsn_veille_nuit`, à l'heure des réglages), donne la capacité `rsn_veille_gerer` aux rôles des réglages, ajoute la règle de réécriture de `/veille.ics` et régénère les règles, planifie le courriel hebdomadaire s'il est coché.
 - **Désactivation** : déplanifie les trois tâches (`rsn_veille_nuit`, `rsn_veille_source`, `rsn_veille_hebdo`) et retire la règle de `/veille.ics`. Les fiches, les réglages et la capacité restent.
 - **Désinstallation** (Extensions › Supprimer, après désactivation) : `uninstall.php` supprime les options `rsn_veille_*` (réglages, file, journal, nouvelles gardées et ignorées, dernier courriel, verrou), les transients `rsn_veille_*` stockés dans la base (y compris ceux par langue ; avec un cache d'objets persistant, Redis ou Memcached, les transients ne sont pas dans `wp_options` et expirent d'eux-mêmes), les trois tâches planifiées, et la capacité `rsn_veille_gerer` de tous les rôles.
-- **Ce que la désinstallation ne supprime pas** : les **fiches** `rsn_veille` (toutes les fiches, avec leurs métadonnées, y compris les courriels des proposants), la taxonomie « Thème » et ses termes, et les images téléversées par le formulaire dans la médiathèque. Ce sont des données de l'équipe. Pour tout supprimer à la main, **avec WP-CLI, seulement quand on est sûr, et tant que l'extension est encore active** (le type de contenu doit être enregistré) :
+- **Ce que la désinstallation ne supprime pas** : les **fiches** `rsn_veille` (toutes les fiches, avec leurs métadonnées, y compris les courriels des proposants), la taxonomie « Thème » et ses termes, et les images téléversées par le formulaire dans la médiathèque. Ce sont des données de l'équipe. Pour tout supprimer à la main, **avec WP-CLI, seulement quand on est sûr, et tant que l'extension est encore active** (le type de contenu doit être enregistré) : Elle ne supprime pas non plus les copies d'images faites pour l'infolettre (`wp-content/uploads/rsn-veille-infolettre/`, depuis la 0.16.0) : les infolettres déjà envoyées et leur archive publique affichent ces fichiers.
   ```
   # images du formulaire rattachées aux fiches, puis les fiches, puis les thèmes
   for id in $(wp post list --post_type=rsn_veille --post_status=any --format=ids); do

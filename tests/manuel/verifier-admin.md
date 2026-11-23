@@ -127,7 +127,7 @@ lancent par `npx wp-env run cli wp …`.
       « N appariées en anglais, M orphelines » au-dessus des erreurs, erreurs repliées sous
       « N erreurs », et le déroulé de chaque source replié en bas de page.
 - [ ] Les fichiers `admin.css` et `admin.js` ne sont chargés que sur les pages du menu Veille (onglet
-      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.15.0`.
+      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.16.0`.
 - [ ] Aucune erreur PHP dans `wp-content/debug.log` ni dans la console du navigateur.
 
 ## Réglages (tâche 12)
@@ -255,44 +255,83 @@ copie de 24 h (`rsn_veille_radar_dernier`). Un verrou de 2 min (`rsn_veille_rada
 
 ## Infolettre (tâche 16)
 
-Page Veille > Infolettre (`/wp-admin/admin.php?page=rsn-veille-infolettre`). Trois blocs HTML aux styles en
-ligne (tableaux), calqués sur l'infolettre de septembre 2026 : **Agenda** (événements à venir publiés et
-événements du RSN, comme la page publique), **Appels** (appels publiés non échus et programmes du RSN ouverts,
-articles de la catégorie 149 pour lesquels `rsn_appel_etat()` répond « En cours » (clé `en-cours`)), **Nouvelles gardées**
-(option `rsn_veille_nouvelles_gardees`, la plus récente d'abord). Préparation : publier quelques fiches
-(événements et un appel avec date limite), garder deux nouvelles dans le Radar, et, pour les programmes,
-avoir des articles de la catégorie 149 avec l'extrait 45 du site actif.
+Page Veille > Infolettre (`/wp-admin/admin.php?page=rsn-veille-infolettre`). Cinq blocs HTML aux styles en
+ligne (tableaux), au style de l'infolettre du RSN de l'automne 2026 (0.16.0 ; trois blocs avant). Ce que le RSN
+organise est à part, en billets avec image : **Événements du RSN** (événements à venir dont « qui organise »
+est le RSN) et **Programmes de financement du RSN** (articles de la catégorie 149 pour lesquels
+`rsn_appel_etat()` répond « En cours » (clé `en-cours`), et appels publiés que le RSN organise). Le reste est en
+listes : **Agenda de l'écosystème**, **Appels de l'écosystème** (appels publiés non échus), puis **Nouvelles
+gardées** (option `rsn_veille_nouvelles_gardees`, la plus récente d'abord, présentation inchangée).
+Préparation : publier quelques fiches (événements et un appel avec date limite), avoir un événement du RSN à
+venir avec une image mise en avant, garder deux nouvelles dans le Radar, et, pour les programmes, avoir des
+articles de la catégorie 149 avec l'extrait 45 du site actif.
 
-- [ ] La page s'ouvre sans erreur PHP, avec trois sections (Agenda, Appels, Nouvelles gardées), chacune
-      avec un compteur (« 8 événements »), un aperçu rendu dans un cadre, les boutons **Copier** et
-      **Copier le code HTML**. L'aperçu montre un tableau lisible : colonne de date de 64 px (jour en
-      bleu marine, mois en capitales), titre en gras, organisateur · lieu en gris, thèmes en capitales
-      bleues, résumé, « Plus d'information → ».
-- [ ] **Copier (collage enrichi)** sur le bloc Agenda, puis coller dans un éditeur enrichi (LibreOffice
-      Writer, ou le corps d'un courriel) : la mise en forme est conservée (gras, couleurs, colonnes). Coller
-      dans un éditeur de texte brut : la version texte (une information par ligne, adresse après chaque lien).
-      Message « Bloc copié : collez-le dans Mailchimp. » annoncé sous le titre de la page.
+- [ ] La page s'ouvre sans erreur PHP, avec cinq sections dans cet ordre (Événements du RSN, Programmes de
+      financement du RSN, Agenda de l'écosystème, Appels de l'écosystème, Nouvelles gardées), chacune avec un
+      compteur (« 8 événements », « 3 programmes »), un aperçu rendu dans un cadre, les boutons **Copier** et
+      **Copier le code HTML**.
+- [ ] **Agenda de l'écosystème** : une ligne par événement, séparées par un trait gris : pastille de date marine
+      (jour en jaune, mois en capitales blanches), titre en gras marine, organisateur · lieu en bleu, pastilles
+      de thème à droite (IA et Données en bleu, Réseautage et Formation en vert, Vieillissement en rouge,
+      Financement en jaune, les autres en marine), résumé, bouton bleu arrondi « En savoir plus → » et le format
+      en italique gris (« Présentiel – Gratuit », « · En anglais » pour un événement en anglais). Aucun événement
+      du RSN n'y figure ; un événement d'un partenaire annoncé sur le site du RSN, si.
+- [ ] **Événements du RSN** : un billet par événement (cadre gris arrondi) : image à gauche (200 px), étiquette
+      jaune « ÉVÉNEMENT DU RSN », pastille de date, titre, organisateur · lieu, thèmes, résumé, bouton « En savoir
+      plus → ». Réduire la fenêtre : l'image passe au-dessus du texte et le cadre d'aperçu reprend sa hauteur.
+      Un événement du RSN sans image mise en avant a un billet sans image, le texte sur toute la largeur.
+- [ ] **Programmes de financement du RSN** : un billet par programme ouvert : image mise en avant de l'article,
+      étiquette « PROGRAMME DU RSN », titre court de l'encadré de l'article (sinon son titre), extrait, cadre
+      clair « POUR QUI », « MONTANT », « DÉPÔT » (date limite en gras, « à 23 h 59 (heure de l'Est) »), bouton
+      « Voir l'appel sur Fourwaves → » (lien de l'encadré, sinon premier lien Fourwaves du texte) et lien « Lire
+      l'annonce ». Comparer avec la case du même programme sur la page Programmes du site : mêmes renseignements.
+      Sans lien de dépôt : bouton « Consulter l'appel → » vers l'article, sans second lien. Sans la fonction
+      `rsn_appel_etat` (extrait désactivé), aucun programme et aucune erreur.
+- [ ] **Images en JPEG** (0.16.0) : dans le code copié d'un billet, l'adresse de l'image est
+      `…/wp-content/uploads/rsn-veille-infolettre/<nom>-<empreinte>.jpg`, 400 px de large
+      (`ls wp-content/uploads/rsn-veille-infolettre/`). Ouvrir le fichier : c'est bien un JPEG lisible, pas une
+      image noire. Un PNG, ou un WebP à fond transparent (une affiche, un logo), est copié en `.png` et garde son
+      fond. Recharger la page : aucun nouveau fichier. Remplacer l'image mise en avant d'un programme : une
+      nouvelle copie apparaît, l'ancienne reste. Rendre le dossier `uploads` non inscriptible puis vider
+      `rsn-veille-infolettre` : la page s'ouvre sans erreur, les billets gardent l'image d'origine (l'essai n'est
+      refait qu'un jour plus tard : `wp transient delete --all` pour le refaire tout de suite). Les images de
+      l'agenda de l'écosystème et des événements du RSN déjà passés ne sont pas copiées. Désinstaller
+      l'extension ne supprime pas ce dossier.
+- [ ] **Titre avec « % »** : un événement du RSN intitulé « Journée 100 % IA » s'affiche dans son billet, la page
+      s'ouvre sans erreur.
+- [ ] **Largeur du gabarit** : coller le bloc Programmes dans un bloc Code d'un gabarit Mailchimp dont la colonne
+      fait moins de 600 px (marges de 18 px) : le texte reste à côté de l'image, rien ne déborde.
+- [ ] **Copier (collage enrichi)** sur le bloc Agenda de l'écosystème, puis coller dans un éditeur enrichi
+      (LibreOffice Writer, ou le corps d'un courriel) : la mise en forme est conservée (gras, couleurs, colonnes).
+      Coller dans un éditeur de texte brut : la version texte (une information par ligne, « 12 NOV. » sur sa
+      ligne, adresse après chaque lien, une ligne vide entre deux événements). Message « Bloc copié : collez-le
+      dans Mailchimp. » annoncé sous le titre de la page. Même essai sur un billet : le texte donne « POUR QUI »,
+      sa valeur, « MONTANT », sa valeur, « DÉPÔT », la date, sans adresse d'image.
 - [ ] **Copier le code HTML** puis coller dans un bloc **Code** de Mailchimp (ou un fichier .html) : le code
-      commence par le commentaire `<!-- Agenda — événements à venir (généré par la veille de l'écosystème, … ) -->`,
-      ne contient ni `<script>` ni `<style>`, et l'aperçu Mailchimp reproduit celui de la page.
-- [ ] Même vérification pour les blocs **Appels** (« Date limite » ou « Publié », jour, mois ; « Consulter
+      commence par le commentaire `<!-- Agenda de l'écosystème (généré par la veille de l'écosystème, … ) -->`,
+      ne contient ni `<script>` ni `<style>`, et l'aperçu Mailchimp reproduit celui de la page. **Envoyer un
+      essai de l'infolettre** à une boîte Outlook et à une boîte Gmail, et l'ouvrir sur un téléphone : les
+      billets s'affichent avec leur image, l'image passe au-dessus du texte sur le téléphone.
+- [ ] Même vérification pour les blocs **Appels de l'écosystème** (surtitre « DATE LIMITE » au-dessus de la
+      pastille ; sans date limite, « PUBLIÉ LE » et une pastille en contour ; catégorie en pastille ; « Consulter
       l'appel → ») et **Nouvelles gardées** (« 20 oct. 2026 · Source », titre en gras, « Lire la suite → »).
 - [ ] Repli sans API moderne : dans la console, `delete window.ClipboardItem` puis **Copier** : la copie
       fonctionne encore (sélection du rendu de l'aperçu, `execCommand`).
-- [ ] **Nombre d'événements** : choisir 6, puis 12, **Appliquer** : l'adresse porte `&nombre=6` et l'agenda
-      montre 6 événements au plus (le compteur suit). Une date dans « ou jusqu'au » remplace le nombre :
-      tous les événements jusqu'à cette date (compris). Une valeur forgée dans l'adresse (`nombre=7`,
+- [ ] **Nombre d'événements** : choisir 6, puis 12, **Appliquer** : l'adresse porte `&nombre=6` et l'agenda de
+      l'écosystème montre 6 événements au plus (le compteur suit) ; les événements du RSN ne sont pas comptés
+      dans ce nombre. Une date dans « ou jusqu'au » remplace le nombre : tous les événements jusqu'à cette date
+      (compris), et borne aussi le bloc Événements du RSN. Une valeur forgée dans l'adresse (`nombre=7`,
       `jusqu_au=pas-une-date`) est ignorée (8 événements, sans horizon).
 - [ ] Un événement dont le titre contient `<b>gras</b> & <script>alert(1)</script>` (voir la préparation)
       s'affiche en texte dans l'aperçu, dans le code copié (`&lt;b&gt;…`) et dans le texte : aucune alerte.
-- [ ] Dates : un événement de plusieurs jours du même mois montre « 1–3 » ; sur deux mois,
-      « 28 nov. – 2 » avec le mois de fin. Un événement terminé hier n'apparaît pas ; un événement en cours,
-      si.
+- [ ] Dates : un événement de plusieurs jours du même mois montre « 1-3 » ; sur deux mois, « 28 NOV. » puis
+      « → 2 DÉC. » en petit ; un événement ou une série déjà commencés, « JUSQU'AU » et le jour de fin. Un
+      événement terminé hier n'apparaît pas ; un événement en cours, si.
 - [ ] **Appels** : un appel dont la date limite est passée est absent ; l'ordre va de la date limite la plus
-      proche à celle sans date limite. Un programme du RSN ouvert (catégorie 149) apparaît avec
-      « RSN · Programme du RSN » ; avec sa période « date limite : … », « Date limite » + la date ; sans date
-      lisible, « Publié » + sa date de publication. Un appel collecté qui pointe vers la même page n'est pas
-      répété. Sans la fonction `rsn_appel_etat` (extrait désactivé), aucun programme et aucune erreur.
+      proche à celle sans date limite. Un appel collecté qui pointe vers la page d'un programme du RSN n'est
+      répété dans aucun bloc : le programme, en billet, le remplace. Tenir cette fiche hors de l'infolettre
+      (File d'approbation › Publiées) retire aussi le billet du programme, avec la note « 1 appel publié est
+      tenu hors de l'infolettre » sous le bloc Programmes de financement du RSN.
 - [ ] Bloc sans élément : le message « Aucun élément à inclure pour le moment. » s'affiche dans l'aperçu et
       les deux boutons de copie sont grisés.
 - [ ] **Vider les nouvelles gardées** : le bouton demande confirmation ; confirmer vide la liste

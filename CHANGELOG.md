@@ -1,5 +1,45 @@
 # Journal des modifications
 
+## 0.16.0 (2026-11-23)
+
+Infolettre : les blocs à copier dans Mailchimp prennent le style de l'infolettre du RSN, et ce que le RSN organise est mis à part, en billets avec image. Maquette validée par l'équipe le 23 novembre 2026 (un billet par rangée, image à gauche).
+
+### Cinq blocs au lieu de trois (`Admin\PageInfolettre`)
+- **Événements du RSN** et **Programmes de financement du RSN** : ce que le RSN organise (`organise_par` vaut `rsn`, ou programme ouvert du site) a ses propres blocs, en billets. Puis **Agenda de l'écosystème**, **Appels de l'écosystème** et **Nouvelles gardées** (inchangé).
+- Le nombre d'événements choisi (6, 8, 10, 12) vaut pour l'agenda de l'écosystème : les événements du RSN n'en prennent plus la place. Une date « jusqu'au » borne les deux blocs d'événements.
+- Un appel publié que le RSN organise sans être un programme du site va aussi dans le bloc du RSN (étiquette « Appel du RSN »). Un appel collecté qui pointe vers la page d'un programme lui cède toujours la place.
+- Tenir hors de l'infolettre la fiche publiée d'un appel (File d'approbation › Publiées) retire maintenant aussi le programme du site qui a la même adresse. Avant, le programme restait dans l'infolettre malgré ce choix.
+- La note « n … tenu(s) hors de l'infolettre » est sous le bloc concerné.
+
+### Listes de l'écosystème au style de l'infolettre (`Infolettre`)
+- Pastille de date marine (jour en jaune, mois en capitales blanches), titre marine, organisateur et lieu en bleu, pastilles de thème à droite, résumé, bouton bleu arrondi, format en italique. Police Arial, largeur de 600 px, styles en ligne seulement.
+- **Pastilles de thème en couleur** (`Infolettre::COULEURS_THEMES`) : IA, Données, Science ouverte en bleu ; Santé publique, Vieillissement, Sommeil en rouge ; Réseautage, Formation, Appel à communications en vert ; Financement en jaune ; les autres en marine.
+- Dates : « 7-8 » sur plusieurs jours d'un même mois ; début puis « → 2 DÉC. » à cheval sur deux mois ; « JUSQU'AU » et le jour de fin pour un événement ou une série déjà commencés.
+- Appels : la date limite dans la pastille, sous le surtitre « DATE LIMITE » ; sans date limite, la date de publication dans une pastille en contour (« PUBLIÉ LE ») ; la catégorie en pastille devant les thèmes.
+- Lieu : « Online » devient « En ligne » ; d'une adresse très longue, seule la première partie est gardée ; la ville n'est pas répétée quand le lieu la nomme.
+- Le gris des mentions (#767676) est plus foncé que celui de l'infolettre d'origine (#AAAAAA), pour rester lisible.
+
+### Billets du RSN (`Infolettre`, `Admin\PageInfolettre::programme_depuis_article`)
+- Un billet par rangée : image à gauche (200 px), texte à droite, qui prend la place qui reste quelle que soit la largeur du gabarit où le bloc est collé ; sur un écran étroit, l'image passe au-dessus du texte, sans feuille de style (deux blocs `inline-block`, le second de largeur fluide en `calc()`, tableau de repli pour Outlook).
+- **Événement** : étiquette « Événement du RSN », pastille de date, titre, organisateur et lieu, thèmes, résumé, bouton « En savoir plus → », format.
+- **Programme** : les renseignements de sa case sur la page Programmes du site (extrait 45) : titre court de l'encadré de l'article, extrait, image mise en avant, **Pour qui** (cases de l'encadré, sinon bloc « En bref » du texte), **Montant** (bloc « En bref »), **Dépôt** (date limite de l'encadré, « à 23 h 59 (heure de l'Est) »), bouton « Voir l'appel sur Fourwaves → » (lien de l'encadré, sinon premier lien Fourwaves du texte) et lien « Lire l'annonce ».
+
+### Images lisibles par toutes les messageries (`Admin\ImageCourriel`)
+- Les images du site sont souvent en WebP, qu'Outlook sur ordinateur n'affiche pas. L'image d'un billet est recopiée en **JPEG de 400 px** dans `wp-content/uploads/rsn-veille-infolettre/`, une seule fois par image, à l'ouverture de la page Infolettre, et seulement pour ce qui est repris dans un billet. Une image qui peut être transparente (PNG, WebP transparent d'après son en-tête, AVIF) est copiée en PNG : son fond deviendrait noir en JPEG.
+- Si la copie est impossible (image d'un autre site, dossier non inscriptible, format non lu par le serveur, extension qui impose un autre format de sortie), le billet garde l'image d'origine, et l'essai n'est pas refait avant un jour.
+- Les copies ne sont jamais effacées, pas même à la désinstallation : les infolettres déjà envoyées et leur archive publique affichent ces fichiers. Une image remplacée donne une nouvelle copie ; l'ancienne reste.
+
+### Copie et aperçu
+- La version texte d'un bloc (`Infolettre::texte_brut`) suit le nouveau code : une information par ligne, une ligne vide entre deux éléments, aucune adresse d'image.
+- Le cadre d'aperçu reprend sa hauteur quand la fenêtre change de largeur (`assets/admin.js`).
+
+### Livraison
+- Tests : 29 nouveaux (882 au total), dont la copie des images avec un éditeur d'images simulé. Rendu de la page essayé sur les 92 fiches publiées du site au 23 novembre 2026 et les trois programmes ouverts (3 programmes, 8 événements, 9 appels), et à une date où deux événements du RSN étaient à venir.
+- Billets essayés dans des gabarits de 600, 564, 520 et 328 px : texte à côté de l'image dans les trois premiers, dessous dans le dernier, sans débordement.
+- Relecture indépendante, corrigée avant la livraison : un « % » dans le titre d'un billet (« Journée 100 % IA ») faisait planter la page (le titre servait de format) ; une image WebP transparente devenait un fond noir en JPEG ; une valeur du bloc « En bref » écrit en un seul paragraphe avalait les lignes suivantes ; avec une extension qui impose le WebP en sortie, chaque image était reconvertie à chaque affichage ; les colonnes fixes d'un billet débordaient d'un gabarit de moins de 600 px ; la désinstallation aurait effacé des images que les infolettres envoyées affichent.
+- Non essayé avant la livraison : la copie des images avec le vrai éditeur de WordPress, le collage dans Mailchimp et le rendu dans Outlook et Gmail. Voir `tests/manuel/verifier-admin.md`, section Infolettre.
+- Aucune fiche ni aucune option existante n'est modifiée par la mise à jour. Numéro de version 0.16.0.
+
 ## 0.15.0 (2026-11-20)
 
 Ménage de l'administration, d'après les remarques de l'équipe après une première vraie utilisation : dans la file, on ne distinguait pas un événement d'un appel, les niveaux n'étaient pas expliqués, les fiches dépassées restaient, et rien ne disait ce qui irait dans l'infolettre.
