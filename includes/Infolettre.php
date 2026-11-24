@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Blocs HTML de l'infolettre, à coller dans Mailchimp : billets du RSN (événements, programmes de
+ * Blocs HTML de l'infolettre, à coller dans Mailchimp : billets du RSN (nouvelles, événements, programmes de
  * financement), agenda et appels de l'écosystème, nouvelles gardées.
  *
  * Ce que le RSN organise (`du_rsn`) a ses propres blocs, en billets avec image ; le reste de l'écosystème est en
@@ -63,6 +63,21 @@ final class Infolettre {
 
     /** Texte d'un billet de programme : plus long que le résumé d'une ligne. */
     private const TEXTE_BILLET_MAX = 600;
+
+    /**
+     * Longueur maximale du texte d'un billet de nouvelle du RSN : trois lignes environ à côté de l'image, pour
+     * que le texte ne descende pas beaucoup plus bas qu'elle. La suite se lit dans l'article (« … »).
+     */
+    private const TEXTE_NOUVELLE_MAX = 170;
+
+    /** Longueur à partir de laquelle un paragraphe d'article compte comme du texte (ni légende ni intertitre). */
+    private const PARAGRAPHE_MIN = 60;
+
+    /** Distance, depuis le début du texte, où le titre répété d'un article est encore son ouverture. */
+    private const OUVERTURE_MAX = 200;
+
+    /** Abréviations dont le point ne finit pas une phrase (« M. Tremblay », « etc. et »). */
+    private const ABREVIATIONS = ['Mme', 'Mlle', 'MM', 'Dr', 'Dre', 'Pr', 'Pre', 'Me', 'St', 'Ste', 'Ph', 'etc', 'cf', 'ex', 'env', 'vs', 'no', 'p', 'pp', 'vol', 'éd'];
 
     // --- Sélection des éléments ---
 
@@ -303,6 +318,124 @@ final class Infolettre {
     }
 
     // --- Blocs ---
+
+    /**
+     * Un article du site du RSN mis au format des nouvelles du RSN : `{titre, url, date, texte, image_url}`.
+     *
+     * @return array{titre: string, url: string, date: ?string, texte: string, image_url: string}
+     */
+    public static function article_rsn(string $titre, string $url, string $date_publication, string $extrait, string $contenu, string $image_url = ''): array {
+        return [
+            'titre' => self::net($titre),
+            'url' => trim($url),
+            'date' => self::date_ou_null(substr($date_publication, 0, 10)),
+            'texte' => self::texte_article($titre, $extrait, $contenu),
+            'image_url' => trim($image_url),
+        ];
+    }
+
+    /**
+     * Texte du billet d'un article : l'extrait rédigé s'il y en a un ; sinon le premier vrai paragraphe du
+     * texte (les articles en bloc HTML s'ouvrent sur une feuille de style, un surtitre et le titre répété) ;
+     * sinon tout le texte, sans le surtitre ni le titre qui l'ouvrent. Ramené à `TEXTE_NOUVELLE_MAX` caractères,
+     * à la fin d'une phrase quand c'est possible (`chapeau`).
+     */
+    public static function texte_article(string $titre, string $extrait, string $contenu): string {
+        $texte = Fiche::nettoyer_texte($extrait);
+        if ($texte === '') {
+            $contenu = preg_replace(['#<(style|script|noscript)\b[^>]*>.*?</\1>#is', '/<!--.*?-->/s'], '', $contenu) ?? $contenu;
+            if (preg_match_all('#<p\b[^>]*>(.*?)</p>#is', $contenu, $paragraphes) > 0) {
+                foreach ($paragraphes[1] as $paragraphe) {
+                    $candidat = Fiche::nettoyer_texte($paragraphe);
+                    if (mb_strlen($candidat) >= self::PARAGRAPHE_MIN) {
+                        $texte = $candidat;
+                        break;
+                    }
+                }
+            }
+            if ($texte === '') {
+                $texte = self::sans_ouverture(Fiche::nettoyer_texte($contenu), Fiche::nettoyer_texte($titre));
+            }
+        }
+        return self::chapeau($texte, self::TEXTE_NOUVELLE_MAX);
+    }
+
+    /**
+     * Texte ramené à `$max` caractères au plus, coupé de préférence à la fin d'une phrase (s'il en reste au
+     * moins `PARAGRAPHE_MIN` caractères), sinon au dernier mot entier, avec « … ».
+     */
+    private static function chapeau(string $texte, int $max): string {
+        if (mb_strlen($texte) <= $max) {
+            return $texte;
+        }
+        // Une fin de phrase : ponctuation forte, guillemet fermant éventuel, puis une espace. Ni « chercheur.e.s »
+        // (pas d'espace après le point), ni une abréviation ou une initiale (« M. Tremblay », « etc. et »).
+        $pas_abrege = '(?<!\b\p{Lu})';
+        foreach (self::ABREVIATIONS as $abrege) {
+            $pas_abrege .= '(?<!\b' . $abrege . ')';
+        }
+        if (preg_match('/^(.{' . self::PARAGRAPHE_MIN . ',}(?:[!?]|' . $pas_abrege . '\.)(?:\s?»)?)\s/us', mb_substr($texte, 0, $max + 1), $m) === 1) {
+            return $m[1];
+        }
+        // « … » compris dans la limite.
+        return Fiche::court($texte, $max - 1);
+    }
+
+    /**
+     * Le texte sans ce qui précède et répète le titre, quand le titre l'ouvre (après un surtitre éventuel).
+     * Le titre est reconnu mot à mot, quels que soient la ponctuation et les espaces entre ses mots (WordPress
+     * réécrit apostrophes, guillemets et tirets du titre), avec les mêmes majuscules, et seulement s'il est
+     * suivi d'un début de phrase : un titre cité au milieu d'une phrase n'est pas une ouverture.
+     */
+    private static function sans_ouverture(string $texte, string $titre): string {
+        if (preg_match_all('/[\p{L}\p{N}]+/u', $titre, $mots) < 1) {
+            return $texte;
+        }
+        $motif = '/(?<![\p{L}\p{N}])' . implode('[^\p{L}\p{N}]+', array_map(static fn(string $mot): string => preg_quote($mot, '/'), $mots[0])) . '(?![\p{L}\p{N}])/u';
+        if (preg_match($motif, $texte, $trouve, PREG_OFFSET_CAPTURE) !== 1 || mb_strlen(substr($texte, 0, $trouve[0][1])) > self::OUVERTURE_MAX) {
+            return $texte;
+        }
+        // Ce qui ferme le titre (« ? », guillemet, deux-points) part avec lui.
+        $suite = self::net((string) preg_replace('/^[\s\x{00A0}\x{202F}»”"’\'!?.…:–—-]+/u', '', substr($texte, $trouve[0][1] + strlen($trouve[0][0]))));
+        return $suite === '' || preg_match('/^[\p{Lu}\p{N}«“"]/u', $suite) === 1 ? $suite : $texte;
+    }
+
+    /**
+     * Articles du RSN repris : un titre, une date de parution valide, parus depuis `$depuis` (tous sans date de
+     * départ) et pas après aujourd'hui, le plus récent d'abord.
+     *
+     * @param array<int,mixed> $articles Articles au format de `article_rsn`.
+     * @return array<int,array<string,mixed>>
+     */
+    public static function articles_rsn_retenus(array $articles, ?string $depuis = null, ?string $aujourdhui = null): array {
+        $aujourdhui ??= \rsn_veille_aujourdhui();
+        $depuis = self::date_ou_null($depuis);
+        $retenus = array_values(array_filter($articles, static function ($a) use ($depuis, $aujourdhui): bool {
+            if (!is_array($a) || self::net((string) ($a['titre'] ?? '')) === '') {
+                return false;
+            }
+            $date = self::date_ou_null($a['date'] ?? null);
+            return $date !== null && $date <= $aujourdhui && ($depuis === null || $date >= $depuis);
+        }));
+        usort($retenus, static fn(array $a, array $b): int => strcmp((string) $b['date'], (string) $a['date']));
+        return $retenus;
+    }
+
+    /**
+     * Nouvelles du RSN : les articles du site parus depuis `$depuis`, en billets (voir `articles_rsn_retenus`).
+     *
+     * @param array<int,mixed> $articles Articles au format de `article_rsn`.
+     */
+    public static function bloc_nouvelles_rsn(array $articles, ?string $depuis = null, ?string $aujourdhui = null): string {
+        $aujourdhui ??= \rsn_veille_aujourdhui();
+        $billets = [];
+        foreach (self::articles_rsn_retenus($articles, $depuis, $aujourdhui) as $article) {
+            $billets[] = self::billet_nouvelle($article);
+        }
+        /* translators: %s : date du jour. */
+        $commentaire = sprintf(__("Nouvelles du RSN (généré par la veille de l'écosystème, %s)", 'rsn-veille'), Dates::date_longue($aujourdhui));
+        return self::assembler($commentaire, $billets, 'padding: 0 0 16px 0;', 'padding: 0;');
+    }
 
     /**
      * Événements du RSN à venir, en billets (voir `evenements_rsn_retenus`).
@@ -579,6 +712,25 @@ final class Infolettre {
             'image' => (string) ($appel['image_url'] ?? ''),
             'url' => $url,
             'pied' => self::pied($bouton, $second, ''),
+        ]);
+    }
+
+    /** @param array<string,mixed> $article Article du site, au format de `article_rsn`. */
+    private static function billet_nouvelle(array $article): string {
+        $url = (string) ($article['url'] ?? '');
+        $date = Dates::date_longue(self::date_ou_null($article['date'] ?? null));
+        /* translators: %s : date de parution d'un article du RSN, en toutes lettres. */
+        $mention = $date !== '' ? str_replace('%s', $date, __('Publié le %s', 'rsn-veille')) : '';
+        return self::billet([
+            'etiquette' => __('Nouvelle du RSN', 'rsn-veille'),
+            'titre' => self::net((string) $article['titre']),
+            'pastille' => '',
+            'sous_titre' => '',
+            'themes' => [],
+            'texte' => is_string($article['texte'] ?? null) ? $article['texte'] : '',
+            'image' => is_string($article['image_url'] ?? null) ? $article['image_url'] : '',
+            'url' => $url,
+            'pied' => self::pied(self::bouton($url, __("Lire l'article →", 'rsn-veille')), '', $mention),
         ]);
     }
 
@@ -860,7 +1012,7 @@ final class Infolettre {
     }
 
     private static function date_valide(?string $date): bool {
-        return $date !== null && preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $m) === 1 && checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
+        return $date !== null && preg_match('/^(\d{4})-(\d{2})-(\d{2})$/D', $date, $m) === 1 && checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
     }
 
     private static function date_ou_null(mixed $date): ?string {

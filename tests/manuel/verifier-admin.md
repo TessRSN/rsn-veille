@@ -127,7 +127,7 @@ lancent par `npx wp-env run cli wp …`.
       « N appariées en anglais, M orphelines » au-dessus des erreurs, erreurs repliées sous
       « N erreurs », et le déroulé de chaque source replié en bas de page.
 - [ ] Les fichiers `admin.css` et `admin.js` ne sont chargés que sur les pages du menu Veille (onglet
-      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.16.2`.
+      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.17.0`.
 - [ ] Aucune erreur PHP dans `wp-content/debug.log` ni dans la console du navigateur.
 
 ## Réglages (tâche 12)
@@ -255,9 +255,10 @@ copie de 24 h (`rsn_veille_radar_dernier`). Un verrou de 2 min (`rsn_veille_rada
 
 ## Infolettre (tâche 16)
 
-Page Veille > Infolettre (`/wp-admin/admin.php?page=rsn-veille-infolettre`). Cinq blocs HTML aux styles en
-ligne (tableaux), au style de l'infolettre du RSN de l'automne 2026 (0.16.0 ; trois blocs avant). Ce que le RSN
-organise est à part, en billets avec image : **Événements du RSN** (événements à venir dont « qui organise »
+Page Veille > Infolettre (`/wp-admin/admin.php?page=rsn-veille-infolettre`). Six blocs HTML aux styles en
+ligne (tableaux), au style de l'infolettre du RSN de l'automne 2026 (0.16.0 ; six blocs depuis la 0.17.0). Ce que le RSN
+publie et organise est à part, en billets avec image : **Nouvelles du RSN** (0.17.0 : articles de la catégorie 10,
+« Actualités du RSN », parus depuis la date choisie, par défaut les 30 derniers jours), **Événements du RSN** (événements à venir dont « qui organise »
 est le RSN) et **Programmes de financement du RSN** (articles de la catégorie 149 pour lesquels
 `rsn_appel_etat()` répond « En cours » (clé `en-cours`), et appels publiés que le RSN organise). Le reste est en
 listes : **Agenda de l'écosystème**, **Appels de l'écosystème** (appels publiés non échus), puis **Nouvelles
@@ -266,10 +267,22 @@ Préparation : publier quelques fiches (événements et un appel avec date limit
 venir avec une image mise en avant, garder deux nouvelles dans le Radar, et, pour les programmes, avoir des
 articles de la catégorie 149 avec l'extrait 45 du site actif.
 
-- [ ] La page s'ouvre sans erreur PHP, avec cinq sections dans cet ordre (Événements du RSN, Programmes de
+- [ ] La page s'ouvre sans erreur PHP, avec six sections dans cet ordre (Nouvelles du RSN, Événements du RSN, Programmes de
       financement du RSN, Agenda de l'écosystème, Appels de l'écosystème, Nouvelles gardées), chacune avec un
       compteur (« 8 événements », « 3 programmes »), un aperçu rendu dans un cadre, les boutons **Copier** et
       **Copier le code HTML**.
+- [ ] **Nouvelles du RSN** (0.17.0) : un billet par article de la catégorie « Actualités du RSN » paru dans les 30
+      derniers jours, le plus récent en haut : image mise en avant à gauche (liée à l'article), étiquette jaune
+      « NOUVELLE DU RSN », titre marine, texte (l'extrait rédigé dans l'article, sinon le premier paragraphe du
+      texte, sans feuille de style ni titre répété ; 170 caractères au plus, « … » si coupé), bouton bleu « Lire l'article → »
+      et « Publié le 10 novembre 2026 » en italique. Un article sans image mise en avant a un billet en texte
+      seul. Aucun article de la catégorie 149 (programmes) ni article anglais dans ce bloc.
+- [ ] **Articles publiés depuis le** : le champ montre la date appliquée (aujourd'hui moins 30 jours sans
+      choix). Choisir une date plus ancienne puis **Appliquer** : l'adresse porte `&depuis=2026-08-01`, des
+      billets plus anciens s'ajoutent et le compteur suit. Le nombre d'événements et la date « jusqu'au » déjà
+      choisis sont conservés, et inversement (changer le nombre d'événements garde `depuis`). Une date future
+      dans l'adresse (`&depuis=2099-01-01`) est ignorée. Avec une date d'aujourd'hui et aucun article du jour :
+      « Aucun élément à inclure pour le moment. », boutons de copie grisés.
 - [ ] **Agenda de l'écosystème** : une ligne par événement, séparées par un trait gris : pastille de date marine
       (jour en jaune, mois en capitales blanches), titre en gras marine, organisateur · lieu en bleu, pastilles
       de thème à droite (IA et Données en bleu, Réseautage et Formation en vert, Vieillissement en rouge,

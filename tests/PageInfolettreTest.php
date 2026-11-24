@@ -83,24 +83,24 @@ final class PageInfolettreTest extends TestCase {
 
     // --- Rendu ---
 
-    public function test_cinq_blocs_avec_apercu_et_boutons(): void {
+    public function test_six_blocs_avec_apercu_et_boutons(): void {
         $html = PageInfolettre::page_html([self::evenement()], [self::gardee()], [], self::OPTIONS);
-        // Ce que le RSN organise d'abord, puis l'écosystème, puis les nouvelles.
+        // Ce que le RSN publie et organise d'abord, puis l'écosystème, puis les nouvelles gardées.
         $positions = [];
-        foreach (['evenements-rsn', 'programmes-rsn', 'agenda', 'appels', 'nouvelles'] as $bloc) {
+        foreach (['nouvelles-rsn', 'evenements-rsn', 'programmes-rsn', 'agenda', 'appels', 'nouvelles'] as $bloc) {
             $this->assertStringContainsString('data-bloc="' . $bloc . '"', $html);
             $positions[] = strpos($html, 'data-bloc="' . $bloc . '"');
         }
         $trie = $positions;
         sort($trie);
         $this->assertSame($trie, $positions);
-        foreach (['Événements du RSN', 'Programmes de financement du RSN', 'Agenda de l&#039;écosystème', 'Appels de l&#039;écosystème', 'Nouvelles gardées'] as $titre) {
+        foreach (['Nouvelles du RSN', 'Événements du RSN', 'Programmes de financement du RSN', 'Agenda de l&#039;écosystème', 'Appels de l&#039;écosystème', 'Nouvelles gardées'] as $titre) {
             $this->assertStringContainsString('<h2>' . $titre . ' <span', $html);
         }
-        $this->assertStringContainsString('Cinq blocs prêts pour Mailchimp', $html);
-        $this->assertSame(5, substr_count($html, '<iframe'));
-        $this->assertSame(5, substr_count($html, '>Copier</button>'));
-        $this->assertSame(5, substr_count($html, '>Copier le code HTML</button>'));
+        $this->assertStringContainsString('Six blocs prêts pour Mailchimp', $html);
+        $this->assertSame(6, substr_count($html, '<iframe'));
+        $this->assertSame(6, substr_count($html, '>Copier</button>'));
+        $this->assertSame(6, substr_count($html, '>Copier le code HTML</button>'));
         $this->assertStringContainsString('rsn-veille-infolettre', $html);
         $this->assertStringContainsString('role="status"', $html);
         // Le bloc Appels est vide : ses boutons sont désactivés, pas ceux des blocs garnis.
@@ -269,6 +269,110 @@ final class PageInfolettreTest extends TestCase {
         $this->assertSame('Équipes multi-axes', $programme['pour_qui']);
         $this->assertSame('https://formulaire.test/depot', $programme['lien']);
         $this->assertSame('2026-11-15', $programme['echeance'], 'sans date limite dans l’encadré : celle de la période');
+    }
+
+    // --- Nouvelles du RSN (0.17.0) ---
+
+    private static function article(array $champs = []): array {
+        return $champs + ['titre' => 'IA en santé : des pilotes à l’impact', 'url' => 'https://rsn.test/ia/', 'date' => '2026-10-20', 'texte' => 'Le RSN a réuni la communauté.', 'image_url' => 'https://rsn.test/ia.webp'];
+    }
+
+    public function test_depuis_demande_date_valide_et_pas_future(): void {
+        $this->assertSame('2026-09-01', PageInfolettre::depuis_demande('2026-09-01', '2026-10-26'));
+        $this->assertSame('2026-10-26', PageInfolettre::depuis_demande('2026-10-26', '2026-10-26'));
+        $this->assertNull(PageInfolettre::depuis_demande('2026-10-27', '2026-10-26'));
+        $this->assertNull(PageInfolettre::depuis_demande('2026-02-30', '2026-10-26'));
+        $this->assertNull(PageInfolettre::depuis_demande('hier', '2026-10-26'));
+        $this->assertNull(PageInfolettre::depuis_demande("2026-09-01\n", '2026-10-26'));
+        $this->assertNull(PageInfolettre::horizon_demande("2026-12-31\n"));
+        $this->assertNull(PageInfolettre::depuis_demande(['2026-09-01'], '2026-10-26'));
+        $this->assertNull(PageInfolettre::depuis_demande(null, '2026-10-26'));
+        $this->assertSame('2026-09-26', PageInfolettre::depuis_par_defaut('2026-10-26'));
+        $this->assertSame('2026-02-01', PageInfolettre::depuis_par_defaut('2026-03-03'));
+    }
+
+    public function test_nouvelles_du_rsn_des_trente_derniers_jours_par_defaut(): void {
+        $articles = [self::article(), self::article(['titre' => 'Rapport de l’été', 'url' => 'https://rsn.test/rapport/', 'date' => '2026-09-01'])];
+        $html = PageInfolettre::page_html([], [], [], ['articles_rsn' => $articles] + self::OPTIONS);
+        $bloc = self::blocs($html)['nouvelles-rsn'];
+        $this->assertStringContainsString('<h2>Nouvelles du RSN <span class="rsn-veille-compteur">1 nouvelle</span></h2>', $bloc);
+        $this->assertStringContainsString('IA en santé', $bloc);
+        $this->assertStringNotContainsString('Rapport de l’été', $html);
+        $this->assertStringNotContainsString('disabled', $bloc);
+        // Le champ montre la date de départ appliquée, bornée à aujourd'hui.
+        $this->assertStringContainsString('<input type="date" name="depuis" id="rsn-veille-depuis" value="2026-09-26" max="2026-10-26">', $bloc);
+        $this->assertStringContainsString('Sans date choisie : les 30 derniers jours.', $bloc);
+        // Les nouvelles du RSN ne vont dans aucun autre bloc.
+        foreach (self::blocs($html) as $cle => $autre) {
+            if ($cle !== 'nouvelles-rsn') {
+                $this->assertStringNotContainsString('IA en santé', $autre, $cle);
+            }
+        }
+    }
+
+    public function test_nouvelles_du_rsn_depuis_la_date_choisie(): void {
+        $articles = [self::article(), self::article(['titre' => 'Rapport de l’été', 'url' => 'https://rsn.test/rapport/', 'date' => '2026-09-01'])];
+        $html = PageInfolettre::page_html([], [], [], ['articles_rsn' => $articles, 'depuis' => '2026-08-15', 'nombre' => 10, 'jusqu_au' => '2026-12-31'] + self::OPTIONS);
+        $blocs = self::blocs($html);
+        $this->assertStringContainsString('<span class="rsn-veille-compteur">2 nouvelles</span>', $blocs['nouvelles-rsn']);
+        $this->assertStringContainsString('Rapport de l’été', $blocs['nouvelles-rsn']);
+        $this->assertStringContainsString('value="2026-08-15" max="2026-10-26"', $blocs['nouvelles-rsn']);
+        // Chaque formulaire garde le choix de l'autre.
+        $this->assertStringContainsString('<input type="hidden" name="nombre" value="10"><input type="hidden" name="jusqu_au" value="2026-12-31">', $blocs['nouvelles-rsn']);
+        $this->assertStringContainsString('<input type="hidden" name="depuis" value="2026-08-15">', $blocs['agenda']);
+        // Sans date choisie, l'agenda ne fige pas la date par défaut dans l'adresse.
+        $sans = self::blocs(PageInfolettre::page_html([], [], [], ['articles_rsn' => $articles] + self::OPTIONS));
+        $this->assertStringNotContainsString('name="depuis"', $sans['agenda']);
+        $this->assertStringNotContainsString('name="jusqu_au"', $sans['nouvelles-rsn']);
+        // Une date future ou invalide vaut « pas de choix ».
+        $future = self::blocs(PageInfolettre::page_html([], [], [], ['articles_rsn' => $articles, 'depuis' => '2027-01-01'] + self::OPTIONS));
+        $this->assertStringContainsString('value="2026-09-26"', $future['nouvelles-rsn']);
+    }
+
+    public function test_nouvelles_du_rsn_bloc_vide(): void {
+        $bloc = self::blocs(PageInfolettre::page_html([], [], [], self::OPTIONS))['nouvelles-rsn'];
+        $this->assertStringContainsString('<span class="rsn-veille-compteur">0 nouvelles</span>', $bloc);
+        $this->assertStringContainsString('Aucun élément à inclure', $bloc);
+        $this->assertSame(2, substr_count($bloc, ' disabled'));
+        // Le réglage reste utilisable pour remonter plus loin.
+        $this->assertStringContainsString('name="depuis"', $bloc);
+        // Une valeur inattendue à la place de la liste ne casse pas la page.
+        $this->assertStringContainsString('0 nouvelles', self::blocs(PageInfolettre::page_html([], [], [], ['articles_rsn' => 'x'] + self::OPTIONS))['nouvelles-rsn']);
+    }
+
+    public function test_images_des_nouvelles_du_rsn_adaptees_au_courriel(): void {
+        $articles = [self::article(), self::article(['titre' => 'Trop ancien', 'date' => '2026-08-01', 'image_url' => 'https://rsn.test/ancien.webp']), self::article(['titre' => 'Sans image', 'url' => 'https://rsn.test/s/', 'image_url' => ''])];
+        $demandees = [];
+        $image = static function (string $url) use (&$demandees): string {
+            $demandees[] = $url;
+            return (string) preg_replace('/\.webp$/', '.jpg', $url);
+        };
+        $html = PageInfolettre::page_html([], [], [], ['articles_rsn' => $articles, 'image' => $image] + self::OPTIONS);
+        $this->assertSame(['https://rsn.test/ia.webp'], $demandees, 'seulement l’image d’un article repris');
+        $this->assertStringContainsString('src=&quot;https://rsn.test/ia.jpg&quot;', $html);
+        $this->assertStringNotContainsString('.webp', $html);
+    }
+
+    public function test_article_du_site_converti(): void {
+        $id = wp_insert_post([
+            'post_type' => 'post', 'post_status' => 'publish', 'post_title' => 'L&rsquo;IA en santé : <em>passer</em> à l&rsquo;impact',
+            'post_date' => '2026-11-10 09:12:00', 'post_excerpt' => '',
+            'post_content' => '<style>.x{color:red}</style><div>Intelligence artificielle</div><h1>L’IA en santé : passer à l’impact</h1>'
+                . '<p>Le 27 octobre 2026, Digital Health Canada et le RSN ont réuni la communauté à Montréal pour en discuter.</p>',
+        ]);
+        $article = PageInfolettre::article_depuis_post(get_post($id));
+        $this->assertSame('L’IA en santé : passer à l’impact', $article['titre']);
+        $this->assertSame((string) get_permalink($id), $article['url']);
+        $this->assertSame('2026-11-10', $article['date']);
+        $this->assertSame('Le 27 octobre 2026, Digital Health Canada et le RSN ont réuni la communauté à Montréal pour en discuter.', $article['texte']);
+        $this->assertSame('', $article['image_url'], 'sans image mise en avant : billet en texte seul');
+        // L'extrait rédigé dans l'article prime sur le texte.
+        $id2 = wp_insert_post(['post_type' => 'post', 'post_status' => 'publish', 'post_title' => 'Lauréats 2026', 'post_date' => '2026-11-02 08:00:00', 'post_excerpt' => 'Le RSN félicite les lauréates et lauréats.', 'post_content' => '<p>Un long texte qui ne sera pas repris puisque l’extrait est rédigé dans l’article.</p>']);
+        $this->assertSame('Le RSN félicite les lauréates et lauréats.', PageInfolettre::article_depuis_post(get_post($id2))['texte']);
+    }
+
+    public function test_articles_rsn_sans_wordpress_liste_vide(): void {
+        $this->assertSame([], PageInfolettre::articles_rsn('2026-10-01'));
     }
 
     // --- Vider les gardées, accès, programmes ---

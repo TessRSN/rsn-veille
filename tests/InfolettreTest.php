@@ -591,6 +591,153 @@ final class InfolettreTest extends TestCase {
         $this->assertStringNotContainsString('border-radius', $html);
     }
 
+    // --- Nouvelles du RSN (articles du site) ---
+
+    private static function article(array $champs = []): array {
+        return $champs + [
+            'titre' => 'L’IA en santé : passer des projets pilotes à l’impact', 'url' => 'https://rsn.quebec/ia-en-sante/', 'date' => '2026-10-20',
+            'texte' => 'Digital Health Canada et le RSN ont réuni la communauté à Montréal.', 'image_url' => 'https://rsn.quebec/wp-content/uploads/dhc.jpg',
+        ];
+    }
+
+    public function test_texte_d_un_article_extrait_redige_d_abord(): void {
+        $contenu = '<p>Premier paragraphe du texte, assez long pour être retenu comme résumé de la nouvelle.</p>';
+        $this->assertSame('Le RSN félicite les onze lauréates et lauréats.', Infolettre::texte_article('Lauréats 2026', ' <p>Le RSN félicite les onze lauréates et lauréats.</p> ', $contenu));
+        $this->assertSame('Premier paragraphe du texte, assez long pour être retenu comme résumé de la nouvelle.', Infolettre::texte_article('Lauréats 2026', '', $contenu));
+    }
+
+    public function test_texte_d_un_article_premier_vrai_paragraphe(): void {
+        // Article en bloc HTML : feuille de style, surtitre, titre répété, puis le texte.
+        $contenu = '<link rel="stylesheet" href="https://fonts.test/css"><style>.rsn-ia-article a{color:#003469}</style>'
+            . '<script>console.log("x")</script><!-- wp:html -->'
+            . '<div class="rsn-ia-article"><div>Intelligence artificielle en santé</div><h1>L’IA en santé : passer des projets pilotes à l’impact</h1>'
+            . '<p style="margin: 0"></p><p>Court.</p>'
+            . '<p style="margin: 0; font-size: 19px">Le 27 octobre 2026, Digital Health Canada et le <strong>Réseau santé numérique</strong> (RSN) ont réuni la communauté au Plaza Centre-Ville.</p>'
+            . '<p>Deuxième paragraphe, lui aussi assez long pour compter, mais qui ne doit pas être repris ici.</p></div>';
+        $texte = Infolettre::texte_article('L’IA en santé : passer des projets pilotes à l’impact', '', $contenu);
+        $this->assertSame('Le 27 octobre 2026, Digital Health Canada et le Réseau santé numérique (RSN) ont réuni la communauté au Plaza Centre-Ville.', $texte);
+        $this->assertStringNotContainsString('color:#003469', $texte);
+    }
+
+    public function test_texte_d_un_article_sans_paragraphe_ni_titre_repete(): void {
+        // Texte sans balise de paragraphe (éditeur classique) : tout le texte, sans le surtitre ni le titre qui l'ouvrent.
+        $contenu = "<div>Accès aux données</div><h1>LRSSS : où en sommes-nous?</h1>Entrée en vigueur en 2024, la loi change l'accès aux données.\n\nSuite du texte.";
+        $this->assertSame("Entrée en vigueur en 2024, la loi change l'accès aux données. Suite du texte.", Infolettre::texte_article('LRSSS : où en sommes-nous?', '', $contenu));
+        // L'apostrophe du titre n'a pas la même forme dans le texte : le titre est reconnu quand même.
+        $this->assertSame('Le texte commence ici.', Infolettre::texte_article("L'IA en santé", '', 'L’IA en santé Le texte commence ici.'));
+        // Un titre cité plus loin dans le texte n'est pas une ouverture : rien n'est retiré.
+        $long = str_repeat('Une phrase pour éloigner le titre. ', 8);
+        $this->assertStringStartsWith('Une phrase pour éloigner', Infolettre::texte_article('Titre cité', '', $long . 'Titre cité plus loin.'));
+        $this->assertSame('', Infolettre::texte_article('Titre', '', '<style>p{color:red}</style>'));
+    }
+
+    public function test_texte_d_un_article_raccourci(): void {
+        // Une seule longue phrase : coupée au dernier mot entier, avec « … ».
+        $texte = Infolettre::texte_article('Titre', '', '<p>' . str_repeat('un mot après l’autre ', 40) . '</p>');
+        $this->assertLessThanOrEqual(170, mb_strlen($texte));
+        $this->assertGreaterThan(140, mb_strlen($texte));
+        $this->assertStringEndsWith('…', $texte);
+        $this->assertStringNotContainsString(' …', $texte);
+    }
+
+    public function test_texte_d_un_article_coupe_a_la_fin_d_une_phrase(): void {
+        $debut = 'Le 27 octobre 2026, le RSN a réuni chercheur.e.s et clinicien.ne.s sous le thème « Bâtir une IA équitable et durable ». ';
+        $suite = 'La question de la matinée : comment passer de projets pilotes à une IA utile. ';
+        $texte = Infolettre::texte_article('Titre', '', '<p>' . $debut . $suite . str_repeat('Encore des mots pour dépasser la limite. ', 8) . '</p>');
+        // La dernière phrase entière qui tient dans la limite, sans « … » ni mot orphelin ; « chercheur.e.s » n'est pas une fin de phrase.
+        $this->assertSame(trim($debut), $texte);
+        // Les phrases courtes qui tiennent ensemble dans la limite sont toutes gardées, la suivante est laissée.
+        $this->assertSame('Une première phrase assez longue pour compter comme du texte. Une seconde phrase qui tient encore. Puis d’autres phrases qui dépassent.', Infolettre::texte_article('Titre', '', '<p>Une première phrase assez longue pour compter comme du texte. Une seconde phrase qui tient encore. ' . str_repeat('Puis d’autres phrases qui dépassent. ', 6) . '</p>'));
+        // Une fin de phrase trop proche du début ne suffit pas : coupure au mot, avec « … ».
+        $court = Infolettre::texte_article('Titre', '', '<p>Bref. ' . str_repeat('des mots sans point final ', 20) . '</p>');
+        $this->assertStringEndsWith('…', $court);
+    }
+
+    public function test_texte_d_un_article_pas_coupe_sur_une_abreviation(): void {
+        $suite = str_repeat('des mots pour dépasser la limite sans autre point ', 6);
+        foreach (['selon M. Tremblay', 'explique la Dr. Tremblay', 'santé mobile, etc. et', 'selon J. Tremblay', 'à la p. 12 du rapport'] as $piege) {
+            $texte = Infolettre::texte_article('Titre', '', '<p>Le RSN a reçu une subvention importante pour soutenir la recherche, ' . $piege . ' ' . $suite . '</p>');
+            $this->assertStringEndsWith('…', $texte, $piege);
+            $this->assertLessThanOrEqual(170, mb_strlen($texte), $piege);
+        }
+        // Une vraie fin de phrase avant l'abréviation est retenue.
+        $texte = Infolettre::texte_article('Titre', '', '<p>Le RSN a reçu une subvention importante pour soutenir la recherche au Québec. C’est ce qu’annonce M. Tremblay ' . $suite . '</p>');
+        $this->assertSame('Le RSN a reçu une subvention importante pour soutenir la recherche au Québec.', $texte);
+    }
+
+    public function test_texte_d_un_article_titre_cite_dans_la_premiere_phrase(): void {
+        // Sans paragraphe : le titre n'est retiré que s'il ouvre le texte, pas quand ses mots sont dans une phrase.
+        $this->assertSame('Le RSN annonce les lauréats des bourses de mobilité 2026 : onze étudiantes et étudiants.', Infolettre::texte_article('Lauréats des bourses de mobilité 2026', '', 'Le RSN annonce les lauréats des bourses de mobilité 2026 : onze étudiantes et étudiants.'));
+        $this->assertSame('Le Réseau de recherche en santé numérique se réunit.', Infolettre::texte_article('Santé', '', '<div>Le Réseau de recherche en santé numérique se réunit.</div>'));
+        $this->assertSame('Le Réseau Santé numérique se réunit.', Infolettre::texte_article('Santé', '', '<div>Le Réseau Santé numérique se réunit.</div>'));
+        // Titre réécrit par WordPress (guillemets français, points de suspension, tiret) : reconnu quand même.
+        $this->assertSame('Texte de la nouvelle.', Infolettre::texte_article("Le projet «\u{00A0}Santé connectée\u{00A0}» est lancé… enfin –\u{00A0}vraiment", '', '<div>NOUVELLE</div><h1>Le projet "Santé connectée" est lancé... enfin - vraiment</h1>Texte de la nouvelle.'));
+        // Le texte n'est que le titre : rien à montrer.
+        $this->assertSame('', Infolettre::texte_article('Un titre seul', '', '<h1>Un titre seul</h1>'));
+    }
+
+    public function test_article_du_rsn_mis_en_forme(): void {
+        $article = Infolettre::article_rsn("\u{00A0}Rapport des journées ", 'https://rsn.quebec/rapport/', '2026-08-17 10:24:00', 'Bilan des journées.', '<p>Autre texte.</p>', ' https://rsn.quebec/wp-content/uploads/r.jpg ');
+        $this->assertSame(['titre' => 'Rapport des journées', 'url' => 'https://rsn.quebec/rapport/', 'date' => '2026-08-17', 'texte' => 'Bilan des journées.', 'image_url' => 'https://rsn.quebec/wp-content/uploads/r.jpg'], $article);
+        $this->assertNull(Infolettre::article_rsn('T', 'https://rsn.quebec/t/', '', '', '')['date']);
+    }
+
+    public function test_articles_du_rsn_retenus_depuis_une_date(): void {
+        $articles = [
+            self::article(['titre' => 'Ancien', 'date' => '2026-09-01']),
+            self::article(['titre' => 'Du jour limite', 'date' => '2026-10-01']),
+            self::article(['titre' => 'Récent', 'date' => '2026-10-24']),
+            self::article(['titre' => 'À paraître', 'date' => '2026-10-30']),
+            self::article(['titre' => "\u{00A0} ", 'date' => '2026-10-22']),
+            self::article(['titre' => 'Sans date', 'date' => null]),
+            'pas un tableau',
+        ];
+        $titres = static fn(array $liste): array => array_column($liste, 'titre');
+        $this->assertSame(['Récent', 'Du jour limite'], $titres(Infolettre::articles_rsn_retenus($articles, '2026-10-01', self::AUJOURDHUI)));
+        // Sans date de départ : tout ce qui est déjà paru, le plus récent d'abord.
+        $this->assertSame(['Récent', 'Du jour limite', 'Ancien'], $titres(Infolettre::articles_rsn_retenus($articles, null, self::AUJOURDHUI)));
+        $this->assertSame([], Infolettre::articles_rsn_retenus([], '2026-10-01', self::AUJOURDHUI));
+        // Une date de départ suivie d'un saut de ligne n'est pas une date : aucun filtre, plutôt qu'un filtre décalé.
+        $this->assertCount(3, Infolettre::articles_rsn_retenus($articles, "2026-10-01\n", self::AUJOURDHUI));
+    }
+
+    public function test_nouvelles_du_rsn_en_billets(): void {
+        $html = Infolettre::bloc_nouvelles_rsn([self::article(), self::article(['titre' => 'Rapport <b>2026</b> : 100 % numérique', 'url' => 'https://rsn.quebec/rapport/', 'date' => '2026-10-24', 'image_url' => ''])], '2026-10-01', self::AUJOURDHUI);
+        $this->assertStringStartsWith("<!-- Nouvelles du RSN (généré par la veille de l'écosystème, 26 octobre 2026) -->", $html);
+        $this->assertSame(2, substr_count($html, '>NOUVELLE DU RSN</span>'));
+        // Le plus récent d'abord ; le « % » et les balises du titre restent du texte.
+        $this->assertLessThan(strpos($html, 'L’IA en santé'), strpos($html, 'Rapport &lt;b&gt;2026&lt;/b&gt; : 100 % numérique'));
+        // Image liée à l'article pour le billet qui en a une ; l'autre est en texte seul.
+        $this->assertSame(1, substr_count($html, '<img '));
+        $this->assertStringContainsString('<a href="https://rsn.quebec/ia-en-sante/"><img src="https://rsn.quebec/wp-content/uploads/dhc.jpg" width="200" alt=""', $html);
+        $this->assertStringContainsString('Digital Health Canada et le RSN ont réuni la communauté à Montréal.', $html);
+        // Bouton vers l'article et date de parution en mention.
+        $this->assertSame(2, substr_count($html, ">Lire l'article →</a>"));
+        $this->assertStringContainsString('font-style: italic;">Publié le 20 octobre 2026</span>', $html);
+        $this->assertStringContainsString('font-style: italic;">Publié le 24 octobre 2026</span>', $html);
+        // Deux cartes, tableaux équilibrés.
+        $this->assertSame(2, substr_count($html, 'border-radius: 10px; border-collapse: separate;'));
+        $this->assertSame(substr_count($html, '<table'), substr_count($html, '</table>'));
+    }
+
+    public function test_nouvelles_du_rsn_adresse_refusee_et_bloc_vide(): void {
+        $html = Infolettre::bloc_nouvelles_rsn([self::article(['url' => 'javascript:alert(1)', 'image_url' => 'javascript:alert(2)'])], null, self::AUJOURDHUI);
+        $this->assertStringNotContainsString('javascript:', $html);
+        $this->assertStringNotContainsString('<a ', $html);
+        $this->assertStringNotContainsString('<img', $html);
+        $this->assertStringContainsString('L’IA en santé', $html);
+        // Rien de paru depuis la date : le message, sans billet.
+        $vide = Infolettre::bloc_nouvelles_rsn([self::article()], '2026-10-25', self::AUJOURDHUI);
+        $this->assertStringContainsString('Aucun élément', $vide);
+        $this->assertStringNotContainsString('NOUVELLE DU RSN', $vide);
+    }
+
+    public function test_texte_brut_des_nouvelles_du_rsn(): void {
+        $texte = Infolettre::texte_brut(Infolettre::bloc_nouvelles_rsn([self::article(), self::article(['titre' => 'Rapport', 'url' => 'https://rsn.quebec/rapport/', 'date' => '2026-10-24', 'image_url' => '', 'texte' => ''])], null, self::AUJOURDHUI));
+        $this->assertSame("NOUVELLE DU RSN\nRapport\nLire l'article → https://rsn.quebec/rapport/\nPublié le 24 octobre 2026\n\n"
+            . "NOUVELLE DU RSN\nL’IA en santé : passer des projets pilotes à l’impact\nDigital Health Canada et le RSN ont réuni la communauté à Montréal.\nLire l'article → https://rsn.quebec/ia-en-sante/\nPublié le 20 octobre 2026", $texte);
+    }
+
     // --- Texte brut ---
 
     public function test_texte_brut(): void {
