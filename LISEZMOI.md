@@ -1,6 +1,6 @@
 # RSN : veille de l'écosystème
 
-Extension WordPress du Réseau santé numérique (RSN), version 0.16.1. Elle collecte des sources externes (flux RSS, calendriers, pages publiques, The Events Calendar), en tire des fiches d'actualités, d'événements et d'appels, puis les présente sur une page publique « Événements et appels » (raccourci `[rsn_veille]`), en français et en anglais, et la bande « Prochains événements » de l'accueil (code court `[rsn_veille_accueil]`). L'équipe approuve les fiches dans wp-admin (menu **Veille**), repère des nouvelles dans le Radar, prépare les blocs de l'infolettre et, si elle le veut, reçoit un courriel hebdomadaire.
+Extension WordPress du Réseau santé numérique (RSN), version 0.16.2. Elle collecte des sources externes (flux RSS, calendriers, pages publiques, The Events Calendar), en tire des fiches d'actualités, d'événements et d'appels, puis les présente sur une page publique « Événements et appels » (raccourci `[rsn_veille]`), en français et en anglais, et la bande « Prochains événements » de l'accueil (code court `[rsn_veille_accueil]`). L'équipe approuve les fiches dans wp-admin (menu **Veille**), repère des nouvelles dans le Radar, prépare les blocs de l'infolettre et, si elle le veut, reçoit un courriel hebdomadaire.
 
 Les règles de confiance, la priorité des niveaux (A, C, M, B) et la conception complète se trouvent dans `docs/superpowers/specs/2026-10-25-veille-ecosysteme-design.md`. Pour installer l'extension sur un site, passer à la page rsn.quebec et dépanner, voir **`docs/installation-et-bascule.md`**. Le dossier `docs/` (ce guide compris) n'est pas dans le zip de l'extension : il se lit dans le dépôt GitHub, https://github.com/TessRSN/rsn-veille. L'historique des versions est dans `CHANGELOG.md`.
 
@@ -70,7 +70,7 @@ docs/                     devis, plan, inventaire des sources, maquette, guide d
 
 - `composer install` (installe PHPUnit, dépendance de développement seulement), puis **`composer test`**. Les classes pures de `includes/` sont testées sans WordPress grâce à `tests/bootstrap.php` et `tests/bouchons-wordpress.php`.
 - Le bouchon de WordPress est **une imitation, pas la référence** : il peut différer du vrai WordPress (échappement, `wp_date`, requêtes de fiches, `kses`). Ce qui touche WordPress lui-même (menus, AJAX, cron, formulaire, médiathèque, mails) se vérifie dans un WordPress réel avec les listes de `tests/manuel/` : **`tests/manuel/PARCOURS.md`** les enchaîne dans l'ordre du parcours (`verifier-admin.md`, `verifier-public.md` et deux scripts `wp eval-file`).
-- Les tests tournent avec la version de PHP de la machine (le verrou Composer vise PHP 8.0.30) ; il n'y a pas d'intégration continue en 0.16.1.
+- Les tests tournent avec la version de PHP de la machine (le verrou Composer vise PHP 8.0.30) ; il n'y a pas d'intégration continue en 0.16.2.
 
 ## Lancer wp-env
 
@@ -81,12 +81,12 @@ Pour essayer l'extension dans un WordPress local, il faut Docker et `@wordpress/
 Le zip de l'extension se fabrique à partir d'un commit, sans tests ni documents de conception :
 
 ```
-git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.16.1.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
+git archive --format=zip --prefix=rsn-veille/ -o rsn-veille-0.16.2.zip HEAD -- . ':!tests' ':!docs' ':!.wp-env.json' ':!.superpowers' ':!composer.lock' ':!phpunit.xml'
 ```
 
 (les fichiers `rsn-veille-*.zip` sont ignorés par Git). Le guide d'installation décrit aussi l'installation depuis GitHub (WP Pusher ou Git Updater).
 
-## Limites connues de la version 0.16.1
+## Limites connues de la version 0.16.2
 
 - **Infolettre** : les blocs sont faits pour un bloc Code de Mailchimp ou un collage enrichi ; le rendu n'a pas été essayé dans chaque messagerie. Les images des billets du RSN sont recopiées en JPEG (PNG pour une image transparente), en 400 px de large, dans `uploads/rsn-veille-infolettre/` à la première ouverture de la page ; si la copie échoue (dossier non inscriptible, format non lu par le serveur, extension qui impose le WebP en sortie), le billet garde l'image d'origine, qu'Outlook sur ordinateur n'affiche pas quand elle est en WebP, et la copie n'est retentée qu'un jour plus tard. Les copies ne sont jamais effacées, pas même à la désinstallation : les infolettres déjà envoyées les affichent ; le dossier grossit donc d'un fichier par image utilisée. Dans un billet, le texte prend la place qui reste à côté de l'image grâce à `calc()` ; une messagerie qui l'ignore garde des colonnes fixes prévues pour un gabarit d'au moins 564 px. « Pour qui » et « Montant » d'un programme sont lus dans le bloc « En bref » du texte de l'article : un article monté dans Elementor n'en donne pas. La couleur de chaque thème est fixée dans le code (`Infolettre::COULEURS_THEMES`).
 - **File d'approbation** : « Peut-être déjà dans l'agenda » n'est qu'un indice (dates qui se recoupent et titre proche, ou même adresse) : un même événement titré en français d'un côté et en anglais de l'autre n'est pas repéré, et deux événements distincts du même jour aux titres voisins peuvent l'être à tort ; rien n'est fusionné, et l'étiquette n'apparaît que dans l'onglet « À approuver » ; pas de pagination ; les onglets « Publiées » et « Écartées » montrent les 200 fiches les plus récentes (les compteurs restent exacts), « À approuver » et « À vérifier » sont chargés en entier ; la liste des sources du filtre ne reprend que celles de l'onglet affiché ; un statut changé dans l'éditeur WordPress ne marque pas la fiche comme traitée à la main ; « À approuver » et « À vérifier » sont triées par le jour d'arrivée (`cree_le`) : une fiche sans jour d'arrivée prend le jour de son post (qui suit la date de l'événement) ; le repère « Nouveau » a la granularité du jour (arrivée aujourd'hui ou hier) ; un menu absent à la première requête après une mise à jour sans réactivation (recharger la page).

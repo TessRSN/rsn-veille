@@ -127,7 +127,7 @@ lancent par `npx wp-env run cli wp …`.
       « N appariées en anglais, M orphelines » au-dessus des erreurs, erreurs repliées sous
       « N erreurs », et le déroulé de chaque source replié en bas de page.
 - [ ] Les fichiers `admin.css` et `admin.js` ne sont chargés que sur les pages du menu Veille (onglet
-      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.16.1`.
+      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.16.2`.
 - [ ] Aucune erreur PHP dans `wp-content/debug.log` ni dans la console du navigateur.
 
 ## Réglages (tâche 12)
@@ -261,7 +261,7 @@ organise est à part, en billets avec image : **Événements du RSN** (événeme
 est le RSN) et **Programmes de financement du RSN** (articles de la catégorie 149 pour lesquels
 `rsn_appel_etat()` répond « En cours » (clé `en-cours`), et appels publiés que le RSN organise). Le reste est en
 listes : **Agenda de l'écosystème**, **Appels de l'écosystème** (appels publiés non échus), puis **Nouvelles
-gardées** (option `rsn_veille_nouvelles_gardees`, la plus récente d'abord, présentation inchangée).
+gardées** (option `rsn_veille_nouvelles_gardees`, la plus récente d'abord, réunies dans une carte compacte depuis la 0.16.2).
 Préparation : publier quelques fiches (événements et un appel avec date limite), avoir un événement du RSN à
 venir avec une image mise en avant, garder deux nouvelles dans le Radar, et, pour les programmes, avoir des
 articles de la catégorie 149 avec l'extrait 45 du site actif.
@@ -314,7 +314,10 @@ articles de la catégorie 149 avec l'extrait 45 du site actif.
       billets s'affichent avec leur image, l'image passe au-dessus du texte sur le téléphone.
 - [ ] Même vérification pour les blocs **Appels de l'écosystème** (surtitre « DATE LIMITE » au-dessus de la
       pastille ; sans date limite, « PUBLIÉ LE » et une pastille en contour ; catégorie en pastille ; « Consulter
-      l'appel → ») et **Nouvelles gardées** (« 20 oct. 2026 · Source », titre en gras, « Lire la suite → »).
+      l'appel → ») et **Nouvelles gardées** (0.16.2 : une seule carte au contour arrondi, étiquette « DANS L’ÉCOSYSTÈME »,
+      titre « Nouvelles de nos partenaires », puis pour chaque nouvelle « Source · 20 oct. 2026 » en petit, le
+      titre en gras qui est le lien, suivi d'une flèche bleue, et le résumé ; un trait fin entre deux nouvelles ;
+      plus de « Lire la suite → »).
 - [ ] Repli sans API moderne : dans la console, `delete window.ClipboardItem` puis **Copier** : la copie
       fonctionne encore (sélection du rendu de l'aperçu, `execCommand`).
 - [ ] **Nombre d'événements** : choisir 6, puis 12, **Appliquer** : l'adresse porte `&nombre=6` et l'agenda de
