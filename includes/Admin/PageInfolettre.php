@@ -13,18 +13,19 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Page Infolettre : cinq blocs HTML à coller dans Mailchimp. Ce que le RSN organise a ses propres blocs, en
- * billets avec image (Événements du RSN, Programmes de financement du RSN) ; le reste est en listes (Agenda
- * de l'écosystème, Appels de l'écosystème, Nouvelles gardées).
+ * Page Infolettre : six blocs HTML à coller dans Mailchimp. Ce que le RSN publie et organise a ses propres
+ * blocs, en billets avec image (Nouvelles du RSN, Événements du RSN, Programmes de financement du RSN) ; le
+ * reste est en listes (Agenda de l'écosystème, Appels de l'écosystème, Nouvelles gardées).
  *
  * Chaque bloc a un aperçu (cadre isolé, sans script), « Copier » (collage enrichi : HTML et texte) et
  * « Copier le code HTML ». Les événements et les appels viennent de `Donnees::construire` (les fiches
  * publiées et les événements du RSN, dédoublonnés comme sur la page publique) ; les programmes ouverts du
- * RSN, des articles de la catégorie 149, avec les renseignements de leur case sur le site ; les nouvelles,
- * de l'option du radar. Les images des billets passent par `ImageCourriel` (copie JPEG, pour Outlook).
+ * RSN, des articles de la catégorie 149, avec les renseignements de leur case sur le site ; les nouvelles du
+ * RSN, des articles de la catégorie 10 (« Actualités du RSN ») parus depuis la date choisie ; les nouvelles
+ * gardées, de l'option du radar. Les images des billets passent par `ImageCourriel` (copie JPEG, pour Outlook).
  *
  * Le HTML des blocs est produit par `Infolettre` (testée sans WordPress) ; `page_html` assemble la page à
- * partir de données déjà lues. `afficher`, `traiter_vider` et `programmes_rsn` lisent WordPress.
+ * partir de données déjà lues. `afficher`, `traiter_vider`, `programmes_rsn` et `articles_rsn` lisent WordPress.
  */
 final class PageInfolettre {
     public const NONCE = 'rsn_veille_infolettre';
@@ -49,6 +50,15 @@ final class PageInfolettre {
     /** Nombre d'articles de programmes lus au plus. */
     private const MAX_PROGRAMMES = 50;
 
+    /** Catégorie « Actualités du RSN » des articles du site (rsn.quebec) : les nouvelles du RSN. */
+    public const CATEGORIE_ACTUALITES = 10;
+
+    /** Nombre d'articles d'actualité lus au plus. */
+    private const MAX_ARTICLES = 20;
+
+    /** Sans date choisie, les nouvelles du RSN sont celles des `JOURS_NOUVELLES_RSN` derniers jours. */
+    public const JOURS_NOUVELLES_RSN = 30;
+
     /** État rendu quand `rsn_appel_etat` échoue ou rend une forme inattendue : le programme n'est pas repris. */
     public const ETAT_INCONNU = 'inconnu';
 
@@ -71,6 +81,7 @@ final class PageInfolettre {
         $nombre = self::nombre_demande(isset($_GET['nombre']) ? wp_unslash($_GET['nombre']) : null);
         $horizon = self::horizon_demande(isset($_GET['jusqu_au']) ? wp_unslash($_GET['jusqu_au']) : null);
         $aujourdhui = \rsn_veille_aujourdhui();
+        $depuis = self::depuis_demande(isset($_GET['depuis']) ? wp_unslash($_GET['depuis']) : null, $aujourdhui);
         // Même source que la page publique : fiches publiées et événements du RSN dédoublonnés, sans les champs d'équipe.
         // L'infolettre est française : toujours `fr`, quelle que soit la langue de l'administration.
         // Les fiches tenues hors de l'infolettre sont marquées avant le dédoublonnage (`Donnees::elements`).
@@ -79,6 +90,8 @@ final class PageInfolettre {
         // Sortie entièrement échappée par les méthodes de rendu.
         echo self::page_html($donnees['items'], PageRadar::lire_gardees(), self::programmes_rsn(), [
             'image' => [ImageCourriel::class, 'adresse'],
+            'articles_rsn' => self::articles_rsn($depuis ?? self::depuis_par_defaut($aujourdhui)),
+            'depuis' => $depuis,
             'aujourdhui' => $aujourdhui,
             'nombre' => $nombre,
             'jusqu_au' => $horizon,
@@ -178,6 +191,61 @@ final class PageInfolettre {
     }
 
     /**
+     * Nouvelles du RSN : articles publiés de la catégorie « Actualités du RSN » parus depuis `$depuis`, sans les
+     * programmes de financement (catégorie 149, qui ont leur bloc). Les traductions ont leur propre catégorie :
+     * seuls les articles français répondent. Non testable sans WordPress : `tests/manuel/verifier-admin.md`.
+     *
+     * @return array<int,array<string,mixed>> Articles au format de `Infolettre::article_rsn`.
+     */
+    public static function articles_rsn(string $depuis): array {
+        if (!function_exists('get_posts')) {
+            return [];
+        }
+        $posts = get_posts([
+            'cat' => self::CATEGORIE_ACTUALITES,
+            'category__not_in' => [self::CATEGORIE_PROGRAMMES],
+            'post_type' => 'post',
+            'post_status' => 'publish',
+            // Un article protégé par mot de passe ne va pas dans une infolettre.
+            'has_password' => false,
+            'numberposts' => self::MAX_ARTICLES,
+            'orderby' => 'date',
+            'order' => 'DESC',
+            'date_query' => [['after' => $depuis . ' 00:00:00', 'inclusive' => true]],
+        ]);
+        $articles = [];
+        foreach (is_array($posts) ? $posts : [] as $post) {
+            if ($post instanceof \WP_Post) {
+                $articles[] = self::article_depuis_post($post);
+            }
+        }
+        return $articles;
+    }
+
+    /**
+     * Un article du site au format des nouvelles du RSN : titre, adresse, date de parution, texte (l'extrait
+     * rédigé dans l'article, sinon le début du texte, codes courts retirés) et image mise en avant.
+     *
+     * @return array<string,mixed>
+     */
+    public static function article_depuis_post(\WP_Post $article): array {
+        $contenu = (string) $article->post_content;
+        if (function_exists('strip_shortcodes')) {
+            $contenu = (string) strip_shortcodes($contenu);
+        }
+        $image = function_exists('get_the_post_thumbnail_url') ? get_the_post_thumbnail_url($article->ID, 'large') : false;
+        return Infolettre::article_rsn(
+            html_entity_decode(wp_strip_all_tags((string) get_the_title($article)), ENT_QUOTES, 'UTF-8'),
+            (string) get_permalink($article),
+            (string) $article->post_date,
+            // L'extrait rédigé seulement : `get_the_excerpt` en fabriquerait un, coupé au milieu du surtitre et du titre.
+            (string) $article->post_excerpt,
+            $contenu,
+            is_string($image) ? $image : ''
+        );
+    }
+
+    /**
      * État d'un programme selon la fonction du site ($etat : `rsn_appel_etat` de l'extrait 45), appelée avec
      * l'identifiant de l'article : la fonction fait `get_post_meta($post_id, …)`, qui attend un entier. Elle rend
      * un tableau `['cle' => 'en-cours'|'a-venir'|'evaluation'|'finance', 'libelle' => …]` ; on en garde la clé.
@@ -206,10 +274,22 @@ final class PageInfolettre {
 
     /** Horizon de l'agenda : une date `Y-m-d` valide, sinon aucun. */
     public static function horizon_demande(mixed $brut): ?string {
-        if (!is_string($brut) || preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $brut, $m) !== 1 || !checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+        if (!is_string($brut) || preg_match('/^(\d{4})-(\d{2})-(\d{2})$/D', $brut, $m) !== 1 || !checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
             return null;
         }
         return $brut;
+    }
+
+    /** Date de départ des nouvelles du RSN demandée : une date `Y-m-d` valide, pas dans le futur ; sinon aucune. */
+    public static function depuis_demande(mixed $brut, string $aujourdhui): ?string {
+        $date = self::horizon_demande($brut);
+        return $date !== null && $date <= $aujourdhui ? $date : null;
+    }
+
+    /** Date de départ sans choix : `JOURS_NOUVELLES_RSN` jours avant aujourd'hui. */
+    public static function depuis_par_defaut(string $aujourdhui): string {
+        $jour = \DateTimeImmutable::createFromFormat('!Y-m-d', $aujourdhui) ?: new \DateTimeImmutable('today');
+        return $jour->modify('-' . self::JOURS_NOUVELLES_RSN . ' days')->format('Y-m-d');
     }
 
     // --- Rendu ---
@@ -220,8 +300,10 @@ final class PageInfolettre {
      * @param array<int,mixed> $items Fiches de `Donnees` (événements et appels publiés).
      * @param array<int,mixed> $gardees Nouvelles gardées.
      * @param array<int,mixed> $programmes Programmes du RSN ouverts, au format appel.
-     * @param array{aujourdhui?: string, nombre?: int, jusqu_au?: ?string, url_page?: string, url_action?: string, nonce?: string, vide?: bool, image?: callable} $options
+     * @param array{aujourdhui?: string, nombre?: int, jusqu_au?: ?string, url_page?: string, url_action?: string, nonce?: string, vide?: bool, image?: callable, articles_rsn?: array<int,mixed>, depuis?: ?string} $options
      *        `image` : reçoit l'adresse de l'image d'un billet du RSN et rend celle à mettre dans le courriel.
+     *        `articles_rsn` : articles du site au format de `Infolettre::article_rsn` ; `depuis` : date de départ
+     *        choisie pour eux (sans choix, les `JOURS_NOUVELLES_RSN` derniers jours).
      *
      * Un élément marqué `hors_infolettre` par `Donnees` (fiche que l'équipe ne veut pas dans l'infolettre : « Publier
      * seulement » ou « Retirer de l'infolettre » dans la file) n'est pas repris. Une nouvelle gardée trop vieille
@@ -231,6 +313,9 @@ final class PageInfolettre {
         $aujourdhui = (string) ($options['aujourdhui'] ?? \rsn_veille_aujourdhui());
         $nombre = self::nombre_demande($options['nombre'] ?? null);
         $horizon = self::horizon_demande($options['jusqu_au'] ?? null);
+        $depuis_choisi = self::depuis_demande($options['depuis'] ?? null, $aujourdhui);
+        $depuis = $depuis_choisi ?? self::depuis_par_defaut($aujourdhui);
+        $articles = Infolettre::articles_rsn_retenus(is_array($options['articles_rsn'] ?? null) ? $options['articles_rsn'] : [], $depuis, $aujourdhui);
         $toutes_gardees = array_values(array_filter($gardees, static fn($g): bool => is_array($g)));
         $gardees = PageRadar::gardees_actives($toutes_gardees, $aujourdhui);
         $nb_archivees = count($toutes_gardees) - count($gardees);
@@ -264,10 +349,17 @@ final class PageInfolettre {
                 return $element;
             };
             $evenements_rsn = array_map($adapter, $evenements_rsn);
+            $articles = array_map(static function (array $article) use ($image): array {
+                if (is_string($article['image_url'] ?? null) && $article['image_url'] !== '') {
+                    $article['image_url'] = (string) $image($article['image_url']);
+                }
+                return $article;
+            }, $articles);
             $programmes = array_map($adapter, $programmes);
             $appels = array_map($adapter, $appels);
         }
 
+        $nb_nouvelles_rsn = count($articles);
         $nb_evenements_rsn = count($evenements_rsn);
         $nb_programmes = count(Infolettre::appels_rsn_retenus($appels, $programmes, $aujourdhui));
         $nb_evenements = count(Infolettre::evenements_ecosysteme_retenus($evenements, $nombre, $horizon, $aujourdhui));
@@ -286,9 +378,17 @@ final class PageInfolettre {
 
         return '<div class="wrap rsn-veille-admin rsn-veille-infolettre">'
             . '<h1>' . esc_html__('Infolettre', 'rsn-veille') . '</h1>'
-            . '<p class="description">' . esc_html__("Cinq blocs prêts pour Mailchimp : ce que le RSN organise en billets avec image, le reste de l'écosystème en listes. « Copier » garde la mise en forme : collez-la dans l'éditeur de l'infolettre. « Copier le code HTML » sert pour un bloc Code.", 'rsn-veille') . '</p>'
+            . '<p class="description">' . esc_html__("Six blocs prêts pour Mailchimp : ce que le RSN publie et organise en billets avec image, le reste de l'écosystème en listes. « Copier » garde la mise en forme : collez-la dans l'éditeur de l'infolettre. « Copier le code HTML » sert pour un bloc Code.", 'rsn-veille') . '</p>'
             . $avis
             . '<div class="rsn-veille-message" role="status" aria-live="polite"></div>'
+            . self::section_html(
+                'nouvelles-rsn',
+                __('Nouvelles du RSN', 'rsn-veille'),
+                self::libelle_nouvelles($nb_nouvelles_rsn),
+                Infolettre::bloc_nouvelles_rsn($articles, $depuis, $aujourdhui),
+                $nb_nouvelles_rsn,
+                self::depuis_html($depuis, $aujourdhui, $nombre, $horizon, $options)
+            )
             . self::section_html(
                 'evenements-rsn',
                 __('Événements du RSN', 'rsn-veille'),
@@ -311,7 +411,7 @@ final class PageInfolettre {
                 self::libelle_evenements($nb_evenements),
                 Infolettre::bloc_agenda($evenements, $nombre, $horizon, $aujourdhui),
                 $nb_evenements,
-                self::reglages_html($nombre, $horizon, $options) . self::note_html(self::note_evenements_hors($hors_evenements))
+                self::reglages_html($nombre, $horizon, $depuis_choisi, $options) . self::note_html(self::note_evenements_hors($hors_evenements))
             )
             . self::section_html(
                 'appels',
@@ -378,14 +478,33 @@ final class PageInfolettre {
             . '</section>';
     }
 
-    /** Réglages de l'agenda : formulaire GET (nombre d'événements ou horizon). */
-    private static function reglages_html(int $nombre, ?string $horizon, array $options): string {
+    /**
+     * Réglage des nouvelles du RSN : formulaire GET (date de départ). Les réglages de l'agenda suivent en
+     * champs cachés, pour qu'un formulaire n'efface pas le choix de l'autre.
+     */
+    private static function depuis_html(string $depuis, string $aujourdhui, int $nombre, ?string $horizon, array $options): string {
+        /* translators: %d : nombre de jours couverts quand aucune date n'est choisie. */
+        $aide = sprintf(__('Articles de la catégorie « Actualités du RSN » du site. Sans date choisie : les %d derniers jours.', 'rsn-veille'), self::JOURS_NOUVELLES_RSN);
+        return '<form method="get" action="' . esc_url((string) ($options['url_page'] ?? '')) . '" class="rsn-veille-reglages-bloc">'
+            . '<input type="hidden" name="page" value="' . esc_attr(Menu::SLUG_INFOLETTRE) . '">'
+            . '<input type="hidden" name="nombre" value="' . $nombre . '">'
+            . ($horizon !== null ? '<input type="hidden" name="jusqu_au" value="' . esc_attr($horizon) . '">' : '')
+            . '<label for="rsn-veille-depuis">' . esc_html__('Articles publiés depuis le', 'rsn-veille') . '</label> '
+            . '<input type="date" name="depuis" id="rsn-veille-depuis" value="' . esc_attr($depuis) . '" max="' . esc_attr($aujourdhui) . '"> '
+            . '<button type="submit" class="button">' . esc_html__('Appliquer', 'rsn-veille') . '</button> '
+            . '<span class="description">' . esc_html($aide) . '</span>'
+            . '</form>';
+    }
+
+    /** Réglages de l'agenda : formulaire GET (nombre d'événements ou horizon) ; la date choisie pour les nouvelles du RSN suit en champ caché. */
+    private static function reglages_html(int $nombre, ?string $horizon, ?string $depuis_choisi, array $options): string {
         $choix = '';
         foreach (self::NOMBRES as $n) {
             $choix .= '<option value="' . $n . '"' . ($n === $nombre ? ' selected' : '') . '>' . $n . '</option>';
         }
         return '<form method="get" action="' . esc_url((string) ($options['url_page'] ?? '')) . '" class="rsn-veille-reglages-bloc">'
             . '<input type="hidden" name="page" value="' . esc_attr(Menu::SLUG_INFOLETTRE) . '">'
+            . ($depuis_choisi !== null ? '<input type="hidden" name="depuis" value="' . esc_attr($depuis_choisi) . '">' : '')
             . '<label for="rsn-veille-nombre">' . esc_html__("Nombre d'événements", 'rsn-veille') . '</label> '
             . '<select name="nombre" id="rsn-veille-nombre">' . $choix . '</select> '
             . '<label for="rsn-veille-jusqu-au">' . esc_html__("ou jusqu'au", 'rsn-veille') . '</label> '

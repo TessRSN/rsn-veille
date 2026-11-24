@@ -66,6 +66,15 @@ Le dépôt est **privé** (`TessRSN/rsn-veille`) et la branche de livraison est 
 
 Quelle que soit la voie, l'activation lance les mêmes opérations (voir section 9).
 
+### Après la mise à jour de la 0.16.2 vers la 0.17.0
+
+Rien à régler. **Veille › Infolettre** a un sixième bloc, en premier : **Nouvelles du RSN**. Il reprend en billets (image, titre, texte, bouton « Lire l'article → ») les articles de la catégorie « Actualités du RSN » du site parus dans les 30 derniers jours ; le champ **« Articles publiés depuis le »** permet de remonter plus loin ou moins loin.
+
+- Le texte d'un billet est l'**extrait** rédigé dans l'article (panneau « Extrait » de l'éditeur) ; sans extrait, le début du premier paragraphe du texte. Dans les deux cas, 170 caractères au plus (trois lignes environ, pour rester à la hauteur de l'image), avec « … » quand le texte est coupé. Pour choisir le texte de l'infolettre, remplir l'extrait de l'article.
+- L'image est l'**image mise en avant** de l'article ; sans elle, le billet est en texte seul.
+- Les programmes de financement restent dans leur bloc. Le Radar et les nouvelles gardées (« Nouvelles de nos partenaires ») ne changent pas.
+- À la première ouverture, les images des nouveaux billets sont recopiées pour le courriel : la page peut mettre quelques secondes de plus.
+
 ### Après la mise à jour de la 0.16.1 vers la 0.16.2
 
 Rien à régler. Dans **Veille › Infolettre**, le bloc **Nouvelles gardées** est maintenant une seule carte compacte : l'étiquette « DANS L’ÉCOSYSTÈME », le titre « Nouvelles de nos partenaires », puis chaque nouvelle avec sa source et sa date, son titre cliquable suivi d'une flèche, et son résumé. Le lien « Lire la suite → » n'existe plus. Les quatre autres blocs ne changent pas. Le résumé est celui lu dans le flux de la source : on peut le raccourcir dans Mailchimp après le collage.

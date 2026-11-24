@@ -1,5 +1,23 @@
 # Journal des modifications
 
+## 0.17.0 (2026-11-24)
+
+Infolettre : les articles du RSN ont leur bloc, en billets avec image, comme les événements et les programmes du RSN. Le Radar ne lisait que les nouvelles des autres organismes.
+
+### Un sixième bloc, « Nouvelles du RSN » (`Admin\PageInfolettre`, `Infolettre`)
+- Placé en premier sur la page. Un **billet** par article de la catégorie « Actualités du RSN » du site (catégorie 10, `PageInfolettre::CATEGORIE_ACTUALITES`), le plus récent en haut : image mise en avant liée à l'article, étiquette « NOUVELLE DU RSN », titre, texte, bouton « Lire l'article → » et la date de parution (« Publié le 10 novembre 2026 »). Un article sans image mise en avant a un billet en texte seul.
+- **Lus directement sur le site**, sans passer par le Radar : un article publié est déjà choisi. Les programmes de financement (catégorie 149) restent dans leur bloc ; les traductions anglaises ne sont pas reprises.
+- **« Articles publiés depuis le »** : une date sous le titre du bloc choisit jusqu'où remonter ; sans choix, les 30 derniers jours (`PageInfolettre::JOURS_NOUVELLES_RSN`). Le choix suit dans l'adresse (`&depuis=2026-10-01`) et les réglages de l'agenda sont conservés quand on l'applique, et inversement. Une date future ou invalide est ignorée.
+- **Texte du billet** (`Infolettre::texte_article`) : l'extrait rédigé dans l'article s'il existe ; sinon le premier vrai paragraphe du texte, en laissant de côté la feuille de style, le surtitre et le titre répété des articles en bloc HTML ; sinon tout le texte sans le titre qui l'ouvre. Au plus 170 caractères, soit trois lignes environ à côté de l'image : coupés à la fin d'une phrase quand c'est possible, sinon au dernier mot entier, avec « … » (la suite se lit dans l'article).
+- Les images passent par la même copie pour courriel que les autres billets (`ImageCourriel`), faite seulement pour les articles repris.
+- Les articles protégés par mot de passe ne sont pas repris ; au plus 20 articles sont lus, les plus récents.
+- Pas de bouton pour écarter un article en particulier : déplacer la date de départ, ou supprimer le billet dans Mailchimp après le collage.
+
+### Autres
+- Une date suivie d'un saut de ligne dans l'adresse (`jusqu_au`, `depuis`) est refusée au lieu de fausser le filtre.
+- La page annonce « Six blocs prêts pour Mailchimp ». Les cinq autres blocs, le Radar et la page publique ne changent pas.
+- Aucune fiche, aucune option, aucun texte traduit n'est modifié. Numéro de version 0.17.0.
+
 ## 0.16.2 (2026-11-24)
 
 Infolettre : le bloc des nouvelles gardées prend la présentation compacte demandée par l'équipe. Les quatre autres blocs ne changent pas.
