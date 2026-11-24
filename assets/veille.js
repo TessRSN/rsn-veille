@@ -656,6 +656,43 @@ function animer(racine, noeudDonnees) {
     }
   });
 
+  // En-tête collant du site (barre du haut et menu du thème, barre d'administration) : la colonne de filtres se
+  // cale dessous au lieu de glisser derrière. Sa hauteur est mesurée, pas écrite en dur : elle dépend du thème et de
+  // la largeur de la fenêtre. On descend depuis le haut de la fenêtre tant qu'on trouve un élément fixe ou collant.
+  function basEntete() {
+    let bas = 0;
+    for (let i = 0; i < 6; i++) {
+      let trouve = null;
+      for (let e = document.elementFromPoint(Math.round(window.innerWidth / 2), bas + 1); e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+        if (racine.contains(e)) { trouve = null; break; } // le contenu de la veille n'est pas un en-tête
+        if (e.contains(racine)) break;                    // un ancêtre commun non plus : on s'arrête avant lui
+        const position = getComputedStyle(e).position;
+        if (position === 'fixed' || position === 'sticky') trouve = e;
+      }
+      if (!trouve) break;
+      const r = trouve.getBoundingClientRect();
+      if (r.top > bas + 1 || r.bottom <= bas + 1 || r.height > window.innerHeight / 2) break;
+      bas = Math.round(r.bottom);
+    }
+    return bas;
+  }
+  let enteteMesure = -1, enteteProgramme = false;
+  function majEntete() {
+    enteteProgramme = false;
+    const bas = basEntete();
+    if (bas !== enteteMesure) { enteteMesure = bas; racine.style.setProperty('--entete', bas + 'px'); }
+  }
+  function programmerEntete() {
+    if (enteteProgramme) return;
+    enteteProgramme = true;
+    window.requestAnimationFrame(majEntete);
+  }
+  if ($('.cote')) {
+    window.addEventListener('scroll', programmerEntete, { passive: true });
+    window.addEventListener('resize', programmerEntete);
+    majEntete();
+  }
+
   rendreSources(); tout();
 }
 })();

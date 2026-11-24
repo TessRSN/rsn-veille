@@ -66,6 +66,10 @@ Le dépôt est **privé** (`TessRSN/rsn-veille`) et la branche de livraison est 
 
 Quelle que soit la voie, l'activation lance les mêmes opérations (voir section 9).
 
+### Après la mise à jour de la 0.16.0 vers la 0.16.1
+
+Rien à régler. Sur la page de l'agenda, la colonne de filtres défile toute seule sous le menu du site quand elle dépasse la hauteur de la fenêtre, et le choix « Liste » ou « Calendrier » est un bouton à deux positions. Si l'ancien affichage persiste, vider le cache du navigateur (les fichiers sont chargés avec `?ver=0.16.1`).
+
 ### Après la mise à jour de la 0.15.0 vers la 0.16.0
 
 Rien à régler. **Veille › Infolettre** a maintenant cinq blocs au lieu de trois, au style de l'infolettre du RSN :

@@ -52,8 +52,13 @@ WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se lancent par `n
 - [ ] Largeur mobile (375 px, outils de développement) : aucun défilement horizontal
       (`document.documentElement.scrollWidth === innerWidth`), image en bannière au-dessus du texte,
       colonne de filtres au-dessus de la liste, points de couleur dans le calendrier.
-- [ ] Bureau : la colonne de filtres reste collante, sans barre de défilement (4 mois, Plus tard,
-      thèmes repliés la gardent courte).
+- [ ] Bureau, fenêtre de 800 px de haut (0.16.1) : en parcourant la liste, la colonne de filtres reste collante
+      **sous** le menu du site (la recherche est visible, rien n'est caché par l'en-tête) et elle défile toute seule
+      jusqu'à « Réinitialiser les filtres ». Dans une fenêtre assez haute pour la montrer en entier, pas de barre
+      de défilement. Dans la console, `document.querySelector('.rsn-veille').style.getPropertyValue('--entete')`
+      rend la hauteur de l'en-tête collant (119px sur rsn.quebec).
+- [ ] Choix « Liste » ou « Calendrier » (0.16.1) : un bouton à deux positions à droite du compte, la vue en cours
+      en marine avec son icône en blanc. Un clic sur « Liste » depuis le calendrier ramène la liste.
 - [ ] `[rsn_veille section="agenda"]` : événements seuls (sans appels, bandes ni sources) ;
       `[rsn_veille section="appels"]` : dates limites puis appels seuls ; `[rsn_veille une="0"]` : sans la bande
       « À la une ». Les deux sur la même page : chacun fonctionne
@@ -114,7 +119,7 @@ débit : `wp transient list --search='rsn_veille_debit_*'` puis `wp transient de
 
 ## Ressources et cohabitation
 
-- [ ] Sur la page Veille, `veille.css` et `veille.js` sont chargés avec `?ver=0.16.0` (onglet Réseau) ;
+- [ ] Sur la page Veille, `veille.css` et `veille.js` sont chargés avec `?ver=0.16.1` (onglet Réseau) ;
       sur une autre page du site (accueil, Nouvelles), ni l'un ni l'autre.
 - [ ] Les polices Google ne sont pas chargées une seconde fois par l'extension (pas de feuille
       `rsn-veille-polices`) ; `add_filter('rsn_veille_charger_polices', '__return_true')` dans un

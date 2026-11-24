@@ -1,5 +1,15 @@
 # Journal des modifications
 
+## 0.16.1 (2026-11-24)
+
+Agenda public : tous les filtres restent atteignables sur un écran de portable, et le choix entre la liste et le calendrier se voit. Deux gênes signalées par une personne qui découvrait la page.
+
+- **Colonne de filtres** (`assets/veille.css`, `.cote`) : elle défile maintenant toute seule quand elle est plus haute que la fenêtre. Avant, dans une fenêtre de 800 px de haut, le bas de la colonne (Thèmes, Organisateur, Réinitialiser les filtres) restait hors de l'écran tant qu'on parcourait la liste. Une ombre légère en haut ou en bas indique qu'il reste des filtres.
+- **En-tête collant du site** (`assets/veille.js`, `basEntete`) : la colonne se cale sous la barre du haut et le menu du site au lieu de glisser derrière. Avant, la recherche et le début de la colonne étaient cachés par l'en-tête (119 px sur rsn.quebec). La hauteur est mesurée dans la page, pas écrite en dur ; sans en-tête collant, rien ne change.
+- **Choix Liste / Calendrier** (`.vues`, `.vue`) : un bouton à deux positions, la vue en cours en marine. Avant, deux mots soulignés d'un trait fin, que l'on prenait pour du texte. Même comportement, mêmes attributs `aria-pressed`.
+- Sous 820 px de large, rien ne change : la colonne reste au-dessus de la liste, sans hauteur bornée.
+- Aucune fiche, aucune option, aucun texte traduit n'est modifié. Numéro de version 0.16.1.
+
 ## 0.16.0 (2026-11-23)
 
 Infolettre : les blocs à copier dans Mailchimp prennent le style de l'infolettre du RSN, et ce que le RSN organise est mis à part, en billets avec image. Maquette validée par l'équipe le 23 novembre 2026 (un billet par rangée, image à gauche).
