@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
  *
  * Ce que le RSN organise (`du_rsn`) a ses propres blocs, en billets avec image ; le reste de l'écosystème est en
  * listes, au style de l'infolettre de l'automne 2026 (pastille de date marine et jaune, pastilles de thème,
- * bouton bleu). Les nouvelles gardent leur présentation d'origine.
+ * bouton bleu). Les nouvelles gardées tiennent dans une seule carte compacte.
  *
  * Classe pure : aucune lecture de WordPress (les fiches arrivent en tableaux au format fiche), seulement
  * l'échappement (`esc_html`, `esc_url`) et les dates en français (`Dates`). Tableaux HTML aux styles
@@ -25,9 +25,6 @@ if (!defined('ABSPATH')) {
 final class Infolettre {
     /** Nombre d'événements par défaut de l'agenda. */
     public const NOMBRE_PAR_DEFAUT = 8;
-
-    /** Style du tableau du bloc des nouvelles (présentation d'origine). */
-    private const STYLE_TABLE = "border-collapse:collapse;font-family:'Plus Jakarta Sans',Arial,sans-serif;font-size:14px;color:#101828";
 
     private const GRIS = '#6E7A84';
     private const MARINE = '#003469';
@@ -43,6 +40,8 @@ final class Infolettre {
     private const TRAIT_LIGNE = '#E8E8E8';
     private const BORD_BILLET = '#D5DEE8';
     private const FOND_FAITS = '#F2F6FA';
+    /** Traits de la carte des nouvelles : contour de l'étiquette, séparation entre deux nouvelles. */
+    private const TRAIT_CARTE = '#DCE5EE';
     private const POLICE = 'font-family: Arial, Helvetica, sans-serif;';
 
     /** Couleur de la pastille de chaque thème ; un thème absent d'ici est en marine. Jaune : texte marine. */
@@ -147,13 +146,14 @@ final class Infolettre {
     }
 
     /**
-     * Nouvelles gardées qui ont un titre, la plus récente d'abord (celles sans date à la fin).
+     * Nouvelles gardées qui ont un titre (autre chose que des espaces, insécables comprises), la plus récente
+     * d'abord (celles sans date à la fin).
      *
      * @param array<int,mixed> $gardees
      * @return array<int,array<string,mixed>>
      */
     public static function nouvelles_retenues(array $gardees): array {
-        $retenues = array_values(array_filter($gardees, static fn($g): bool => is_array($g) && trim((string) ($g['titre'] ?? '')) !== ''));
+        $retenues = array_values(array_filter($gardees, static fn($g): bool => is_array($g) && self::net((string) ($g['titre'] ?? '')) !== ''));
         usort($retenues, static fn(array $a, array $b): int => strcmp((string) ($b['date'] ?? ''), (string) ($a['date'] ?? '')));
         return $retenues;
     }
@@ -371,22 +371,39 @@ final class Infolettre {
     }
 
     /**
-     * Nouvelles gardées depuis le radar, la plus récente d'abord.
+     * Nouvelles gardées depuis le radar, la plus récente d'abord, réunies dans une seule carte : une étiquette
+     * et un titre en tête, puis chaque nouvelle (source et date, titre lié, résumé) séparée de la suivante par
+     * un trait fin.
      *
      * @param array<int,mixed> $gardees `{url, titre, date, source, ...}`
      */
     public static function bloc_nouvelles(array $gardees, ?string $aujourdhui = null): string {
         $aujourdhui ??= \rsn_veille_aujourdhui();
-        $lignes = [];
-        foreach (self::nouvelles_retenues($gardees) as $nouvelle) {
-            $lignes[] = self::ligne_nouvelle($nouvelle);
-        }
-        if ($lignes === []) {
-            $lignes = [self::ligne_vide()];
-        }
         /* translators: %s : date du jour. */
         $commentaire = sprintf(__("Nouvelles de l'écosystème gardées pour l'infolettre (généré par la veille de l'écosystème, %s)", 'rsn-veille'), Dates::date_longue($aujourdhui));
-        return '<!-- ' . self::commentaire($commentaire) . " -->\n<table style=\"" . self::STYLE_TABLE . "\">\n" . implode("\n", $lignes) . "\n</table>";
+        $nouvelles = self::nouvelles_retenues($gardees);
+        if ($nouvelles === []) {
+            return self::assembler($commentaire, [], '', '');
+        }
+        $rangees = [];
+        foreach ($nouvelles as $i => $nouvelle) {
+            // Le `</tr>` en fin de ligne marque la fin de l'élément pour `texte_brut`.
+            $rangees[] = '              <tr><td style="' . ($i > 0 ? 'border-top: 1px solid ' . self::TRAIT_CARTE . '; ' : '') . 'padding: 12px 0; ' . self::POLICE . ' text-align: left;">'
+                . self::nouvelle($nouvelle) . '</td></tr>';
+        }
+        $etiquette = '<p style="margin: 0 0 8px 0; line-height: 1.2;"><span style="font-size: 10px; font-weight: bold; color: ' . self::MARINE . '; background-color: ' . self::FOND_FAITS
+            . '; border: 1px solid ' . self::TRAIT_CARTE . '; padding: 3px 9px; border-radius: 99px; letter-spacing: 0.5px;">' . self::texte(__('DANS L’ÉCOSYSTÈME', 'rsn-veille')) . '</span></p>';
+        $titre = '<p style="margin: 0; font-size: 17px; font-weight: bold; color: ' . self::MARINE . '; line-height: 1.25;">' . self::texte(__('Nouvelles de nos partenaires', 'rsn-veille')) . '</p>';
+        $table = '<table width="100%" cellpadding="0" cellspacing="0" border="0"';
+        return '<!-- ' . self::commentaire($commentaire) . " -->\n"
+            . $table . ' style="' . self::POLICE . ' max-width: 600px; margin: 0 auto;">' . "\n"
+            . "  <tr>\n    <td style=\"padding: 0;\">\n"
+            . '      ' . $table . ' style="border: 1px solid ' . self::BORD_BILLET . '; border-radius: 10px; border-collapse: separate; background-color: #ffffff;">' . "\n"
+            . '        <tr><td style="padding: 16px 16px 6px 16px; ' . self::POLICE . ' text-align: left;">' . $etiquette . $titre . "</td></tr>\n"
+            . '        <tr><td style="padding: 0 16px 8px 16px;">' . "\n"
+            . '          ' . $table . ">\n"
+            . implode("\n", $rangees) . "\n"
+            . "          </table>\n        </td></tr>\n      </table>\n    </td>\n  </tr>\n</table>";
     }
 
     /**
@@ -646,18 +663,26 @@ final class Infolettre {
             . '<tr><td style="padding: 4px 14px;"><table width="100%" cellpadding="0" cellspacing="0" border="0">' . $rangees . '</table></td></tr></table>';
     }
 
-    // --- Nouvelles (présentation d'origine) ---
+    // --- Nouvelles ---
 
-    /** @param array<string,mixed> $nouvelle */
-    private static function ligne_nouvelle(array $nouvelle): string {
-        $entete = self::jointure(' · ', [Dates::date_courte((string) ($nouvelle['date'] ?? '')), trim((string) ($nouvelle['source'] ?? ''))]);
-        $lignes = [
-            $entete !== '' ? '<span style="font-size:12px;color:' . self::GRIS . '">' . self::texte($entete) . '</span>' : '',
-            '<b style="font-size:16px">' . self::texte((string) $nouvelle['titre']) . '</b>',
-            self::texte((string) ($nouvelle['resume'] ?? '')),
-            self::lien((string) ($nouvelle['url'] ?? ''), __('Lire la suite →', 'rsn-veille')),
-        ];
-        return '<tr><td style="vertical-align:top;padding:0 0 16px 0">' . implode('<br>', array_filter($lignes, static fn(string $l): bool => $l !== '')) . '</td></tr>';
+    /**
+     * Contenu d'une nouvelle dans la carte : source et date en petit, titre lié suivi d'une flèche (titre seul
+     * sans adresse valide), résumé. Assemblé sans `sprintf` : un « % » dans un titre reste tel quel.
+     *
+     * @param array<string,mixed> $nouvelle
+     */
+    private static function nouvelle(array $nouvelle): string {
+        $mention = self::jointure(' · ', [(string) ($nouvelle['source'] ?? ''), Dates::date_courte((string) ($nouvelle['date'] ?? ''))]);
+        $titre = self::texte(self::net((string) $nouvelle['titre']));
+        $adresse = esc_url(trim((string) ($nouvelle['url'] ?? '')));
+        $resume = trim((string) ($nouvelle['resume'] ?? ''));
+        $style_titre = 'margin: ' . ($resume !== '' ? '0 0 4px 0' : '0') . '; font-size: 14px; font-weight: bold;';
+        return ($mention !== '' ? '<p style="margin: 0 0 3px 0; font-size: 11px; color: ' . self::GRIS_MENTION . '; line-height: 1.4;">' . self::texte($mention) . '</p>' : '')
+            . ($adresse !== ''
+                ? '<p style="' . $style_titre . ' line-height: 1.35;"><a href="' . $adresse . '" style="color: ' . self::MARINE . '; text-decoration: none;">' . $titre
+                    . '&nbsp;<span style="color: ' . self::BLEU . ';">→</span></a></p>'
+                : '<p style="' . $style_titre . ' color: ' . self::MARINE . '; line-height: 1.35;">' . $titre . '</p>')
+            . ($resume !== '' ? '<p style="margin: 0; font-size: 13px; color: ' . self::TEXTE . '; line-height: 1.5;">' . self::texte($resume) . '</p>' : '');
     }
 
     // --- Pièces ---
@@ -819,10 +844,9 @@ final class Infolettre {
         return mb_strtoupper(mb_substr($texte, 0, 1)) . mb_substr($texte, 1);
     }
 
-    /** Lien « texte → » en marine (nouvelles) ; vide sans adresse http(s) ou mailto valide. */
-    private static function lien(string $url, string $texte): string {
-        $adresse = esc_url(trim($url));
-        return $adresse === '' ? '' : '<a href="' . $adresse . '" style="color:' . self::MARINE . '">' . self::texte($texte) . '</a>';
+    /** Texte sans les espaces qui l'entourent, espaces insécables comprises (`trim` les laisse). */
+    private static function net(string $texte): string {
+        return (string) preg_replace('/^[\s\x{00A0}\x{202F}]+|[\s\x{00A0}\x{202F}]+$/u', '', $texte);
     }
 
     /** @param string[] $morceaux */

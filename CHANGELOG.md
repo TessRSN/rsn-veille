@@ -1,5 +1,17 @@
 # Journal des modifications
 
+## 0.16.2 (2026-11-24)
+
+Infolettre : le bloc des nouvelles gardées prend la présentation compacte demandée par l'équipe. Les quatre autres blocs ne changent pas.
+
+- **Nouvelles gardées** (`Infolettre::bloc_nouvelles`) : toutes les nouvelles tiennent dans une seule carte au contour arrondi, large de 600 px au plus. En tête, l'étiquette « DANS L’ÉCOSYSTÈME » et le titre « Nouvelles de nos partenaires ». Puis, pour chaque nouvelle : la source et la date en petit (« Unité de soutien SSA Québec · 17 nov. 2026 »), le titre en gras marine, qui est le lien et se termine par une flèche bleue, et le résumé. Un trait fin sépare deux nouvelles.
+- Le lien « Lire la suite → » disparaît : on clique sur le titre. Une nouvelle sans adresse valide garde son titre, sans lien ni flèche ; sans source ni date, pas de ligne au-dessus du titre ; sans résumé, pas de paragraphe vide.
+- Le résumé est celui que le Radar a lu dans le flux, tel quel : pour un texte plus court ou plus vendeur, le retoucher dans Mailchimp après le collage.
+- Sans nouvelle gardée, le bloc dit « Aucun élément à inclure pour le moment. », sans carte ni en-tête.
+- Une nouvelle dont le titre n'est fait que d'espaces, insécables comprises, n'est plus reprise ni comptée (`Infolettre::nouvelles_retenues`).
+- Version texte de la copie : l'en-tête, puis pour chaque nouvelle la source et la date, le titre suivi de son adresse, le résumé.
+- Aucune fiche, aucune option, aucun texte traduit n'est modifié. Numéro de version 0.16.2.
+
 ## 0.16.1 (2026-11-24)
 
 Agenda public : tous les filtres restent atteignables sur un écran de portable, et le choix entre la liste et le calendrier se voit. Deux gênes signalées par une personne qui découvrait la page.

@@ -510,24 +510,85 @@ final class InfolettreTest extends TestCase {
             self::gardee(['url' => 'https://frq.test/n2', 'titre' => 'Plus récente <i>x</i>', 'date' => '2026-10-24', 'source' => 'FRQ']),
         ], self::AUJOURDHUI);
         $this->assertStringStartsWith('<!-- Nouvelles', $html);
-        $this->assertSame(2, substr_count($html, 'Lire la suite →'));
         $this->assertLessThan(strpos($html, 'Une nouvelle'), strpos($html, 'Plus récente'));
         $this->assertStringContainsString('Plus récente &lt;i&gt;x&lt;/i&gt;', $html);
-        $this->assertStringContainsString('<span style="font-size:12px;color:#6E7A84">24 oct. 2026 · FRQ</span>', $html);
-        $this->assertStringContainsString('<b style="font-size:16px">Une nouvelle</b>', $html);
-        $this->assertStringContainsString('<a href="https://inspq.test/n1" style="color:#003469">Lire la suite →</a>', $html);
+        // Source puis date, en petit et en gris, au-dessus du titre.
+        $this->assertStringContainsString('<p style="margin: 0 0 3px 0; font-size: 11px; color: #767676; line-height: 1.4;">FRQ · 24 oct. 2026</p>', $html);
+        // Le titre est le lien, suivi d'une flèche bleue ; plus de « Lire la suite ».
+        $this->assertStringContainsString('<p style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; line-height: 1.35;"><a href="https://inspq.test/n1" style="color: #003469; text-decoration: none;">'
+            . 'Une nouvelle&nbsp;<span style="color: #0061AF;">→</span></a></p>', $html);
+        $this->assertStringNotContainsString('Lire la suite', $html);
+        $this->assertStringContainsString('<p style="margin: 0; font-size: 13px; color: #444444; line-height: 1.5;">Résumé de la nouvelle.</p>', $html);
         $this->assertStringNotContainsString('<script', $html);
+    }
+
+    public function test_nouvelles_dans_une_carte_avec_son_en_tete(): void {
+        $html = Infolettre::bloc_nouvelles([self::gardee(), self::gardee(['url' => 'https://frq.test/n2', 'titre' => 'Autre', 'date' => '2026-10-24']), self::gardee(['url' => 'https://frq.test/n3', 'titre' => 'Troisième', 'date' => '2026-10-22'])], self::AUJOURDHUI);
+        // Une seule carte, aux coins arrondis, dans un gabarit d'au plus 600 px.
+        $this->assertStringContainsString('max-width: 600px; margin: 0 auto;', $html);
+        $this->assertSame(1, substr_count($html, 'border: 1px solid #D5DEE8; border-radius: 10px; border-collapse: separate; background-color: #ffffff;'));
+        // En-tête : étiquette puis titre, une seule fois, avant la première nouvelle.
+        $this->assertSame(1, substr_count($html, '>DANS L’ÉCOSYSTÈME</span>'));
+        $this->assertSame(1, substr_count($html, '>Nouvelles de nos partenaires</p>'));
+        $this->assertLessThan(strpos($html, 'Nouvelles de nos partenaires'), strpos($html, 'DANS L’ÉCOSYSTÈME'));
+        $this->assertLessThan(strpos($html, 'Autre'), strpos($html, 'Nouvelles de nos partenaires'));
+        // Un trait fin entre deux nouvelles, aucun au-dessus de la première.
+        $this->assertSame(2, substr_count($html, '<td style="border-top: 1px solid #DCE5EE; padding: 12px 0;'));
+        $this->assertSame(1, substr_count($html, '<td style="padding: 12px 0;'));
+        // Tableaux équilibrés.
+        $this->assertSame(substr_count($html, '<table'), substr_count($html, '</table>'));
+        $this->assertSame(substr_count($html, '<tr'), substr_count($html, '</tr>'));
+        $this->assertSame(substr_count($html, '<td'), substr_count($html, '</td>'));
     }
 
     public function test_nouvelles_sans_date_ni_source_et_adresse_refusee(): void {
         $html = Infolettre::bloc_nouvelles([self::gardee(['date' => '', 'source' => '']), self::gardee(['url' => 'javascript:alert(1)', 'titre' => 'Piégée', 'date' => '', 'source' => ''])], self::AUJOURDHUI);
-        $this->assertStringNotContainsString('<span style="font-size:12px', $html);
+        $this->assertStringNotContainsString('font-size: 11px', $html);
         $this->assertStringNotContainsString('javascript:', $html);
-        $this->assertSame(1, substr_count($html, 'Lire la suite →'));
+        // Sans adresse valide : le titre reste, en marine, sans lien ni flèche.
+        $this->assertSame(1, substr_count($html, '<a '));
+        $this->assertSame(1, substr_count($html, '→'));
+        $this->assertStringContainsString('font-weight: bold; color: #003469; line-height: 1.35;">Piégée</p>', $html);
+    }
+
+    public function test_nouvelles_une_seule_information_ou_sans_resume(): void {
+        $html = Infolettre::bloc_nouvelles([self::gardee(['date' => '', 'resume' => '']), self::gardee(['url' => 'https://frq.test/n2', 'titre' => 'Autre', 'source' => ''])], self::AUJOURDHUI);
+        $this->assertStringContainsString('line-height: 1.4;">INSPQ</p>', $html);
+        $this->assertStringContainsString('line-height: 1.4;">20 oct. 2026</p>', $html);
+        $this->assertStringNotContainsString(' · ', $html);
+        // Sans résumé, pas de paragraphe vide.
+        $this->assertSame(1, substr_count($html, 'font-size: 13px; color: #444444;'));
+        $this->assertDoesNotMatchRegularExpression('/<p[^>]*><\/p>/', $html);
+        $this->assertStringContainsString('<p style="margin: 0; font-size: 14px; font-weight: bold; line-height: 1.35;"><a href="https://inspq.test/n1"', $html);
+    }
+
+    public function test_nouvelles_pourcent_dans_le_titre(): void {
+        $html = Infolettre::bloc_nouvelles([self::gardee(['titre' => 'Hausse de 30 % des demandes : 100%s', 'resume' => '50 %d de plus'])], self::AUJOURDHUI);
+        $this->assertStringContainsString('Hausse de 30 % des demandes : 100%s&nbsp;', $html);
+        $this->assertStringContainsString('50 %d de plus', $html);
+    }
+
+    public function test_nouvelles_source_et_resume_echappes(): void {
+        $html = Infolettre::bloc_nouvelles([self::gardee(['source' => 'A & B <b>', 'resume' => 'Un "résumé" <script>alert(1)</script> --> fin'])], self::AUJOURDHUI);
+        $this->assertStringContainsString('A &amp; B &lt;b&gt; · 20 oct. 2026', $html);
+        $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt; --&gt; fin', $html);
+        $this->assertStringNotContainsString('<script', $html);
+        $this->assertSame(1, substr_count($html, '-->'), 'seul le commentaire de tête se ferme');
+    }
+
+    public function test_nouvelles_titre_fait_d_espaces_insecables(): void {
+        $nbsp = "\u{00A0}";
+        $this->assertSame([], Infolettre::nouvelles_retenues([self::gardee(['titre' => $nbsp . ' ' . $nbsp])]));
+        $html = Infolettre::bloc_nouvelles([self::gardee(['titre' => $nbsp . 'Entouré' . $nbsp])], self::AUJOURDHUI);
+        $this->assertStringContainsString('text-decoration: none;">Entouré&nbsp;<span', $html);
     }
 
     public function test_nouvelles_vide(): void {
-        $this->assertStringContainsString('Aucun élément', Infolettre::bloc_nouvelles([], self::AUJOURDHUI));
+        $html = Infolettre::bloc_nouvelles([], self::AUJOURDHUI);
+        $this->assertStringContainsString('Aucun élément', $html);
+        // Rien à annoncer : ni carte ni en-tête.
+        $this->assertStringNotContainsString('Nouvelles de nos partenaires', $html);
+        $this->assertStringNotContainsString('border-radius', $html);
     }
 
     // --- Texte brut ---
@@ -560,8 +621,11 @@ final class InfolettreTest extends TestCase {
         $evenement = Infolettre::texte_brut(Infolettre::bloc_evenements_rsn([self::evenement_rsn()], null, self::AUJOURDHUI));
         $this->assertSame("ÉVÉNEMENT DU RSN\n12-13 NOV.\nAtelier de co-création\nRSN · Agora de Mila – Montréal\nFormation\nDeux jours pour imaginer des solutions.\nEn savoir plus → https://rsn.quebec/evenement/atelier/\nPrésentiel", $evenement);
 
-        // Les nouvelles gardent une ligne vide entre elles.
+        // Les nouvelles : l'en-tête de la carte, puis une ligne vide entre deux nouvelles ; l'adresse suit le titre.
         $nouvelles = Infolettre::texte_brut(Infolettre::bloc_nouvelles([self::gardee(), self::gardee(['url' => 'https://frq.test/n2', 'titre' => 'Autre', 'date' => '2026-10-24'])], self::AUJOURDHUI));
-        $this->assertSame("24 oct. 2026 · INSPQ\nAutre\nRésumé de la nouvelle.\nLire la suite → https://frq.test/n2\n\n20 oct. 2026 · INSPQ\nUne nouvelle\nRésumé de la nouvelle.\nLire la suite → https://inspq.test/n1", $nouvelles);
+        $this->assertSame("DANS L’ÉCOSYSTÈME\nNouvelles de nos partenaires\n\nINSPQ · 24 oct. 2026\nAutre → https://frq.test/n2\nRésumé de la nouvelle.\n\nINSPQ · 20 oct. 2026\nUne nouvelle → https://inspq.test/n1\nRésumé de la nouvelle.", $nouvelles);
+        // Une seule nouvelle, sans adresse valide, sans résumé, sans source ni date : l'en-tête puis le titre.
+        $seule = Infolettre::texte_brut(Infolettre::bloc_nouvelles([self::gardee(['url' => '', 'resume' => '', 'source' => '', 'date' => ''])], self::AUJOURDHUI));
+        $this->assertSame("DANS L’ÉCOSYSTÈME\nNouvelles de nos partenaires\n\nUne nouvelle", $seule);
     }
 }

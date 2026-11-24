@@ -66,6 +66,10 @@ Le dépôt est **privé** (`TessRSN/rsn-veille`) et la branche de livraison est 
 
 Quelle que soit la voie, l'activation lance les mêmes opérations (voir section 9).
 
+### Après la mise à jour de la 0.16.1 vers la 0.16.2
+
+Rien à régler. Dans **Veille › Infolettre**, le bloc **Nouvelles gardées** est maintenant une seule carte compacte : l'étiquette « DANS L’ÉCOSYSTÈME », le titre « Nouvelles de nos partenaires », puis chaque nouvelle avec sa source et sa date, son titre cliquable suivi d'une flèche, et son résumé. Le lien « Lire la suite → » n'existe plus. Les quatre autres blocs ne changent pas. Le résumé est celui lu dans le flux de la source : on peut le raccourcir dans Mailchimp après le collage.
+
 ### Après la mise à jour de la 0.16.0 vers la 0.16.1
 
 Rien à régler. Sur la page de l'agenda, la colonne de filtres défile toute seule sous le menu du site quand elle dépasse la hauteur de la fenêtre, et le choix « Liste » ou « Calendrier » est un bouton à deux positions. Si l'ancien affichage persiste, vider le cache du navigateur (les fichiers sont chargés avec `?ver=0.16.1`).
