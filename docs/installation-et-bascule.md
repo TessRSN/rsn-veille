@@ -66,6 +66,14 @@ Le dépôt est **privé** (`TessRSN/rsn-veille`) et la branche de livraison est 
 
 Quelle que soit la voie, l'activation lance les mêmes opérations (voir section 9).
 
+### Après la mise à jour de la 0.18.0 vers la 0.19.0
+
+Rien à régler. Le formulaire « Faire une proposition » offre un second choix, **« Envoyer seulement le lien »** : la personne donne l'adresse de la page, et c'est tout.
+
+- Dans **Veille › File d'approbation**, ces envois portent la pastille orange **« À compléter »** et le bouton **« Compléter la fiche »** à la place de « Publier ». Ce bouton ouvre la fiche : corriger le titre en haut de la page, remplir l'organisateur et la date de début dans « Détails de la fiche », puis **Enregistrer comme en attente**. De retour dans la file, la fiche a ses boutons « Publier ». Le bouton « Publier » de l'éditeur, lui, laisse la fiche en attente tant qu'il manque quelque chose.
+- À la première ouverture de la file, l'extension essaie de lire le titre de la page pour le mettre à la place de l'adresse ; il est à vérifier. Si le site refuse la lecture, l'adresse reste. Cette lecture peut ralentir de quelques secondes la première ouverture de la file après un envoi.
+- Vider le cache de LiteSpeed après la mise à jour, pour que la page de l'agenda serve le nouveau formulaire (`veille.js` et `veille.css` en `?ver=0.19.0`).
+
 ### Après la mise à jour de la 0.17.0 vers la 0.18.0
 
 Rien à régler. Sur la page de l'agenda, le type d'une fiche se voit à sa couleur : étiquette « Événement » bleue, étiquette « Appel » jaune, fiche d'un appel sur un fond jaune très pâle, mêmes couleurs dans le filtre « Afficher » et dans le calendrier. « Organisé par le RSN » passe en marine. Si l'ancien affichage persiste, vider le cache du navigateur (la feuille de style est chargée avec `?ver=0.18.0`).

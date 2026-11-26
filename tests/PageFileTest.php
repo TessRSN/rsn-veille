@@ -755,6 +755,140 @@ final class PageFileTest extends TestCase {
         $this->assertStringNotContainsString('à traiter', PageFile::page_html([$publiee], 'publie', '', '', $url, self::OPTIONS));
     }
 
+    // --- Propositions reçues par lien seulement, à compléter (0.19.0) ---
+
+    private static function par_lien(array $champs = []): Fiche {
+        return self::fiche($champs + [
+            'id' => 31, 'titre' => 'exemple.org/evenements/atelier', 'debut' => null, 'heure' => '', 'organisateur' => '', 'resume' => '',
+            'source' => Fiche::SOURCE_PROPOSITION, 'niveau' => 'M', 'url' => 'https://www.exemple.org/evenements/atelier',
+        ]);
+    }
+
+    public function test_ligne_d_une_proposition_a_completer(): void {
+        $options = ['a_completer' => [31], 'mots' => [31 => 'Atelier gratuit <b>!</b>'], 'courriels' => [31 => 'personne@exemple.org'], 'onglet' => 'a_approuver'] + self::OPTIONS;
+        $html = PageFile::ligne_html(self::par_lien(), $options);
+        $this->assertStringContainsString('data-a-completer="1"', $html);
+        $this->assertStringContainsString('<span class="rsn-veille-a-completer">À compléter</span>', $html);
+        $this->assertStringContainsString('Titre provisoire : l&#039;adresse du lien reçu.', $html);
+        $this->assertSame(2, substr_count($html, '<span class="rsn-veille-a-preciser">à préciser</span>'), 'la date et l’organisateur');
+        $this->assertStringContainsString('Proposition du public</span><br>Lien seulement<br><a href="mailto:personne@exemple.org">', $html);
+        $this->assertStringContainsString('<span class="rsn-veille-mot">Mot de la personne :</span> « Atelier gratuit &lt;b&gt;!&lt;/b&gt; »', $html);
+        // « Compléter la fiche » à la place de « Publier » ; « Écarter » reste.
+        $this->assertStringContainsString('<a class="button button-primary" href="https://exemple.test/wp-admin/post.php?post=31&amp;action=edit">Compléter la fiche</a>', $html);
+        $this->assertSame(['Écarter' => 'ecarte'], self::boutons($html));
+        $this->assertStringContainsString('À compléter avant de publier.', $html);
+        $this->assertStringNotContainsString('Publier', $html);
+    }
+
+    public function test_ligne_a_completer_titre_lu_et_appel(): void {
+        $options = ['a_completer' => [31], 'titres_lus' => [31]] + self::OPTIONS;
+        $html = PageFile::ligne_html(self::par_lien(['titre' => 'Atelier : introduction à l’IA', 'organisateur' => 'MiCM']), $options);
+        $this->assertStringContainsString('Titre lu sur la page, à vérifier.', $html);
+        $this->assertSame(1, substr_count($html, 'rsn-veille-a-preciser'), 'il ne manque plus que la date');
+        // Un appel reçu par lien a sa date de publication : seule la colonne de l'organisateur dit « à préciser ».
+        $appel = PageFile::ligne_html(self::par_lien(['type' => 'appel', 'debut' => '2026-10-27']), ['a_completer' => [31]] + self::OPTIONS);
+        $this->assertSame(1, substr_count($appel, 'rsn-veille-a-preciser'));
+        $this->assertStringContainsString('27 octobre 2026', $appel);
+    }
+
+    public function test_ligne_ordinaire_inchangee_sans_marque(): void {
+        $html = PageFile::ligne_html(self::par_lien(), self::OPTIONS);
+        $this->assertStringNotContainsString('a-completer', $html);
+        $this->assertStringNotContainsString('Compléter la fiche', $html);
+        $this->assertStringContainsString('Formulaire de la page', $html);
+        $this->assertArrayHasKey('Publier + infolettre', self::boutons($html));
+        // Une option mal formée ne casse pas la ligne.
+        $this->assertStringNotContainsString('a-completer', PageFile::ligne_html(self::par_lien(), ['a_completer' => 'oui', 'mots' => 'x', 'titres_lus' => null] + self::OPTIONS));
+    }
+
+    public function test_proposition_a_completer_ecartee_ou_publiee(): void {
+        // Écartée : on peut encore la compléter, pas la publier ni l'écarter de nouveau.
+        $ecartee = PageFile::ligne_html(self::par_lien(['statut' => 'ecarte']), ['a_completer' => [31]] + self::OPTIONS);
+        $this->assertStringContainsString('Compléter la fiche', $ecartee);
+        $this->assertSame([], self::boutons($ecartee));
+        // Publiée malgré la marque (état d'avant la 0.19.0, improbable) : les boutons ordinaires.
+        $publiee = PageFile::ligne_html(self::par_lien(['statut' => 'publie', 'debut' => '2026-11-12']), ['a_completer' => [31]] + self::OPTIONS);
+        $this->assertSame(['Retirer de la page' => 'ecarte'], self::boutons($publiee));
+    }
+
+    public function test_meme_lien_qu_une_autre_fiche_signale(): void {
+        $publiee = self::fiche(['id' => 40, 'statut' => 'publie', 'titre' => 'Atelier déjà publié', 'url' => 'http://exemple.org/evenements/atelier/']);
+        $recue = self::par_lien();
+        $jumelle = self::par_lien(['id' => 33]);
+        $autre = self::par_lien(['id' => 34, 'url' => 'https://www.exemple.org/evenements/colloque']);
+        $collectee = self::fiche(['id' => 35, 'url' => 'https://www.exemple.org/evenements/atelier']);
+        // Une fiche publiée de même adresse passe avant une fiche en attente.
+        $r = PageFile::memes_liens([$recue, $jumelle, $autre, $collectee], [$publiee]);
+        $this->assertSame(40, $r[31]->id);
+        $this->assertSame(40, $r[33]->id);
+        $this->assertArrayNotHasKey(34, $r);
+        $this->assertArrayNotHasKey(35, $r, 'seules les propositions du public reçoivent ce repère');
+        // Deux envois du même lien, rien de publié : chacun renvoie à l'autre.
+        $r = PageFile::memes_liens([$recue, $jumelle], []);
+        $this->assertSame(33, $r[31]->id);
+        $this->assertSame(31, $r[33]->id);
+        // Un repère déjà trouvé par les dates et les titres est gardé.
+        $this->assertSame(35, PageFile::memes_liens([$recue], [$publiee], [31 => $collectee])[31]->id);
+        // Dans la ligne : l'étiquette orange habituelle.
+        $html = PageFile::ligne_html($recue, ['onglet' => 'a_approuver', 'a_completer' => [31], 'ressemblances' => [31 => $publiee]] + self::OPTIONS);
+        $this->assertStringContainsString('Peut-être déjà dans l&#039;agenda', $html);
+    }
+
+    public function test_rappel_des_propositions_compte_celles_a_completer(): void {
+        $fiches = [self::par_lien(), self::par_lien(['id' => 32, 'titre' => 'Colloque complet', 'debut' => '2026-11-20', 'organisateur' => 'Obvia'])];
+        $html = PageFile::page_html($fiches, 'a_approuver', '', '', 'https://exemple.test/wp-admin/admin.php?page=rsn-veille', ['a_completer' => [31]] + self::OPTIONS);
+        $this->assertStringContainsString('2 propositions du public à traiter</a>, dont 1 à compléter</p>', $html);
+        $sans = PageFile::page_html($fiches, 'a_approuver', '', '', 'https://exemple.test/wp-admin/admin.php?page=rsn-veille', self::OPTIONS);
+        $this->assertStringContainsString('2 propositions du public à traiter</a></p>', $sans);
+    }
+
+    public function test_une_proposition_a_completer_ne_se_publie_pas(): void {
+        $e = new EntrepotWordPress();
+        $f = self::par_lien();
+        $f->id = null;
+        $f->cle_source = 'proposition:1';
+        $f->cles_source = ['proposition:1'];
+        $id = $e->creer($f);
+        \RSN\Veille\ACompleter::marquer($id);
+        $r = PageFile::changer_statut($e, $id, 'publie');
+        $this->assertFalse($r['ok']);
+        $this->assertStringContainsString('à compléter avant de la publier', $r['message']);
+        $this->assertSame('a_approuver', $e->obtenir($id)->statut);
+        // L'écarter reste permis ; une fois la marque levée, elle se publie.
+        $this->assertTrue(PageFile::changer_statut($e, $id, 'ecarte')['ok']);
+        $this->assertFalse(PageFile::changer_statut($e, $id, 'publie')['ok']);
+        \RSN\Veille\ACompleter::lever($id);
+        $this->assertTrue(PageFile::changer_statut($e, $id, 'publie')['ok']);
+        $this->assertSame('publie', $e->obtenir($id)->statut);
+    }
+
+    public function test_afficher_lit_le_titre_et_montre_la_marque(): void {
+        $GLOBALS['rsn_veille_wp']['capacites'] = ['rsn_veille_gerer'];
+        $e = new EntrepotWordPress();
+        $f = self::par_lien();
+        $f->id = null;
+        $f->cle_source = 'proposition:2';
+        $f->cles_source = ['proposition:2'];
+        $id = $e->creer($f);
+        \RSN\Veille\ACompleter::marquer($id, 'Ouvert à la relève');
+        \RSN\Veille\ACompleter::$resolveur = static fn(string $hote): array => ['93.184.216.34'];
+        $GLOBALS['rsn_veille_wp']['reponse_http'] = ['headers' => ['content-type' => 'text/html'], 'body' => '<title>Atelier lu sur la page</title>', 'response' => ['code' => 200]];
+        ob_start();
+        PageFile::afficher();
+        $html = (string) ob_get_clean();
+        $this->assertStringContainsString('<strong>Atelier lu sur la page</strong> <span class="rsn-veille-a-completer">À compléter</span>', $html);
+        $this->assertStringContainsString('Titre lu sur la page, à vérifier.', $html);
+        $this->assertStringContainsString('« Ouvert à la relève »', $html);
+        $this->assertStringContainsString(', dont 1 à compléter', $html);
+        $this->assertCount(1, $GLOBALS['rsn_veille_wp']['requetes_http']);
+        // Deuxième ouverture : le titre n'est pas relu.
+        ob_start();
+        PageFile::afficher();
+        ob_end_clean();
+        $this->assertCount(1, $GLOBALS['rsn_veille_wp']['requetes_http']);
+        \RSN\Veille\ACompleter::$resolveur = null;
+    }
+
     public function test_rappel_des_sources_dont_le_gabarit_est_a_verifier(): void {
         $url = 'https://exemple.test/wp-admin/admin.php?page=rsn-veille';
         $options = self::OPTIONS + ['sources_a_verifier' => ['Obvia : événements', 'SSA <b>', 7], 'url_journal' => 'https://exemple.test/wp-admin/admin.php?page=rsn-veille-journal'];

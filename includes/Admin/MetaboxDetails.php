@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace RSN\Veille\Admin;
 
+use RSN\Veille\ACompleter;
 use RSN\Veille\Depot;
 use RSN\Veille\EntrepotWordPress;
 use RSN\Veille\Fiche;
@@ -23,6 +24,10 @@ if (!defined('ABSPATH')) {
  * Les champs de l'autre type, masqués par `assets/admin-details.js`, sont envoyés et enregistrés tels quels.
  * Seule exception : le début. L'événement l'envoie dans `debut` (« Date de début »), l'appel dans `publie`
  * (« Publié le ») ; seul le champ du type coché compte, et la fin d'un appel vaut son début.
+ *
+ * Proposition reçue par lien seulement (`ACompleter`, 0.19.0) : un avis en tête de l'encadré dit ce qui manque
+ * (titre, organisateur, date de début) et les champs à remplir sont entourés ; l'enregistrement lève la marque
+ * « à compléter » dès que rien ne manque, et la fiche peut alors être publiée depuis la file.
  */
 final class MetaboxDetails {
     public const ID = 'rsn_veille_details';
@@ -84,7 +89,11 @@ final class MetaboxDetails {
     /** Affiche le contenu de la métabox pour la fiche éditée. */
     public static function rendre(\WP_Post $post): void {
         $fiche = (new EntrepotWordPress())->obtenir($post->ID) ?? new Fiche();
-        echo self::html($fiche, self::origine($fiche));
+        $a_completer = ACompleter::est($post->ID)
+            ? ['manque' => ACompleter::manque_de($post->ID, $fiche), 'mot' => ACompleter::mot($post->ID), 'titre_lu' => ACompleter::titre_lu($post->ID)]
+            : null;
+        // Sortie entièrement échappée par `html`.
+        echo self::html($fiche, self::origine($fiche), $a_completer);
     }
 
     /** Script de bascule, seulement sur l'éditeur des fiches (`admin_enqueue_scripts`). */
@@ -125,8 +134,15 @@ final class MetaboxDetails {
 
     // --- Rendu ---
 
-    /** Contenu de la métabox : type, champs communs et champs du type, note sur la protection, origine. */
-    public static function html(Fiche $f, string $origine): string {
+    /**
+     * Contenu de la métabox : type, champs communs et champs du type, note sur la protection, origine.
+     *
+     * @param ?array{manque?: string[], mot?: string, titre_lu?: bool} $a_completer Proposition reçue par lien
+     *        seulement : ce qui lui manque (`ACompleter::manque`), le mot de la personne, et si son titre a été lu sur
+     *        la page ; null pour toute autre fiche. Un appel reçu par lien montre une date de début vide : le jour de
+     *        l'envoi qu'il porte est sa date de publication, pas celle d'un événement.
+     */
+    public static function html(Fiche $f, string $origine, ?array $a_completer = null): string {
         $type = $f->type === 'appel' ? 'appel' : 'evenement';
         $proteges = array_values(array_intersect($f->champs_manuels, Depot::CHAMPS_PROTEGEABLES));
         $debut = (string) $f->debut;
@@ -147,7 +163,7 @@ final class MetaboxDetails {
             . self::ligne('appel', 'echeance', __('Date limite', 'rsn-veille'), self::entree('echeance', 'date', $echeance), $proteges, '', $type)
             . self::ligne('appel', 'categorie', __('Catégorie', 'rsn-veille'), self::entree('categorie', 'text', $f->categorie, __('Ex. : Appel de financement', 'rsn-veille')), $proteges, __('Vide : « Appel ».', 'rsn-veille'), $type)
             . self::ligne('appel', 'publie', __('Publié le', 'rsn-veille'), self::entree('publie', 'date', $debut), $proteges, __("Date de l'annonce.", 'rsn-veille'), $type)
-            . self::ligne('evenement', 'debut', __('Date de début', 'rsn-veille'), self::entree('debut', 'date', $debut), $proteges, '', $type)
+            . self::ligne('evenement', 'debut', __('Date de début', 'rsn-veille'), self::entree('debut', 'date', $a_completer !== null && $f->type === 'appel' ? '' : $debut), $proteges, '', $type)
             . self::ligne('evenement', 'fin', __('Date de fin', 'rsn-veille'), self::entree('fin', 'date', (string) $f->fin), $proteges, '', $type)
             . self::ligne('evenement', 'heure', __('Heure', 'rsn-veille'), self::entree('heure', 'time', $f->heure), $proteges, __('Facultative.', 'rsn-veille'), $type)
             . self::ligne('evenement', 'format', __('Format', 'rsn-veille'), self::liste('format', $formats, $f->format), $proteges, '', $type)
@@ -166,10 +182,47 @@ final class MetaboxDetails {
             . '.rsn-veille-corrige{display:inline-block;margin-left:6px;padding:1px 6px;font-size:12px;color:#996800;background:#fcf9e8;border:1px solid #f0e6b5;border-radius:3px}'
             . '.rsn-veille-details-origine{font-weight:400;color:#646970;margin-left:8px}</style>'
             . '<div class="rsn-veille-details" id="rsn-veille-details">'
+            . ($a_completer === null ? '' : self::avis_a_completer($f, $a_completer))
             . '<input type="hidden" name="' . esc_attr(self::CHAMP_JETON) . '" value="' . esc_attr(wp_create_nonce(self::NONCE)) . '">'
             . '<table class="form-table" role="presentation"><tbody>' . $lignes . '</tbody></table>'
             . '<div class="notice notice-info inline"><p>' . esc_html__('Une date, une heure, un lien, un lieu ou une ville corrigés ici ne sont plus changés par la collecte de nuit (pastille 🔒). Le titre et le texte ne le sont jamais.', 'rsn-veille') . '</p></div>'
             . $pied
+            . '</div>';
+    }
+
+    /**
+     * Avis en tête de l'encadré d'une proposition reçue par lien seulement : ce qui manque, le mot de la personne,
+     * le lien vers la page, et le contour des champs à remplir.
+     *
+     * @param array{manque?: string[], mot?: string, titre_lu?: bool} $a_completer
+     */
+    private static function avis_a_completer(Fiche $f, array $a_completer): string {
+        $manque = is_array($a_completer['manque'] ?? null) ? $a_completer['manque'] : [];
+        $libelles = [
+            'titre' => __('le titre (en haut de la page)', 'rsn-veille'),
+            'organisateur' => __("l'organisateur", 'rsn-veille'),
+            'date' => __('la date de début', 'rsn-veille'),
+        ];
+        $liste = implode(', ', array_values(array_intersect_key($libelles, array_flip(array_filter($manque, 'is_string')))));
+        $texte = $liste === ''
+            ? __("Il ne manque plus rien : enregistrez la fiche (« Enregistrer comme en attente »), elle pourra être publiée depuis la file d'approbation.", 'rsn-veille')
+            /* translators: %s : ce qui manque à la fiche (« le titre (en haut de la page), l'organisateur, la date de début »). */
+            : sprintf(__("Avant de la publier, il reste à donner : %s. Enregistrez ensuite la fiche (« Enregistrer comme en attente ») : elle pourra être publiée depuis la file d'approbation. Tant qu'il manque quelque chose, le bouton « Publier » de cette page la laisse en attente.", 'rsn-veille'), $liste);
+        $lu = !empty($a_completer['titre_lu']) && !in_array('titre', $manque, true);
+        $mot = trim((string) ($a_completer['mot'] ?? ''));
+        $lien = esc_url($f->url);
+        $contours = '';
+        foreach (['organisateur' => 'organisateur', 'date' => 'debut'] as $cle => $champ) {
+            if (in_array($cle, $manque, true)) {
+                $contours .= '#rsn-veille-details-' . $champ . '{border-color:#dba617;box-shadow:0 0 0 1px #dba617}';
+            }
+        }
+        return ($contours === '' ? '' : '<style>' . $contours . '</style>')
+            . '<div class="notice notice-warning inline rsn-veille-details-a-completer"><p><strong>' . esc_html__('Proposition reçue par lien seulement.', 'rsn-veille') . '</strong> ' . esc_html($texte) . '</p>'
+            /* translators: %s : mot laissé pour l'équipe par la personne qui a envoyé le lien. */
+            . ($lu ? '<p>' . esc_html__("Le titre a été lu sur la page d'origine : vérifiez-le, en haut de la page.", 'rsn-veille') . '</p>' : '')
+            . ($mot === '' ? '' : '<p>' . esc_html(sprintf(__('Mot de la personne : « %s »', 'rsn-veille'), $mot)) . '</p>')
+            . ($lien === '' ? '' : '<p><a href="' . $lien . '" target="_blank" rel="noopener noreferrer">' . esc_html__("Ouvrir la page d'origine ↗", 'rsn-veille') . '</a></p>')
             . '</div>';
     }
 
@@ -446,6 +499,14 @@ final class MetaboxDetails {
                 if ($accroche) {
                     add_action('save_post_' . TypeContenu::TYPE, $rappel, self::PRIORITE, 1);
                 }
+            }
+        }
+        // Proposition reçue par lien seulement : la marque « à compléter » tombe dès que rien ne manque (le titre
+        // est celui du post, déjà enregistré quand ce crochet s'exécute).
+        if (ACompleter::est($post_id)) {
+            $completee = $entrepot->obtenir($post_id);
+            if ($completee !== null && ACompleter::manque_de($post_id, $completee) === []) {
+                ACompleter::lever($post_id);
             }
         }
         if ($erreurs !== []) {

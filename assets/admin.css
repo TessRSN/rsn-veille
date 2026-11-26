@@ -560,3 +560,41 @@
 	border: 1px solid #dcdcde;
 	background: #fff;
 }
+
+/* Proposition reçue par lien seulement (0.19.0) : à compléter avant de publier. */
+.rsn-veille-a-completer {
+	display: inline-block;
+	margin-left: 6px;
+	padding: 1px 8px;
+	border: 1px solid #F59E0B;
+	border-radius: 999px;
+	background: #FEF3C7;
+	color: #92400E;
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 1.6;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	vertical-align: middle;
+	white-space: nowrap;
+}
+.rsn-veille-file tr[data-a-completer] > td:first-child {
+	box-shadow: inset 3px 0 0 #F59E0B;
+}
+.rsn-veille-titre-provisoire {
+	margin: 2px 0 0;
+	font-size: 12px;
+	color: #646970;
+}
+.rsn-veille-a-preciser {
+	color: #92400E;
+	font-style: italic;
+}
+.rsn-veille-mot {
+	font-weight: 600;
+	color: #1d2327;
+}
+.rsn-veille-aide-completer {
+	margin: 4px 0 0;
+	font-size: 12px;
+}

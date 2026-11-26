@@ -228,6 +228,8 @@ final class Raccourci {
             'libelle_lien_appel' => __("Lien de l'appel", 'rsn-veille'),
             'placeholder_titre_evenement' => __('Ex. : Colloque sur la souveraineté numérique en santé', 'rsn-veille'),
             'placeholder_titre_appel' => __('Ex. : Appel à projets en santé numérique 2027', 'rsn-veille'),
+            'envoyer' => __("Envoyer à l'équipe", 'rsn-veille'),
+            'envoyer_lien' => __("Envoyer le lien à l'équipe", 'rsn-veille'),
             'envoi_en_cours' => __('Envoi…', 'rsn-veille'),
             'merci_proposition' => __("Merci ! Votre proposition est dans la file d'approbation de l'équipe du RSN.", 'rsn-veille'),
             'corriger_champs' => __('Vérifiez les champs signalés :', 'rsn-veille'),

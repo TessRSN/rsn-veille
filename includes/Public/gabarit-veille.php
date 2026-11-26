@@ -86,6 +86,14 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
     <form id="form-proposition" method="post" enctype="multipart/form-data">
       <div class="erreurs" id="p-erreurs" role="alert" tabindex="-1" hidden></div>
       <div class="choix">
+        <span class="lab" id="lab-mode"><?php echo esc_html__('Vous préférez', 'rsn-veille'); ?></span>
+        <div class="seg" role="group" aria-labelledby="lab-mode">
+          <button type="button" id="p-mode-complet" data-mode="complet" aria-pressed="true"><?php echo esc_html__('Remplir la fiche', 'rsn-veille'); ?></button>
+          <button type="button" id="p-mode-lien" data-mode="lien" aria-pressed="false"><?php echo esc_html__('Envoyer seulement le lien', 'rsn-veille'); ?></button>
+        </div>
+        <input type="hidden" name="mode" id="p-mode" value="complet">
+      </div>
+      <div class="choix">
         <span class="lab" id="lab-type"><?php echo esc_html__('Vous proposez', 'rsn-veille'); ?></span>
         <div class="seg" role="group" aria-labelledby="lab-type">
           <button type="button" id="p-type-evenement" data-type="evenement" aria-pressed="true"><?php echo esc_html__('Un événement', 'rsn-veille'); ?></button>
@@ -93,7 +101,13 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
         </div>
         <input type="hidden" name="type" id="p-type" value="evenement">
       </div>
-      <div class="champs">
+      <p class="rapide" data-mode-pour="lien" hidden><b><?php echo esc_html__('Pas le temps de tout remplir ?', 'rsn-veille'); ?></b> <?php echo esc_html__("Donnez-nous le lien de la page : l'équipe du RSN complète la fiche avant de la publier.", 'rsn-veille'); ?></p>
+      <div class="champs" data-mode-pour="lien" hidden>
+        <label class="large"><?php echo esc_html__("Lien de la page de l'événement ou de l'appel", 'rsn-veille'); ?> <input id="p-lien" name="url" type="url" required disabled placeholder="https://"></label>
+        <label><?php echo esc_html__('Votre courriel (facultatif, pour vous répondre)', 'rsn-veille'); ?> <input id="p-lien-courriel" name="courriel" type="email" autocomplete="email" disabled></label>
+        <label><?php echo esc_html__("Un mot pour l'équipe (facultatif)", 'rsn-veille'); ?> <input id="p-mot" name="mot" maxlength="300" disabled placeholder="<?php echo esc_attr__('Ex. : atelier gratuit, ouvert à la relève', 'rsn-veille'); ?>"></label>
+      </div>
+      <div class="champs" data-mode-pour="complet">
         <label class="large"><?php echo esc_html__('Titre', 'rsn-veille'); ?> <input id="p-titre" name="titre" required maxlength="200" placeholder="<?php echo esc_attr__('Ex. : Colloque sur la souveraineté numérique en santé', 'rsn-veille'); ?>"></label>
         <label data-pour="evenement"><?php echo esc_html__('Date de début', 'rsn-veille'); ?> <input id="p-debut" name="debut" type="date" required data-requis-pour="evenement"></label>
         <label data-pour="evenement"><?php echo esc_html__('Date de fin (si plusieurs jours)', 'rsn-veille'); ?> <input id="p-fin" name="fin" type="date"></label>
@@ -109,7 +123,7 @@ $fleche = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wid
       <input type="hidden" name="langue" value="<?php echo esc_attr($langue); ?>">
       <div class="piege" aria-hidden="true"><label><?php echo esc_html__('Site web (laisser vide)', 'rsn-veille'); ?> <input name="site_web" type="text" tabindex="-1" autocomplete="off" aria-hidden="true"></label></div>
       <div class="boutons">
-        <button class="btn" type="submit"><?php echo esc_html__("Envoyer à l'équipe", 'rsn-veille'); ?></button>
+        <button class="btn" type="submit" id="p-envoyer"><?php echo esc_html__("Envoyer à l'équipe", 'rsn-veille'); ?></button>
         <button class="btn sobre" type="button" id="btn-annuler"><?php echo esc_html__('Annuler', 'rsn-veille'); ?></button>
         <span class="note"><?php echo esc_html__("Votre courriel sert seulement à vous répondre ; il n'est jamais publié.", 'rsn-veille'); ?></span>
       </div>

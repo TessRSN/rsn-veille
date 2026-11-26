@@ -127,7 +127,7 @@ lancent par `npx wp-env run cli wp …`.
       « N appariées en anglais, M orphelines » au-dessus des erreurs, erreurs repliées sous
       « N erreurs », et le déroulé de chaque source replié en bas de page.
 - [ ] Les fichiers `admin.css` et `admin.js` ne sont chargés que sur les pages du menu Veille (onglet
-      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.18.0`.
+      Réseau des outils du navigateur sur `/wp-admin/edit.php` : absents), avec `?ver=0.19.0`.
 - [ ] Aucune erreur PHP dans `wp-content/debug.log` ni dans la console du navigateur.
 
 ## Réglages (tâche 12)
@@ -182,6 +182,36 @@ lancent par `npx wp-env run cli wp …`.
       dans les outils du navigateur, envoyer → page « Le lien que vous avez suivi a expiré », rien n'est fait.
 - [ ] Largeur mobile (outils du navigateur, 375 px) : pas de défilement horizontal de la page ; les zones
       de mots-clés défilent seules.
+
+### Propositions reçues par lien seulement (0.19.0)
+
+Préparation : envoyer depuis la page publique, hors connexion, un lien d'événement (avec un mot pour l'équipe) et
+un lien d'appel par « Envoyer seulement le lien ».
+
+- [ ] File d'approbation › À approuver : chaque fiche a la pastille orange **« À compléter »**, un trait orange à
+      gauche, « à préciser » dans les colonnes Dates (événement) et Organisateur, « Lien seulement » sous
+      « Proposition du public », le mot de la personne dans la colonne Extrait, et le bouton bleu **« Compléter la
+      fiche »** à la place de « Publier », avec « Écarter ». Le rappel dit « n propositions du public à traiter,
+      dont m à compléter ».
+- [ ] Titre : à la première ouverture de la file, le titre de la page remplace l'adresse (« Titre lu sur la page, à
+      vérifier. ») ; si le site refuse la lecture, l'adresse reste (« Titre provisoire : l'adresse du lien
+      reçu. »). Recharger la file ne relance pas la lecture (`wp post meta get <id> rsn_veille_titre_lu` : `1` ou `0`).
+- [ ] « Compléter la fiche » ouvre l'éditeur : un avis jaune en tête de « Détails de la fiche » dit ce qui manque
+      (titre, organisateur, date de début), montre le mot de la personne et le lien « Ouvrir la page d'origine » ;
+      les champs à remplir sont entourés. Remplir l'organisateur et la date, corriger le titre en haut de la page,
+      **Enregistrer comme en attente** : l'avis disparaît, la fiche revient dans la file sans « À compléter », avec
+      « Publier + infolettre ». Enregistrer sans la date : l'avis reste et dit qu'il manque la date de début.
+- [ ] Dans l'éditeur d'une fiche encore à compléter, cliquer **Publier** : la fiche reste « en attente » (elle
+      n'apparaît pas sur la page publique) et l'avis dit toujours ce qui manque. Même essai par la modification
+      rapide de `edit.php?post_type=rsn_veille` (État : Publié) : la fiche reste en attente.
+- [ ] Envoyer deux fois le même lien : chaque ligne porte « Ressemble à une autre fiche en attente ». Envoyer le
+      lien d'une fiche déjà publiée : « Peut-être déjà dans l'agenda ».
+- [ ] Une fiche à compléter ne se publie pas : aucun bouton « Publier » ne lui est offert, ni dans « À approuver »
+      ni, une fois écartée, dans « Écartées » (« Compléter la fiche » seulement). Le serveur refuse aussi une
+      requête `rsn_veille_changer_statut` avec `statut=publie` (« Cette proposition est à compléter avant de la
+      publier », couvert par `test_une_proposition_a_completer_ne_se_publie_pas`). « Écarter » fonctionne.
+- [ ] Le lendemain, l'événement reçu par lien est toujours dans « À approuver » (sans date, il ne passe pas dans
+      « Archivées »). Un appel reçu par lien y passe trente jours après l'envoi, comme tout appel sans date limite.
 
 ## Radar (tâche 15)
 
