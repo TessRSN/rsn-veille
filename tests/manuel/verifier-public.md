@@ -40,7 +40,7 @@ WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se lancent par `n
 - [ ] « Événements passés » : lignes compactes sans image, du plus récent au plus ancien, compteur
       « N événements passés depuis {mois année} ».
 - [ ] Calendrier : grille lundi → dimanche, flèches, Aujourd'hui, flèches du clavier sur la grille,
-      glissement tactile (mobile), événements RSN en jaune, clic sur un jour → fiches dessous ; un appel
+      glissement tactile (mobile), événements du RSN en marine, les autres en bleu, clic sur un jour → fiches dessous ; un appel
       apparaît le jour de sa date limite (« Date limite · … »).
 - [ ] Appels (dans la liste unifiée, avec leur mois de date limite) : tuile jaune (date limite) ou grise
       (publication) ; un appel dont l'échéance est passée n'apparaît plus.
@@ -57,6 +57,13 @@ WordPress (`tests/bouchons-wordpress.php`). Les commandes `wp` se lancent par `n
       jusqu'à « Réinitialiser les filtres ». Dans une fenêtre assez haute pour la montrer en entier, pas de barre
       de défilement. Dans la console, `document.querySelector('.rsn-veille').style.getPropertyValue('--entete')`
       rend la hauteur de l'en-tête collant (119px sur rsn.quebec).
+- [ ] Couleurs des types (0.18.0) : dans la liste, l'étiquette « Événement » est bleue (texte blanc) et l'étiquette
+      « Appel » jaune (texte marine) ; « Organisé par le RSN » est marine, texte jaune. La fiche d'un appel est sur
+      un fond jaune très pâle aux coins arrondis, avec un hexagone jaune plein sur la frise ; un événement a un
+      hexagone au contour bleu et son jour en bleu. Dans le filtre « Afficher », un point bleu suit
+      « Événements » et un point jaune suit « Appels ». Calendrier : événements en bleu (ceux du RSN avec un trait
+      marine, en gras), dates limites des appels en jaune ; la légende a les mêmes couleurs. À 375 px de large, la
+      fiche d'un appel ne déborde pas.
 - [ ] Choix « Liste » ou « Calendrier » (0.16.1) : un bouton à deux positions à droite du compte, la vue en cours
       en marine avec son icône en blanc. Un clic sur « Liste » depuis le calendrier ramène la liste.
 - [ ] `[rsn_veille section="agenda"]` : événements seuls (sans appels, bandes ni sources) ;
@@ -119,7 +126,7 @@ débit : `wp transient list --search='rsn_veille_debit_*'` puis `wp transient de
 
 ## Ressources et cohabitation
 
-- [ ] Sur la page Veille, `veille.css` et `veille.js` sont chargés avec `?ver=0.17.0` (onglet Réseau) ;
+- [ ] Sur la page Veille, `veille.css` et `veille.js` sont chargés avec `?ver=0.18.0` (onglet Réseau) ;
       sur une autre page du site (accueil, Nouvelles), ni l'un ni l'autre.
 - [ ] Les polices Google ne sont pas chargées une seconde fois par l'extension (pas de feuille
       `rsn-veille-polices`) ; `add_filter('rsn_veille_charger_polices', '__return_true')` dans un
