@@ -492,6 +492,126 @@ final class MetaboxDetailsTest extends TestCase {
         return (new EntrepotWordPress())->creer($f);
     }
 
+    // --- Proposition reçue par lien seulement (0.19.0) ---
+
+    /** Proposition par lien enregistrée et marquée « à compléter ». */
+    private static function par_lien(): int {
+        $f = self::fiche(['titre' => 'exemple.org/evenements/atelier', 'debut' => null, 'fin' => null, 'heure' => '', 'organisateur' => '', 'resume' => '',
+            'source' => Fiche::SOURCE_PROPOSITION, 'niveau' => 'M', 'url' => 'https://www.exemple.org/evenements/atelier', 'cle_source' => 'proposition:9']);
+        $f->id = null;
+        $f->cles_source = ['proposition:9'];
+        $id = (new EntrepotWordPress())->creer($f);
+        \RSN\Veille\ACompleter::marquer($id, 'Atelier gratuit');
+        return $id;
+    }
+
+    public function test_avis_d_une_proposition_a_completer(): void {
+        $id = self::par_lien();
+        $fiche = (new EntrepotWordPress())->obtenir($id);
+        $html = MetaboxDetails::html($fiche, 'Proposée par le public', ['manque' => ['titre', 'organisateur', 'date'], 'mot' => 'Atelier <i>gratuit</i>']);
+        $this->assertStringContainsString('<div class="notice notice-warning inline rsn-veille-details-a-completer"><p><strong>Proposition reçue par lien seulement.</strong> Avant de la publier, il reste à donner : le titre (en haut de la page), l&#039;organisateur, la date de début.', $html);
+        $this->assertStringContainsString('Mot de la personne : « Atelier &lt;i&gt;gratuit&lt;/i&gt; »', $html);
+        $this->assertStringContainsString('<a href="https://www.exemple.org/evenements/atelier" target="_blank" rel="noopener noreferrer">Ouvrir la page d&#039;origine ↗</a>', $html);
+        // Les champs à remplir sont entourés ; la date de début est vide, à donner.
+        $this->assertStringContainsString('#rsn-veille-details-organisateur{border-color:#dba617', $html);
+        $this->assertStringContainsString('#rsn-veille-details-debut{border-color:#dba617', $html);
+        $this->assertStringContainsString('id="rsn-veille-details-debut" name="rsn_veille_details[debut]" value=""', $html);
+        // Il ne manque plus rien : l'avis le dit, sans contour.
+        $complet = MetaboxDetails::html($fiche, 'Proposée par le public', ['manque' => [], 'mot' => '']);
+        $this->assertStringContainsString('Il ne manque plus rien', $complet);
+        $this->assertStringNotContainsString('border-color:#dba617', $complet);
+        $this->assertStringNotContainsString('Mot de la personne', $complet);
+        // Toute autre fiche : aucun avis.
+        $this->assertStringNotContainsString('rsn-veille-details-a-completer', MetaboxDetails::html($fiche, 'Proposée par le public'));
+    }
+
+    public function test_rendre_montre_l_avis_seulement_pour_une_fiche_marquee(): void {
+        $id = self::par_lien();
+        ob_start();
+        MetaboxDetails::rendre(get_post($id));
+        $html = (string) ob_get_clean();
+        $this->assertStringContainsString('Proposition reçue par lien seulement.', $html);
+        $this->assertStringContainsString('Mot de la personne : « Atelier gratuit »', $html);
+        ob_start();
+        MetaboxDetails::rendre(get_post(self::fiche_enregistree()));
+        $this->assertStringNotContainsString('Proposition reçue par lien seulement.', (string) ob_get_clean());
+    }
+
+    public function test_enregistrer_leve_la_marque_quand_rien_ne_manque(): void {
+        $GLOBALS['rsn_veille_wp']['capacites'] = ['edit_post'];
+        $id = self::par_lien();
+        $e = new EntrepotWordPress();
+        // Organisateur et date donnés, mais le titre est resté l'adresse : toujours à compléter.
+        self::poster(['type' => 'evenement', 'organisateur' => 'MiCM', 'debut' => '2027-01-21', 'fin' => '', 'heure' => '', 'format' => 'Virtuel', 'lieu' => '', 'ville' => '', 'langue' => 'fr', 'url' => 'https://www.exemple.org/evenements/atelier']);
+        MetaboxDetails::enregistrer_envoi($id);
+        $this->assertSame('MiCM', $e->obtenir($id)->organisateur);
+        $this->assertSame('2027-01-21', $e->obtenir($id)->debut);
+        $this->assertTrue(\RSN\Veille\ACompleter::est($id), 'le titre provisoire reste à remplacer');
+        // Le titre corrigé dans l'éditeur : la marque tombe au prochain enregistrement.
+        $e->mettre_a_jour($id, ['titre' => 'Atelier : introduction à l’IA en santé']);
+        MetaboxDetails::enregistrer_envoi($id);
+        $this->assertFalse(\RSN\Veille\ACompleter::est($id));
+        $this->assertSame('a_approuver', $e->obtenir($id)->statut, 'compléter ne publie pas : c’est la file qui publie');
+    }
+
+    public function test_adresse_changee_sans_toucher_au_titre_garde_la_marque(): void {
+        $GLOBALS['rsn_veille_wp']['capacites'] = ['edit_post'];
+        $id = self::par_lien();
+        $e = new EntrepotWordPress();
+        \RSN\Veille\ACompleter::marquer($id, '', $e->obtenir($id)->titre);
+        self::poster(['type' => 'evenement', 'organisateur' => 'MiCM', 'debut' => '2027-01-21', 'fin' => '', 'heure' => '', 'format' => '', 'lieu' => '', 'ville' => '', 'langue' => 'fr', 'url' => 'https://www.exemple.org/autre-adresse']);
+        MetaboxDetails::enregistrer_envoi($id);
+        $this->assertSame('https://www.exemple.org/autre-adresse', $e->obtenir($id)->url);
+        $this->assertTrue(\RSN\Veille\ACompleter::est($id), 'le titre est encore l’ancienne adresse');
+    }
+
+    public function test_appel_recu_par_lien_passe_en_evenement_exige_une_date(): void {
+        $GLOBALS['rsn_veille_wp']['capacites'] = ['edit_post'];
+        $f = self::fiche(['type' => 'appel', 'titre' => 'exemple.org/financement/bourses', 'debut' => '2026-10-27', 'fin' => '2026-10-27', 'heure' => '', 'organisateur' => '', 'resume' => '',
+            'source' => Fiche::SOURCE_PROPOSITION, 'niveau' => 'M', 'url' => 'https://www.exemple.org/financement/bourses', 'cle_source' => 'proposition:10']);
+        $f->id = null;
+        $f->cles_source = ['proposition:10'];
+        $e = new EntrepotWordPress();
+        $id = $e->creer($f);
+        \RSN\Veille\ACompleter::marquer($id, '', $e->obtenir($id)->titre);
+        // L'encadré montre une date de début vide : le jour de l'envoi est la date de publication de l'appel.
+        $html = MetaboxDetails::html($e->obtenir($id), 'Proposée par le public', ['manque' => ['titre', 'organisateur'], 'mot' => '']);
+        $this->assertStringContainsString('id="rsn-veille-details-debut" name="rsn_veille_details[debut]" value=""', $html);
+        $this->assertStringContainsString('id="rsn-veille-details-publie" name="rsn_veille_details[publie]" value="2026-10-27"', $html);
+        // Passée en événement sans date : elle reste un appel, avec un avis, et la marque reste.
+        $e->mettre_a_jour($id, ['titre' => 'Journée des bourses']);
+        self::poster(['type' => 'evenement', 'organisateur' => 'FRQ', 'debut' => '', 'publie' => '2026-10-27', 'fin' => '', 'heure' => '', 'format' => '', 'lieu' => '', 'ville' => '', 'langue' => 'fr', 'url' => 'https://www.exemple.org/financement/bourses']);
+        MetaboxDetails::enregistrer_envoi($id);
+        $this->assertSame('appel', $e->obtenir($id)->type);
+        // Avec une date : c'est un événement à cette date, et rien ne manque plus.
+        self::poster(['type' => 'evenement', 'organisateur' => 'FRQ', 'debut' => '2027-02-03', 'publie' => '2026-10-27', 'fin' => '', 'heure' => '', 'format' => '', 'lieu' => '', 'ville' => '', 'langue' => 'fr', 'url' => 'https://www.exemple.org/financement/bourses']);
+        MetaboxDetails::enregistrer_envoi($id);
+        $this->assertSame('evenement', $e->obtenir($id)->type);
+        $this->assertSame('2027-02-03', $e->obtenir($id)->debut);
+        $this->assertFalse(\RSN\Veille\ACompleter::est($id));
+    }
+
+    public function test_avis_dit_de_verifier_un_titre_lu_sur_la_page(): void {
+        $id = self::par_lien();
+        $fiche = (new EntrepotWordPress())->obtenir($id);
+        $html = MetaboxDetails::html($fiche, 'Proposée par le public', ['manque' => ['organisateur', 'date'], 'mot' => '', 'titre_lu' => true]);
+        $this->assertStringContainsString('Le titre a été lu sur la page d&#039;origine : vérifiez-le', $html);
+        $this->assertStringContainsString('« Enregistrer comme en attente »', $html);
+        $this->assertStringContainsString('le bouton « Publier » de cette page la laisse en attente', $html);
+        $this->assertStringNotContainsString('Le titre a été lu', MetaboxDetails::html($fiche, 'Proposée par le public', ['manque' => ['titre'], 'mot' => '', 'titre_lu' => true]));
+    }
+
+    public function test_enregistrer_sans_date_garde_la_marque(): void {
+        $GLOBALS['rsn_veille_wp']['capacites'] = ['edit_post'];
+        $id = self::par_lien();
+        $e = new EntrepotWordPress();
+        $e->mettre_a_jour($id, ['titre' => 'Atelier IA']);
+        self::poster(['type' => 'evenement', 'organisateur' => 'MiCM', 'debut' => '', 'fin' => '', 'heure' => '', 'format' => '', 'lieu' => '', 'ville' => '', 'langue' => 'fr', 'url' => 'https://www.exemple.org/evenements/atelier']);
+        MetaboxDetails::enregistrer_envoi($id);
+        $this->assertTrue(\RSN\Veille\ACompleter::est($id));
+        $this->assertSame(['date'], \RSN\Veille\ACompleter::manque($e->obtenir($id)));
+    }
+
     public function test_sans_jeton_ou_jeton_faux_rien(): void {
         $GLOBALS['rsn_veille_wp']['capacites'] = ['edit_post'];
         $id = self::fiche_enregistree();

@@ -502,7 +502,9 @@ function animer(racine, noeudDonnees) {
     Object.keys(erreurs).forEach(cle => {
       const message = String(erreurs[cle] || ''); if (!message) return;
       messages.push(message);
-      const champ = cle && form.elements.namedItem(cle);
+      // Deux champs portent le même nom (lien et courriel de la fiche complète et de la voie rapide) : celui qui est actif.
+      const trouve = cle && form.elements.namedItem(cle);
+      const champ = trouve && !trouve.tagName && typeof trouve.length === 'number' ? Array.from(trouve).find(c => !c.disabled) : trouve;
       if (!champ || !champ.insertAdjacentElement) return;
       const note = document.createElement('span');
       note.className = 'erreur-champ'; note.id = 'p-erreur-' + cle; note.textContent = message;
@@ -541,7 +543,35 @@ function animer(racine, noeudDonnees) {
   // libellés « Organisateur » / « Organisme » et « Lien d'information » / « Lien de l'appel » et l'exemple du titre suivent
   // (textes traduits de la page). Un champ masqué est désactivé (il n'est pas envoyé) et n'est jamais requis ; les champs
   // `data-requis-pour` ne sont requis que pour leur type.
+  //
+  // Voie rapide (0.19.0) : « Remplir la fiche » ou « Envoyer seulement le lien » (boutons `data-mode`, champ caché `mode`).
+  // Chaque bloc `data-mode-pour` n'est visible, et ses champs actifs, que dans son mode ; le type reste demandé dans les deux.
   const boutonsType = form ? Array.from(form.querySelectorAll('[data-type]')) : [];
+  const boutonsMode = form ? Array.from(form.querySelectorAll('[data-mode]')) : [];
+  let mode = 'complet';
+  function appliquerChamps(type) {
+    form.querySelectorAll('[data-mode-pour]').forEach(bloc => {
+      const cache = bloc.dataset.modePour !== mode;
+      bloc.hidden = cache;
+      bloc.querySelectorAll('input, select, textarea').forEach(c => { c.disabled = cache; });
+    });
+    form.querySelectorAll('[data-pour]').forEach(el => {
+      const autre = el.dataset.pour !== type;
+      el.hidden = autre;
+      el.querySelectorAll('input, select, textarea').forEach(c => { c.disabled = autre || mode !== 'complet'; });
+    });
+    form.querySelectorAll('[data-requis-pour]').forEach(c => { c.required = c.dataset.requisPour === type && !c.disabled; });
+  }
+  function choisirMode(choix) {
+    if (!form || !boutonsMode.length) return;
+    mode = choix === 'lien' ? 'lien' : 'complet';
+    effacerErreurs();
+    boutonsMode.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+    $('#p-mode').value = mode;
+    appliquerChamps($('#p-type').value === 'appel' ? 'appel' : 'evenement');
+    const envoyer = $('#p-envoyer'); if (envoyer) envoyer.textContent = t(mode === 'lien' ? 'envoyer_lien' : 'envoyer');
+  }
+  boutonsMode.forEach(b => b.addEventListener('click', () => choisirMode(b.dataset.mode)));
   function choisirType(type) {
     if (!form || !boutonsType.length) return;
     type = type === 'appel' ? 'appel' : 'evenement';
@@ -549,12 +579,7 @@ function animer(racine, noeudDonnees) {
     effacerErreurs();
     boutonsType.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.type === type)));
     $('#p-type').value = type;
-    form.querySelectorAll('[data-pour]').forEach(el => {
-      const cache = el.dataset.pour !== type;
-      el.hidden = cache;
-      el.querySelectorAll('input, select, textarea').forEach(c => { c.disabled = cache; });
-    });
-    form.querySelectorAll('[data-requis-pour]').forEach(c => { c.required = c.dataset.requisPour === type && !c.disabled; });
+    appliquerChamps(type);
     const texte = (selecteur, cle) => { const n = $(selecteur); if (n) n.textContent = t(cle); };
     texte('#dialogue h2', appel ? 'titre_proposer_appel' : 'titre_proposer_evenement');
     texte('#lab-orga', appel ? 'libelle_organisme' : 'libelle_organisateur');
@@ -564,7 +589,8 @@ function animer(racine, noeudDonnees) {
   boutonsType.forEach(b => b.addEventListener('click', () => choisirType(b.dataset.type)));
   function ouvrirFormulaire() {
     // À chaque ouverture le formulaire revient à « Un événement » ; un clic sur le bouton d'un formulaire déjà ouvert garde le choix en cours.
-    if ($('#dialogue').hidden || form.hidden) choisirType('evenement');
+    // Il revient aussi à « Remplir la fiche » : la voie rapide reste le second choix.
+    if ($('#dialogue').hidden || form.hidden) { choisirMode('complet'); choisirType('evenement'); }
     $('#dialogue').hidden = false; form.hidden = false; $('#p-merci').hidden = true; $('#p-titre').focus();
   }
   on('#btn-proposer', 'click', ouvrirFormulaire);
@@ -643,6 +669,7 @@ function animer(racine, noeudDonnees) {
       const data = r.data || {};
       if (data.ok) {
         form.reset(); form.hidden = true;
+        // Le mode et le type choisis sont ramenés à « Remplir la fiche » et « Un événement » à la réouverture (`ouvrirFormulaire`).
         const merci = $('#p-merci'); merci.textContent = data.message || t('merci_proposition'); merci.hidden = false; merci.focus();
       } else if (data.erreurs && typeof data.erreurs === 'object' && Object.keys(data.erreurs).length) {
         montrerErreurs(data.erreurs);

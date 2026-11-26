@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace RSN\Veille\Admin;
 
+use RSN\Veille\ACompleter;
 use RSN\Veille\Collecte;
 use RSN\Veille\Entrepot;
 use RSN\Veille\EntrepotWordPress;
@@ -73,13 +74,28 @@ final class PageFile {
         $actuelles = self::publiees_d_actualite($entrepot, $aujourdhui);
         $attente = $entrepot->lister('a_approuver');
         [$fiches, $plafond_atteint] = self::fiches_de_l_onglet($entrepot, $onglet, $type, $aujourdhui, $actuelles, $attente);
-        // Courriel des proposants (méta privée, jamais publiée), pour que l'équipe puisse leur répondre.
+        // Propositions reçues par lien seulement : un essai de lecture du titre de leur page, à la première ouverture.
+        if ($onglet === 'a_approuver') {
+            ACompleter::lire_titres($entrepot, $fiches);
+        }
+        // Courriel des proposants (méta privée, jamais publiée), pour que l'équipe puisse leur répondre ; marque
+        // « à compléter », mot de la personne et titre lu sur la page des propositions par lien.
         $courriels = [];
+        $a_completer = [];
+        $mots = [];
+        $titres_lus = [];
         foreach ($fiches as $fiche) {
             if ($fiche->est_proposition() && $fiche->id !== null) {
                 $courriel = get_post_meta($fiche->id, TypeContenu::PREFIXE . 'courriel_proposant', true);
                 if (is_string($courriel) && $courriel !== '') {
                     $courriels[$fiche->id] = $courriel;
+                }
+                if (ACompleter::est($fiche->id)) {
+                    $a_completer[] = $fiche->id;
+                    $mots[$fiche->id] = ACompleter::mot($fiche->id);
+                    if (ACompleter::titre_lu($fiche->id)) {
+                        $titres_lus[] = $fiche->id;
+                    }
                 }
             }
         }
@@ -93,6 +109,9 @@ final class PageFile {
             'peut_ajouter' => current_user_can('edit_posts'),
             'origine' => $origine,
             'courriels' => $courriels,
+            'a_completer' => $a_completer,
+            'mots' => $mots,
+            'titres_lus' => $titres_lus,
             'sources_a_verifier' => self::sources_a_verifier(Journal::alertes(Journal::tout()), Collecte::sources()),
             // Mêmes repères que le Radar : ce qui est peut-être déjà publié, ce qu'une infolettre annonce plusieurs fois.
             'ressemblances' => $onglet === 'a_approuver' ? self::ressemblances($entrepot, $fiches, $aujourdhui, $actuelles) : [],
@@ -113,7 +132,42 @@ final class PageFile {
         if ($en_attente === []) {
             return [];
         }
-        return Ressemblance::pour_la_file($en_attente, $publiees ?? self::publiees_d_actualite($e, $aujourdhui), $aujourdhui);
+        $publiees ??= self::publiees_d_actualite($e, $aujourdhui);
+        return self::memes_liens($en_attente, $publiees, Ressemblance::pour_la_file($en_attente, $publiees, $aujourdhui));
+    }
+
+    /**
+     * Propositions du public sans autre repère : celle qui porte la même adresse qu'une fiche publiée, ou qu'une
+     * autre fiche en attente, la reçoit pour ressemblance. C'est le seul indice pour un lien reçu seul, qui n'a
+     * ni vrai titre ni date à comparer.
+     *
+     * @param Fiche[] $en_attente
+     * @param Fiche[] $publiees
+     * @param array<int,Fiche> $ressemblances Repères déjà trouvés (`Ressemblance::pour_la_file`), gardés tels quels.
+     * @return array<int,Fiche>
+     */
+    public static function memes_liens(array $en_attente, array $publiees, array $ressemblances = []): array {
+        $par_adresse = [];
+        foreach (array_merge($publiees, $en_attente) as $fiche) {
+            $adresse = $fiche instanceof Fiche ? ACompleter::adresse_comparable($fiche->url) : '';
+            if ($adresse !== '') {
+                // La première rencontrée : une fiche publiée passe avant une fiche en attente.
+                $par_adresse[$adresse][] = $fiche;
+            }
+        }
+        foreach ($en_attente as $fiche) {
+            $id = $fiche instanceof Fiche ? (int) $fiche->id : 0;
+            if ($id <= 0 || isset($ressemblances[$id]) || !$fiche->est_proposition()) {
+                continue;
+            }
+            foreach ($par_adresse[ACompleter::adresse_comparable($fiche->url)] ?? [] as $autre) {
+                if ((int) $autre->id !== $id) {
+                    $ressemblances[$id] = $autre;
+                    break;
+                }
+            }
+        }
+        return $ressemblances;
     }
 
     /**
@@ -337,6 +391,10 @@ final class PageFile {
         if ($id <= 0) {
             return ['ok' => false, 'message' => __('Fiche introuvable.', 'rsn-veille')];
         }
+        // Une proposition reçue par lien seulement ne se publie pas avant d'être complétée.
+        if ($statut === 'publie' && ACompleter::est($id)) {
+            return ['ok' => false, 'message' => __('Cette proposition est à compléter avant de la publier : « Compléter la fiche ».', 'rsn-veille')];
+        }
         $champs = ['statut' => $statut, 'manuel' => true];
         if ($statut === 'publie') {
             $champs += ['absences' => 0, 'absent_depuis' => null];
@@ -509,7 +567,7 @@ final class PageFile {
             . self::filtres_html($onglet, $type, $source, self::sources_distinctes($fiches), $origine)
             . '<div class="rsn-veille-message" role="status" aria-live="polite"></div>'
             . $mention
-            . self::rappel_propositions_html($fiches, $onglet, $type, $source, $origine, $url_page, $aujourdhui)
+            . self::rappel_propositions_html($fiches, $onglet, $type, $source, $origine, $url_page, $aujourdhui, self::identifiants($options['a_completer'] ?? null))
             . self::rappel_gabarit_html($onglet, is_array($options['sources_a_verifier'] ?? null) ? $options['sources_a_verifier'] : [], (string) ($options['url_journal'] ?? ''))
             . self::tableau_html(self::filtrer($fiches, $onglet, $type, $source, $origine, $aujourdhui), $onglet, $options)
             . self::legende_html()
@@ -521,10 +579,13 @@ final class PageFile {
      * organisateur, source et niveau, extrait, puis, dans « Publiées », si la fiche va dans l'infolettre du RSN, et
      * enfin les boutons selon le statut.
      *
-     * @param array{url_admin?: string, onglet?: string, aujourdhui?: string, hors_infolettre?: int[]} $options
+     * @param array{url_admin?: string, onglet?: string, aujourdhui?: string, hors_infolettre?: int[], a_completer?: int[], mots?: array<int,string>, titres_lus?: int[]} $options
      *        `url_admin` : adresse de wp-admin, terminée par « / » ; `onglet` : onglet affiché (le repère « Nouveau »
      *        n'apparaît que dans « À approuver » et « À vérifier », la colonne de l'infolettre que dans « Publiées ») ;
-     *        `hors_infolettre` : fiches que l'équipe ne veut pas dans l'infolettre.
+     *        `hors_infolettre` : fiches que l'équipe ne veut pas dans l'infolettre ; `a_completer` : propositions reçues
+     *        par lien seulement (`ACompleter`), avec le mot de la personne (`mots`) et celles dont le titre a été lu
+     *        sur la page (`titres_lus`). Une telle fiche montre « À compléter », ce qui lui manque, et le bouton
+     *        « Compléter la fiche » à la place de « Publier ».
      */
     public static function ligne_html(Fiche $f, array $options): string {
         $id = (int) $f->id;
@@ -535,18 +596,27 @@ final class PageFile {
         $pareille = $onglet === 'a_approuver' && is_array($options['ressemblances'] ?? null) ? ($options['ressemblances'][$id] ?? null) : null;
         $pareille = $pareille instanceof Fiche ? $pareille : null;
         $hors = is_array($options['hors_infolettre'] ?? null) ? $options['hors_infolettre'] : [];
+        $incomplete = in_array($id, self::identifiants($options['a_completer'] ?? null), true);
+        $mot = $incomplete && is_array($options['mots'] ?? null) ? trim((string) ($options['mots'][$id] ?? '')) : '';
+        $a_preciser = '<span class="rsn-veille-a-preciser">' . esc_html__('à préciser', 'rsn-veille') . '</span>';
         return '<tr id="rsn-veille-fiche-' . $id . '" data-id="' . $id . '" data-statut="' . esc_attr($f->statut) . '" data-origine="' . esc_attr($f->origine()) . '"'
+            . ($incomplete ? ' data-a-completer="1"' : '')
             . ($pareille !== null ? ' data-ressemble="' . ($pareille->statut === 'publie' ? 'publie' : 'a_approuver') . '"' : '') . '>'
-            . '<td class="rsn-veille-titre">' . self::titre_html($f, $url_admin, self::est_onglet_d_arrivee($onglet) && self::est_nouvelle($f, $aujourdhui))
+            . '<td class="rsn-veille-titre">' . self::titre_html($f, $url_admin, self::est_onglet_d_arrivee($onglet) && self::est_nouvelle($f, $aujourdhui), $incomplete, $incomplete && in_array($id, self::identifiants($options['titres_lus'] ?? null), true))
             . ($pareille !== null ? self::ressemblance_html($pareille, $url_admin, in_array((int) $pareille->id, is_array($options['affichees'] ?? null) ? $options['affichees'] : [], true)) : '') . '</td>'
             . '<td>' . self::type_html($f->type) . ($onglet === 'archive' && $f->statut === 'a_approuver' ? '<br><span class="rsn-veille-jamais-publiee">' . esc_html__('Jamais publiée', 'rsn-veille') . '</span>' : '') . '</td>'
-            . '<td>' . self::dates_html($f) . '</td>'
-            . '<td>' . esc_html($f->organisateur) . '</td>'
-            . '<td>' . self::source_html($f, is_array($options['courriels'] ?? null) ? (string) ($options['courriels'][$id] ?? '') : '')
+            . '<td>' . ($incomplete && $f->type !== 'appel' && (string) $f->debut === '' ? $a_preciser : self::dates_html($f)) . '</td>'
+            . '<td>' . ($incomplete && trim($f->organisateur) === '' ? $a_preciser : esc_html($f->organisateur)) . '</td>'
+            . '<td>' . self::source_html($f, is_array($options['courriels'] ?? null) ? (string) ($options['courriels'][$id] ?? '') : '', $incomplete)
             . self::mentions_html($f, is_array($options['mentions'] ?? null) ? $options['mentions'] : []) . '</td>'
-            . '<td class="rsn-veille-extrait">' . esc_html(Fiche::court($f->resume, self::LONGUEUR_EXTRAIT)) . '</td>'
+            . '<td class="rsn-veille-extrait">' . ($mot !== ''
+                /* translators: %s : mot laissé pour l'équipe par la personne qui a envoyé un lien. */
+                ? '<span class="rsn-veille-mot">' . esc_html__('Mot de la personne :', 'rsn-veille') . '</span> ' . esc_html(sprintf(__('« %s »', 'rsn-veille'), Fiche::court($mot, self::LONGUEUR_EXTRAIT)))
+                : esc_html(Fiche::court($f->resume, self::LONGUEUR_EXTRAIT))) . '</td>'
             . ($onglet === 'publie' ? '<td class="rsn-veille-infolettre-cellule">' . self::infolettre_html(!in_array($id, $hors, true)) . '</td>' : '')
-            . '<td class="rsn-veille-actions">' . self::boutons_html($f, $f->est_passee($aujourdhui)) . '</td>'
+            . '<td class="rsn-veille-actions">' . ($incomplete && $f->statut !== 'publie'
+                ? self::boutons_a_completer_html($f, $url_admin)
+                : self::boutons_html($f, $f->est_passee($aujourdhui))) . '</td>'
             . '</tr>';
     }
 
@@ -628,7 +698,7 @@ final class PageFile {
         return $html . '</select>';
     }
 
-    private static function titre_html(Fiche $f, string $url_admin, bool $nouvelle): string {
+    private static function titre_html(Fiche $f, string $url_admin, bool $nouvelle, bool $incomplete = false, bool $titre_lu = false): string {
         $titre = $f->titre !== '' ? $f->titre : __('(sans titre)', 'rsn-veille');
         $liens = [];
         if ($url_admin !== '') {
@@ -639,6 +709,9 @@ final class PageFile {
             $liens[] = '<a href="' . $info . '" target="_blank" rel="noopener noreferrer">' . esc_html__("Page d'origine", 'rsn-veille') . '</a>';
         }
         $html = '<strong>' . esc_html($titre) . '</strong>';
+        if ($incomplete) {
+            $html .= ' <span class="rsn-veille-a-completer">' . esc_html__('À compléter', 'rsn-veille') . '</span>';
+        }
         if ($nouvelle) {
             $html .= ' <span class="rsn-veille-nouveau">' . esc_html__('Nouveau', 'rsn-veille') . '</span>';
         }
@@ -647,10 +720,34 @@ final class PageFile {
             /* translators: %s : date à laquelle la fiche n'a plus été trouvée à sa source. */
             $html .= '<p class="rsn-veille-absent">' . esc_html(sprintf(__('Absent de la source depuis le %s', 'rsn-veille'), $depuis !== '' ? $depuis : $f->absent_depuis)) . '</p>';
         }
+        if ($incomplete) {
+            $html .= '<p class="rsn-veille-titre-provisoire">' . esc_html($titre_lu
+                ? __('Titre lu sur la page, à vérifier.', 'rsn-veille')
+                : __("Titre provisoire : l'adresse du lien reçu.", 'rsn-veille')) . '</p>';
+        }
         if ($liens !== []) {
             $html .= '<div class="rsn-veille-liens">' . implode(' | ', $liens) . '</div>';
         }
         return $html;
+    }
+
+    /**
+     * Boutons d'une proposition reçue par lien seulement : « Compléter la fiche » (l'éditeur, avec l'encadré
+     * « Détails de la fiche ») à la place de « Publier », et « Écarter » tant qu'elle n'est pas écartée.
+     */
+    private static function boutons_a_completer_html(Fiche $f, string $url_admin): string {
+        $html = $url_admin !== ''
+            ? '<a class="button button-primary" href="' . esc_url($url_admin . 'post.php?post=' . (int) $f->id . '&action=edit') . '">' . esc_html__('Compléter la fiche', 'rsn-veille') . '</a> '
+            : '';
+        if ($f->statut === 'a_approuver') {
+            $html .= '<button type="button" class="button rsn-veille-action" data-statut="ecarte">' . esc_html__('Écarter', 'rsn-veille') . '</button>';
+        }
+        return rtrim($html) . '<p class="description rsn-veille-aide-completer">' . esc_html__('À compléter avant de publier.', 'rsn-veille') . '</p>';
+    }
+
+    /** @return int[] Identifiants d'une option de rendu (`a_completer`, `titres_lus`) ; vide si elle manque ou n'est pas une liste. */
+    private static function identifiants(mixed $liste): array {
+        return is_array($liste) ? array_map('intval', array_values(array_filter($liste, 'is_numeric'))) : [];
     }
 
     /**
@@ -760,7 +857,7 @@ final class PageFile {
      * Origine (pastille : proposition du public, collecte automatique ou saisie par l'équipe), puis la source et son
      * niveau en clair. Une proposition montre « Formulaire de la page » et le courriel de la personne (lien pour lui répondre).
      */
-    private static function source_html(Fiche $f, string $courriel = ''): string {
+    private static function source_html(Fiche $f, string $courriel = '', bool $par_lien = false): string {
         $origine = $f->origine();
         $pastilles = [
             'proposition' => __('Proposition du public', 'rsn-veille'),
@@ -771,7 +868,7 @@ final class PageFile {
             . ($origine === 'proposition' ? '<span class="dashicons dashicons-admin-users" aria-hidden="true"></span> ' : '')
             . esc_html($pastilles[$origine]) . '</span><br>';
         if ($origine === 'proposition') {
-            $html .= esc_html__('Formulaire de la page', 'rsn-veille');
+            $html .= $par_lien ? esc_html__('Lien seulement', 'rsn-veille') : esc_html__('Formulaire de la page', 'rsn-veille');
             if ($courriel !== '' && is_email($courriel)) {
                 $html .= '<br><a href="' . esc_url('mailto:' . $courriel) . '">' . esc_html($courriel) . '</a>';
             }
@@ -793,19 +890,24 @@ final class PageFile {
      *
      * @param Fiche[] $fiches
      */
-    private static function rappel_propositions_html(array $fiches, string $onglet, string $type, string $source, string $origine, string $url_page, ?string $aujourdhui = null): string {
+    private static function rappel_propositions_html(array $fiches, string $onglet, string $type, string $source, string $origine, string $url_page, ?string $aujourdhui = null, array $a_completer = []): string {
         if ($onglet !== 'a_approuver' || $origine === 'proposition') {
             return '';
         }
-        $nombre = count(self::filtrer($fiches, $onglet, $type, $source, 'proposition', $aujourdhui));
+        $propositions = self::filtrer($fiches, $onglet, $type, $source, 'proposition', $aujourdhui);
+        $nombre = count($propositions);
         if ($nombre === 0) {
             return '';
         }
+        $incompletes = count(array_filter($propositions, static fn(Fiche $f): bool => in_array((int) $f->id, $a_completer, true)));
         $url = $url_page . '&' . http_build_query(['statut' => $onglet, 'origine' => 'proposition'], '', '&', PHP_QUERY_RFC3986);
         /* translators: %d : nombre de propositions du public en attente. */
         $texte = sprintf(_n('%d proposition du public à traiter', '%d propositions du public à traiter', $nombre, 'rsn-veille'), $nombre);
         return '<p class="rsn-veille-rappel-propositions"><span class="dashicons dashicons-admin-users" aria-hidden="true"></span> '
-            . '<a href="' . esc_url($url) . '">' . esc_html($texte) . '</a></p>';
+            . '<a href="' . esc_url($url) . '">' . esc_html($texte) . '</a>'
+            /* translators: %d : nombre de propositions reçues par lien seulement, à compléter avant de les publier. */
+            . ($incompletes > 0 ? esc_html(sprintf(__(', dont %d à compléter', 'rsn-veille'), $incompletes)) : '')
+            . '</p>';
     }
 
     /**

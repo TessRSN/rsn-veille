@@ -424,6 +424,100 @@ final class FormulaireTest extends TestCase {
         return ['name' => $nom, 'type' => 'image/png', 'tmp_name' => $chemin, 'error' => UPLOAD_ERR_OK, 'size' => $taille ?? filesize($chemin)];
     }
 
+    // --- Voie rapide : le lien seulement (0.19.0) ---
+
+    private static function lien(array $champs = []): array {
+        return $champs + ['mode' => 'lien', 'url' => 'https://www.exemple.org/evenements/atelier-ia-sante/', 'courriel' => '', 'mot' => '', 'site_web' => ''];
+    }
+
+    public function test_lien_seul_donne_une_fiche_a_completer(): void {
+        $r = Formulaire::valider(self::lien(['courriel' => 'personne@exemple.org', 'mot' => ' Atelier <b>gratuit</b> ', 'langue' => 'en']), self::AUJOURDHUI);
+        $this->assertSame([], $r['erreurs']);
+        $this->assertTrue($r['a_completer']);
+        $this->assertSame('Atelier gratuit', $r['mot']);
+        $this->assertSame('personne@exemple.org', $r['courriel']);
+        $f = $r['fiche'];
+        $this->assertSame('evenement', $f->type);
+        $this->assertSame('exemple.org/evenements/atelier-ia-sante', $f->titre, 'titre provisoire : l’adresse sans protocole');
+        $this->assertSame('https://www.exemple.org/evenements/atelier-ia-sante/', $f->url);
+        $this->assertNull($f->debut, 'un événement reçu par lien n’a pas de date : il ne passe jamais dans « Archivées »');
+        $this->assertNull($f->fin);
+        $this->assertSame('', $f->organisateur);
+        $this->assertSame('proposition', $f->source);
+        $this->assertSame('a_approuver', $f->statut);
+        $this->assertSame('en', $f->langue);
+        $this->assertStringStartsWith('proposition:', $f->cle_source);
+    }
+
+    public function test_lien_seul_ignore_les_champs_de_la_fiche_complete(): void {
+        // Ni titre, ni date, ni organisateur exigés ; ce qui traîne de l'autre mode n'est pas repris.
+        $r = Formulaire::valider(self::lien(['type' => 'appel', 'titre' => 'Un titre', 'organisateur' => 'Obvia', 'debut' => '2027-01-10', 'echeance' => '2020-01-01']), self::AUJOURDHUI);
+        $this->assertSame([], $r['erreurs']);
+        $this->assertSame('appel', $r['fiche']->type);
+        $this->assertSame(self::AUJOURDHUI, $r['fiche']->debut, 'un appel : le jour de l’envoi comme date de publication');
+        $this->assertNull($r['fiche']->echeance);
+        $this->assertSame('', $r['fiche']->organisateur);
+        $this->assertSame('exemple.org/evenements/atelier-ia-sante', $r['fiche']->titre);
+        // Sans `mode=lien`, la fiche complète reste exigée comme avant.
+        $this->assertArrayHasKey('titre', Formulaire::valider(['url' => 'https://www.exemple.org/x', 'site_web' => ''], self::AUJOURDHUI)['erreurs']);
+    }
+
+    public function test_lien_seul_lien_manquant_ou_invalide(): void {
+        $this->assertSame(['url' => 'Lien obligatoire'], Formulaire::valider(self::lien(['url' => '  ']), self::AUJOURDHUI)['erreurs']);
+        foreach (['javascript:alert(1)', 'ftp://exemple.org/x', 'exemple.org', 'https://utilisateur@exemple.org/x', 'https://exemple.org/<script>'] as $url) {
+            $r = Formulaire::valider(self::lien(['url' => $url]), self::AUJOURDHUI);
+            $this->assertNull($r['fiche'], $url);
+            $this->assertSame(['url' => 'Lien invalide : il doit commencer par http:// ou https://'], $r['erreurs'], $url);
+        }
+    }
+
+    public function test_lien_seul_mot_tronque_et_piege(): void {
+        $r = Formulaire::valider(self::lien(['mot' => str_repeat('é', 400)]), self::AUJOURDHUI);
+        $this->assertSame(300, mb_strlen($r['mot']));
+        $this->assertStringNotContainsString('alert', Formulaire::valider(self::lien(['mot' => 'Bonjour<script>alert(1)</script>']), self::AUJOURDHUI)['mot']);
+        // Champ piège rempli : rejet silencieux, comme pour la fiche complète.
+        $piege = Formulaire::valider(self::lien(['site_web' => 'https://spam.test']), self::AUJOURDHUI);
+        $this->assertNull($piege['fiche']);
+        $this->assertSame([], $piege['erreurs']);
+    }
+
+    public function test_lien_seul_envoye_cree_une_fiche_marquee_a_completer(): void {
+        [$reponse, $statut] = $this->envoyer(self::lien(['courriel' => 'personne@exemple.org', 'mot' => "Atelier gratuit, ouvert à la relève"]));
+        $this->assertSame(200, $statut);
+        $this->assertSame("Merci ! L'équipe du RSN a reçu votre lien. Elle complétera la fiche et la publiera si elle convient à l'agenda.", $reponse['data']['message']);
+        $fiches = self::fiches();
+        $this->assertCount(1, $fiches);
+        $id = $fiches[0]->ID;
+        $this->assertSame('pending', $fiches[0]->post_status);
+        $this->assertSame('1', get_post_meta($id, 'rsn_veille_a_completer', true));
+        $this->assertSame('Atelier gratuit, ouvert à la relève', get_post_meta($id, 'rsn_veille_mot_proposant', true));
+        $this->assertSame('personne@exemple.org', get_post_meta($id, 'rsn_veille_courriel_proposant', true));
+        $this->assertSame('', get_post_meta($id, 'rsn_veille_titre_lu', true));
+        $this->assertSame((new EntrepotWordPress())->obtenir($id)->titre, get_post_meta($id, 'rsn_veille_titre_provisoire', true), 'le titre provisoire tel qu’il est enregistré');
+        // L'adresse reçue n'est jamais chargée par la requête publique.
+        $this->assertSame([], $GLOBALS['rsn_veille_wp']['requetes_http'] ?? []);
+        // Une proposition complète n'est pas marquée.
+        $_POST = $_REQUEST = [];
+        $this->envoyer(self::champs(['titre' => 'Un colloque complet']));
+        $complete = array_values(array_filter(self::fiches(), static fn(WP_Post $p): bool => $p->ID !== $id))[0];
+        $this->assertSame('', get_post_meta($complete->ID, 'rsn_veille_a_completer', true));
+    }
+
+    public function test_lien_seul_refuse_en_400_et_ne_cree_rien(): void {
+        [$reponse, $statut] = $this->envoyer(self::lien(['url' => 'pas-un-lien']));
+        $this->assertSame(400, $statut);
+        $this->assertSame('Lien invalide : il doit commencer par http:// ou https://', $reponse['data']['erreurs']['url']);
+        $this->assertSame([], self::fiches());
+    }
+
+    public function test_lien_seul_deux_envois_du_meme_lien_font_deux_fiches(): void {
+        $this->envoyer(self::lien());
+        $_POST = $_REQUEST = [];
+        [$reponse] = $this->envoyer(self::lien());
+        $this->assertCount(2, self::fiches(), 'sans titre ni date vrais, rien n’est dédoublonné');
+        $this->assertStringStartsWith('Merci ! L', $reponse['data']['message']);
+    }
+
     public function test_accroche_les_actions_ajax_avec_et_sans_connexion(): void {
         Formulaire::accrocher();
         foreach (['wp_ajax_rsn_veille_proposer', 'wp_ajax_nopriv_rsn_veille_proposer', 'wp_ajax_rsn_veille_jeton', 'wp_ajax_nopriv_rsn_veille_jeton'] as $crochet) {

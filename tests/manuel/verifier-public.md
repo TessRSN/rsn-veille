@@ -124,9 +124,24 @@ débit : `wp transient list --search='rsn_veille_debit_*'` puis `wp transient de
       source, son lien et ses dates.
 - [ ] Plafond du site : au-delà de 30 propositions valides dans l'heure (toutes adresses), refus 429.
 
+### Proposition par lien seulement (0.19.0)
+
+- [ ] En tête du formulaire, « Vous préférez » : « Remplir la fiche » (choisi à l'ouverture) et « Envoyer seulement
+      le lien ». Le second ne laisse que trois champs (lien, courriel facultatif, mot facultatif), l'encadré jaune
+      « Pas le temps de tout remplir ? » et le bouton « Envoyer le lien à l'équipe ». « Vous proposez » reste.
+      Revenir à « Remplir la fiche » rend tous les champs, sans rien avoir perdu de ce qui était saisi.
+- [ ] Envoi sans lien : le navigateur réclame le champ. Lien sans `https://` (« exemple.org ») envoyé en forçant
+      la validation : « Lien invalide : il doit commencer par http:// ou https:// » sous le champ et en tête.
+- [ ] Envoi d'un lien valide : « Merci ! L'équipe du RSN a reçu votre lien. Elle complétera la fiche et la publiera
+      si elle convient à l'agenda. » Rien n'apparaît sur la page publique. Rouvrir le formulaire : il est revenu à
+      « Remplir la fiche ».
+- [ ] Page anglaise : « You'd rather », « Fill in the form », « Just send the link », « Send the link to the team »,
+      et le remerciement en anglais.
+- [ ] Dans la file (voir `verifier-admin.md`) : la fiche a la mention « À compléter ».
+
 ## Ressources et cohabitation
 
-- [ ] Sur la page Veille, `veille.css` et `veille.js` sont chargés avec `?ver=0.18.0` (onglet Réseau) ;
+- [ ] Sur la page Veille, `veille.css` et `veille.js` sont chargés avec `?ver=0.19.0` (onglet Réseau) ;
       sur une autre page du site (accueil, Nouvelles), ni l'un ni l'autre.
 - [ ] Les polices Google ne sont pas chargées une seconde fois par l'extension (pas de feuille
       `rsn-veille-polices`) ; `add_filter('rsn_veille_charger_polices', '__return_true')` dans un

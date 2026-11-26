@@ -1,5 +1,30 @@
 # Journal des modifications
 
+## 0.19.0 (2026-11-26)
+
+Proposition par lien seulement : qui n'a pas le temps de remplir le formulaire donne le lien, et l'équipe du RSN complète la fiche. Maquette validée par l'équipe le 26 novembre 2026.
+
+### Formulaire public (`Public\Formulaire`, `gabarit-veille.php`, `assets/veille.js`, `assets/veille.css`)
+- **« Vous préférez »**, en tête du formulaire : « Remplir la fiche » (choisi à l'ouverture, comme avant) ou **« Envoyer seulement le lien »**. La voie rapide ne demande que le lien de la page ; le courriel et un mot pour l'équipe (300 caractères) sont facultatifs. « Un événement » ou « Un appel » reste demandé.
+- Mêmes protections que la fiche complète : jeton, champ piège, cinq envois par heure et par adresse, plafond du site. L'adresse reçue n'est toujours pas chargée par la requête publique.
+- Lien absent ou qui ne commence pas par `http://` ou `https://` : refusé, avec un message sous le champ. Remerciement propre à la voie rapide. Textes traduits en anglais (254 messages).
+
+### File d'approbation (`Admin\PageFile`, `ACompleter`)
+- La proposition arrive « à approuver » avec la pastille **« À compléter »** : titre provisoire (l'adresse du lien), « à préciser » pour la date et l'organisateur, « Lien seulement », le mot de la personne dans la colonne Extrait.
+- **« Compléter la fiche »** remplace les boutons « Publier » ; « Écarter » reste. Une fiche à compléter ne se publie par aucun chemin : la file refuse, et le bouton « Publier » de l'éditeur de WordPress, la modification rapide et les actions groupées la laissent « en attente » (`ACompleter::retenir_publication`).
+- **Titre lu sur la page** : à la première ouverture de la file, l'extension essaie une fois de lire le titre de la page (balise `og:title`, sinon `<title>`) et le met à la place de l'adresse, avec la mention « à vérifier ». Une seule tentative par fiche, notée avant la requête ; trois fiches au plus par ouverture, et plus aucune nouvelle lecture une fois huit secondes écoulées (quatre secondes par requête, une redirection au plus). Le titre d'une page de refus ou d'erreur (« Just a moment… », « 404 ») n'est pas repris. L'adresse, comme celle de la redirection, doit mener à une adresse IP publique sur le port 80 ou 443 (`ACompleter::adresse_sure`) : rien n'est demandé à une adresse locale, privée ou de métadonnées d'hébergeur. Aucune protection anti-robots n'est contournée : si la page ne se lit pas, l'adresse reste.
+- **Même lien qu'une autre fiche** : une proposition du public qui porte l'adresse d'une fiche publiée, ou d'une autre fiche en attente, reçoit l'étiquette orange « Peut-être déjà dans l'agenda » ou « Ressemble à une autre fiche en attente » (`PageFile::memes_liens`).
+- Le rappel des propositions dit combien sont à compléter. Un événement reçu par lien n'a pas de date : il reste dans « À approuver » jusqu'à ce qu'on le traite. Un appel reçu par lien suit la règle des appels sans date limite : il passe dans « Archivées » trente jours après l'envoi.
+
+### Fiche (`Admin\MetaboxDetails`)
+- En tête de « Détails de la fiche », un avis dit ce qui manque (le titre, l'organisateur, la date de début), montre le mot de la personne et le lien vers la page, et demande de vérifier un titre lu sur la page ; les champs à remplir sont entourés.
+- À l'enregistrement (« Enregistrer comme en attente »), la mention « À compléter » tombe dès que rien ne manque : la fiche se publie alors depuis la file, comme les autres. La date limite d'un appel reste facultative. Le titre manque tant qu'il est resté l'adresse reçue, même si l'adresse de la fiche a été corrigée depuis. Un appel reçu par lien qu'on transforme en événement doit recevoir une date de début.
+
+### Autres
+- Quatre métas privées de plus sur les fiches : `rsn_veille_a_completer`, `rsn_veille_titre_provisoire`, `rsn_veille_mot_proposant`, `rsn_veille_titre_lu`. Aucune n'est publiée.
+- Écart avec la maquette : le courriel est demandé « pour vous répondre », pas « pour vous prévenir de la publication », puisque l'extension n'envoie pas d'avis de publication.
+- Numéro de version 0.19.0.
+
 ## 0.18.0 (2026-11-26)
 
 Agenda public : on reconnaît d'un coup d'œil un appel d'un événement. Avant, les deux étiquettes étaient marine, l'une pleine et l'autre en contour. Maquette validée par l'équipe le 26 novembre 2026 (jaune pour les appels, étiquettes, repères et fond teinté).

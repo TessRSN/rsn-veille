@@ -2,7 +2,7 @@
 /**
  * Plugin Name: RSN : veille de l'écosystème
  * Description: Collecte et présente la veille de l'écosystème de la santé numérique au Québec.
- * Version: 0.18.0
+ * Version: 0.19.0
  * Author: Réseau santé numérique
  * Requires at least: 6.0
  * Requires PHP: 8.0
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('RSN_VEILLE_VERSION', '0.18.0');
+define('RSN_VEILLE_VERSION', '0.19.0');
 define('RSN_VEILLE_DOSSIER', __DIR__);
 define('RSN_VEILLE_URL', function_exists('plugin_dir_url') ? plugin_dir_url(__FILE__) : '');
 
@@ -46,6 +46,8 @@ if (function_exists('add_action')) {
     \RSN\Veille\Admin\MetaboxImage::accrocher();
     // Métabox « Détails de la fiche » : type, dates, lien, lieu… corrigés à la main et protégés de la collecte.
     \RSN\Veille\Admin\MetaboxDetails::accrocher();
+    // Proposition reçue par lien seulement : ne se publie par aucun chemin tant qu'elle est « à compléter ».
+    \RSN\Veille\ACompleter::accrocher();
     // Page publique : raccourci [rsn_veille], ressources seulement si la page le contient, cache du JSON.
     \RSN\Veille\Public\Raccourci::accrocher();
     // Bande « Prochains événements » de l'accueil : raccourci [rsn_veille_accueil], ressources en tête sur l'accueil.

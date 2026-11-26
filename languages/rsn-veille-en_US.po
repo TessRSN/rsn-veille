@@ -795,3 +795,39 @@ msgstr "and %d more"
 
 msgid "et %d autres"
 msgstr "and %d more"
+
+msgid "Vous préférez"
+msgstr "You'd rather"
+
+msgid "Remplir la fiche"
+msgstr "Fill in the form"
+
+msgid "Envoyer seulement le lien"
+msgstr "Just send the link"
+
+msgid "Pas le temps de tout remplir ?"
+msgstr "No time to fill everything in?"
+
+msgid "Donnez-nous le lien de la page : l'équipe du RSN complète la fiche avant de la publier."
+msgstr "Give us the link to the page: the RSN team completes the listing before publishing it."
+
+msgid "Lien de la page de l'événement ou de l'appel"
+msgstr "Link to the event or call page"
+
+msgid "Votre courriel (facultatif, pour vous répondre)"
+msgstr "Your email (optional, so we can reply)"
+
+msgid "Un mot pour l'équipe (facultatif)"
+msgstr "A note for the team (optional)"
+
+msgid "Ex. : atelier gratuit, ouvert à la relève"
+msgstr "E.g., free workshop, open to trainees"
+
+msgid "Envoyer le lien à l'équipe"
+msgstr "Send the link to the team"
+
+msgid "Lien invalide : il doit commencer par http:// ou https://"
+msgstr "Invalid link: it must start with http:// or https://"
+
+msgid "Merci ! L'équipe du RSN a reçu votre lien. Elle complétera la fiche et la publiera si elle convient à l'agenda."
+msgstr "Thank you! The RSN team has received your link. It will complete the listing and publish it if it fits the calendar."

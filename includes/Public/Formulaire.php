@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace RSN\Veille\Public;
 
 use RSN\Veille\Admin\Menu;
+use RSN\Veille\ACompleter;
 use RSN\Veille\Collecte;
 use RSN\Veille\EntrepotWordPress;
 use RSN\Veille\Fiche;
@@ -24,6 +25,10 @@ if (!defined('ABSPATH')) {
  * ne modifie jamais une fiche existante : un doublon (même date, même début de titre) est seulement
  * signalé. Le champ `type` (`evenement` par défaut, ou `appel`) change les champs demandés : un appel a une
  * date limite et un lien obligatoires, et aucune date de début, de fin, de format ni de lieu.
+ *
+ * Voie rapide (0.19.0) : avec `mode=lien`, seul le lien est demandé (courriel et mot pour l'équipe facultatifs).
+ * La fiche est créée avec un titre provisoire et la marque « à compléter » (`ACompleter`) : l'équipe la remplit
+ * avant de pouvoir la publier. L'adresse n'est pas chargée par cette requête non plus.
  */
 final class Formulaire {
     public const ACTION = 'rsn_veille_proposer';
@@ -50,7 +55,7 @@ final class Formulaire {
     public const META_IMAGE_PROPOSEE = TypeContenu::PREFIXE . 'image_proposee';
 
     /** Champs texte lus dans la requête. */
-    private const CHAMPS = ['type', 'echeance', 'titre', 'debut', 'fin', 'organisateur', 'format', 'lieu', 'url', 'resume', 'courriel', 'site_web', 'langue'];
+    private const CHAMPS = ['mode', 'mot', 'type', 'echeance', 'titre', 'debut', 'fin', 'organisateur', 'format', 'lieu', 'url', 'resume', 'courriel', 'site_web', 'langue'];
 
     private const FORMATS = ['Présentiel', 'Virtuel', 'Hybride'];
 
@@ -72,8 +77,11 @@ final class Formulaire {
      * nom du champ => message. Le courriel (vide s'il est invalide) est rendu à part : il n'est pas une
      * propriété de la fiche.
      *
+     * Avec `mode=lien`, seule la validation de la voie rapide s'applique (`valider_lien`) : `a_completer` est
+     * alors vrai et `mot` porte le mot de la personne pour l'équipe.
+     *
      * @param array<string,mixed> $champs
-     * @return array{fiche: ?Fiche, erreurs: array<string,string>, courriel: string}
+     * @return array{fiche: ?Fiche, erreurs: array<string,string>, courriel: string, a_completer?: bool, mot?: string}
      */
     public static function valider(array $champs, string $aujourdhui): array {
         $brut = static fn(string $nom): string => isset($champs[$nom]) && is_scalar($champs[$nom]) ? trim((string) $champs[$nom]) : '';
@@ -86,6 +94,9 @@ final class Formulaire {
 
         if ($brut('site_web') !== '') {
             return ['fiche' => null, 'erreurs' => [], 'courriel' => ''];
+        }
+        if ($brut('mode') === 'lien') {
+            return self::valider_lien($brut, $aujourdhui);
         }
 
         $appel = $brut('type') === 'appel';
@@ -161,6 +172,40 @@ final class Formulaire {
         $fiche->cles_source = [$fiche->cle_source];
         $fiche->titres_source = [$fiche->cle_source => $titre];
         return ['fiche' => $fiche, 'erreurs' => [], 'courriel' => $courriel];
+    }
+
+    /**
+     * Voie rapide : seul le lien est exigé. La fiche porte un titre provisoire (l'adresse) et aucun organisateur ;
+     * un événement n'a pas de date (l'équipe la donnera), un appel a le jour de l'envoi comme date de publication.
+     * Elle sera marquée « à compléter » à l'enregistrement.
+     *
+     * @param callable(string): string $brut Valeur d'un champ, sans espaces autour.
+     * @return array{fiche: ?Fiche, erreurs: array<string,string>, courriel: string, a_completer: bool, mot: string}
+     */
+    private static function valider_lien(callable $brut, string $aujourdhui): array {
+        $courriel = self::courriel($brut('courriel'));
+        $url = self::url($brut('url'));
+        if ($url === '') {
+            $erreur = $brut('url') === '' ? __('Lien obligatoire', 'rsn-veille') : __('Lien invalide : il doit commencer par http:// ou https://', 'rsn-veille');
+            return ['fiche' => null, 'erreurs' => ['url' => $erreur], 'courriel' => $courriel, 'a_completer' => true, 'mot' => ''];
+        }
+        $mot = mb_substr(Fiche::nettoyer_texte((string) (preg_replace('#<(script|style)\b[^>]*>.*?</\1\s*>#is', ' ', $brut('mot')) ?? '')), 0, ACompleter::MOT_MAX);
+        $fiche = new Fiche();
+        $fiche->type = $brut('type') === 'appel' ? 'appel' : 'evenement';
+        $fiche->titre = ACompleter::titre_provisoire($url);
+        if ($fiche->type === 'appel') {
+            $fiche->debut = $aujourdhui;
+            $fiche->fin = $aujourdhui;
+        }
+        $fiche->url = $url;
+        $fiche->langue = $brut('langue') === 'en' ? 'en' : 'fr';
+        $fiche->source = Fiche::SOURCE_PROPOSITION;
+        $fiche->niveau = 'M';
+        $fiche->statut = 'a_approuver';
+        $fiche->cle_source = 'proposition:' . uniqid('', true);
+        $fiche->cles_source = [$fiche->cle_source];
+        $fiche->titres_source = [$fiche->cle_source => $fiche->titre];
+        return ['fiche' => $fiche, 'erreurs' => [], 'courriel' => $courriel, 'a_completer' => true, 'mot' => $mot];
     }
 
     /**
@@ -251,7 +296,9 @@ final class Formulaire {
         }
 
         $erreurs = $resultat['erreurs'];
-        $image = self::image_envoyee();
+        $par_lien = !empty($resultat['a_completer']);
+        // Par lien seulement : pas d'image (le champ n'est pas proposé).
+        $image = $par_lien ? null : self::image_envoyee();
         if ($image !== null) {
             $erreur = self::verifier_image($image);
             if ($erreur !== '') {
@@ -272,7 +319,7 @@ final class Formulaire {
         try {
             // Une proposition reste à approuver : rien de public ne change, aucune purge de cache (page ni JSON),
             // qu'une requête anonyme pourrait sinon déclencher à volonté.
-            $deja = Collecte::sans_purge(static fn(): bool => self::enregistrer($fiche, $resultat['courriel'], $image !== null));
+            $deja = Collecte::sans_purge(static fn(): bool => self::enregistrer($fiche, $resultat['courriel'], $image !== null, $par_lien, (string) ($resultat['mot'] ?? '')));
         } catch (\Throwable $e) {
             error_log('rsn-veille : proposition non enregistrée : ' . $e->getMessage());
             wp_send_json_error(['ok' => false, 'message' => __("L'envoi a échoué. Réessayez plus tard.", 'rsn-veille')], 500);
@@ -282,6 +329,10 @@ final class Formulaire {
             wp_send_json_success(['ok' => true, 'message' => $fiche->type === 'appel'
                 ? __('Merci, cet appel est déjà dans la veille.', 'rsn-veille')
                 : __('Merci, cet événement est déjà dans la veille.', 'rsn-veille')]);
+            return;
+        }
+        if ($par_lien) {
+            wp_send_json_success(['ok' => true, 'message' => __("Merci ! L'équipe du RSN a reçu votre lien. Elle complétera la fiche et la publiera si elle convient à l'agenda.", 'rsn-veille')]);
             return;
         }
         self::repondre_merci();
@@ -294,13 +345,19 @@ final class Formulaire {
      * dates ou son URL), et l'entrepôt ne lui écrit pas de clé de dédoublonnage (voir
      * `Fiche::est_proposition`).
      */
-    private static function enregistrer(Fiche $fiche, string $courriel, bool $avec_image): bool {
+    private static function enregistrer(Fiche $fiche, string $courriel, bool $avec_image, bool $a_completer = false, string $mot = ''): bool {
         $entrepot = new EntrepotWordPress();
-        $existante = $entrepot->trouver_par_dedoublonnage($fiche->cle_dedoublonnage());
+        // Une proposition par lien n'a ni vrai titre ni vraie date : rien à comparer.
+        $existante = $a_completer ? null : $entrepot->trouver_par_dedoublonnage($fiche->cle_dedoublonnage());
         if ($existante !== null && $existante->statut === 'publie') {
             return true;
         }
         $id = $entrepot->creer($fiche);
+        if ($a_completer) {
+            // Le titre provisoire tel que l'entrepôt l'a enregistré (il peut l'avoir nettoyé).
+            $enregistree = $entrepot->obtenir($id);
+            ACompleter::marquer($id, $mot, $enregistree !== null ? $enregistree->titre : $fiche->titre);
+        }
         if ($courriel !== '') {
             update_post_meta($id, self::META_COURRIEL, wp_slash($courriel));
         }
