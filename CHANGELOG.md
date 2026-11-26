@@ -1,5 +1,18 @@
 # Journal des modifications
 
+## 0.18.0 (2026-11-26)
+
+Agenda public : on reconnaît d'un coup d'œil un appel d'un événement. Avant, les deux étiquettes étaient marine, l'une pleine et l'autre en contour. Maquette validée par l'équipe le 26 novembre 2026 (jaune pour les appels, étiquettes, repères et fond teinté).
+
+- **Étiquettes de type** (`assets/veille.css`, `.pill.type`) : « Événement » en bleu plein (#0061AF, texte blanc), « Appel » en jaune plein (#FFCC4E, texte marine).
+- **« Organisé par le RSN »** (`.pill.rsn`) : marine, texte jaune. Elle était jaune, la couleur qui désigne maintenant un appel.
+- **Fiche d'un appel** (`.ev.appel-ev`) : fond jaune très pâle (#FFF8E1) aux coins arrondis, hexagone jaune plein sur la frise. La tuile jaune « date limite » ne change pas.
+- **Fiche du RSN** (`.ev.rsn .corps`) : le trait de gauche passe du jaune au marine ; un appel du RSN n'a plus de carte grise dans son fond teinté.
+- **Fiche d'un événement** : hexagone de la frise et jour en bleu. L'hexagone d'un événement du RSN n'est plus jaune : c'est l'étiquette « Organisé par le RSN » qui le signale.
+- **Filtre « Afficher »** : un point bleu après « Événements », un point jaune après « Appels ».
+- **Calendrier** : événements en bleu (ceux du RSN avec un trait marine, en gras), dates limites des appels en jaune ; légende et points de la vue étroite aux mêmes couleurs. Avant, les événements du RSN et les appels partageaient le jaune.
+- Seule la feuille de style change : aucune fiche, aucune option, aucun texte traduit, aucun script. L'administration, la bande de l'accueil et l'infolettre gardent leurs couleurs. Numéro de version 0.18.0.
+
 ## 0.17.0 (2026-11-24)
 
 Infolettre : les articles du RSN ont leur bloc, en billets avec image, comme les événements et les programmes du RSN. Le Radar ne lisait que les nouvelles des autres organismes.

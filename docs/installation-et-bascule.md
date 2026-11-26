@@ -66,6 +66,10 @@ Le dépôt est **privé** (`TessRSN/rsn-veille`) et la branche de livraison est 
 
 Quelle que soit la voie, l'activation lance les mêmes opérations (voir section 9).
 
+### Après la mise à jour de la 0.17.0 vers la 0.18.0
+
+Rien à régler. Sur la page de l'agenda, le type d'une fiche se voit à sa couleur : étiquette « Événement » bleue, étiquette « Appel » jaune, fiche d'un appel sur un fond jaune très pâle, mêmes couleurs dans le filtre « Afficher » et dans le calendrier. « Organisé par le RSN » passe en marine. Si l'ancien affichage persiste, vider le cache du navigateur (la feuille de style est chargée avec `?ver=0.18.0`).
+
 ### Après la mise à jour de la 0.16.2 vers la 0.17.0
 
 Rien à régler. **Veille › Infolettre** a un sixième bloc, en premier : **Nouvelles du RSN**. Il reprend en billets (image, titre, texte, bouton « Lire l'article → ») les articles de la catégorie « Actualités du RSN » du site parus dans les 30 derniers jours ; le champ **« Articles publiés depuis le »** permet de remonter plus loin ou moins loin.

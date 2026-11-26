@@ -7,7 +7,7 @@
  */
 .rsn-veille{container-type:inline-size;container-name:rsn-veille;
   --navy:#003469; --ink:#101828; --body:rgba(16,24,40,.72); --muted:#6E7A84; --rule:#DCE1E8; --trait:#3D6A99; --tint:#F5F7FA;
-  --yellow:#FFCC4E; --yellow-ink:#E3A800; --yellow-tint:#FFF4D1; --green:#00A759; --blue:#0061AF; --amber:#C99000; --erreur:#B42318; --bg:#ffffff;
+  --yellow:#FFCC4E; --yellow-ink:#E3A800; --yellow-tint:#FFF4D1; --appel-tint:#FFF8E1; --blue-tint:#E6F0F9; --green:#00A759; --blue:#0061AF; --amber:#C99000; --erreur:#B42318; --bg:#ffffff;
   --serif:"DM Serif Display",Georgia,"Times New Roman",serif;
   --sans:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   color-scheme:light;
@@ -122,14 +122,26 @@
 /* Pastilles sur les fiches */
 .rsn-veille .pills{display:flex;flex-wrap:wrap;gap:5px 6px;margin:0 0 7px}
 .rsn-veille .pill{display:inline-block;font-size:11.5px;font-weight:600;line-height:1;border-radius:999px;padding:5px 9px;background:var(--tint);color:var(--ink)}
-.rsn-veille .pill.type{background:var(--navy);color:#fff}
-.rsn-veille .pill.type.appel{background:#fff;color:var(--navy);box-shadow:inset 0 0 0 1.5px var(--navy)}
+/* 0.18.0 : le type se reconnaît à sa couleur, la même partout (étiquette, hexagone de la frise, date, filtre
+   « Afficher », calendrier) : bleu pour un événement, jaune pour un appel. Avant, les deux étiquettes étaient
+   marine, l'une pleine et l'autre en contour. « Organisé par le RSN », jaune jusque-là, passe en marine et jaune
+   pour ne pas se confondre avec un appel. */
+.rsn-veille .pill.type{background:var(--blue);color:#fff;font-weight:700;padding:5px 10px}
+.rsn-veille .pill.type.appel{background:var(--yellow);color:var(--navy)}
 .rsn-veille .pill.etat{background:var(--yellow-tint);color:var(--navy)}
-.rsn-veille .pill.rsn{background:var(--yellow);color:var(--navy);font-weight:700}
+.rsn-veille .pill.rsn{background:var(--navy);color:var(--yellow);font-weight:700}
 .rsn-veille .pill.part{background:#E3ECF7;color:var(--navy)}
 .rsn-veille .pill.orga{background:#E8EEF5;color:var(--navy)}
 .rsn-veille .pill.theme{background:#fff;border:1px solid var(--rule);color:var(--body)}
-.rsn-veille .ev.rsn > .hex{color:var(--yellow-ink)}
+/* La fiche d'un appel : fond teinté, hexagone jaune plein (il cache le trait de la frise sans rectangle blanc). */
+.rsn-veille .ev.appel-ev{background:var(--appel-tint);border-radius:12px;padding-right:16px;margin-block:8px}
+/* Pas de filet autour d'une fiche d'appel (spécificité 0,4,0, devant `.ev + .ev`) ; le texte gris et la pastille d'état restent lisibles sur le fond teinté. */
+.rsn-veille .ev + .ev.appel-ev,.rsn-veille .ev.appel-ev + .ev{border-top-color:transparent}
+.rsn-veille .ev.appel-ev .meta{color:var(--body)}
+.rsn-veille .ev.appel-ev .pill.etat{background:#fff}
+.rsn-veille .ev.appel-ev > .hex{color:var(--yellow-ink);background:transparent}
+.rsn-veille .ev.appel-ev > .hex path{fill:var(--yellow)}
+.rsn-veille .ev .jour{color:var(--blue)}
 .rsn-veille .ev.appel-ev{grid-template-columns:62px minmax(0,1fr)}
 .rsn-veille .ev.appel-ev .tuile{width:62px;padding:8px 0 7px}
 .rsn-veille .ev.appel-ev .tuile b{font-size:24px}
@@ -162,6 +174,9 @@
 .rsn-veille.rsn-veille .rub:hover .t{text-decoration:underline;text-decoration-color:var(--yellow);text-decoration-thickness:1.5px;text-underline-offset:4px}
 .rsn-veille.rsn-veille .rub[aria-pressed="true"]{font-weight:600;color:var(--navy)}
 .rsn-veille.rsn-veille .rub[aria-pressed="true"] .hex{visibility:visible}
+/* Filtre « Afficher » : un point de la couleur du type après « Événements » et « Appels ». */
+.rsn-veille.rsn-veille .rub[data-cle="type"]:not([data-val=""]) .t::after{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin-left:8px;background:var(--blue)}
+.rsn-veille.rsn-veille .rub[data-cle="type"][data-val="appel"] .t::after{background:var(--yellow)}
 .rsn-veille .tags{display:flex;flex-wrap:wrap;gap:6px 14px}
 .rsn-veille.rsn-veille .tag{padding:2px 0;font-size:14px;color:var(--body);border-bottom:1px solid var(--rule)}
 .rsn-veille.rsn-veille .tag:hover{color:var(--navy);border-bottom-color:var(--navy)}
@@ -181,7 +196,7 @@
 /* Frise d'événements (liste compacte de la page Événements) */
 .rsn-veille .frise{border-left:1px solid var(--rule);padding:4px 0 6px;margin-left:7px}
 .rsn-veille .ev{position:relative;display:grid;grid-template-columns:62px minmax(0,1fr);gap:18px;padding:14px 0 18px 26px}
-.rsn-veille .ev > .hex{position:absolute;left:-7px;top:22px;background:#fff;color:var(--trait)}
+.rsn-veille .ev > .hex{position:absolute;left:-7px;top:22px;background:#fff;color:var(--blue)}
 .rsn-veille .ev + .ev{border-top:1px solid var(--rule)}
 .rsn-veille .jour{font-family:var(--serif);font-size:26px;line-height:1;color:var(--navy);font-variant-numeric:tabular-nums}
 .rsn-veille .jour small{display:block;font-family:var(--sans);font-size:11.5px;color:var(--muted);margin-top:5px;letter-spacing:.04em;text-transform:uppercase;font-weight:500}
@@ -270,7 +285,9 @@
 .rsn-veille .ev .serie b{color:var(--ink);font-weight:600}
 .rsn-veille.rsn-veille .ev .serie a{color:var(--navy);text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
 /* Fiches RSN : le corps (image + texte) forme un bloc sur fond gris très pâle, avec un trait jaune à gauche. */
-.rsn-veille .ev.rsn .corps{border-left:4px solid var(--yellow);border-radius:14px;overflow:hidden;background:#F6F8FA}
+.rsn-veille .ev.rsn .corps{border-left:4px solid var(--navy);border-radius:14px;overflow:hidden;background:#F6F8FA}
+/* Un appel du RSN : pas de carte grise dans le fond teinté. */
+.rsn-veille .ev.appel-ev.rsn .corps{background:transparent}
 .rsn-veille .ev.rsn .tx{padding:14px 18px 16px}
 .rsn-veille .ev.rsn.avec-image .tx{padding-left:12px}
 .rsn-veille .ev.rsn .im{border-radius:0;align-self:stretch;max-height:none}
@@ -312,20 +329,24 @@
 .rsn-veille.rsn-veille .cal .c[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--yellow-ink)}
 .rsn-veille .cal .num{font-family:var(--serif);font-size:15px;color:var(--navy);line-height:1}
 .rsn-veille.rsn-veille .cal .c.auj .num{display:inline-block;background:var(--yellow);border-radius:6px;padding:3px 5px;margin:-3px 0 0 -5px}
-.rsn-veille .cal .puce{font-size:11px;line-height:1.25;color:var(--ink);background:var(--tint);border-radius:4px;padding:2px 5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border-left:2px solid var(--trait)}
-.rsn-veille .cal .puce.rsn,.rsn-veille .cal .puce.appel{border-left-color:var(--yellow-ink);background:var(--yellow-tint)}
+.rsn-veille .cal .puce{font-size:11px;line-height:1.25;color:var(--ink);background:var(--blue-tint);border-radius:4px;padding:2px 5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border-left:2px solid var(--blue)}
+/* Calendrier, mêmes couleurs : événement en bleu (celui du RSN en marine, en gras), date limite d'un appel en jaune. */
+.rsn-veille .cal .puce.rsn{border-left-color:var(--navy);font-weight:600}
+.rsn-veille .cal .puce.appel{border-left-color:var(--yellow-ink);background:var(--yellow-tint)}
 .rsn-veille.rsn-veille .cal .plus{font-size:11px;color:var(--muted);border:0;font-weight:500}
 .rsn-veille .cal-jour{margin-top:26px}
 .rsn-veille .cal-legende{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px;color:var(--muted);margin-top:12px}
-.rsn-veille .cal-legende i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:var(--tint);border-left:2px solid var(--trait)}
-.rsn-veille .cal-legende i.rsn,.rsn-veille .cal-legende i.appel{background:var(--yellow-tint);border-left-color:var(--yellow-ink)}
+.rsn-veille .cal-legende i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:var(--blue-tint);border-left:2px solid var(--blue)}
+.rsn-veille .cal-legende i.rsn{border-left-color:var(--navy)}
+.rsn-veille .cal-legende i.appel{background:var(--yellow-tint);border-left-color:var(--yellow-ink)}
 @media (max-width:640px){
   .rsn-veille .cal-tete h2{font-size:22px}
   .rsn-veille.rsn-veille .cal .c{min-height:56px;padding:4px}
   .rsn-veille .cal .puce{display:none}
   .rsn-veille .cal .pts{display:flex;gap:3px;flex-wrap:wrap}
-  .rsn-veille .cal .pt{width:6px;height:6px;border-radius:50%;background:var(--trait)}
-  .rsn-veille .cal .pt.rsn,.rsn-veille .cal .pt.appel{background:var(--yellow-ink)}
+  .rsn-veille .cal .pt{width:6px;height:6px;border-radius:50%;background:var(--blue)}
+  .rsn-veille .cal .pt.rsn{background:var(--navy)}
+  .rsn-veille .cal .pt.appel{background:var(--yellow-ink)}
   .rsn-veille.rsn-veille .cal .plus{display:none}
   .rsn-veille .ev.avec-image{grid-template-columns:52px minmax(0,1fr)}
 }
@@ -346,7 +367,7 @@
   .rsn-veille .limites{flex-wrap:wrap}
   .rsn-veille .limites .defile{order:3;flex-basis:100%}
   .rsn-veille .limites .fleches{margin-left:auto}
-  .rsn-veille .ev.appel-ev{grid-template-columns:52px minmax(0,1fr)}
+  .rsn-veille .ev.appel-ev{grid-template-columns:52px minmax(0,1fr);padding-right:12px}
   .rsn-veille .ev.appel-ev .tuile{width:52px}
 }
 
@@ -370,7 +391,7 @@
   .rsn-veille .limites{flex-wrap:wrap}
   .rsn-veille .limites .defile{order:3;flex-basis:100%}
   .rsn-veille .limites .fleches{margin-left:auto}
-  .rsn-veille .ev.appel-ev{grid-template-columns:52px minmax(0,1fr)}
+  .rsn-veille .ev.appel-ev{grid-template-columns:52px minmax(0,1fr);padding-right:12px}
   .rsn-veille .ev.appel-ev .tuile{width:52px}
 }
 

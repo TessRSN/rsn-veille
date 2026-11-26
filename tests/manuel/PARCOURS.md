@@ -1,4 +1,4 @@
-# Parcours de vérification de bout en bout (version 0.17.0)
+# Parcours de vérification de bout en bout (version 0.18.0)
 
 Ce parcours enchaîne, dans l'ordre d'un vrai usage, toutes les listes de vérification manuelles :
 `verifier-admin.md` (administration), `verifier-public.md` (page publique, formulaire, REST et iCal) et
@@ -175,7 +175,7 @@ est vide pour la page Veille choisie.
    (rubrique, comme Mois) : l'appel du RSN est compté et listé sous RSN (et non sous Écosystème) ; les compteurs
    croisent les deux filtres ; Réinitialiser remet tout à « Tout » et « Tous ».
 8. **Liste unifiée** : événements et appels mêlés par mois, en-tête qui n'affiche que les compteurs non nuls (« 2 événements », « 1 appel » ou « 2 événements · 1 appel ») ; pastilles de
-   type, d'organisateur, de format, de langue et de thèmes ; hexagone doré pour un élément du RSN.
+   type, d'organisateur, de format, de langue et de thèmes ; hexagone bleu pour un événement, jaune plein pour un appel (0.18.0).
 9. **Calendrier** : l'appel apparaît le jour de sa date limite, en puce jaune « Date limite · … » ; cliquer le jour :
    les événements du jour puis les appels de ce jour ; le titre du mois compte événements **et** appels affichés
    (« N éléments ») ; la série de plus de 7 jours ne figure qu'à son premier jour ; la légende contient « Date limite d'un appel ». Avec
@@ -193,7 +193,7 @@ est vide pour la page Veille choisie.
     (la bande ne doit causer aucun défilement horizontal). Consigner tout écart dans le tableau des écarts.
     Vérifier aussi à 375 px (cartes empilées).
 12. Section **Ressources et cohabitation** de `verifier-public.md` : ressources seulement sur la page Veille
-    (chargées avec `?ver=0.17.0`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
+    (chargées avec `?ver=0.18.0`), polices, Elementor, cache (publier une fiche puis recharger hors connexion), WPML
     si installé (la page anglaise a ses propres points, 24 à 32).
 13. Section **REST et iCal** : `/wp-json/rsn/v1/veille` (aucune clé retirée), `/veille.ics` (CRLF, en-têtes,
     validateur iCal, abonnement dans un agenda).
@@ -204,7 +204,7 @@ est vide pour la page Veille choisie.
     et il n'est pas à la une du RSN.
 15. **Purge à la mise à jour** : `wp option delete rsn_veille_version`, puis charger une page de wp-admin ; le transient
     `rsn_veille_json_fr` a disparu (`wp transient get rsn_veille_json_fr` ne rend rien) et
-    `wp option get rsn_veille_version` rend `0.17.0`. Un second chargement ne purge plus.
+    `wp option get rsn_veille_version` rend `0.18.0`. Un second chargement ne purge plus.
 16. **Bandeau continu** (version 0.3.0 ; exige le thème Vault, absent de wp-env : à faire sur rsn.quebec, sur la page
     ordinaire avec un bloc Code court, renommée « Événements et appels », fenêtre large) :
     - aucun écart blanc entre l'en-tête du thème (fil d'Ariane et titre) et l'intro du bandeau, ni entre l'intro, les
@@ -243,8 +243,8 @@ est vide pour la page Veille choisie.
     date de fin précédée d'une flèche (« →jj mois ») avec la mention « en cours », et une pastille « En cours » suit la
     pastille de type ; elle n'est pas à la une. L'événement du RSN commencé hier et qui finit demain porte aussi la
     tuile « →jj mois » et la pastille « En cours » dans la liste, mais **reste à la une** avec son jour de début.
-21. **Pastille « Appel »** : contour bleu marine sur fond blanc (plus de fond jaune), à côté d'« Événement » en bleu plein ;
-    la pastille « RSN » reste jaune et ne se confond plus avec elle.
+21. **Pastille « Appel »** (0.18.0) : jaune pleine, texte marine, à côté d'« Événement » en bleu plein ;
+    la pastille « RSN » est marine, texte jaune, et ne se confond pas avec elle.
 22. **375 px** (mobile ; exige le thème Vault, absent de wp-env : à faire sur rsn.quebec, avec une fenêtre de 375 px ou l'émulation des outils du navigateur) : le bandeau passe l'intro puis les
     boutons sur des lignes séparées, sans défilement horizontal ; les flèches des dates limites sont à droite du libellé
     « Dates limites » et les puces dessous, sur toute la largeur ; dans une fiche RSN avec image, l'image est
@@ -358,13 +358,13 @@ changement de fiche (`wp transient delete rsn_veille_json_fr` et `rsn_veille_jso
 1. **Rendu et hauteur** (hors connexion, fenêtre de 1 440 px) : trois colonnes, le calendrier du mois, « Au RSN » et
    « Dans l'écosystème ». La bande est nettement plus basse qu'avant (environ 1 040 px pour l'ancienne bande ; mesurer
    la section avec les outils du navigateur et la noter dans le tableau des écarts). `accueil.css` et `accueil.js`
-   sont chargés avec `?ver=0.17.0` (le CSS dans l'en-tête, le script en pied de page) sur l'accueil ; ni `veille.css` ni `veille.js`. Aucune erreur dans la
+   sont chargés avec `?ver=0.18.0` (le CSS dans l'en-tête, le script en pied de page) sur l'accueil ; ni `veille.css` ni `veille.js`. Aucune erreur dans la
    console, aucun défilement horizontal (`document.documentElement.scrollWidth === document.documentElement.clientWidth`).
    **Charger l'accueil sans toucher la souris ni le clavier** : la bande doit se dessiner d'elle-même ; si elle reste vide,
    exclure `accueil.js` du délai du JavaScript de LiteSpeed (LiteSpeed › Optimisation de page › Réglages JS).
 2. **Calendrier** : mois courant au départ, la flèche précédente désactivée ; la flèche suivante va jusqu'au dernier
-   mois qui a un événement, puis se désactive. Jours passés grisés, aujourd'hui entouré. Point jaune les jours qui ont
-   un événement du RSN, point marine ceux qui ont un événement de l'écosystème ; une série de plus de 7 jours ne
+   mois qui a un événement, puis se désactive. Jours passés grisés, aujourd'hui entouré. Point marine les jours qui ont
+   un événement du RSN, point bleu ceux qui ont un événement de l'écosystème, point jaune une date limite d'appel ; une série de plus de 7 jours ne
    pointe que son premier jour.
 3. **Filtre par jour** : cliquer un jour pointé ; la colonne de droite devient « Le 4 novembre » (ou la date choisie)
    avec le bouton « Tous » et **tous** les événements de ce jour, ceux du RSN compris (plus de quatre si on en crée autant,
